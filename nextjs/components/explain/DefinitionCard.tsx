@@ -25,7 +25,7 @@ export function DefinitionCard({ selected, onClose }: { selected: number | null;
       aria-label="Definition"
       aria-live="polite"
       hidden={selected === null}
-      className="bm-xcard mt-5 border border-rule-2 bg-raised px-4 py-3 shadow-overlay md:px-5 md:py-4"
+      className="bm-xcard border border-rule-2 bg-raised px-4 py-3 shadow-overlay md:mt-5 md:px-5 md:py-4"
     >
       <div className="flex items-start gap-3">
         <div ref={bodyRef} className="min-w-0 flex-1" />

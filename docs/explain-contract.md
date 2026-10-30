@@ -244,9 +244,15 @@ withheld. The safety note lists the collected `destructive` facts verbatim;
 hint backticks become `<code>` through text splitting, never markup.
 
 Because a line can hold secrets, the service worker never stores `/explain`,
-`/api/v1/explain`, or any URL with a `cmd` or `q` parameter (search pages and
-API answers included) in Cache Storage, and purges such entries an older worker
-kept; Sentry's URL data denies `cmd` and `q`.
+`/api/v1/explain`, or any URL with a `cmd`, `q` or `name` parameter (search
+pages, search and suggest API answers included) in Cache Storage, and purges
+such entries an older worker kept. Sentry never carries their values:
+`PRIVATE_QUERY_PARAMS` in `lib/sentryScrub.ts` (`cmd`, `q`, `name`) feeds every
+`dataCollection` deny list and the scrubber, which redacts each value to the
+next unencoded `&` or `#` (and inside percent-encoded nested URLs) in every
+outgoing event, transaction, span and breadcrumb (`beforeSend`, `beforeSendTransaction`, `beforeSendSpan`,
+`beforeBreadcrumb`) and in each envelope's header (the trace context's
+`transaction`), in all three Sentry configs.
 
 Portability cells are not in this response (`portability` stays null). The
 page reads them separately with `portability.getCells({distro, name, section,

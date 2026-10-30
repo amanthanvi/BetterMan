@@ -975,11 +975,14 @@
       font-size: 1.0625rem;
     }
 
-    /* On a phone the open definition pins under the site header while the grid and notes scroll. */
+    /* On a phone the open definition is fixed under the site header, so it is in
+       view at once however long the grid, and stays while the grid and notes scroll. */
     .bm-xcard {
-      position: sticky;
+      position: fixed;
       top: 4rem;
-      z-index: 10;
+      right: 1.25rem;
+      left: 1.25rem;
+      z-index: 20;
       max-height: 45vh;
       overflow-y: auto;
     }

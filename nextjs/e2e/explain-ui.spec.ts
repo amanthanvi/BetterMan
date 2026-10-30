@@ -5,6 +5,11 @@ import { waitForInteractiveShell } from './shortcuts'
 
 const LS = '/explain?cmd=' + encodeURIComponent('ls -lah --color')
 
+// Each explain page spends a search-bucket token; keep this file's in its own
+// real rate-limit bucket, as explain.spec.ts does for its API matrix.
+const bucket = () => crypto.randomUUID().replaceAll('-', '').slice(0, 4)
+test.use({ extraHTTPHeaders: { 'x-vercel-forwarded-for': `2001:db8::${bucket()}:${bucket()}` } })
+
 test('explain on a phone: the command, then the reading, then the token grid', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto(LS)
@@ -57,6 +62,46 @@ test('explain: a flag cluster splits into individually selectable flags, one def
   await expect(card).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(card).toBeHidden()
+})
+
+test('explain on a phone: a card opened from a grid taller than the screen is in view at once', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const files = Array.from({ length: 45 }, (_, i) => `file${i}`).join(' ')
+  await page.goto('/explain?cmd=' + encodeURIComponent(`ls ${files} -lah`))
+  await waitForInteractiveShell(page)
+  const grid = page.getByRole('list', { name: 'Tokens' })
+  expect((await grid.boundingBox())!.height).toBeGreaterThan(844)
+  const flag = grid.getByRole('link', { name: '-a', exact: true })
+  await flag.scrollIntoViewIfNeeded()
+  const card = page.getByRole('region', { name: 'Definition' })
+  await expect(async () => {
+    await flag.click()
+    await expect(card).toBeVisible({ timeout: 500 })
+  }).toPass()
+  await expect(card).toBeInViewport()
+  const box = (await card.boundingBox())!
+  expect(box.y).toBeLessThan(200)
+  expect(box.x + box.width).toBeLessThanOrEqual(390)
+  await expect(card).toContainText('Do not ignore entries')
+})
+
+test('explain on a phone: a very long token wraps in its note and its card', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const path = 'a'.repeat(200)
+  await page.goto('/explain?cmd=' + encodeURIComponent(`ls -l ${path}`))
+  await waitForInteractiveShell(page)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  const note = page.getByRole('list', { name: 'Definitions' }).getByRole('listitem').filter({ hasText: path })
+  const code = note.locator('code').first()
+  const box = (await code.boundingBox())!
+  expect(box.x + box.width).toBeLessThanOrEqual(390)
+  const card = page.getByRole('region', { name: 'Definition' })
+  await expect(async () => {
+    await page.getByRole('list', { name: 'Tokens' }).getByRole('link').filter({ hasText: path }).click()
+    await expect(card).toBeVisible({ timeout: 500 })
+  }).toPass()
+  const cardCode = (await card.locator('code').first().boundingBox())!
+  expect(cardCode.x + cardCode.width).toBeLessThanOrEqual(390)
 })
 
 test('explain: each flag is linked to its exact definition and carries portability cells', async ({ page }) => {

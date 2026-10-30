@@ -1,3 +1,5 @@
+import { PRIVATE_QUERY_PARAMS, SENTRY_PRIVACY_HOOKS } from './sentryScrub'
+
 type SentryModule = typeof import('./sentrySdk')
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN?.trim()
@@ -26,6 +28,8 @@ function loadSentry(): Promise<SentryModule> {
         environment:
           process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT || process.env.NEXT_PUBLIC_VERCEL_ENV || process.env.NODE_ENV,
         tracesSampleRate: 0.1,
+        // cmd and q values never leave the page: request URLs, breadcrumbs, transactions.
+        ...SENTRY_PRIVACY_HOOKS,
         // Preserve the pre-v11 defaults: v11 turns collection of user info,
         // cookies, headers, bodies, and query params on unless told otherwise.
         dataCollection: {
@@ -36,8 +40,8 @@ function loadSentry(): Promise<SentryModule> {
             response: { deny: ['forwarded', '-ip', 'remote-', 'via', '-user'] },
           },
           httpBodies: [],
-          // cmd and q carry pasted command lines and searches (explain, search, home).
-          urlQueryParams: { deny: ['forwarded', '-ip', 'remote-', 'via', '-user', 'cmd', 'q'] },
+          // cmd, q and name carry what a reader typed (explain, search, home, type-ahead).
+          urlQueryParams: { deny: ['forwarded', '-ip', 'remote-', 'via', '-user', ...PRIVATE_QUERY_PARAMS] },
           genAI: { inputs: false, outputs: false },
           databaseQueryData: false,
           queues: false,

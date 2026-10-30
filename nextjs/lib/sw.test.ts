@@ -93,7 +93,7 @@ describe('service worker', () => {
 
   it('never caches explain pages, explain API answers or anything typed as a query', async () => {
     const w = worker()
-    for (const path of ['/explain?cmd=rm%20-rf%20secret', '/api/v1/explain?cmd=x', '/?q=export%20TOKEN%3Dabc', '/search?cmd=x', '/search?q=curl%20-H%20token', '/api/v1/search?q=x', '/api/v1/suggest?q=x']) {
+    for (const path of ['/explain?cmd=rm%20-rf%20secret', '/api/v1/explain?cmd=x', '/?q=export%20TOKEN%3Dabc', '/search?cmd=x', '/search?q=curl%20-H%20token', '/api/v1/search?q=x', '/api/v1/suggest?q=x', '/api/v1/suggest?name=tar%20-x']) {
       const request = w.request(path, path.startsWith('/api/') ? 'cors' : 'navigate')
       expect(request.response, path).toBeUndefined()
     }
@@ -138,5 +138,11 @@ describe('service worker', () => {
 
     await w.activate()
     expect(w.self.clients.claim).toHaveBeenCalled()
+  })
+
+  it('excludes exactly the private parameters the Sentry scrubber redacts', async () => {
+    const { PRIVATE_QUERY_PARAMS } = await import('./sentryScrub')
+    const list = /const PRIVATE_QUERY_PARAMS = \[([^\]]*)\]/.exec(source)![1]
+    expect(list.split(',').map((item) => item.trim().replace(/'/g, ''))).toEqual([...PRIVATE_QUERY_PARAMS])
   })
 })

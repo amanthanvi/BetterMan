@@ -94,11 +94,14 @@ self.addEventListener('activate', (event) => {
 })
 
 // A pasted command line or search can hold anything: explain pages and any
-// URL carrying a typed query (cmd or q, on pages and the API) never go into
-// Cache Storage, whatever their HTTP status. Offline search is the trade-off.
+// URL carrying typed text (lib/sentryScrub.ts PRIVATE_QUERY_PARAMS, on pages
+// and the API) never go into Cache Storage, whatever their HTTP status.
+// Offline search is the trade-off.
+const PRIVATE_QUERY_PARAMS = ['cmd', 'q', 'name']
+
 function isPrivate(url) {
   return isSameOrigin(url) && (url.pathname === '/explain' || url.pathname === '/api/v1/explain' ||
-    url.searchParams.has('cmd') || url.searchParams.has('q'))
+    PRIVATE_QUERY_PARAMS.some((name) => url.searchParams.has(name)))
 }
 
 function isSameOrigin(url) {

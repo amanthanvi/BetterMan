@@ -189,8 +189,9 @@ the numbered definitions and the safety note.
   JavaScript the grid is a table of contents.
 - **Definition card** (`DefinitionCard.tsx`, an overlay): with JavaScript a
   token opens its one note, cloned from the list, in a card with a close
-  control; Escape closes it. Under `md` it pins under the site header while the
-  grid and notes scroll.
+  control; Escape closes it. Under `md` it is fixed under the site header, so
+  it is in view at once however long the grid, and stays while the grid and
+  notes scroll. Notes and the card wrap a token of any length.
 - **Definitions:** serif excerpts from the manual, the source as a quiet link to
   the exact `page#anchor`, and three portability cells on every flag that has
   data (with the legend once). Unresolved tokens say no definition was matched.

@@ -12,13 +12,14 @@ export function ExplainNote({ token, portability }: { token: NumberedToken; port
   const excerpt = token.excerpt || (token.shell?.excerpt ?? '')
   return (
     <>
-      <p className="flex flex-wrap items-baseline gap-x-3">
+      <p className="flex min-w-0 flex-wrap items-baseline gap-x-3">
         <span className="bm-xn-n">{token.n}</span>
-        <code className="font-mono text-[1.0625rem] font-semibold">{token.kind === 'option' ? token.value : token.text}</code>
+        {/* A token can be any length (a 200-character path): it wraps anywhere rather than overflow. */}
+        <code className="min-w-0 max-w-full font-mono text-[1.0625rem] font-semibold [overflow-wrap:anywhere]">{token.kind === 'option' ? token.value : token.text}</code>
         <span className="small-caps text-[0.9375rem] text-ink-3">{token.label}</span>
         {codes && portability ? <PortabilityGlyph codes={codes} systems={portability.systems} always /> : null}
       </p>
-      {excerpt ? <p className="mt-1.5 font-serif text-[1.0625rem] leading-[1.58] text-ink">{excerpt}</p> : null}
+      {excerpt ? <p className="mt-1.5 font-serif text-[1.0625rem] leading-[1.58] text-ink [overflow-wrap:anywhere]">{excerpt}</p> : null}
       {token.kind === 'unknown' ? (
         <p className="mt-1.5 font-serif text-[1.0625rem] italic text-ink-2">No manual definition was matched for this token.</p>
       ) : null}
