@@ -100,6 +100,10 @@ export type ManPageResponse = {
   derived?: import('../../convex/_derivedEncoding').PageDerivedResponse
   brief?: ManPageBrief | null
   providers?: import('../../convex/lib').ManProviders | null
+  /** Translated pages (#395): how the translation lags its English page, computed after activation. */
+  translationDrift?: import('../../convex/translationDrift').PageTranslationDrift
+  /** The drift build for the current English release is unfinished: cache this page briefly. */
+  translationDriftPending?: true
 }
 
 export type ErrorDetail = { code: string; message: string }

@@ -290,6 +290,8 @@ B3 (#395) adds `manTranslated` (`/man/bash/1?lang=de`) and
 German release with bash(1) and a French release without it. Each must render
 cold through the proxy: the German page with `lang="de"`, its note and its
 `hreflang` set; the fallback as English with the missing-translation note and
-`noindex`. Both measure 4 calls and 1 storage read, at 15 and 29 documents.
-The fixture hash changed for these rows only; every existing baseline and
+`noindex`. Both measure 4 calls and 1 storage read, at 18 and 29 documents.
+The German page carries a finished drift build and note, so its 18 documents
+include the drift read (the English pointer, the note and the build). The
+fixture hash changed for these rows only; every existing baseline and
 tolerance is unchanged.

@@ -48,6 +48,7 @@ export function ManPageDocument({
   urlLang,
   t,
   translation,
+  drift,
 }: {
   page: ManPage
   content: ManPageContent
@@ -71,6 +72,8 @@ export function ManPageDocument({
   t: ServerT
   /** `?lang=` (#395): the translation itself, or English because the language lacks the page. */
   translation?: TranslationOutcome
+  /** How the translation lags English (#395); shown only on a translated page. */
+  drift?: ManPageResponse['translationDrift']
 }) {
   const inBrief = briefView({
     brief,
@@ -142,6 +145,7 @@ export function ManPageDocument({
                     ? t('{language} translation shipped by {distro} in {package}.', { language: LANG_NAMES[translation.lang], distro: DISTRO_LABEL[servedDistro], package: page.sourcePackage })
                     : t('{language} translation shipped by {distro}.', { language: LANG_NAMES[translation.lang], distro: DISTRO_LABEL[servedDistro] })}
                   {englishHref ? <>{' '}<a href={englishHref} hrefLang="en" className="underline">{t('English original')}</a></> : null}
+                  {drift ? <TranslationDriftNote drift={drift} t={t} /> : null}
                 </>
               ) : translation.noRelease ? (
                 t('BetterMan has no {language} manuals for {distro} yet; this is the English page.', { language: LANG_NAMES[translation.lang], distro: DISTRO_LABEL[servedDistro] })
@@ -197,5 +201,29 @@ export function ManPageDocument({
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * One line on how a translation lags English (#395): an older documented
+ * release, and the options English has that it lacks. Computed after activation.
+ */
+function TranslationDriftNote({ drift, t }: { drift: NonNullable<ManPageResponse['translationDrift']>; t: ServerT }) {
+  const more = drift.missingCount - drift.missingFlags.length
+  return (
+    <span data-bm-translation-drift className="block">
+      {drift.older && drift.documented && drift.english
+        ? <>{t('This translation documents {documented}; English documents {english}.', { documented: drift.documented, english: drift.english })}{' '}</>
+        : null}
+      {drift.missingCount ? (
+        <>
+          {t('Not in this translation:')}{' '}
+          {drift.missingFlags.map((flag, index) => (
+            <span key={flag}>{index ? ', ' : ''}<code className="font-mono">{flag}</code></span>
+          ))}
+          {more > 0 ? <>{' '}{t('{count, plural, other {and # more}}', { count: more })}</> : null}.
+        </>
+      ) : null}
+    </span>
   )
 }

@@ -238,4 +238,7 @@ export const server: Record<ServerKey, string> = {
   'English original': 'Английский оригинал',
   '{distro} ships no {language} translation of {citation}; this is the English page.': 'В {distro} нет перевода {citation} ({language}); это английская страница.',
   'BetterMan has no {language} manuals for {distro} yet; this is the English page.': 'В BetterMan пока нет страниц руководства ({language}) для {distro}; это английская страница.',
+  'This translation documents {documented}; English documents {english}.': 'Этот перевод описывает версию {documented}; английская страница описывает {english}.',
+  'Not in this translation:': 'Нет в этом переводе:',
+  '{count, plural, other {and # more}}': '{count, plural, one {и ещё #} few {и ещё #} many {и ещё #} other {и ещё #}}',
 }

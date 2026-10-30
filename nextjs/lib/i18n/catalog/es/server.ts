@@ -238,4 +238,7 @@ export const server: Record<ServerKey, string> = {
   'English original': 'Original en inglés',
   '{distro} ships no {language} translation of {citation}; this is the English page.': '{distro} no incluye una traducción ({language}) de {citation}; esta es la página en inglés.',
   'BetterMan has no {language} manuals for {distro} yet; this is the English page.': 'BetterMan aún no tiene páginas de manual ({language}) para {distro}; esta es la página en inglés.',
+  'This translation documents {documented}; English documents {english}.': 'Esta traducción documenta la versión {documented}; la página en inglés documenta la {english}.',
+  'Not in this translation:': 'No figura en esta traducción:',
+  '{count, plural, other {and # more}}': '{count, plural, one {y # más} other {y # más}}',
 }

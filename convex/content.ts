@@ -3,6 +3,7 @@ import { decodeSummary, publicSummary } from "./_derivedEncoding";
 import { readProviderPackages } from "./_providers";
 import { variantGroups } from "./_derivedModel";
 import { CONTENT_LOCALES, DEFAULT_LOCALE, isContentLocale } from "./_locales";
+import { pageTranslationDrift } from "./translationDrift";
 import {
   action,
   internalAction,
@@ -491,7 +492,7 @@ async function pageReadModel(
       derived.family = null;
     }
   }
-  const [content, variants, generated, providers] = await Promise.all([
+  const [content, variants, generated, providers, drift] = await Promise.all([
     contentPointer(ctx, args.page._id),
     variantsForPage(ctx, {
       stage: args.stage, locale: args.release.locale, name: args.page.name, section: args.page.section, knownPage: args.page,
@@ -502,10 +503,12 @@ async function pageReadModel(
       .withIndex("by_contentSha256", (q) => q.eq("contentSha256", args.page.contentSha256))
       .unique(),
     providerChoices(ctx, args.release, args.page.name, args.page.section, args.page),
+    // Translated pages only: one indexed read and the English pointer.
+    pageTranslationDrift(ctx, args.release, args.page._id),
   ]);
   if (derived) derived.variantGroups = variantGroups(variants);
   if (!content) return null;
-  return { release: args.release, page: args.page, content, variants, derived, providers, brief: briefFromRecord(generated) };
+  return { release: args.release, page: args.page, content, variants, derived, providers, brief: briefFromRecord(generated), drift: drift.drift, driftPending: drift.pending };
 }
 
 export const getManByNameReadModel = internalQuery({
@@ -709,6 +712,8 @@ export const getManByName = action({
       kind: "page" as const,
       data: pageResponse(result.data.release, result.data.page, content, result.data.variants, {
         derived: result.data.derived, brief: result.data.brief, providers: result.data.providers,
+        drift: "drift" in result.data ? result.data.drift : null,
+        driftPending: "driftPending" in result.data ? result.data.driftPending : false,
       }),
     };
   },
@@ -748,6 +753,8 @@ export const getManByNameAndSection = action({
       kind: "page" as const,
       data: pageResponse(result.data.release, result.data.page, content, result.data.variants, {
         derived: result.data.derived, brief: result.data.brief, providers: result.data.providers,
+        drift: "drift" in result.data ? result.data.drift : null,
+        driftPending: "driftPending" in result.data ? result.data.driftPending : false,
       }),
     };
   },

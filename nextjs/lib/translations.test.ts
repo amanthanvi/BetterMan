@@ -63,6 +63,17 @@ describe('translated lookups', () => {
     expect((await lookup()).servedRelease).toBeNull()
   })
 
+  it('does not share a drift note compared with another English release (#474)', async () => {
+    const withDrift = (englishReleaseId: string) => ({
+      ...page('de1', 'de'), translation: translated,
+      data: { ...page('de1', 'de').data, translationDrift: { documented: '1.34', english: '1.35', older: true, missingFlags: [], missingCount: 0, englishReleaseId } },
+    })
+    mocks.fetchTranslatedMan.mockResolvedValue(withDrift('en1'))
+    expect((await lookup()).servedRelease).toBe('en1')
+    mocks.fetchTranslatedMan.mockResolvedValue(withDrift('en0'))
+    expect((await lookup()).servedRelease).toBeNull()
+  })
+
   it('shows English with the claim only on a confirmed miss', async () => {
     mocks.fetchTranslatedMan.mockResolvedValue({ ...page('en1'), translation: { state: 'missing', locale: 'de', translatedReleaseId: 'de1' } })
     expect(await lookup()).toMatchObject({ kind: 'page', translation: { lang: 'de', state: 'missing' }, servedRelease: 'en1' })

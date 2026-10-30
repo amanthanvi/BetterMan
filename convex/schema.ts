@@ -455,6 +455,32 @@ export default defineSchema({
   }).index("by_releaseId_and_pageId", ["releaseId", "pageId"])
     .searchIndex("search_taskText", { searchField: "taskText", filterFields: ["releaseId", "section"] }),
 
+  // Drift of a translated page against its English page (#395), computed after
+  // activation. Rows exist only for pages that drift; each names the English
+  // release it compared, and readers ignore a row whose English release is no
+  // longer active.
+  manPageTranslationDrift: defineTable({
+    releaseId: v.id("datasetReleases"),
+    pageId: v.id("manPages"),
+    englishReleaseId: v.id("datasetReleases"),
+    documented: v.optional(v.string()),
+    english: v.optional(v.string()),
+    older: v.boolean(),
+    missingFlags: v.array(v.string()),
+    missingCount: v.number(),
+  }).index("by_releaseId_and_pageId", ["releaseId", "pageId"]),
+
+  // One drift build per translated release, against one English release.
+  translationDriftBuilds: defineTable({
+    releaseId: v.id("datasetReleases"),
+    englishReleaseId: v.id("datasetReleases"),
+    cursor: v.union(v.string(), v.null()),
+    scanned: v.number(),
+    drifted: v.number(),
+    done: v.boolean(),
+    updatedAt: v.number(),
+  }).index("by_releaseId", ["releaseId"]),
+
   // Progress of a release's task-phrase backfill; a version bump rebuilds.
   taskPhraseBackfills: defineTable({
     releaseId: v.id("datasetReleases"),

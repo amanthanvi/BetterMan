@@ -288,6 +288,7 @@ try {
       assertNoManStreaming(html)
       assert.ok(html.includes('lang="de" data-bm-manual-text') && html.includes('Übersetzte Handbuchseite (de).') && html.includes('data-bm-translation="translated"'), 'The German page must render in German')
       assert.ok(/hreflang="de"/i.test(html) && /hreflang="x-default"/i.test(html), 'The German page must carry its hreflang set')
+      assert.ok(html.includes('data-bm-translation-drift') && html.includes('--debugger'), 'The German page must show its drift note')
     }
     if (name === 'manTranslationFallback') {
       assertNoManStreaming(html)
