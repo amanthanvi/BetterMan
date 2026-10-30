@@ -225,7 +225,7 @@ def test_fedora_requires_deployed_stored_license_capability_before_acquisition(m
             pass
 
         def require_deployed_contract(self):
-            return {"schemaVersion": 7, "acquisitions": ["fedora-rpm-extraction"]}
+            return {"schemaVersion": 8, "acquisitions": ["fedora-rpm-extraction"]}
 
     monkeypatch.setattr(debian_publish, "ConvexIngestClient", Client)
     monkeypatch.setattr(debian_publish, "Workspace", lambda *a, **kw: pytest.fail("no acquisition"))

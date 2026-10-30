@@ -1,9 +1,10 @@
 # B2 Fedora archive extraction
 
 Fedora family of #394; stacked on Ubuntu #467 and #445's pending ingest contract
-v7. Merge/deploy only after #445's November 1 window. There is no v8 fork: v7
-advertises each acquisition and stored-notice support so an earlier v7 backend
-is rejected before a full import starts. No workflow was dispatched or merged;
+v7. B2 uses exact **v8**, shared by all four families; translations follow as v9.
+Client preflight rejects v7 and v9 servers even with matching capabilities;
+server promotion headers require exact v8 too. Merge/deploy only after #445's
+November 1 window. No workflow was dispatched or merged;
 no production/shared data, repository variable, configuration or secret changed.
 The lead owns independent review and staging measurement after merge.
 
@@ -122,11 +123,16 @@ projections; mirror/cloud behavior still needs staging measurement. Retained-sou
 and spool ratios project well below 4 GiB each; allow **under 8 GB** incremental
 disk including cache, in-flight RPMs and metadata. Quotas remain fail closed.
 
-Validation: ingest lint and **966 ingestion tests**, **126 ops tests**, explicit
-**12 dataset/deploy workflow tests**, **3,282 Convex tests**, Convex typecheck and
+Validation: ingest lint and **968 ingestion tests**, **126 ops tests**, explicit
+**12 dataset/deploy workflow tests**, **3,283 Convex tests**, Convex typecheck and
 local codegen on 3432/3433 with no generated drift, Python 3.14 pip packaging
 dry-run, frontend lint/grammar, production `pnpm next:build`, and **692 tests**. Large-notice tests cover exact
 bytes, replay/failure cleanup, public reads, release deletion, orphan safety,
 gzip round-trip and no-gzip/q=0 redirects. PR guards run on the committed family
 diff. Full staging throughput, full-corpus notices and production promotion are
 not established by these local checks.
+
+Review follow-up: the Fedora RPM and primary/filelists parsers run only after
+whole-file SHA256 verification in `download`; malformed unverified bodies are
+rejected at that boundary before any parser, including cached bodies. They do
+not use Alpine's parser callback and have no equivalent parse-error fallback gap.
