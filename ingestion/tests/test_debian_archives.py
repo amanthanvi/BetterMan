@@ -45,6 +45,18 @@ def archive_workspace(tmp_path):
     obj.store.db.close()
 
 
+def check_command_owners(obj, pages):
+    obj.published_route_owners = {(page.name, page.section): page.source_package for page in pages}
+    obj.published_route_owners.update(
+        {
+            (a["name"], a["section"]): a["targetPackage"]
+            for a in obj.alias_providers
+            if not a["providerOnly"]
+        }
+    )
+    return obj.require_command_owners()
+
+
 def test_real_debs_resolve_cross_package_stubs_links_hardlinks_and_copyright(
     archive_workspace, tmp_path
 ):
@@ -755,12 +767,12 @@ def test_command_owner_gate_accepts_dependencies_and_virtual_providers_but_rejec
     }
     obj.alias_providers = []
     page = SimpleNamespace(name="psql", section="1", source_package="postgresql-client-17")
-    assert obj.require_command_owners([page]) == {"postgresql-client": "postgresql-client-17"}
+    assert check_command_owners(obj, [page]) == {"postgresql-client": "postgresql-client-17"}
     del obj.available["postgresql-client"]
-    assert obj.require_command_owners([page]) == {"postgresql-client": "postgresql-client-17"}
+    assert check_command_owners(obj, [page]) == {"postgresql-client": "postgresql-client-17"}
     page.source_package = "9base"
     with pytest.raises(RuntimeError, match="wrong command-page owner.*psql"):
-        obj.require_command_owners([page])
+        check_command_owners(obj, [page])
 
 
 def test_wrong_owner_blocks_archive_publish_before_upload(archive_workspace, monkeypatch):
@@ -799,9 +811,9 @@ def test_command_owner_gate_prefers_exact_section_to_plan9_suffix(archive_worksp
     obj.alias_providers = []
     standard = SimpleNamespace(name="ls", section="1", source_package="coreutils")
     plan9 = SimpleNamespace(name="ls", section="1plan9", source_package="9base")
-    assert obj.require_command_owners([standard, plan9]) == {"coreutils": "coreutils"}
+    assert check_command_owners(obj, [standard, plan9]) == {"coreutils": "coreutils"}
     with pytest.raises(RuntimeError, match="wrong command-page owner.*ls"):
-        obj.require_command_owners([plan9])
+        check_command_owners(obj, [plan9])
 
 
 def test_command_owner_gate_preserves_explicit_mount_companion(archive_workspace, monkeypatch):
@@ -813,7 +825,7 @@ def test_command_owner_gate_preserves_explicit_mount_companion(archive_workspace
     obj.available["util-linux"] = replace(obj.packages[0], name="util-linux")
     obj.alias_providers = []
     page = SimpleNamespace(name="mount", section="8", source_package="mount")
-    assert obj.require_command_owners([page]) == {"util-linux": "mount"}
+    assert check_command_owners(obj, [page]) == {"util-linux": "mount"}
 
 
 @pytest.mark.parametrize(
@@ -842,8 +854,8 @@ def test_unrelated_command_provider_cannot_satisfy_curated_gate(
     obj.available[wrong_owner] = replace(obj.packages[0], name=wrong_owner, provides=(requested,))
     obj.alias_providers = []
     with pytest.raises(RuntimeError, match="wrong command-page owner"):
-        obj.require_command_owners(
-            [SimpleNamespace(name=name, section="1", source_package=wrong_owner)]
+        check_command_owners(
+            obj, [SimpleNamespace(name=name, section="1", source_package=wrong_owner)]
         )
 
 
@@ -861,3 +873,86 @@ def test_acquisition_summary_counts_archive_fallbacks(archive_workspace, monkeyp
     summary = json.loads(caplog.records[-1].message)
     assert summary["event"] == "deb_acquisition_complete"
     assert summary["archiveFallbacks"] == obj.archive_fallbacks == 2
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_published_nc_owner_uses_elected_alias_target_in_both_provider_orders(
+    archive_workspace,
+    tmp_path,
+    monkeypatch,
+    reverse,
+):
+    from dataclasses import replace
+
+    from ingestion.debian_pipeline import parse_workspace
+    from ingestion.ingest_runner import _PageSpool
+
+    obj = archive_workspace
+    obj.store.db.execute("DELETE FROM entries WHERE kind='control'")
+    mapping = {"provider-low": "netcat-traditional", "provider-high": "netcat-openbsd"}
+    for old, name in mapping.items():
+        obj.store.db.execute("UPDATE entries SET pkg=? WHERE pkg=?", (name, old))
+        obj.store.db.execute("UPDATE packages SET name=? WHERE name=?", (name, old))
+        metadata = replace(
+            obj.available.pop(old),
+            name=name,
+            provides=("netcat",),
+            priority="standard" if name == "netcat-traditional" else "optional",
+        )
+        obj.available[name] = metadata
+        script = tmp_path / f"{name}.postinst"
+        priority = 10 if name == "netcat-traditional" else 50
+        script.write_text(
+            "update-alternatives --install /usr/bin/nc nc /usr/bin/shared "
+            f"{priority} --slave /usr/share/man/man1/nc.1 nc.1 /usr/share/man/man1/shared.1\n"
+        )
+        obj.store.db.execute(
+            "INSERT INTO entries VALUES (?,?,?,NULL,?)",
+            (name, "@control/postinst", "control", str(script)),
+        )
+    names = list(mapping.values())
+    obj.packages = [obj.available[n] for n in (reversed(names) if reverse else names)]
+    obj.acquired = set(obj.available)
+    obj.curated_packages = []
+    monkeypatch.setattr(pipeline, "FULL_PACKAGE_SET_DEBIAN", ["netcat-openbsd"])
+    with _PageSpool(tmp_path / "nc-pages.sqlite3") as spool:
+        providers, failures = parse_workspace(obj, spool, workers=1)
+        assert not failures
+        assert obj.route_winners[("nc", "1")][0] == "netcat-traditional"
+        assert obj.published_route_owners[("nc", "1")] == "netcat-traditional"
+        offers = [a for a in obj.alias_providers if a["name"] == "nc"]
+        assert {a["sourcePackage"] for a in offers} == set(names)
+        elected = next(a for a in offers if not a["providerOnly"])
+        assert elected["targetPackage"] == "netcat-traditional"
+        obj.alias_providers = list(reversed(offers)) if reverse else offers
+        assert obj.require_command_owners() == {"netcat-openbsd": "netcat-traditional"}
+
+
+def test_published_alias_owner_is_its_served_target_package(
+    archive_workspace, tmp_path, monkeypatch
+):
+    from dataclasses import replace
+
+    from ingestion.debian_pipeline import parse_workspace
+    from ingestion.ingest_runner import _PageSpool
+
+    obj = archive_workspace
+    obj.store.db.execute("DELETE FROM entries WHERE kind='control'")
+    script = tmp_path / "alias-target.postinst"
+    script.write_text(
+        "update-alternatives --install /usr/share/man/man1/gawk.1 gawk.1 "
+        "/usr/share/man/man1/target.1 10\n"
+    )
+    obj.store.db.execute(
+        "INSERT INTO entries VALUES (?,?,?,NULL,?)",
+        ("provider-high", "@control/postinst", "control", str(script)),
+    )
+    obj.store.db.execute("DELETE FROM entries WHERE pkg='gawk'")
+    obj.available["gawk"] = replace(obj.available["gawk"], depends=("provider-low",))
+    monkeypatch.setattr(pipeline, "FULL_PACKAGE_SET_DEBIAN", ["gawk"])
+    with _PageSpool(tmp_path / "target-pages.sqlite3") as spool:
+        _providers, failures = parse_workspace(obj, spool, workers=1)
+        assert not failures
+        assert obj.route_winners[("gawk", "1")][0] == "provider-high"
+        assert obj.published_route_owners[("gawk", "1")] == "provider-low"
+        assert obj.require_command_owners() == {"gawk": "provider-low"}

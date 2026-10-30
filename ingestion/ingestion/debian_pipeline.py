@@ -54,6 +54,9 @@ CURATED_ALTERNATIVES = {
     ("nc", "1"): ("netcat-openbsd", "nc_openbsd", "1"),
 }
 
+# Full-catalog default-group elections differ from the curated apt package pass.
+ARCHIVE_COMMAND_PACKAGES = {"netcat-openbsd": "netcat-traditional"}
+
 # Debian renames alternatives targets in archives without rewriting every .so.
 # Two manpages-dev 6.9.1 stubs also refer to the old section suffix. These are
 # exact pinned-corpus repairs, never a fuzzy basename or host-filesystem lookup.
@@ -364,22 +367,19 @@ class Workspace:
             package,
         )
 
-    def require_command_owners(self, pages):
+    def require_command_owners(self):
         from ingestion.ingest_runner import _COMMAND_PAGE_EXCLUSIONS, _COMMAND_PAGES
 
         providers = {}
         for package in self.available.values():
             for name in package.provides:
                 providers.setdefault(name, set()).add(package.name)
-        routes = [(page.name, page.section, page.source_package) for page in pages]
-        routes.extend(
-            (a["name"], a["section"], a["sourcePackage"])
-            for a in self.alias_providers
-            if not a["providerOnly"]
-        )
         actual = {}
-        # Prefer the exact section before suffixed variants such as 1plan9/1ssl.
-        for name, section, owner in sorted(routes, key=lambda row: (row[0], len(row[1]), row[1])):
+        # Use the finalized publication map, including elected alias targets.
+        for (name, section), owner in sorted(
+            self.published_route_owners.items(),
+            key=lambda row: (row[0][0], len(row[0][1]), row[0][1]),
+        ):
             actual.setdefault((name, section[:1]), owner)
         result = {}
         for requested in FULL_PACKAGE_SET_DEBIAN:
@@ -388,7 +388,8 @@ class Workspace:
             name, section = _COMMAND_PAGES[requested]
             if (name, section) not in actual:
                 continue  # The existing missing-page gate reports absent routes.
-            allowed, pending = set(), [requested]
+            expected_package = ARCHIVE_COMMAND_PACKAGES.get(requested, requested)
+            allowed, pending = set(), [expected_package]
             # Match apt_install's explicit companion request; mount is not a util-linux dependency.
             if requested == "util-linux":
                 pending.append("mount")
@@ -407,7 +408,7 @@ class Workspace:
             if owner not in allowed:
                 raise RuntimeError(
                     f"publish blocked: wrong command-page owner for {name}({section}): "
-                    f"{owner} is not {requested} or its dependency/provider"
+                    f"{owner} is not {expected_package} or its dependency/provider"
                 )
             result[requested] = owner
         return result
@@ -700,6 +701,16 @@ def parse_workspace(workspace: Workspace, spool: _PageSpool, *, workers=4):
         }
         for a in workspace.alias_candidates
     ]
+    workspace.published_route_owners = {
+        (p.name, p.section): p.source_package for p in refs if p.page_id not in providers
+    }
+    workspace.published_route_owners.update(
+        {
+            (a["name"], a["section"]): a["targetPackage"]
+            for a in workspace.alias_providers
+            if not a["providerOnly"]
+        }
+    )
     return providers, failed
 
 

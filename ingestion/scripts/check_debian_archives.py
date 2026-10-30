@@ -14,9 +14,13 @@ def audit_command_pages(workspace, *, workers=2):
     """Full Contents audit plus a no-upload replay of every curated command owner."""
     from tempfile import TemporaryDirectory
 
-    from ingestion.debian_indexes import MAN_PATH
+    from ingestion.debian_indexes import BINARY_PATH, MAN_PATH
     from ingestion.debian_licenses import copyright_text
-    from ingestion.debian_pipeline import parse_workspace
+    from ingestion.debian_pipeline import (
+        ARCHIVE_COMMAND_PACKAGES,
+        CURATED_ALTERNATIVES,
+        parse_workspace,
+    )
     from ingestion.ingest_runner import (
         _COMMAND_PAGE_EXCLUSIONS,
         _COMMAND_PAGE_OWNERS,
@@ -48,6 +52,28 @@ def audit_command_pages(workspace, *, workers=2):
         if match and (match[1].lower(), match[2].lower()) in private_routes:
             selected.add(pkg)
     selected.update(source["package"] for items in sources.values() for source in items)
+    # Exact archive pages occupy their routes before alternatives. For missing
+    # names, inspect executable families too (nc.openbsd/nc.traditional/ncat).
+    missing_names = {
+        name
+        for pkg, (name, section) in expected.items()
+        if pkg not in _COMMAND_PAGE_EXCLUSIONS["debian"] and not sources[(name, section)]
+    }
+    virtual_names = {
+        name
+        for pkg in expected
+        if pkg in workspace.available
+        for name in workspace.available[pkg].provides
+    }
+    control_competitors = {
+        p.name for p in workspace.available.values() if virtual_names.intersection(p.provides)
+    }
+    for path, pkg in workspace.owners.execute("SELECT path,pkg FROM owners"):
+        if BINARY_PATH.fullmatch(path) and any(
+            Path(path).name.lower().startswith(n) for n in missing_names
+        ):
+            control_competitors.add(pkg)
+    selected |= control_competitors
     workspace.packages = [
         workspace.available[n] for n in sorted(selected) if n in workspace.available
     ]
@@ -56,6 +82,7 @@ def audit_command_pages(workspace, *, workers=2):
         with _PageSpool(Path(temporary) / "pages.sqlite3") as spool:
             providers, failures = parse_workspace(workspace, spool, workers=workers)
             canonical = [p for p in spool.refs() if p.page_id not in providers]
+            verified_owners = workspace.require_command_owners()
             license_packages = {p.source_package for p in spool.refs() if p.source_package}
             license_packages.update(a["sourcePackage"] for a in workspace.alias_providers)
             licenses = _LicenseSpool(spool.connection)
@@ -97,12 +124,20 @@ def audit_command_pages(workspace, *, workers=2):
                         else "missing",
                         "reason": reason,
                         "catalogSources": sources[(name, section)],
-                        "resolvedOwner": winner[0] if winner else None,
-                        "resolvedPath": winner[1] if winner else None,
+                        "expectedPackage": ARCHIVE_COMMAND_PACKAGES.get(pkg, pkg),
+                        "resolvedOwner": verified_owners.get(pkg),
+                        "registrationPackage": winner[0] if winner else None,
+                        "alternativeCandidates": [
+                            a
+                            for a in workspace.alternatives_audit
+                            if a["name"] == name and a["section"][:1] == section
+                        ],
+                        "resolvedPath": workspace.resolve(winner[0], winner[1], details=True)[1]
+                        if winner
+                        else None,
                     }
                 )
-            # Exercise exactly the publish gates; never enable their escape hatch.
-            verified_owners = workspace.require_command_owners(canonical)
+            # Exercise the remaining publish gate; never enable its escape hatch.
             _require_command_pages(
                 distro="debian",
                 requested=FULL_PACKAGE_SET_DEBIAN,
@@ -111,10 +146,30 @@ def audit_command_pages(workspace, *, workers=2):
                 sample=False,
             )
     return {
-        "scope": "complete pinned Contents-all/amd64 and curated-owner archive parse; no upload",
+        "scope": (
+            "complete pinned Contents/Packages competitor discovery, including renamed "
+            "executable families and virtual providers; candidate archive parse; no upload"
+        ),
         "releaseSha256": workspace.pins["releaseSha256"],
         "fullManualPackages": len(workspace.all_manual_packages),
         "acquiredPackages": len(workspace.acquired),
+        "auditedPackages": [p.name for p in workspace.packages],
+        "controlCompetitors": sorted(control_competitors),
+        "curatedAlternativeRoutes": [
+            {
+                "name": name,
+                "section": section,
+                "tiePreference": preferred[0],
+                "publishedOwner": workspace.published_route_owners.get((name, section)),
+                "registrationPackage": workspace.route_winners.get((name, section), (None,))[0],
+                "candidates": [
+                    a
+                    for a in workspace.alternatives_audit
+                    if (a["name"], a["section"]) == (name, section)
+                ],
+            }
+            for (name, section), preferred in sorted(CURATED_ALTERNATIVES.items())
+        ],
         "privateManualPackages": sorted(private_packages),
         "registeredPrivateManualPaths": [
             {"package": pkg, "path": path, "name": name, "section": section}
