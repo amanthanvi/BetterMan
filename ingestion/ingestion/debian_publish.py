@@ -72,6 +72,7 @@ def ingest_debian(
                 "ubuntu": "ubuntu-noble.json",
                 "fedora": "fedora-44.json",
                 "arch": "arch-20261001.json",
+                "alpine": "alpine-v3.23.json",
             }[distro]
         )
     )
@@ -135,6 +136,8 @@ def publish_workspace(
         used |= {a["sourcePackage"] for a in workspace.alias_providers}
         published_packages = [workspace.available[name] for name in sorted(used)]
         for package in published_packages:
+            if not package.sha256:
+                raise RuntimeError("Missing verified archive SHA256 before publication")
             require_job_budget("copyright collection")
             text = notice_text(workspace, package.name)
             if text.strip():
@@ -163,7 +166,13 @@ def publish_workspace(
                     **(
                         {
                             "licenseExpression": p.license,
-                            ("sourceRpm" if distro == "fedora" else "packageBase"): p.source,
+                            (
+                                "sourceRpm"
+                                if distro == "fedora"
+                                else "origin"
+                                if distro == "alpine"
+                                else "packageBase"
+                            ): p.source,
                         }
                         if distro in {"fedora", "arch"}
                         else {}

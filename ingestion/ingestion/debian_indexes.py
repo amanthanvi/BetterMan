@@ -81,6 +81,8 @@ class DebianRedirects(HTTPRedirectHandler):
                 "archives.fedoraproject.org",
                 "archive.archlinux.org",
                 "geo.mirror.pkgbuild.com",
+                "dl-cdn.alpinelinux.org",
+                "dl-3.alpinelinux.org",
             }
             or after.netloc not in {before.hostname, f"{before.hostname}:443"}
         ):
@@ -136,15 +138,28 @@ def safe_path(value: str) -> str:
     return str(path)
 
 
-def _download_once(url: str, destination: Path, digest: str, size: int | None = None) -> int:
+def _download_once(
+    url: str, destination: Path, digest: str | None, size: int | None = None, *, verify=None
+) -> int:
     """Bounded streaming download, atomic publish, and checked cache replays."""
-    if not re.fullmatch(r"[a-f0-9]{64}", digest) or not url.startswith("https://"):
+    if (
+        (digest is None and verify is None)
+        or (digest is not None and not re.fullmatch(r"[a-f0-9]{64}", digest))
+        or not url.startswith("https://")
+    ):
         raise ValueError("A pinned HTTPS URL and SHA256 are required")
     if destination.exists():
-        with destination.open("rb") as source:
-            actual = hashlib.file_digest(source, "sha256").hexdigest()
-        if actual == digest and (size is None or destination.stat().st_size == size):
-            return 0
+        if digest is None:
+            try:
+                verify(destination)
+                return 0
+            except DownloadIntegrityError:
+                pass
+        else:
+            with destination.open("rb") as source:
+                actual = hashlib.file_digest(source, "sha256").hexdigest()
+            if actual == digest and (size is None or destination.stat().st_size == size):
+                return 0
         destination.unlink()
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_name(destination.name + f".{uuid.uuid4().hex}.part")
@@ -169,8 +184,10 @@ def _download_once(url: str, destination: Path, digest: str, size: int | None = 
                 output.write(chunk)
         if size is not None and count != size:
             raise DownloadIntegrityError("short_body")
-        if checksum.hexdigest() != digest:
+        if digest is not None and checksum.hexdigest() != digest:
             raise DownloadIntegrityError("checksum")
+        if verify is not None:
+            verify(temporary)
         temporary.replace(destination)
         return count
     finally:
@@ -180,11 +197,12 @@ def _download_once(url: str, destination: Path, digest: str, size: int | None = 
 def download(
     url: str,
     destination: Path,
-    digest: str,
+    digest: str | None,
     size: int | None = None,
     *,
     fallback_url=None,
     on_fallback=None,
+    verify=None,
 ) -> int:
     def switch(reason):
         logging.getLogger("betterman.ingestion").warning(
@@ -200,7 +218,9 @@ def download(
         if deadline is not None and time.time() >= deadline:
             raise RuntimeError("Job deadline exhausted during Debian download")
         try:
-            return _download_once(url, destination, digest, size)
+            return _download_once(
+                url, destination, digest, size, **({"verify": verify} if verify is not None else {})
+            )
         except DownloadIntegrityError as exc:
             if not fallback_url:
                 raise

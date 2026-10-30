@@ -9,7 +9,7 @@ on:
         required: false
         default: true
       linux:
-        description: Run Linux distro ingests (full Debian requires its separate opt-in)
+        description: Run Linux distro ingests (full archives require separate per-distro opt-ins)
         type: boolean
         required: false
         default: true
@@ -55,6 +55,16 @@ on:
         default: false
       debian_full_promote:
         description: Explicitly authorize promotion of a held full Debian staging release
+        type: boolean
+        required: false
+        default: false
+      alpine_full:
+        description: Explicitly authorize full Alpine APK extraction to staging
+        type: boolean
+        required: false
+        default: false
+      alpine_full_promote:
+        description: Explicitly authorize promotion of a held full Alpine staging release
         type: boolean
         required: false
         default: false
@@ -118,6 +128,10 @@ permissions:
 # workflow_dispatch choices above aligned with its LINUX and BSD lists.
 
 env:
+  BETTERMAN_ALPINE_FULL: ${{ vars.BETTERMAN_ALPINE_FULL }}
+  BETTERMAN_ALPINE_FULL_INPUT: ${{ inputs.alpine_full && 'true' || 'false' }}
+  BETTERMAN_ALPINE_FULL_PROMOTE: ${{ vars.BETTERMAN_ALPINE_FULL_PROMOTE }}
+  BETTERMAN_ALPINE_FULL_PROMOTE_INPUT: ${{ inputs.alpine_full_promote && 'true' || 'false' }}
   BETTERMAN_ARCH_FULL: ${{ vars.BETTERMAN_ARCH_FULL }}
   BETTERMAN_ARCH_FULL_INPUT: ${{ inputs.arch_full && 'true' || 'false' }}
   BETTERMAN_ARCH_FULL_PROMOTE: ${{ vars.BETTERMAN_ARCH_FULL_PROMOTE }}
@@ -352,6 +366,11 @@ jobs:
         if: ${{ needs.plan.outputs.ingest == 'true' && matrix.full_debian }}
         run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends mandoc
 
+      - name: Install Alpine archive renderer
+        id: alpine_renderer
+        if: ${{ needs.plan.outputs.ingest == 'true' && matrix.full_alpine }}
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends mandoc
+
       - name: Install Arch archive renderer
         id: arch_renderer
         if: ${{ needs.plan.outputs.ingest == 'true' && matrix.full_arch }}
@@ -378,6 +397,9 @@ jobs:
           BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
           BETTERMAN_INGEST_GIT_SHA: ${{ github.sha }}
           BETTERMAN_DEBIAN_FULL_SELECTED: ${{ matrix.full_debian }}
+          BETTERMAN_ALPINE_FULL_SELECTED: ${{ matrix.full_alpine }}
+          BETTERMAN_ALPINE_WORKDIR: ${{ runner.temp }}/betterman-alpine/workspace
+          BETTERMAN_ALPINE_CACHE_DIR: ${{ runner.temp }}/betterman-alpine/archives
           BETTERMAN_ARCH_FULL_SELECTED: ${{ matrix.full_arch }}
           BETTERMAN_ARCH_WORKDIR: ${{ runner.temp }}/betterman-arch/workspace
           BETTERMAN_ARCH_CACHE_DIR: ${{ runner.temp }}/betterman-arch/archives
@@ -398,6 +420,9 @@ jobs:
           fi
           if [[ "${BETTERMAN_DEBIAN_FULL_SELECTED}" == "true" ]]; then
             ingest_args+=(--debian-full)
+          fi
+          if [[ "${BETTERMAN_ALPINE_FULL_SELECTED}" == "true" ]]; then
+            ingest_args+=(--alpine-full)
           fi
           if [[ "${BETTERMAN_ARCH_FULL_SELECTED}" == "true" ]]; then
             ingest_args+=(--arch-full)

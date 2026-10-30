@@ -39,3 +39,4 @@ venv/
 .cache/ubuntu/
 .cache/fedora/
 .cache/arch/
+.cache/alpine/

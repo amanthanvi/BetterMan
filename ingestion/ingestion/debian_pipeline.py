@@ -106,7 +106,7 @@ class Workspace:
 
     def __init__(self, root: Path, *, limit: int | None = None, distro="debian"):
         self.distro = distro
-        if distro not in {"debian", "ubuntu", "fedora", "arch"}:
+        if distro not in {"debian", "ubuntu", "fedora", "arch", "alpine"}:
             raise ValueError("Unsupported deb archive distro")
         pins_path = (
             PINS
@@ -116,6 +116,7 @@ class Workspace:
                     "ubuntu": "ubuntu-noble.json",
                     "fedora": "fedora-44.json",
                     "arch": "arch-20261001.json",
+                    "alpine": "alpine-v3.23.json",
                 }[distro]
             )
         )
@@ -126,11 +127,13 @@ class Workspace:
         if marker.exists() and marker.read_text() != fingerprint:
             raise ValueError("Workspace belongs to different archive pins")
         marker.write_text(fingerprint)
-        if distro in {"fedora", "arch"}:
+        if distro in {"fedora", "arch", "alpine"}:
             if distro == "fedora":
                 from ingestion.fedora_archives import catalog as archive_catalog
-            else:
+            elif distro == "arch":
                 from ingestion.arch_archives import catalog as archive_catalog
+            else:
+                from ingestion.alpine_archives import catalog as archive_catalog
 
             self.pins, self.all_manual_packages, self.available = archive_catalog(
                 self.root / "indexes", pins_path
@@ -179,6 +182,17 @@ class Workspace:
             registrations=self.registrations,
             source_targets=self.pins.get("sourceTargets"),
         )
+        if distro == "alpine":
+            for name, checksum, actual, data, offset in self.store.db.execute(
+                "SELECT * FROM apk_hashes"
+            ):
+                package = self.available.get(name)
+                if package and package.control_checksum == checksum:
+                    self.available[name] = dataclasses.replace(
+                        package, sha256=actual, data_sha256=data, data_offset=offset
+                    )
+            self.packages = [self.available[p.name] for p in self.packages]
+            self.curated_packages = [self.available[p.name] for p in self.curated_packages]
         self.owners = sqlite3.connect(self.root / "indexes" / "owners.sqlite3")
         self.acquired = {p.name for p in self.available.values() if self.store.complete(p)}
         # Never resolve through stale/incomplete extraction records. Keep the
@@ -228,6 +242,7 @@ class Workspace:
         if self.distro not in {"debian", "ubuntu"}:
             cdn = bool(self.pins.get("cdn"))
         suffix = self.pins.get("archiveSuffix", ".deb")
+        cache_key = getattr(package, "cache_key", package.sha256)
         snapshot_url = f"{self.pins['mirror']}/{package.filename}"
         fallbacks = []
         with self._disk_lock:
@@ -237,14 +252,20 @@ class Workspace:
             ):
                 raise RuntimeError("Insufficient workspace disk for bounded archive extraction")
             self._reserved += package.size
-            self._inflight.add(f"{package.sha256}{suffix}")
-        archive = self.cache / f"{package.sha256}{suffix}"
+            self._inflight.add(f"{cache_key}{suffix}")
+        archive = self.cache / f"{cache_key}{suffix}"
         try:
             started = time.monotonic()
+            verified = {}
+            verify_options = {}
+            if self.distro == "alpine":
+                from ingestion.alpine_archives import verify
+
+                verify_options = {"verify": lambda path: verified.update(verify(path, package))}
             size = download(
                 f"{cdn_base}/{package.filename}" if cdn else snapshot_url,
                 archive,
-                package.sha256,
+                None if self.distro == "alpine" else package.sha256,
                 package.size,
                 fallback_url=snapshot_url
                 if cdn
@@ -254,7 +275,10 @@ class Workspace:
                     else None
                 ),
                 on_fallback=fallbacks.append,
+                **verify_options,
             )
+            if self.distro == "alpine":
+                package = dataclasses.replace(package, **verified)
             downloaded = time.monotonic()
             archive.touch()
             extractor = extract
@@ -262,6 +286,8 @@ class Workspace:
                 from ingestion.fedora_archives import extract as extractor
             elif self.distro == "arch":
                 from ingestion.arch_archives import extract as extractor
+            elif self.distro == "alpine":
+                from ingestion.alpine_archives import extract as extractor
             entries = extractor(
                 archive,
                 package,
@@ -273,7 +299,7 @@ class Workspace:
         finally:
             with self._disk_lock:
                 self._reserved -= package.size
-                self._inflight.discard(f"{package.sha256}{suffix}")
+                self._inflight.discard(f"{cache_key}{suffix}")
                 self._evict_archives()
         return package, entries, size, downloaded - started, extracted - downloaded, len(fallbacks)
 
@@ -309,7 +335,11 @@ class Workspace:
             return
         # Consume restored archives before fresh downloads can evict them.
         suffix = self.pins.get("archiveSuffix", ".deb")
-        pending.sort(key=lambda p: not (self.cache / f"{p.sha256}{suffix}").is_file())
+        pending.sort(
+            key=lambda p: (
+                not (self.cache / f"{getattr(p, 'cache_key', p.sha256)}{suffix}").is_file()
+            )
+        )
         started = time.monotonic()
         download_seconds = extract_seconds = 0
         cache_hits = fallback_count = 0
@@ -326,6 +356,13 @@ class Workspace:
                     fallback_count += fallbacks
                     self.archive_fallbacks += fallbacks
                     self.store.add(package, entries)
+                    if self.distro == "alpine":
+                        self.available[package.name] = package
+                        with self.owners:
+                            self.owners.executemany(
+                                "INSERT OR IGNORE INTO owners VALUES (?,?)",
+                                [(entry[1], entry[0]) for entry in entries],
+                            )
                     self.acquired.add(package.name)
                     self.downloaded += size
                     if len(self.acquired) % 100 == 0:
@@ -470,7 +507,11 @@ class Workspace:
                 self.distro, {}
             ):
                 continue
-            name, section = _COMMAND_PAGES[requested]
+            name, section = (
+                ("httpd", "8")
+                if self.distro == "alpine" and requested == "apache2"
+                else _COMMAND_PAGES[requested]
+            )
             expected_package = (
                 ARCHIVE_COMMAND_PACKAGES.get(requested, requested)
                 if self.distro == "debian"
@@ -491,6 +532,19 @@ class Workspace:
                     # Only a virtual name is satisfied by its providers; a real
                     # package (make) is not by another that Provides it (make-guile).
                     pending.extend(providers.get(current, ()))
+            if self.distro == "alpine":
+                runtime = [self.available[n] for n in allowed if n in self.available]
+                for doc in self.available.values():
+                    if (
+                        doc.name.endswith("-doc")
+                        and doc.source
+                        and "docs" in doc.install_if
+                        and any(
+                            doc.source == package.source and doc.version == package.version
+                            for package in runtime
+                        )
+                    ):
+                        allowed.add(doc.name)
             result[requested] = ((name, section), expected_package, allowed)
         return result
 

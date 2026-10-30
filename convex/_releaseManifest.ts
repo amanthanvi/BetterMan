@@ -7,11 +7,11 @@ export const MAX_MANIFEST_SECTIONS = 256;
 export function releaseAcquisition(manifest: unknown): Doc<"datasetReleases">["acquisition"] {
   const acquisition = manifest && typeof manifest === "object" && "acquisition" in manifest
     ? manifest.acquisition : undefined;
-  if (acquisition !== undefined && acquisition !== "deb-extraction" && acquisition !== "ubuntu-deb-extraction" && acquisition !== "fedora-rpm-extraction" && acquisition !== "arch-pkg-extraction") throw new Error("INVALID_RELEASE_MANIFEST");
+  if (acquisition !== undefined && acquisition !== "deb-extraction" && acquisition !== "ubuntu-deb-extraction" && acquisition !== "fedora-rpm-extraction" && acquisition !== "arch-pkg-extraction" && acquisition !== "alpine-apk-extraction") throw new Error("INVALID_RELEASE_MANIFEST");
   return acquisition;
 }
 
-export function fullArchivePromotionReason(release: Doc<"datasetReleases">, stage: "prod" | "staging", authorization: { allowFullUbuntu?: boolean; allowFullFedora?: boolean; allowFullArch?: boolean }): string | undefined {
+export function fullArchivePromotionReason(release: Doc<"datasetReleases">, stage: "prod" | "staging", authorization: { allowFullUbuntu?: boolean; allowFullFedora?: boolean; allowFullArch?: boolean; allowFullAlpine?: boolean }): string | undefined {
   if (stage !== "prod") return;
   let distro: string;
   let allowed: boolean | undefined;
@@ -19,6 +19,7 @@ export function fullArchivePromotionReason(release: Doc<"datasetReleases">, stag
     case "ubuntu-deb-extraction": distro = "UBUNTU"; allowed = authorization.allowFullUbuntu; break;
     case "fedora-rpm-extraction": distro = "FEDORA"; allowed = authorization.allowFullFedora; break;
     case "arch-pkg-extraction": distro = "ARCH"; allowed = authorization.allowFullArch; break;
+    case "alpine-apk-extraction": distro = "ALPINE"; allowed = authorization.allowFullAlpine; break;
     default: return;
   }
   if (release.indexablePageCount === undefined) return `FULL_${distro}_TIER_REQUIRED`;

@@ -53,7 +53,7 @@ class WorkflowTest(unittest.TestCase):
         self.addCleanup(self.no_network.stop)
         self.contract = patch.object(ConvexIngestClient, '_get_json', return_value={
             'schemaVersion': REQUIRED_SCHEMA_VERSION, 'functions': list(REQUIRED_FUNCTIONS),
-            'declarationCounts': list(REQUIRED_DECLARATION_COUNTS), 'activatePending': True, 'acquisitions': ['deb-extraction', 'ubuntu-deb-extraction', 'fedora-rpm-extraction', 'arch-pkg-extraction'],
+            'declarationCounts': list(REQUIRED_DECLARATION_COUNTS), 'activatePending': True, 'acquisitions': ['deb-extraction', 'ubuntu-deb-extraction', 'fedora-rpm-extraction', 'arch-pkg-extraction', 'alpine-apk-extraction'],
         }).start()
         self.source_ids = {}
 
@@ -220,6 +220,24 @@ class WorkflowTest(unittest.TestCase):
         for reason in ['FULL_ARCH_PROMOTION_HELD', 'FULL_ARCH_TIER_REQUIRED']:
             with self.post_mock(lambda request, **kwargs: io.BytesIO(json.dumps({'promoted': [], 'skipped': [{'distro': 'arch', 'datasetReleaseId': 'release-arch', 'reason': reason}]}).encode())):
                 self.assertEqual(w.promote('arch'), 0)
+
+    def test_alpine_gates_do_not_borrow_other_family_authorization(self):
+        for event in ['schedule', 'workflow_dispatch']:
+            for enabled in [False, True]:
+                for allowed in [False, True]:
+                    _, rows = self.plan(BETTERMAN_WORKFLOW_EVENT=event,
+                        BETTERMAN_ALPINE_FULL='1' if enabled else '',
+                        BETTERMAN_ALPINE_FULL_INPUT='true' if enabled else 'false',
+                        BETTERMAN_ALPINE_FULL_PROMOTE='1' if allowed else '',
+                        BETTERMAN_ALPINE_FULL_PROMOTE_INPUT='false',
+                        BETTERMAN_UBUNTU_FULL_PROMOTE='1', BETTERMAN_DEBIAN_FULL_PROMOTE='1')
+                    row = next(r for r in rows if r['distro'] == 'alpine')
+                    self.assertEqual(row['full_alpine'], enabled)
+                    self.assertEqual(row['promote'], not enabled or allowed)
+        self.plan(BETTERMAN_INGEST_ENABLED='false')
+        for reason in ['FULL_ALPINE_PROMOTION_HELD', 'FULL_ALPINE_TIER_REQUIRED']:
+            with self.post_mock(lambda request, **kwargs: io.BytesIO(json.dumps({'promoted': [], 'skipped': [{'distro': 'alpine', 'datasetReleaseId': 'release-alpine', 'reason': reason}]}).encode())):
+                self.assertEqual(w.promote('alpine'), 0)
 
     def test_full_debian_promotion_hold_and_explicit_recovery(self):
         os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
@@ -713,7 +731,7 @@ function assertWorkflowWiring(workflow) {
   assert.ok(!JSON.stringify(download).includes('secrets.'))
   assert.ok(!JSON.stringify(download).includes('--local-upload'))
   assert.match(download.steps.find(s => s.name === 'Acquire only; never create a Convex client').run, /--download-only$/)
-  for (const distro of ['ubuntu', 'fedora', 'arch']) {
+  for (const distro of ['ubuntu', 'fedora', 'arch', 'alpine']) {
     assert.equal(workflow.on.workflow_dispatch.inputs[`${distro}_full`].default, false)
     assert.equal(workflow.on.workflow_dispatch.inputs[`${distro}_full_promote`].default, false)
     assert.equal(workflow.env[`BETTERMAN_${distro.toUpperCase()}_FULL`], '${{ vars.BETTERMAN_' + distro.toUpperCase() + '_FULL }}')

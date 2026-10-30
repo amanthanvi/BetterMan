@@ -553,3 +553,30 @@ pnpm ingest:full-benchmark --distro arch --workdir ../.cache/b2/arch-largest --p
 ```
 
 [Arch evidence, exact selections and projections](../docs/roadmap/b2-arch-evidence.md).
+
+## Full Alpine from archives (B2)
+
+`pnpm ingest:run --distro alpine --alpine-full` selects the pinned Alpine 3.23
+main/community APKINDEX/doc-subpackage corpus. Python 3.14 and host mandoc are
+required. The bundled index snapshots are SHA256-verified. APK v2's native Q1
+compressed-control SHA1 and `.PKGINFO` data SHA256 are verified before extraction;
+observed whole-archive SHA256 is recorded separately. No hook, trigger or packaged
+executable runs. Doc owners require matching pinned origin/version and `docs`
+install-if metadata, not just a matching name suffix.
+
+Cron requires `BETTERMAN_ALPINE_FULL=1`; dispatch requires `alpine_full: true`.
+Promotion independently requires `alpine_full_promote: true` or
+`BETTERMAN_ALPINE_FULL_PROMOTE=1`. All default off; persisted
+`alpine-apk-extraction`, index tiers and CAS enforce the server hold.
+
+Alpine mirrors may remove pinned older APKs. Refresh and review index/version pins
+in a new commit when necessary; never silently fall forward to a new version.
+
+```bash
+pnpm ingest:full-benchmark --distro alpine --workdir ../.cache/b2/alpine-audit --packages 50 --curated
+pnpm ingest:full-benchmark --distro alpine --workdir ../.cache/b2/alpine-sample --packages 200
+```
+
+[Alpine evidence, checksum semantics and limits](../docs/roadmap/b2-alpine-evidence.md).
+The lead dispatches staging measurement after merge; production still needs
+owner sign-off.
