@@ -1,33 +1,24 @@
 # B2 extraction worklog
 
-Goal: implement #394 as four reviewable distro-family PRs, Ubuntu first.
-Base: #445 (`bm2/b4-index-by-demand`), pending ingest contract v7.
-Constraints: no dispatch, merge, production/config/secret/data changes; all gates off.
-Staging measurement spend approved; production promotion requires owner approval.
-Sub-agent implements directly; lead supplies independent review and staging runs.
+Goal: #394, #467 Ubuntu → #470 Fedora → #473 Arch → #476 Alpine. #445 remains
+pending v7; B2 exact v8; translations v9. No merge, dispatch, production/shared
+config/data/secret/variable writes. Lead handles review/staging and prod sign-off.
 
-Current: Ubuntu implemented on #445 v7 with independent identity/gates and
-pinned Noble main/universe catalog. Curated-owner audit: 62 acquired packages,
-2,617 pages, 1,726 aliases, all 30 command owners pass; no parse/source failures.
-Ingest lint and 954 tests pass; ops 126 pass; Convex 3,279 pass; local codegen on
-3432/3433 matches committed generation; pip dry-run passes. Broader 200-package sample caught
-a Kerberos include; exact repair passed a cached replay with 5,312 pages and
-6,709 aliases, zero unresolved. PR guards and Ubuntu PR next. No shared writes/dispatches.
+Current review: #470 must bypass persistent cache for unproven package selectors;
+avoid licenses.by_storageId on legacy data; add a fail-closed deploy index preflight
+independent of Convex 1.48's nullable schema evaluation; integrate #469/#471 from
+main and keep allowlist/private misses. Rebase/restack/push/Proof every family.
 
-Remaining: open Ubuntu, then implement/check/open Fedora, Arch and Alpine.
+Ubuntu rebased onto main f16e8828 with pending #445 changes carried locally, leaving
+#445's branch untouched. Reconciled concept/share metadata and B4 tier robots with
+#469 query privacy. 956 ingestion / 3,280 Convex / 850 frontend / 126 ops / 12
+workflow tests pass; lint/grammar/typecheck/public API/codegen no-drift/pip pass.
+Next: push Ubuntu/Proof; restack Fedora and implement fixes, then Arch/Alpine;
+rerun each family's checks and final-stack man-query/short-URL E2E.
 
-Review follow-up: lead requires Arch CDN/archive fallback, malformed APK cache/
-mirror recovery, optional reviewed whole-APK SHA256 pins enforced when present,
-and exact B2 v8 (B4 v7, translations v9). Implement in family branches, restack,
-rerun each family checks, push and refresh each Proof. No dispatch or merge.
-
-Ubuntu review fixes verified: exact v8, explicit v7/v9 preflight and promotion
-rejection; 956 ingestion / 3,280 Convex / 126 ops / 12 workflow tests pass.
-Lint, typecheck, public API, pip dry-run and isolated codegen/no-drift pass.
-Remaining: restack Fedora, fix/remeasure Arch, fix/harden Alpine; rerun checks
-and push each branch with refreshed Proof.
-
-Second review: move capability-gated Ubuntu promotion argument into #467;
-broaden Fedora provider-name validator with route/cache bounds tests; document
-whether licenses.by_storageId needs large-index confirmation. Apply alongside
-Arch/Alpine fixes, restack/push/Proof and rerun family checks.
+Preserve prior cold/cached acquisition measurements and projections: Ubuntu
+266/300 min <10 GB; Fedora 225/300 <8 GB; Arch CDN cold 170.33 MB in 20.49 s,
+270/300 <10 GB; Alpine 240/300 <6 GB, cached export of all 223 acquired hashes.
+Alpine reviewed pin map is required when present; lead commits full staging pins
+later. Original evidence and .cache/b2 artifacts remain; no subagents or CI watches.
+Task-local Convex ports 3432/3433; stop only freshly verified task-owned processes.

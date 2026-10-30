@@ -125,3 +125,9 @@ Review follow-up: promotion omits `allowFullUbuntu` unless the exact-v8 backend
 advertises `ubuntu-deb-extraction`. An explicit full-Ubuntu authorization without
 that capability fails before source reads or writes, including sibling promotions.
 Workflow regressions exercise both advertised states for Ubuntu and Arch.
+
+Integration re-check: rebased onto main `f16e8828` (#469 query/share rules and
+#471 concepts), carrying the pending #445 v7 prerequisite without changing its
+branch. Preserved query-private behavior, concept/share metadata and B4 tier
+robots/canonical policy. All requested family checks pass again, including
+850 combined frontend tests and isolated codegen with no drift.
