@@ -72,6 +72,12 @@ test.describe('concept explainers (#400)', () => {
     })
   })
 
+  test('a query other than ?distro= is redirected away before it can key the cache', async ({ page }) => {
+    await page.goto('/concept/signals?utm_source=x&distro=arch')
+    expect(new URL(page.url()).search).toBe('?distro=arch')
+    await expect(page.getByRole('heading', { level: 1, name: 'Signals' })).toBeVisible()
+  })
+
   test('drafts never reach the sitemap, and unknown explainers are a 404', async ({ request, page }) => {
     expect((await request.get('/sitemap-concepts.xml')).status()).toBe(404)
     const response = await page.goto('/concept/no-such-concept')

@@ -168,7 +168,8 @@ export async function proxy(request: NextRequest) {
   if (isManHtmlPath(request.nextUrl.pathname)) return await manProxy(request, cspEnabled)
   // Explainers depend only on the URL and the deployment: the man pages' hash-only CSP, no nonce, no cookie.
   if (isConceptHtmlPath(request.nextUrl.pathname)) {
-    return setSecurityHeaders(NextResponse.next(), cspEnabled ? buildCsp([await manBootScriptHash()], { strictDynamic: false }) : null)
+    const csp = cspEnabled ? buildCsp([await manBootScriptHash()], { strictDynamic: false }) : null
+    return manQueryRedirect(request, csp) ?? setSecurityHeaders(NextResponse.next(), csp)
   }
   const path = request.nextUrl.pathname
   // Keep root concrete .txt routes in sync with the afterFiles rewrites in next.config.ts.

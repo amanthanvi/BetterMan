@@ -52,6 +52,16 @@ describe('/concept/<slug>', () => {
   })
 })
 
+describe('/concept/<slug> queries', () => {
+  it('answers an off-list query privately, even a miss, so it never keys the CDN apart', async () => {
+    vi.stubEnv('BETTERMAN_CONCEPT_DRAFTS', '')
+    const { ctx, headers } = context('signals', { utm_source: 'x' })
+    await getServerSideProps(ctx)
+    expect(headers['cache-control']).toBe('private, no-store')
+    expect(headers['cdn-cache-control']).toBeUndefined()
+  })
+})
+
 describe('sourceDistro', () => {
   it('keeps the reader’s distro only where the source was read', () => {
     expect(sourceDistro({ distros: ['debian', 'freebsd'] }, 'freebsd')).toBe('freebsd')

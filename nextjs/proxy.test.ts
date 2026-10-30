@@ -63,6 +63,11 @@ it('serves concept explainers under the same hash-only CSP, with no release look
   expect(release.servingRelease).not.toHaveBeenCalled()
   expect(isConceptHtmlPath('/concept/signals')).toBe(true)
   for (const path of ['/concept', '/concept/signals/x', '/concepts/signals']) expect(isConceptHtmlPath(path)).toBe(false)
+  // One cache entry per meaning, as for man pages: only a valid ?distro= survives.
+  const messy = await proxy(new NextRequest('https://betterman.sh/concept/signals?utm_source=x&distro=arch&distro=freebsd&pkg=y'))
+  expect(messy.status).toBe(308)
+  expect(messy.headers.get('location')).toBe('https://betterman.sh/concept/signals?distro=arch')
+  expect((await proxy(new NextRequest('https://betterman.sh/concept/signals?distro=arch'))).status).toBe(200)
 })
 
 it('keys a man page on the active release and forwards it to the renderer', async () => {

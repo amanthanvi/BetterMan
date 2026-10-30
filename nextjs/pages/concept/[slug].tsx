@@ -7,6 +7,7 @@ import { ManShell } from '../../components/man/ManShell'
 import { conceptHref, conceptReportHref, getConcept, publishedConcepts, type Concept } from '../../lib/concepts'
 import { normalizeDistro, type Distro } from '../../lib/distro'
 import { setManCache } from '../../lib/manCache'
+import { hasBareRsc, isManQuery } from '../../lib/manQuery'
 import { getPublicOrigin } from '../../lib/public-origin'
 
 /**
@@ -33,13 +34,16 @@ type Props =
 export const getServerSideProps: GetServerSideProps<Props> = async ({ params, query, req, res }) => {
   const urlDistro = normalizeDistro(firstQuery(query.distro))
   const concept = getConcept(String(params?.slug ?? ''))
+  // The proxy redirects any query but one valid `?distro=` (lib/manQuery.ts); reached
+  // some other way, the answer stays private rather than key the CDN apart.
+  const offList = !isManQuery('/concept/_', query, ['slug']) || hasBareRsc(req.url, req.headers)
   if (!concept) {
     res.statusCode = 404
-    setManCache(res, CONCEPT_MISS_CACHE, { keyed: true })
+    setManCache(res, offList ? PRIVATE : CONCEPT_MISS_CACHE, { keyed: true })
     return { props: { kind: 'miss', head: MISSING_MAN_HEAD, urlDistro } }
   }
   const draft = concept.status !== 'approved'
-  setManCache(res, draft ? PRIVATE : CONCEPT_CACHE, { keyed: true })
+  setManCache(res, draft || offList ? PRIVATE : CONCEPT_CACHE, { keyed: true })
   const origin = getPublicOrigin({ headers: requestHeaders(req.headers) })
   return {
     props: {
