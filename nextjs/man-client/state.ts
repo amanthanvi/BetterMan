@@ -6,7 +6,9 @@ import {
   setReadingPrefs,
   type ReadingPreferences,
 } from '../lib/readingPrefs'
+import { THEME_NAME } from '../lib/i18n/names'
 import { announce } from './dom'
+import { t } from './i18n'
 
 /**
  * The reader's theme, reading preferences and default distro, with the same
@@ -53,7 +55,7 @@ function applyTheme(mode: ThemeMode) {
   // App Router pages render data-theme from this cookie.
   writeCookie('bm-theme-resolved', theme)
   const button = document.querySelector<HTMLElement>('[data-bm-action="theme"]')
-  if (button) button.title = `Theme: ${mode} (d)`
+  if (button) button.title = t('Theme: {mode} (d)', { mode: t(THEME_NAME[mode]) })
 }
 
 export function cycleTheme() {
@@ -66,7 +68,7 @@ export function cycleTheme() {
   }
   writeCookie('bm-theme', next)
   applyTheme(next)
-  announce('theme', `Theme: ${next}.`)
+  announce('theme', t('Theme: {mode}.', { mode: t(THEME_NAME[next]) }))
 }
 
 export function initTheme() {
@@ -165,7 +167,7 @@ export function showNavigating() {
   const status = document.querySelector<HTMLElement>('[data-bm-live="navigation"]')
   if (!status) return
   status.className = NAV_ACTIVE
-  status.textContent = 'Loading…'
+  status.textContent = t('Loading…')
   // A back/forward cache restore brings the page back as it was left.
   window.addEventListener('pageshow', () => {
     status.className = 'sr-only'

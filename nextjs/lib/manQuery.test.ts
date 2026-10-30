@@ -55,6 +55,10 @@ describe('man page query allowlist', () => {
     ['?flag=-%63', '?flag=-c'],
     ['?fl%61g=-x', '?flag=-x'],
     ['?flag=-#', '?flag=-%23'],
+    // A language in another case is the same page: it redirects to the canonical spelling, not to English.
+    ['?lang=DE', '?lang=de'],
+    ['?lang=pt-br', '?lang=pt-BR'],
+    ['?distro=arch&lang=PT-BR', '?distro=arch&lang=pt-BR'],
   ])('spells a valid value one way: %s → %j', (search, canonical) => {
     expect(normalizeManQuery(PAGE, search)).toBe(canonical)
   })

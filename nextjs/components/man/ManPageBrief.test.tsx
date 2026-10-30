@@ -5,6 +5,7 @@ import type { BlockNode, ManPageBrief, OptionItem } from '../../lib/docModel'
 import { briefFlagGroups, briefView, commandSegments, gloss, portabilityWords } from '../../lib/manBrief'
 import { ManPageBriefSection } from './ManPageBrief'
 import { OptionsTable } from './OptionsTable'
+import { tServer } from '../../lib/i18n/testing'
 
 const options: OptionItem[] = [
   { flags: '-c, --create', anchorId: 'opt-create', description: 'Create a new archive. Arguments name the files.' },
@@ -63,9 +64,9 @@ describe('In brief data', () => {
   })
 
   it('writes the cells as words', () => {
-    expect(portabilityWords('aaa')).toBe('on all three')
-    expect(portabilityWords('axd')).toBe('not on FreeBSD; differs on macOS')
-    expect(portabilityWords('apl')).toBe('unknown on FreeBSD and macOS')
+    expect(portabilityWords('aaa', tServer)).toBe('on all three')
+    expect(portabilityWords('axd', tServer)).toBe('not on FreeBSD; differs on macOS')
+    expect(portabilityWords('apl', tServer)).toBe('unknown on FreeBSD and macOS')
   })
 })
 
@@ -80,7 +81,7 @@ describe('In brief', () => {
     ],
     taskPhrases: [], tldr: null, generated,
   }
-  const html = renderToStaticMarkup(<ManPageBriefSection view={briefView({ brief, fallbackExamples: [], mostUsed: verified, options, blocks })!} />)
+  const html = renderToStaticMarkup(<ManPageBriefSection view={briefView({ brief, fallbackExamples: [], mostUsed: verified, options, blocks })!} t={tServer} />)
 
   it('renders generated and tldr text as text, never markup', () => {
     expect(html).toContain('Creates archives &lt;img src=x onerror=alert(1)&gt;.')
@@ -107,7 +108,7 @@ describe('In brief', () => {
 describe('Options index portability', () => {
   const portability = { systems: [], rows: [['opt-create', 'aaa'], ['opt-extract', 'axa']] as [string, string][], total: 3, available: 3, nextOffset: null }
   const render = (mode: 'glyph' | 'text') =>
-    renderToStaticMarkup(<OptionsTable options={options} rowIds={new Map()} portability={portability} portabilityMode={mode}
+    renderToStaticMarkup(<OptionsTable t={tServer} options={options} rowIds={new Map()} portability={portability} portabilityMode={mode}
       newIn={[{ anchorId: 'opt-file', flags: ['-f'], datasetReleaseId: 'r2', packageVersion: '1.35' }]} />)
 
   it('marks portable rows for the Portable only filter and new options with their version', () => {

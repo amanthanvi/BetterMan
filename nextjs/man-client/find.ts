@@ -3,6 +3,7 @@ import { singleKeyShortcutsBlocked } from '../lib/dom'
 import { getScrollBehavior, scrollElementIntoView } from '../lib/scroll'
 import { escapeRegExp } from '../lib/textRanges'
 import { h, ICON_BUTTON, icons } from './dom'
+import { t } from './i18n'
 import { onRemark, setHighlight } from './highlights'
 
 const FIND_DEBOUNCE_MS = 150
@@ -45,7 +46,7 @@ function renderCount() {
   if (!countEl || !statusEl) return
   const text = label()
   countEl.textContent = text
-  statusEl.textContent = getFindA11yStatus(query, text)
+  statusEl.textContent = getFindA11yStatus(query, text, t)
   const none = !matches().length || query.trim() !== applied
   if (prevButton) prevButton.disabled = none
   if (nextButton) nextButton.disabled = none
@@ -89,17 +90,17 @@ export function goPrev() {
 function build() {
   input = h('input', {
     name: 'bm-find',
-    placeholder: 'Find in page…',
+    placeholder: t('Find in page…'),
     class: 'h-9 min-w-0 flex-1 border-0 bg-transparent text-sm text-ink placeholder:text-ink-3',
-    'aria-label': 'Find in page',
+    'aria-label': t('Find in page'),
     autocomplete: 'off',
   })
   input.value = query
   countEl = h('div', { class: 'min-w-[3.5rem] text-center text-xs text-ink-3 tabular-nums' })
   statusEl = h('div', { 'aria-live': 'polite', class: 'sr-only' })
-  prevButton = h('button', { type: 'button', class: ICON_BUTTON, 'aria-label': 'Previous match' }, icons.chevron('size-4 rotate-180'))
-  nextButton = h('button', { type: 'button', class: ICON_BUTTON, 'aria-label': 'Next match' }, icons.chevron('size-4'))
-  const closeButton = h('button', { type: 'button', class: ICON_BUTTON, 'aria-label': 'Close find' }, icons.close('size-4'))
+  prevButton = h('button', { type: 'button', class: ICON_BUTTON, 'aria-label': t('Previous match') }, icons.chevron('size-4 rotate-180'))
+  nextButton = h('button', { type: 'button', class: ICON_BUTTON, 'aria-label': t('Next match') }, icons.chevron('size-4'))
+  const closeButton = h('button', { type: 'button', class: ICON_BUTTON, 'aria-label': t('Close find') }, icons.close('size-4'))
   bar = h('div', { 'data-bm-findbar': true }, h('div', { class: 'flex items-center gap-1.5' }, input, countEl, statusEl, prevButton, nextButton, closeButton))
 
   input.addEventListener('input', () => {

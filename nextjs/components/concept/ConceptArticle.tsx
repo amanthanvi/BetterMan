@@ -1,6 +1,8 @@
 import { ManSectionLabel, RunningHead } from '../man/RunningHead'
 import type { Concept, ConceptSource } from '../../lib/concepts'
 import { DISTRO_LABEL, withDistro, type Distro } from '../../lib/distro'
+import { tRich } from '../../lib/i18n/rich'
+import type { ServerT } from '../../lib/i18n/server'
 import { Kbd } from '../ui/Kbd'
 import { Citation, ConceptText } from './ConceptText'
 
@@ -15,8 +17,8 @@ export function sourceDistro(source: Pick<ConceptSource, 'distros'>, urlDistro: 
   return (source.distros[0] as Distro | undefined) ?? null
 }
 
-function formatDate(iso: string): string {
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+function formatDate(iso: string, lang: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString(lang === 'en' ? 'en-GB' : lang, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
 }
 
 /**
@@ -28,19 +30,21 @@ export function ConceptArticle({
   urlDistro,
   published,
   reportHref,
+  t,
 }: {
   concept: Concept
   urlDistro: Distro | null
   /** Slugs that render, so links to other explainers only appear once those are published. */
   published: string[]
   reportHref: string
+  t: ServerT
 }) {
   const primary = concept.sources.filter((s) => s.page.section.startsWith('7'))
   const lead = primary.length ? primary : concept.sources.slice(0, 1)
 
   return (
     <div className="mx-auto max-w-[46rem]" data-bm-concept={concept.slug}>
-      <RunningHead title="Concept" label={concept.title} end="BetterMan" />
+      <RunningHead title={t('Concept')} label={concept.title} end="BetterMan" />
       <header className="pt-9">
         {concept.status !== 'approved' ? (
           <p className="mb-4 text-sm text-accent" data-bm-concept-draft>
@@ -53,7 +57,7 @@ export function ConceptArticle({
 
       <section aria-labelledby="concept-manual" className="mt-8">
         <ManSectionLabel as="h2" id="concept-manual">
-          {lead.length > 1 ? 'The manual’s pages' : 'The manual’s page'}
+          {lead.length > 1 ? t('The manual’s pages') : t('The manual’s page')}
         </ManSectionLabel>
         <ul className="mt-1.5 flex flex-wrap gap-x-6 gap-y-1 font-serif text-2xl">
           {lead.map((source) => (
@@ -62,24 +66,28 @@ export function ConceptArticle({
             </li>
           ))}
         </ul>
-        <p className="mt-1.5 text-sm text-ink-3">The manual is the authority; this page is a plain-English way in.</p>
+        <p className="mt-1.5 text-sm text-ink-3">{t('The manual is the authority; this page is a plain-English way in.')}</p>
       </section>
 
-      <article aria-label="Explainer" className="mt-8 border-t border-rule pt-6">
+      <article aria-label={t('Explainer')} className="mt-8 border-t border-rule pt-6">
         <p className="mb-5 text-sm text-ink-3" data-bm-concept-provenance>
-          BetterMan’s own explainer, not text from the manual. Generated · {concept.generatedBy}, {formatDate(concept.generatedOn)};{' '}
-          {concept.status === 'approved'
-            ? 'checked against the pages it cites by a model panel and read by the maintainer.'
-            : concept.panelReview
-              ? 'checked against the pages it cites by a model panel; not yet read by the maintainer.'
-              : 'not yet reviewed.'}
+          {t('BetterMan’s own explainer, not text from the manual. Generated · {by}, {date}; {review}', {
+            by: concept.generatedBy,
+            date: formatDate(concept.generatedOn, t.lang),
+            review:
+              concept.status === 'approved'
+                ? t('checked against the pages it cites by a model panel and read by the maintainer.')
+                : concept.panelReview
+                  ? t('checked against the pages it cites by a model panel; not yet read by the maintainer.')
+                  : t('not yet reviewed.'),
+          })}
         </p>
-        <ConceptText blocks={concept.body} urlDistro={urlDistro} published={new Set(published)} />
+        <ConceptText blocks={concept.body} urlDistro={urlDistro} published={new Set(published)} t={t} />
       </article>
 
       <section aria-labelledby="concept-sources" className="mt-12">
         <ManSectionLabel as="h2" id="concept-sources">
-          Sources
+          {t('Sources')}
         </ManSectionLabel>
         <ul className="mt-2 border-b border-rule">
           {concept.sources.map((source) => (
@@ -89,7 +97,7 @@ export function ConceptArticle({
               </span>
               {source.package ? <span className="ml-2 font-mono text-xs text-ink-3">{source.package}</span> : null}
               <span className="block">{source.distros.map((d) => DISTRO_LABEL[d as Distro] ?? d).join(' · ')}</span>
-              <span className="block text-ink-3">Read: {source.sections}</span>
+              <span className="block text-ink-3">{t('Read: {sections}', { sections: source.sections })}</span>
             </li>
           ))}
         </ul>
@@ -98,7 +106,7 @@ export function ConceptArticle({
       {concept.related.length ? (
         <section aria-labelledby="concept-related" className="mt-8">
           <ManSectionLabel as="h2" id="concept-related">
-            Related pages
+            {t('Related pages')}
           </ManSectionLabel>
           <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 font-serif text-base">
             {concept.related.map((ref) => (
@@ -111,31 +119,34 @@ export function ConceptArticle({
       ) : null}
 
       <p className="mt-12 text-xs text-ink-3">
-        <a href={reportHref} target="_blank" rel="noopener noreferrer" className="underline">
-          Report a problem
-        </a>{' '}
-        with this explainer on GitHub.
+        {tRich(t, '{link} with this explainer on GitHub.', {
+          link: (
+            <a href={reportHref} target="_blank" rel="noopener noreferrer" className="underline">
+              {t('Report a problem')}
+            </a>
+          ),
+        })}
       </p>
     </div>
   )
 }
 
 /** An explainer that does not exist, or is not published: man's ENOENT, as on every other 404. */
-export function ConceptNotFound({ urlDistro }: { urlDistro: Distro | null }) {
+export function ConceptNotFound({ urlDistro, t }: { urlDistro: Distro | null; t: ServerT }) {
   return (
     <div className="mx-auto max-w-[46rem]">
-      <RunningHead title="ERRNO(3)" label="404 Not Found" end="ENOENT" />
+      <RunningHead title="ERRNO(3)" label={t('404 Not Found')} end="ENOENT" />
       <div className="pt-[12vh]">
-        <h1 className="break-words font-mono text-[1.625rem] leading-snug">No such file or directory</h1>
+        <h1 className="break-words font-mono text-[1.625rem] leading-snug">{t('No such file or directory')}</h1>
         <p className="mt-4 font-serif text-lg text-ink-2">
-          Nothing lives at this address. <span className="bm-js">Press <Kbd>⌘K</Kbd> to search the manual.</span>
+          {tRich(t, 'Nothing lives at this address. Press {key} to search the manual.', { key: <Kbd>⌘K</Kbd> })}
         </p>
         <p className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm">
           <a href={withDistro('/', urlDistro)} className="underline">
-            Go home
+            {t('Go home')}
           </a>
           <a href={withDistro('/search', urlDistro)} className="underline">
-            Search
+            {t('Search')}
           </a>
         </p>
       </div>

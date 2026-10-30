@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { RunningHead } from '../../../components/man/RunningHead'
+import { useT } from '../../../components/state/lang'
+import { tRich } from '../../../lib/i18n/rich'
 import type { LicenseTextResponse, LicensesResponse } from '../../../lib/api'
 
 function buildLicenseTextUrl(opts: { distro: string; pkg: string }) {
@@ -12,6 +14,7 @@ function buildLicenseTextUrl(opts: { distro: string; pkg: string }) {
 }
 
 export function LicensesClient({ distro, data }: { distro: string; data: LicensesResponse }) {
+  const t = useT()
   const [filter, setFilter] = useState('')
   const [visibleLimit, setVisibleLimit] = useState(data.packages.length <= 5000 ? 5000 : 200)
   const [selected, setSelected] = useState<string | null>(null)
@@ -45,59 +48,63 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
       .then((payload) => setLicense(payload))
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === 'AbortError') return
-        setError('Failed to load license text.')
+        setError(t('Failed to load license text.'))
       })
       .finally(() => setLoading(false))
 
     return () => controller.abort()
-  }, [distro, selected])
+  }, [distro, selected, t])
 
   return (
     <div className="mx-auto max-w-[64rem]">
-      <RunningHead title="LICENSES" label="Attribution" end={data.datasetReleaseId} />
+      <RunningHead title={t('Licenses').toUpperCase()} label={t('Attribution')} end={data.datasetReleaseId} />
       <header className="border-b border-rule pt-9 pb-6">
-        <h1 className="font-serif text-3xl font-semibold tracking-[-0.015em]">Licenses</h1>
+        <h1 className="font-serif text-3xl font-semibold tracking-[-0.015em]">{t('Licenses')}</h1>
         <p className="mt-2.5 font-serif text-lg italic text-ink-2">
-          Attribution and license notices for the current dataset release.
+          {t('Attribution and license notices for the current dataset release.')}
         </p>
         <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm text-ink-3">
           <div>
-            <dt className="inline">Dataset</dt> <dd className="inline font-mono text-xs text-ink">{data.datasetReleaseId}</dd>
+            <dt className="inline">{t('Dataset')}</dt> <dd className="inline font-mono text-xs text-ink">{data.datasetReleaseId}</dd>
           </div>
           <div>
-            <dt className="inline">Ingested</dt> <dd className="inline font-mono text-xs text-ink">{data.ingestedAt}</dd>
+            <dt className="inline">{t('Ingested')}</dt> <dd className="inline font-mono text-xs text-ink">{data.ingestedAt}</dd>
           </div>
         </dl>
         <p className="mt-3 text-sm text-ink-3">
-          The manual is set in BM Text, a subset of Adobe&rsquo;s Source Serif 4 under the{' '}
-          <a href="/fonts/bm-text/OFL.txt" className="underline">
-            SIL Open Font License
-          </a>
-          .
+          {tRich(t, 'The manual is set in BM Text, a subset of Adobe’s Source Serif 4 under the {license}.', {
+            license: (
+              <a href="/fonts/bm-text/OFL.txt" className="underline">
+                {t('SIL Open Font License')}
+              </a>
+            ),
+          })}
         </p>
         <p className="mt-2 text-sm text-ink-3">
-          Examples marked tldr-pages come from{' '}
-          <a href="https://github.com/tldr-pages/tldr" className="underline">
-            tldr-pages
-          </a>
-          , &copy; the tldr-pages team and contributors, under{' '}
-          <a href="https://creativecommons.org/licenses/by/4.0/" className="underline">
-            CC BY 4.0
-          </a>
-          . BetterMan converts their placeholders, showing the first of alternative values, and keeps only examples whose flags it verifies
-          against the manual shown; each example links to its source file.
+          {tRich(t, 'Examples marked tldr-pages come from {source}, © the tldr-pages team and contributors, under {license}. BetterMan converts their placeholders, showing the first of alternative values, and keeps only examples whose flags it verifies against the manual shown; each example links to its source file.', {
+            source: (
+              <a href="https://github.com/tldr-pages/tldr" className="underline">
+                tldr-pages
+              </a>
+            ),
+            license: (
+              <a href="https://creativecommons.org/licenses/by/4.0/" className="underline">
+                CC BY 4.0
+              </a>
+            ),
+          })}
         </p>
 
         <details className="mt-4">
           <summary className="w-fit cursor-pointer text-sm text-ink-2 underline decoration-rule-2 underline-offset-[3px] hover:text-accent">
-            Package manifest
+            {t('Package manifest')}
           </summary>
           {data.packageManifest === null && data.packageManifestUrl ? (
             <a href={data.packageManifestUrl} className="mt-3 inline-block font-mono text-xs text-ink-2 underline decoration-rule-2 underline-offset-[3px] hover:text-accent">
-              View full package manifest (JSON)
+              {t('View full package manifest (JSON)')}
             </a>
           ) : (
-            <pre tabIndex={0} role="group" aria-label="Package manifest" className="mt-3 overflow-x-auto pl-[1.75em] text-xs leading-relaxed text-ink-2">
+            <pre tabIndex={0} role="group" aria-label={t('Package manifest')} className="mt-3 overflow-x-auto pl-[1.75em] text-xs leading-relaxed text-ink-2">
               {JSON.stringify(data.packageManifest, null, 2)}
             </pre>
           )}
@@ -110,9 +117,9 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
             name="bm-licenses-filter"
             value={filter}
             onChange={(e) => { setFilter(e.target.value); setVisibleLimit(data.packages.length <= 5000 ? 5000 : 200) }}
-            placeholder="Filter packages…"
+            placeholder={t('Filter packages…')}
             className="bm-field py-1.5 text-sm"
-            aria-label="Filter packages"
+            aria-label={t('Filter packages')}
           />
 
           <div className="border-t border-rule">
@@ -146,7 +153,7 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
             {packages.length > visibleLimit ? (
               <button type="button" onClick={() => setVisibleLimit((count) => count + 200)}
                 className="mt-3 font-mono text-xs text-ink-2 underline decoration-rule-2 underline-offset-[3px] hover:text-accent">
-                Load more packages ({visibleLimit} of {packages.length})
+                {t('Load more packages ({shown} of {total})', { shown: visibleLimit, total: packages.length })}
               </button>
             ) : null}
           </div>
@@ -155,10 +162,10 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
         <section className="min-h-[18rem]">
           {!selected ? (
             <p className="py-2 font-serif text-lg italic text-ink-2">
-              Select a package to view its license text.
+              {t('Select a package to view its license text.')}
             </p>
           ) : loading ? (
-            <p className="text-sm text-ink-3">Loading license text…</p>
+            <p className="text-sm text-ink-3">{t('Loading license text…')}</p>
           ) : error ? (
             <div role="alert" className="py-2 text-sm text-accent">
               {error}
@@ -169,12 +176,12 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
                 <h2 className="font-mono text-sm font-bold">{license.package}</h2>
                 <div className="font-mono text-xs text-ink-3">{license.licenseId}</div>
               </div>
-              <pre tabIndex={0} role="group" aria-label={`License text for ${license.package}`} className="mt-3 max-h-[70vh] overflow-auto text-xs leading-relaxed text-ink-2">
+              <pre tabIndex={0} role="group" aria-label={t('License text for {name}', { name: license.package })} className="mt-3 max-h-[70vh] overflow-auto text-xs leading-relaxed text-ink-2">
                 {license.text}
               </pre>
             </div>
           ) : (
-            <p className="py-2 text-sm text-ink-3">No license text.</p>
+            <p className="py-2 text-sm text-ink-3">{t('No license text.')}</p>
           )}
         </section>
       </div>

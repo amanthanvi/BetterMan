@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 
 import type { ConceptBlock, ConceptInline } from '../../lib/concepts'
+import type { ServerT } from '../../lib/i18n/server'
 import { manPageHref, withDistro, type Distro } from '../../lib/distro'
 
 const LINK = 'underline decoration-rule-2 underline-offset-[3px] hover:text-accent'
@@ -46,14 +47,14 @@ function Inlines({ inlines, urlDistro, published }: { inlines: ConceptInline[]; 
  * An explainer's text, from the compiled AST: data, never markup, so nothing in a
  * content file can inject HTML. BetterMan's voice: system sans, mono for what you type.
  */
-export function ConceptText({ blocks, urlDistro, published }: { blocks: ConceptBlock[]; urlDistro: Distro | null; published: Set<string> }) {
+export function ConceptText({ blocks, urlDistro, published, t }: { blocks: ConceptBlock[]; urlDistro: Distro | null; published: Set<string>; t: ServerT }) {
   return (
     <div className="space-y-4 text-[1.0625rem] leading-[1.6]">
       {blocks.map((block, index) => {
         if (block.type === 'pre') {
           return (
             <div key={index} className="bm-code">
-              <pre tabIndex={0} role="group" aria-label="Example" className="font-mono">
+              <pre tabIndex={0} role="group" aria-label={t('Example')} className="font-mono">
                 {block.text}
               </pre>
             </div>

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { useDistro } from '../../components/state/distro'
+import { useLang } from '../../components/state/lang'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 
 /**
@@ -38,6 +39,7 @@ export function SearchPageInput({
   const restoreFocusRef = useRef(false)
   const isExternalNavigation = initialQuery !== lastPushedRef.current
   const { urlDistro: distro } = useDistro()
+  const { t, urlLang } = useLang()
   const placeholder = useLivingPlaceholder(placeholders, value === '')
 
   useEffect(() => {
@@ -92,10 +94,11 @@ export function SearchPageInput({
     if (next) params.set('q', next)
     if (section) params.set('section', section)
     if (distro) params.set('distro', distro)
+    if (urlLang) params.set('lang', urlLang)
     const qs = params.toString()
     restoreFocusRef.current = document.activeElement === inputRef.current
     router.replace(qs ? `${path}?${qs}` : path, { scroll: false })
-  }, [debounced, distro, isExternalNavigation, path, router, section, value])
+  }, [debounced, distro, isExternalNavigation, path, router, section, urlLang, value])
 
   return (
     <input
@@ -104,13 +107,13 @@ export function SearchPageInput({
       type="search"
       value={value}
       onChange={(e) => setValue(e.target.value.slice(0, 120))}
-      placeholder={placeholder ?? 'search man pages…'}
+      placeholder={placeholder ?? t('search man pages…')}
       {...(home ? { 'data-bm-home-search': '' } : { 'data-bm-page-search': '' })}
       autoComplete="off"
       spellCheck={false}
       autoFocus={!initialQ}
       className={className}
-      aria-label="Search man pages"
+      aria-label={t('Search man pages')}
     />
   )
 }

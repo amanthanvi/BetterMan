@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 
 import { captureClientException } from '../lib/sentryClient'
 
+import { useT } from '../components/state/lang'
 import { Button } from '../components/ui/Button'
 
 export default function Error({
@@ -14,6 +15,7 @@ export default function Error({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const t = useT()
   useEffect(() => {
     captureClientException(error)
   }, [error])
@@ -21,18 +23,18 @@ export default function Error({
   return (
     <div className="mx-auto max-w-[46rem]">
       <div className="pt-[12vh]">
-        <h1 className="font-serif text-2xl font-semibold">Something went wrong</h1>
-        <p className="mt-3 font-serif text-lg text-ink-2">The page failed to render.</p>
-        {error.digest ? <p className="mt-3 font-mono text-xs text-ink-3">Digest: {error.digest}</p> : null}
+        <h1 className="font-serif text-2xl font-semibold">{t('Something went wrong')}</h1>
+        <p className="mt-3 font-serif text-lg text-ink-2">{t('The page failed to render.')}</p>
+        {error.digest ? <p className="mt-3 font-mono text-xs text-ink-3">{t('Digest: {digest}', { digest: error.digest })}</p> : null}
         <div className="mt-8 flex flex-wrap items-center gap-6">
           <Button variant="solid" onClick={() => reset()}>
-            Retry
+            {t('Retry')}
           </Button>
           <Link
             href="/"
             className="text-sm underline"
           >
-            Go home
+            {t('Go home')}
           </Link>
         </div>
       </div>

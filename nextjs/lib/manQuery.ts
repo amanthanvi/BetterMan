@@ -1,4 +1,5 @@
 import { normalizeDistro } from './distro'
+import { LANGS } from './i18n/locales'
 import { shareFlag } from './manShare'
 import { packageName } from './packageName'
 
@@ -20,13 +21,24 @@ export const MAN_QUERY = {
   pkg: (value: string) => packageName(value) === value,
   portability: (value: string) => value === 'text',
   flag: (value: string) => shareFlag(value) === value,
-  // B9's language switch (#401); English is the bare URL. Keep in step with its list.
+  // B9's language switch (#401); English is the bare URL, so `?lang=en` normalizes away. The list is lib/i18n/locales.ts's.
   lang: (value: string) => MAN_LANGUAGES.includes(value),
 } as const satisfies Record<string, (value: string) => boolean>
 
 export type ManQueryParam = keyof typeof MAN_QUERY
 
-export const MAN_LANGUAGES: readonly string[] = ['de', 'fr', 'es', 'pt-BR', 'ja', 'ru']
+/** The languages a man page URL may name: every language but English, from the one list (lib/i18n/locales.ts). */
+export const MAN_LANGUAGES: readonly string[] = LANGS.filter((lang) => lang !== 'en')
+
+/**
+ * The one spelling a valid value has, or null. A language is canonical in its own case (`pt-BR`), but a
+ * reader or a link may write `DE` or `pt-br`: those mean the same page, so they redirect to the canonical
+ * spelling like the App Router's `?lang=` does (docs/i18n.md). Every other parameter is exact.
+ */
+function canonicalValue(key: ManQueryParam, value: string): string | null {
+  if (key === 'lang') return MAN_LANGUAGES.find((lang) => lang.toLowerCase() === value.toLowerCase()) ?? null
+  return MAN_QUERY[key](value) ? value : null
+}
 
 /** Which parameters each kind of man page URL reads. */
 export function manQueryParams(pathname: string): readonly ManQueryParam[] | null {
@@ -64,9 +76,10 @@ export function normalizeManQuery(pathname: string, search: string): string | nu
     const key = decode(at < 0 ? pair : pair.slice(0, at))
     const value = at < 0 ? null : decode(pair.slice(at + 1))
     if (key === null || value === null || seen.has(key) || !(allowed as readonly string[]).includes(key)) continue
-    if (!MAN_QUERY[key as ManQueryParam](value)) continue
+    const canonicalised = canonicalValue(key as ManQueryParam, value)
+    if (canonicalised === null) continue
     seen.add(key)
-    kept.push(`${key}=${encodeURIComponent(value)}`)
+    kept.push(`${key}=${encodeURIComponent(canonicalised)}`)
   }
   const canonical = kept.length ? `?${kept.join('&')}` : ''
   return canonical === search ? null : canonical

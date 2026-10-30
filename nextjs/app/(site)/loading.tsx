@@ -1,8 +1,14 @@
-import { Skeleton } from '../../components/ui/Skeleton'
+import { headers } from 'next/headers'
 
-export default function Loading() {
+import { Skeleton } from '../../components/ui/Skeleton'
+import { requestLangFromHeaders } from '../../lib/i18n/request'
+import { getI18n } from '../../lib/i18n/server'
+
+export default async function Loading() {
+  // A server component: the shell's label in the request's language costs the browser nothing.
+  const { t } = await getI18n(requestLangFromHeaders(await headers()))
   return (
-    <div role="status" aria-label="Loading" className="mx-auto max-w-[40rem] pt-[10vh] md:pt-[14vh]">
+    <div role="status" aria-label={t('Loading')} className="mx-auto max-w-[40rem] pt-[10vh] md:pt-[14vh]">
       <Skeleton className="h-10 w-64" />
       <Skeleton className="mt-4 h-5 w-80" />
       <Skeleton className="mt-12 h-10 w-full" />
@@ -17,7 +23,7 @@ export default function Loading() {
           <Skeleton className="mt-3 h-4 w-[90%]" />
         </div>
       </div>
-      <span className="sr-only">Loading…</span>
+      <span className="sr-only">{t('Loading…')}</span>
     </div>
   )
 }
