@@ -139,7 +139,7 @@ test('seo: index-by-demand keeps long-tail HTML and alternate formats served but
   const tail = '/man/foo%3A%3Abar/3pm'
   const html = await request.get(tail)
   expect(html.status()).toBe(200)
-  expect(await html.text()).toMatch(/<meta name="robots" content="noindex, follow"/)
+  expect(await html.text()).toMatch(/<meta name="robots" content="noindex"/)
   const txt = await request.get(`${tail}.txt`)
   expect(txt.status()).toBe(200)
   expect(txt.headers()['x-robots-tag']).toBe('noindex, follow')
@@ -156,14 +156,14 @@ test('seo: index-by-demand keeps long-tail HTML and alternate formats served but
   expect(xml).toContain('/man/tar/1')
   expect(xml).not.toContain('foo%3A%3Abar')
   const indexed = await request.get('/man/tar/1')
-  expect(await indexed.text()).toMatch(/<meta name="robots" content="index, follow"/)
+  expect(await indexed.text()).not.toMatch(/<meta name="robots"/)
 })
 
 test('seo: an unscored legacy edition keeps HTML, alternates and the full sitemap indexable', async ({ request }) => {
   const path = '/man/foo%3A%3Abar/3pm'
   const html = await request.get(`${path}?distro=macos`)
   expect(html.status()).toBe(200)
-  expect(await html.text()).toMatch(/<meta name="robots" content="index, follow"/)
+  expect(await html.text()).not.toMatch(/<meta name="robots"/)
   const txt = await request.get(`${path}.txt?distro=macos`)
   expect(txt.status()).toBe(200)
   expect(txt.headers()['x-robots-tag']).toBe('index, follow')

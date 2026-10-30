@@ -8,6 +8,7 @@ vi.mock('../../lib/manLookup', () => lookup)
 import ManNameRoute, { getServerSideProps as nameProps } from '../../pages/man/[name]/index'
 import ManPageRoute, { config, getServerSideProps as pageProps } from '../../pages/man/[name]/[section]'
 import { encodeReleaseHeader } from '../../lib/manRelease'
+import { ManHeadTags, type ManHeadData } from './ManHead'
 
 process.env.BM_RELEASE_TOKEN = 'test-release-token'
 
@@ -151,6 +152,19 @@ it('turns off the Next runtime, so the page is plain HTML', () => {
   expect(config).toMatchObject({ unstable_runtimeJS: false })
 })
 
+it.each([undefined, true, false])('renders robots from the existing page tier (%s) without another lookup', async (indexable) => {
+  lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data: { ...data, page: { ...page, indexable } }, related: [], servedRelease: release.datasetReleaseId })
+  const { ctx, res } = context({ name: 'tar', section: '1' })
+  const result = await pageProps(ctx)
+  const { head } = propsOf(result) as { head: ManHeadData }
+  const html = renderToStaticMarkup(<ManHeadTags {...head} />)
+  expect(html.includes('<meta name="robots" content="noindex"/>')).toBe(indexable === false)
+  expect(html).toContain('<link rel="canonical" href="http://localhost:3000/man/tar/1"/>')
+  expect(lookup.lookupManPage).toHaveBeenCalledTimes(1)
+  expect(lookup.manMiss).not.toHaveBeenCalled()
+  expect(res.headers['cdn-cache-control']).toBe('public, s-maxage=3600, stale-while-revalidate=86400')
+})
+
 describe('/man/<name>/<section>', () => {
   it('renders from the URL and the release only: a cookie changes nothing', async () => {
     const plain = context({ name: 'tar', section: '1' })
@@ -181,9 +195,10 @@ describe('/man/<name>/<section>', () => {
   })
 
   it('does not share a page served from another release than its key', async () => {
-    lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data: { ...data, page: { ...page, datasetReleaseId: '2026-10-29+debian' } }, related: [], servedRelease: '2026-10-29+debian' })
+    lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data: { ...data, page: { ...page, datasetReleaseId: '2026-10-29+debian', indexable: false } }, related: [], servedRelease: '2026-10-29+debian' })
     const { ctx, res } = context({ name: 'tar', section: '1' })
-    await pageProps(ctx)
+    const result = await pageProps(ctx)
+    expect(propsOf(result)).toMatchObject({ head: { noindex: true } })
     expect(res.headers['cache-control']).toBe('private, no-store')
   })
 
@@ -205,6 +220,8 @@ describe('/man/<name>/<section>', () => {
     const html = renderToStaticMarkup(ManPageRoute(propsOf(result) as Parameters<typeof ManPageRoute>[0]))
     expect(html).toContain('No manual entry for ta in section 9')
     expect(html).not.toContain('data-bm-manual')
+    const { head } = propsOf(result) as { head: ManHeadData }
+    expect(renderToStaticMarkup(<ManHeadTags {...head} />)).toContain('<meta name="robots" content="noindex"/>')
 
     lookup.manMiss.mockImplementation(async (opts: object) => ({ ...opts, suggestions: [], distros: [], limited: true, answeredByKey: true }))
     const limited = context({ name: 'ta', section: '9' })
