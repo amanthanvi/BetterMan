@@ -141,7 +141,28 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(rows, [])
         self.assertEqual((values['ingest'],values['promote']), ('false','false'))
 
+    def test_ubuntu_promotion_argument_requires_advertised_capability(self):
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        for distro in ['ubuntu', 'arch']:
+            for advertised in [False, True]:
+                self.contract.return_value['acquisitions'] = ['ubuntu-deb-extraction'] if advertised else []
+                def response(request, **kwargs):
+                    payload = json.loads(request.data)
+                    self.assertEqual('allowFullUbuntu' in payload, advertised)
+                    if advertised:
+                        self.assertFalse(payload['allowFullUbuntu'])
+                    return io.BytesIO(json.dumps({'promoted': [{'distro': distro, 'datasetReleaseId': 'release-' + distro}]}).encode())
+                with self.post_mock(response):
+                    self.assertEqual(w.promote(distro), 0)
+        os.environ['BETTERMAN_UBUNTU_FULL_PROMOTE_INPUT'] = 'true'
+        self.contract.return_value['acquisitions'] = []
+        with self.post_mock(lambda *a, **kw: self.fail('Unsupported authorization must not write')) as http:
+            self.assertEqual(w.promote('ubuntu'), 1)
+        http.assert_not_called()
+        self.assertIn('acquisition support', w.load('ubuntu')['error'])
+
     def test_ubuntu_full_gates_are_independent_and_fail_closed(self):
+        self.contract.return_value['acquisitions'] = ['ubuntu-deb-extraction']
         for event in ['schedule', 'workflow_dispatch']:
             for enabled in [False, True]:
                 for allowed in [False, True]:

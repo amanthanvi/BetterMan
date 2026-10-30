@@ -120,3 +120,8 @@ Frontend regression checks also passed: `pnpm next:lint`, `pnpm next:grammar`,
 and `pnpm next:test` (**689 passed**). Verbatim postinst fixtures are stored as
 deterministic gzip to preserve upstream trailing whitespace and script hashes
 while satisfying the PR whitespace guard.
+
+Review follow-up: promotion omits `allowFullUbuntu` unless the exact-v8 backend
+advertises `ubuntu-deb-extraction`. An explicit full-Ubuntu authorization without
+that capability fails before source reads or writes, including sibling promotions.
+Workflow regressions exercise both advertised states for Ubuntu and Arch.

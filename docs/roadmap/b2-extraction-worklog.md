@@ -26,3 +26,8 @@ rejection; 956 ingestion / 3,280 Convex / 126 ops / 12 workflow tests pass.
 Lint, typecheck, public API, pip dry-run and isolated codegen/no-drift pass.
 Remaining: restack Fedora, fix/remeasure Arch, fix/harden Alpine; rerun checks
 and push each branch with refreshed Proof.
+
+Second review: move capability-gated Ubuntu promotion argument into #467;
+broaden Fedora provider-name validator with route/cache bounds tests; document
+whether licenses.by_storageId needs large-index confirmation. Apply alongside
+Arch/Alpine fixes, restack/push/Proof and rerun family checks.

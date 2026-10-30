@@ -254,7 +254,6 @@ def promote(distro):
         "distros": [distro],
         "activatedAt": datetime.datetime.now(datetime.UTC).isoformat(),
         "allowFullDebian": full_promotion_enabled(),
-        "allowFullUbuntu": full_promotion_enabled("ubuntu"),
     }
 
     def ingest_request(path, body):
@@ -275,6 +274,11 @@ def promote(distro):
             ingest_secret=os.environ["CONVEX_INGEST_SECRET"],
         )
         contract = retry_request(client.require_deployed_contract)
+        allowed = full_promotion_enabled("ubuntu")
+        if "ubuntu-deb-extraction" in contract.get("acquisitions", []):
+            payload["allowFullUbuntu"] = allowed
+        elif allowed:
+            raise ValueError("Deploy B2 ubuntu acquisition support before full promotion")
         record["stage"] = "verify staging source"
         save(distro, record)
         if not ingest:
