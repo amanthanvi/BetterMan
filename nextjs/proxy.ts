@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { DISTRO_COOKIE, normalizeDistro } from './lib/distro'
 import { manBootScriptHash } from './lib/manBoot'
-import { encodeReleaseHeader, RELEASE_HEADER, RELEASE_PARAM, RELEASE_TOKEN_HEADER, releaseToken, servingRelease, type ReleaseInfo } from './lib/manRelease'
+import { encodeReleaseHeader, RELEASE_HEADER, RELEASE_PARAM, RELEASE_TOKEN_HEADER, releaseToken, servingRelease, UNKNOWN_RELEASE, type ReleaseInfo } from './lib/manRelease'
 
 function createNonce(): string {
   return btoa(crypto.randomUUID())
@@ -106,14 +106,12 @@ async function manProxy(request: NextRequest, cspEnabled: boolean, text = false)
   const requestHeaders = new Headers(request.headers)
   requestHeaders.delete(RELEASE_HEADER)
   requestHeaders.delete(RELEASE_TOKEN_HEADER)
-  if (release) {
-    requestHeaders.set(RELEASE_HEADER, encodeReleaseHeader(release))
-    // Proves to the renderer that this proxy, not the client, set the release.
-    requestHeaders.set(RELEASE_TOKEN_HEADER, releaseToken())
-  }
+  requestHeaders.set(RELEASE_HEADER, release ? encodeReleaseHeader(release) : UNKNOWN_RELEASE)
+  // Proves to the renderer that this proxy, not the client, set the release.
+  requestHeaders.set(RELEASE_TOKEN_HEADER, releaseToken())
   if (isLoopback(request)) return setSecurityHeaders(NextResponse.next({ request: { headers: requestHeaders } }), csp)
   const target = url.clone()
-  target.searchParams.set(RELEASE_PARAM, release?.datasetReleaseId ?? 'unknown')
+  target.searchParams.set(RELEASE_PARAM, release?.datasetReleaseId ?? UNKNOWN_RELEASE)
   return setSecurityHeaders(NextResponse.rewrite(target, { request: { headers: requestHeaders } }), csp)
 }
 
@@ -142,6 +140,7 @@ export async function proxy(request: NextRequest) {
   const cspEnabled = process.env.CSP_ENABLED !== 'false'
   if (isManHtmlPath(request.nextUrl.pathname)) return await manProxy(request, cspEnabled)
   const path = request.nextUrl.pathname
+  // Keep root concrete .txt routes in sync with the afterFiles rewrites in next.config.ts.
   if (/^\/man\/[^/]+\/[^/]+\.txt$/.test(path) || (/^\/[^/]+\.txt$/.test(path) && path !== '/robots.txt')) {
     return await manProxy(request, cspEnabled, true)
   }

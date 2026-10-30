@@ -66,8 +66,8 @@ it('drops a client-sent release and uses an unknown key when no release answers'
   release.servingRelease.mockResolvedValue(null)
   const response = await proxy(new NextRequest('https://betterman.sh/man/tar/1?__bm_release=forged', { headers: { 'x-bm-release': JSON.stringify(releaseFor('debian')) } }))
   expect(new URL(response.headers.get('x-middleware-rewrite')!).searchParams.get('__bm_release')).toBe('unknown')
-  expect(response.headers.get('x-middleware-request-x-bm-release')).toBeNull()
-  expect(response.headers.get('x-middleware-request-x-bm-release-token')).toBeNull()
+  expect(response.headers.get('x-middleware-request-x-bm-release')).toBe('unknown')
+  expect(response.headers.get('x-middleware-request-x-bm-release-token')).toBe('test-release-token')
 })
 
 it.each([

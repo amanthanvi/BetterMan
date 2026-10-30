@@ -7,7 +7,7 @@ import {
   servedRelease,
 } from '@/lib/api'
 import { canonicalWithDistro, normalizeDistro, withDistro } from '@/lib/distro'
-import { trustedRelease } from '@/lib/manRelease'
+import { trustedProxyRelease } from '@/lib/manRelease'
 import { renderManText } from '@/lib/manText'
 import { getPublicOrigin } from '@/lib/public-origin'
 import { isRateLimited } from '@/lib/rateLimit'
@@ -52,9 +52,10 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
   const urlDistro = rawDistro ? normalizeDistro(rawDistro) : null
   if (rawDistro && !urlDistro) return text('Invalid distro\n', 400)
   const requestedDistro = urlDistro ?? 'debian'
-  const release = trustedRelease(Object.fromEntries(request.headers))?.datasetReleaseId
-  // An unknown proxy key must never populate the unkeyed data cache.
-  const lookupRelease = release ?? `unknown:${crypto.randomUUID()}`
+  const proxyRelease = trustedProxyRelease(Object.fromEntries(request.headers))
+  const release = proxyRelease?.datasetReleaseId
+  // A request that bypasses the proxy cannot use a shared data-cache key.
+  const lookupRelease = proxyRelease === undefined ? `unknown:${crypto.randomUUID()}` : release
   const cacheHeaders = (answered: string | null): HeadersInit =>
     release && answered === release ? {} : { 'Cache-Control': 'private, no-store' }
   if (await isRateLimited(request.headers, 'page')) return text('Too many requests\n', 429)
