@@ -25,6 +25,8 @@ All notable changes to BetterMan are documented here.
 
 - Ingestion: restore PostgreSQL and other alternatives-managed private-root manuals in full Debian imports, report actual curated command owners, acquire checksum-bound archives from the Debian CDN with pinned snapshot fallback, consume restored cache entries first, and report acquisition/publish phase timings (#393). CDN failures now discard and fall back across all HTTP/integrity shapes, with an opt-out and bounded telemetry; private pages require SHA-bound registration allowlists, and archive command owners must match requested dependency/provider provenance before upload.
 
+- Combine demand indexing with promotion CAS in ingest contract v7, preserving pinned dispatch expectations and the exact-version header fence.
+
 - Keep legacy generation in sections 1/8/5/7, share one retried analytics snapshot per dataset run, and report unscored full-Debian promotion as skipped.
 
 - Generated layer: pair tagged manual examples with their own descriptions, add a deterministic page refresh, and record bounded response-shape and finish-reason counts with more output headroom.

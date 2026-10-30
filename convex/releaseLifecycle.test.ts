@@ -298,8 +298,8 @@ describe("release sealing", () => {
 
   it("composes CAS with persisted full-Debian authorization, including idempotent retries", async () => {
     const t = convexTest(schema, modules);
-    const { releaseId } = await t.mutation(internal.ingest.createRelease, { ...releaseInput("full-cas"), packageManifest: debianManifest });
-    await t.run(ctx => ctx.db.patch(releaseId, { sealed: true, manifestVerified: true, relatedMetadataCompletedVersion: 0 }));
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, { ...releaseInput("full-cas"), indexablePageCount: 0, packageManifest: debianManifest });
+    await t.run(ctx => ctx.db.patch(releaseId, { sealed: true, manifestVerified: true, relatedMetadataCompletedVersion: 1 }));
     const stagingId = await pointRelease(t, releaseId, "staging");
     const args = { fromStage: "staging" as const, toStage: "prod" as const, distros: ["debian" as const], activatedAt: "now", expectedDatasetReleaseId: { debian: "full-cas" } };
     const held = { promoted: [], skipped: [{ distro: "debian", datasetReleaseId: "full-cas", reason: "FULL_DEBIAN_PROMOTION_HELD" }] };
@@ -443,8 +443,12 @@ it.each([false, true])("unscored full Debian cannot insert/replace a prod pointe
   await t.finishAllScheduledFunctions(() => vi.runAllTimers());
   expect(await t.mutation(internal.ingest.activateRelease, stage)).toMatchObject({ pending: false });
   for (const allowFullDebian of [false, true]) {
+    const promotion = { fromStage: "staging" as const, toStage: "prod" as const, distros: ["debian" as const], activatedAt: "now", allowFullDebian };
     await expect(t.mutation(internal.ingest.promoteActiveReleases, {
-      fromStage: "staging", toStage: "prod", distros: ["debian"], activatedAt: "now", allowFullDebian,
+      ...promotion, expectedDatasetReleaseId: { debian: "different" },
+    })).rejects.toThrow("STAGING_RELEASE_CONFLICT");
+    await expect(t.mutation(internal.ingest.promoteActiveReleases, {
+      ...promotion, expectedDatasetReleaseId: { debian: "unscored-archive" },
     })).rejects.toThrow("FULL_DEBIAN_TIER_REQUIRED");
   }
   expect(await t.run(ctx => ctx.db.query("activeReleases").withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "prod")).take(10)))

@@ -349,7 +349,8 @@ def promote(distro):
                     code = json.loads(body).get("error", {}).get("code")
                 except (ValueError, AttributeError, TypeError):
                     code = None
-                if error.code == 409 and distro == "debian" and code == "FULL_DEBIAN_TIER_REQUIRED":
+                if (error.code == 409 and distro == "debian" and record["stage"] == "promote"
+                    and code == "FULL_DEBIAN_TIER_REQUIRED"):
                     print("[dataset] Skipping promotion: scored full-Debian replacement required", flush=True)
                     record.update(stage="scored full-Debian replacement required", result="success", error="")
                     save(distro, record)

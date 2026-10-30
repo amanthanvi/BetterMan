@@ -42,7 +42,7 @@ it("does not advertise the ingest contract when the secret is unset", async () =
   expect(response.status).toBe(503);
 });
 
-it.each([undefined, "5", "7"])("rejects promotion from a workflow with contract header %s before touching pointers", async (version) => {
+it.each([undefined, "5", "6", "8"])("rejects promotion from a workflow with contract header %s before touching pointers", async (version) => {
   vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
   const t = convexTest(schema, modules);
   const response = await t.fetch("/ingest/promote", {
