@@ -2,8 +2,12 @@ import { expect, test } from '@playwright/test'
 
 import { expectNoCriticalOrSeriousViolations } from './a11y'
 
-// Every explainer ships unapproved, so these run against a server that opts in to
-// drafts: BETTERMAN_CONCEPT_DRAFTS=1 with CI=true, as CI's e2e job runs it. Production ignores the flag.
+// All twenty explainers are approved, so these run as production does: a production
+// build with BETTERMAN_CONCEPT_DRAFTS unset, as a plain `pnpm next:e2e` and CI run it.
+// No draft ships, so the draft path itself (opt-in, noindex, private) is covered by
+// lib/concepts.test.tsx and components/concept/ConceptRoute.test.tsx on a copy of the data.
+// Set BETTERMAN_CONCEPT_DRAFTS=1 for both the server and this runner to add the check below.
+const draftsOn = process.env.BETTERMAN_CONCEPT_DRAFTS === '1'
 
 test.describe('concept explainers (#400)', () => {
   test('a man page names the concepts it references in a quiet footer line', async ({ page }) => {
@@ -37,22 +41,25 @@ test.describe('concept explainers (#400)', () => {
   test.describe('without JavaScript', () => {
     test.use({ javaScriptEnabled: false })
 
-    test('the explainer page is complete, labelled as BetterMan’s text, and links its manual page', async ({ page }) => {
+    test('a published explainer is complete, indexable, cacheable, labelled as BetterMan’s text, and links its manual page', async ({ page }) => {
       const response = await page.goto('/concept/signals')
       expect(response?.status()).toBe(200)
-      // Plain HTML like the man pages: hash-only CSP, no Next runtime, and a draft is never cached.
+      // Plain HTML like the man pages: hash-only CSP, no Next runtime, kept at the edge.
       expect(response?.headers()['content-security-policy']).not.toContain('nonce')
-      expect(response?.headers()['cache-control']).toBe('private, no-store')
+      expect(response?.headers()['cache-control']).toBe('public, max-age=0, must-revalidate')
+      expect(response?.headers()['cdn-cache-control']).toBe('public, s-maxage=3600, stale-while-revalidate=86400')
       await expect(page.locator('script[src^="/_next/"]')).toHaveCount(0)
       await expect(page.getByRole('heading', { level: 1, name: 'Signals' })).toBeVisible()
-      await expect(page.locator('[data-bm-concept-draft]')).toContainText('not published')
+      await expect(page.locator('[data-bm-concept-draft]')).toHaveCount(0)
       await expect(page.locator('[data-bm-concept-provenance]')).toContainText('BetterMan’s own explainer, not text from the manual')
+      await expect(page.locator('[data-bm-concept-provenance]')).toContainText('read by the maintainer')
+      await expect(page.locator('meta[name="robots"]')).toHaveCount(0)
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/concept\/signals$/)
 
       const manual = page.getByRole('region', { name: 'The manual’s page' })
       await expect(manual.getByRole('link', { name: 'signal(7)' })).toHaveAttribute('href', '/man/signal/7')
       await expect(page.getByRole('article', { name: 'Explainer' })).toContainText('SIGKILL')
       await expect(page.getByRole('region', { name: 'Sources' })).toContainText('manpages 6.9.1-1')
-      await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/)
     })
 
     test('search labels an explainer as a concept', async ({ page }) => {
@@ -78,8 +85,28 @@ test.describe('concept explainers (#400)', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Signals' })).toBeVisible()
   })
 
-  test('drafts never reach the sitemap, and unknown explainers are a 404', async ({ request, page }) => {
-    expect((await request.get('/sitemap-concepts.xml')).status()).toBe(404)
+  test('the sitemap lists all twenty explainers, and the sitemap index points to it', async ({ request }) => {
+    const sitemap = await request.get('/sitemap-concepts.xml')
+    expect(sitemap.status()).toBe(200)
+    expect(sitemap.headers()['content-type']).toContain('application/xml')
+    const xml = await sitemap.text()
+    expect(xml.match(/<loc>/g)).toHaveLength(20)
+    for (const slug of ['signals', 'globbing', 'regular-expressions', 'exit-status', 'pipelines']) expect(xml).toMatch(new RegExp(`<loc>[^<]*/concept/${slug}</loc>`))
+    expect(await (await request.get('/sitemap.xml')).text()).toMatch(/<loc>[^<]*\/sitemap-concepts\.xml<\/loc>/)
+  })
+
+  test.describe('with the drafts flag on', () => {
+    test.skip(!draftsOn, 'Needs a server and runner with BETTERMAN_CONCEPT_DRAFTS=1')
+
+    test('an approved explainer reads, caches and indexes exactly as in production', async ({ page }) => {
+      const response = await page.goto('/concept/signals')
+      expect(response?.headers()['cdn-cache-control']).toBe('public, s-maxage=3600, stale-while-revalidate=86400')
+      await expect(page.locator('[data-bm-concept-draft]')).toHaveCount(0)
+      await expect(page.locator('meta[name="robots"]')).toHaveCount(0)
+    })
+  })
+
+  test('an unknown explainer is a 404', async ({ page }) => {
     const response = await page.goto('/concept/no-such-concept')
     expect(response?.status()).toBe(404)
     expect(response?.headers()['cache-control']).toBe('public, max-age=0, must-revalidate')

@@ -3,10 +3,11 @@ slug: exit-status
 title: Exit status
 term: exit status
 summary: The number from 0 to 255 every command returns, where 0 means success, and how the shell tests it with $?, &&, || and if.
-status: pending-owner
+status: approved
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
 panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
+owner-skim: approved 2026-10-30
 sources:
   - page: bash(1)
     package: bash 5.2.37-2+b10

@@ -3,10 +3,11 @@ slug: character-encoding
 title: Character encoding and UTF-8
 term: UTF-8
 summary: How text is stored as bytes, from 7-bit ASCII through the ISO 8859 sets to UTF-8, and why one byte is not always one character.
-status: pending-owner
+status: approved
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
 panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
+owner-skim: approved 2026-10-30
 sources:
   - page: utf-8(7)
     package: manpages 6.9.1-1

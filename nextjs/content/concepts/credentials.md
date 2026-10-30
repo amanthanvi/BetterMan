@@ -3,10 +3,11 @@ slug: credentials
 title: Process and user IDs
 term: process and user IDs
 summary: The numbers that identify a process, its parent, its job and session, and the user and group whose permissions it runs with.
-status: pending-owner
+status: approved
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
 panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
+owner-skim: approved 2026-10-30
 sources:
   - page: credentials(7)
     package: manpages 6.9.1-1

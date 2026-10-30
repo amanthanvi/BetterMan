@@ -30,6 +30,7 @@ export type Concept = {
   generatedBy: string
   generatedOn: string
   panelReview: string | null
+  ownerSkim: string | null
   sources: ConceptSource[]
   related: ConceptRef[]
   aliases: string[]
@@ -80,8 +81,8 @@ export function conceptSitemapXml(origin: string, all: Concept[] = ALL): string 
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${rows}\n</urlset>\n`
 }
 
-export function getConcept(slug: string, env?: Record<string, string | undefined>): Concept | null {
-  return publishedConcepts(env).find((concept) => concept.slug === slug) ?? null
+export function getConcept(slug: string, env?: Record<string, string | undefined>, all: Concept[] = ALL): Concept | null {
+  return publishedConcepts(env, all).find((concept) => concept.slug === slug) ?? null
 }
 
 export function conceptLink(concept: Concept): ConceptLink {

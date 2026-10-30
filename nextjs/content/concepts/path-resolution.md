@@ -3,10 +3,11 @@ slug: path-resolution
 title: Path resolution and permissions
 term: path resolution
 summary: How the kernel turns a path such as ../etc/passwd into a file, step by step, and which permission bits it checks on the way.
-status: pending-owner
+status: approved
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
 panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
+owner-skim: approved 2026-10-30
 sources:
   - page: path_resolution(7)
     package: manpages 6.9.1-1

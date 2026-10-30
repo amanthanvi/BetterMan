@@ -3,10 +3,11 @@ slug: redirection
 title: Redirection
 term: redirection
 summary: How the shell points a command's standard input, output and error at files or at each other with <, >, >>, 2>&1 and here documents.
-status: pending-owner
+status: approved
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
 panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
+owner-skim: approved 2026-10-30
 sources:
   - page: bash(1)
     package: bash 5.2.37-2+b10

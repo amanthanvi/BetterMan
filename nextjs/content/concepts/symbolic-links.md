@@ -3,10 +3,11 @@ slug: symbolic-links
 title: Symbolic and hard links
 term: symbolic links
 summary: The difference between a hard link, another name for the same file, and a symbolic link, a file that holds a path, and which commands follow them.
-status: pending-owner
+status: approved
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
 panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
+owner-skim: approved 2026-10-30
 sources:
   - page: symlink(7)
     package: manpages 6.9.1-1

@@ -5,10 +5,11 @@
    "title": "The boot process",
    "term": "boot process",
    "summary": "What happens between power-on and a login prompt, from firmware and boot loader to the kernel, the initramfs and the system manager.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -353,10 +354,11 @@
    "title": "Capabilities",
    "term": "capabilities",
    "summary": "How Linux splits the superuser's power into separate privileges, such as binding to a low port, that can be granted one at a time.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -608,10 +610,11 @@
    "title": "Control groups (cgroups)",
    "term": "cgroups",
    "summary": "How Linux organizes processes into a hierarchy of groups whose CPU, memory and other resource use can be limited and measured.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -869,10 +872,11 @@
    "title": "Character encoding and UTF-8",
    "term": "UTF-8",
    "summary": "How text is stored as bytes, from 7-bit ASCII through the ISO 8859 sets to UTF-8, and why one byte is not always one character.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -1111,10 +1115,11 @@
    "title": "Process and user IDs",
    "term": "process and user IDs",
    "summary": "The numbers that identify a process, its parent, its job and session, and the user and group whose permissions it runs with.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -1377,10 +1382,11 @@
    "title": "Environment variables",
    "term": "environment variables",
    "summary": "The name=value strings every process inherits, such as PATH, HOME and LANG, and how to set them.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -1738,10 +1744,11 @@
    "title": "Exit status",
    "term": "exit status",
    "summary": "The number from 0 to 255 every command returns, where 0 means success, and how the shell tests it with $?, &&, || and if.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -2108,10 +2115,11 @@
    "title": "The file system hierarchy",
    "term": "file system hierarchy",
    "summary": "What the standard top-level directories such as /etc, /usr, /var and /tmp are for.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -2536,10 +2544,11 @@
    "title": "Globbing",
    "term": "globbing",
    "summary": "How wildcard patterns such as *.txt expand into the list of matching file names.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -2849,10 +2858,11 @@
    "title": "Inodes and file modes",
    "term": "inodes",
    "summary": "The record behind every file name, holding its type, owner, permission bits, size, link count and timestamps.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -3072,10 +3082,11 @@
    "title": "Locale",
    "term": "locale",
    "summary": "The language and cultural settings, chosen by LANG and the LC_* variables, that change messages, sorting, character handling, numbers and dates.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -3411,10 +3422,11 @@
    "title": "Namespaces",
    "term": "namespaces",
    "summary": "How Linux gives a group of processes its own isolated view of a global resource, such as process IDs, mounts or the network; the basis of containers.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -3756,10 +3768,11 @@
    "title": "Path resolution and permissions",
    "term": "path resolution",
    "summary": "How the kernel turns a path such as ../etc/passwd into a file, step by step, and which permission bits it checks on the way.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -4024,10 +4037,11 @@
    "title": "Pipes and pipelines",
    "term": "pipes",
    "summary": "How cmd1 | cmd2 connects one command's output to the next one's input, and what pipes and FIFOs are underneath.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -4336,10 +4350,11 @@
    "title": "Quoting in the shell",
    "term": "quoting",
    "summary": "How backslashes, single quotes and double quotes stop the shell from treating spaces, $, * and other characters as special.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -4690,10 +4705,11 @@
    "title": "Redirection",
    "term": "redirection",
    "summary": "How the shell points a command's standard input, output and error at files or at each other with <, >, >>, 2>&1 and here documents.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -5044,10 +5060,11 @@
    "title": "Regular expressions",
    "term": "regular expressions",
    "summary": "The pattern language grep, sed and many other tools use to match text, in its basic and extended forms.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -5439,10 +5456,11 @@
    "title": "CPU scheduling and nice values",
    "term": "scheduling",
    "summary": "How Linux decides which thread runs next, what a nice value changes, and what the real-time policies are.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -5696,10 +5714,11 @@
    "title": "Signals",
    "term": "signals",
    "summary": "How the kernel or another program tells a process to stop, pause, continue or quit, and what happens by default.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {
@@ -5978,10 +5997,11 @@
    "title": "Symbolic and hard links",
    "term": "symbolic links",
    "summary": "The difference between a hard link, another name for the same file, and a symbolic link, a file that holds a path, and which commands follow them.",
-   "status": "pending-owner",
+   "status": "approved",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
    "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
+   "ownerSkim": "approved 2026-10-30",
    "sources": [
     {
      "page": {

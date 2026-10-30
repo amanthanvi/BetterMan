@@ -3,10 +3,11 @@ slug: pipelines
 title: Pipes and pipelines
 term: pipes
 summary: How cmd1 | cmd2 connects one command's output to the next one's input, and what pipes and FIFOs are underneath.
-status: pending-owner
+status: approved
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
 panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
+owner-skim: approved 2026-10-30
 sources:
   - page: bash(1)
     package: bash 5.2.37-2+b10

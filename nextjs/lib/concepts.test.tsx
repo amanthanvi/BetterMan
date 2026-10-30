@@ -26,13 +26,24 @@ const ALL = (data as unknown as { concepts: Concept[] }).concepts
 const DRAFTS = { BETTERMAN_CONCEPT_DRAFTS: '1', CI: 'true' }
 const bySlug = (slug: string) => ALL.find((c) => c.slug === slug)!
 const approve = (concept: Concept): Concept => ({ ...concept, status: 'approved' })
+// Every shipped explainer is approved, so the draft path is tested on copies.
+const asDraft = (concept: Concept): Concept => ({ ...concept, status: 'pending-owner', ownerSkim: null })
+const MIXED = [bySlug('signals'), asDraft(bySlug('globbing'))]
 
 const link = (href: string): BlockNode => ({ type: 'paragraph', inlines: [{ type: 'text', text: 'see ' }, { type: 'link', href, inlines: [{ type: 'text', text: 'x' }], linkType: 'internal' }] })
 
 describe('publishing gate', () => {
-  it('publishes nothing unapproved by default', () => {
-    expect(publishedConcepts({})).toEqual(approvedConcepts())
-    expect(getConcept('signals', {})).toBeNull()
+  it('publishes all twenty approved explainers with the draft flag off', () => {
+    expect(approvedConcepts()).toHaveLength(20)
+    expect(publishedConcepts({})).toEqual(ALL)
+    expect(getConcept('signals', {})?.status).toBe('approved')
+  })
+
+  it('keeps a draft unpublished unless the flag is on', () => {
+    expect(publishedConcepts({}, MIXED).map((c) => c.slug)).toEqual(['signals'])
+    expect(getConcept('globbing', {}, MIXED)).toBeNull()
+    expect(getConcept('globbing', DRAFTS, MIXED)?.status).toBe('pending-owner')
+    expect(publishedConcepts({ ...DRAFTS, VERCEL_ENV: 'production' }, MIXED).map((c) => c.slug)).toEqual(['signals'])
   })
 
   it('shows drafts only when the flag is set on a server that is positively not production', () => {
@@ -43,13 +54,17 @@ describe('publishing gate', () => {
     // The Docker image sets neither VERCEL_ENV nor CI: a stray flag there shows nothing.
     expect(conceptDraftsEnabled({ BETTERMAN_CONCEPT_DRAFTS: '1', NODE_ENV: 'production' })).toBe(false)
     expect(conceptDraftsEnabled({ BETTERMAN_CONCEPT_DRAFTS: 'true', CI: 'true' })).toBe(false)
-    expect(getConcept('signals', DRAFTS)?.title).toBe('Signals')
-    expect(publishedConcepts({ ...DRAFTS, VERCEL_ENV: 'production' }).map((c) => c.status)).not.toContain('pending-owner')
+  })
+
+  it('lists all twenty in the sitemap', () => {
+    const all = conceptSitemapXml('https://betterman.sh')!
+    expect(all.match(/<loc>/g)).toHaveLength(20)
+    for (const concept of ALL) expect(all).toContain(`<loc>https://betterman.sh/concept/${concept.slug}</loc>`)
   })
 
   it('lists only approved explainers in the sitemap', () => {
-    expect(conceptSitemapXml('https://betterman.sh', ALL.filter((c) => c.status !== 'approved'))).toBeNull()
-    const xml = conceptSitemapXml('https://betterman.sh', [approve(bySlug('signals')), bySlug('globbing')])!
+    expect(conceptSitemapXml('https://betterman.sh', [asDraft(bySlug('signals'))])).toBeNull()
+    const xml = conceptSitemapXml('https://betterman.sh', [bySlug('signals'), asDraft(bySlug('globbing'))])!
     expect(xml).toContain('<loc>https://betterman.sh/concept/signals</loc>')
     expect(xml).not.toContain('globbing')
   })

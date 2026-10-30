@@ -3,10 +3,11 @@ slug: namespaces
 title: Namespaces
 term: namespaces
 summary: How Linux gives a group of processes its own isolated view of a global resource, such as process IDs, mounts or the network; the basis of containers.
-status: pending-owner
+status: approved
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
 panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
+owner-skim: approved 2026-10-30
 sources:
   - page: namespaces(7)
     package: manpages 6.9.1-1

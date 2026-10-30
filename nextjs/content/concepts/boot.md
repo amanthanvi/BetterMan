@@ -3,10 +3,11 @@ slug: boot
 title: The boot process
 term: boot process
 summary: What happens between power-on and a login prompt, from firmware and boot loader to the kernel, the initramfs and the system manager.
-status: pending-owner
+status: approved
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
 panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
+owner-skim: approved 2026-10-30
 sources:
   - page: bootup(7)
     package: systemd 257.13-1~deb13u1

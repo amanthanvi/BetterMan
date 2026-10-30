@@ -19,7 +19,9 @@ One file per concept. `pnpm concepts:build` compiles them into
    sections. Fixes land in the file; `panel-review` records the panel and date.
    The first round (GPT-6.1 Sol and Grok 4.7, 2026-10-30) checked all twenty;
    its corrections are applied, and none was rejected or merged.
-3. **Owner skim.** The owner reads it and flips `status` to `approved`.
+3. **Owner skim.** The owner reads it; `status` becomes `approved` and
+   `owner-skim` records the date. The builder refuses `approved` without both
+   `panel-review` and `owner-skim`. All twenty were approved on 2026-10-30.
 
 Only `approved` explainers exist on the site: the concept page, the man page
 footer line, the search row and `/sitemap-concepts.xml`. Anything else returns
@@ -28,8 +30,9 @@ footer line, the search row and `/sitemap-concepts.xml`. Anything else returns
 `CI=true`; drafts then render with a "not published" note, `noindex` and
 `private, no-store`. The flag is a positive opt-in: it also works on a Vercel
 development or preview deployment, and is ignored everywhere else, including
-`VERCEL_ENV=production` and the Docker image. CI's e2e job sets it to test the
-surfaces.
+`VERCEL_ENV=production` and the Docker image. CI's e2e job runs as production
+does, with the flag unset; unit tests cover the draft path on a copy of the
+data.
 
 ## File format
 
@@ -45,6 +48,7 @@ status: pending-owner              # draft | pending-owner | approved
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
 panel-review: (optional) panel models and date
+owner-skim: (needed for approved) approved and the date
 sources:                           # the pages the text was checked against
   - page: signal(7)
     package: manpages 6.9.1-1      # as served on betterman.sh when drafted

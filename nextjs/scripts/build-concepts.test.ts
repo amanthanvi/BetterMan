@@ -49,10 +49,22 @@ describe('build-concepts', () => {
     expect(readFileSync(OUTPUT_FILE, 'utf8')).toBe(serialize(buildConcepts()))
   })
 
-  it('ships every explainer unapproved until the panel and the owner have read it', () => {
-    // Flipping one to approved is a reviewed content change; update this list with it.
-    const approved = buildConcepts().concepts.filter((c: { status: string }) => c.status === 'approved')
-    expect(approved).toEqual([])
+  it('publishes all twenty, each read by the model panel and skimmed by the owner', () => {
+    // A change of status is a reviewed content change; update this list with it.
+    const concepts = buildConcepts().concepts as Concept[]
+    expect(concepts).toHaveLength(20)
+    for (const concept of concepts) {
+      expect(concept.status, concept.slug).toBe('approved')
+      expect(concept.panelReview, concept.slug).toBe('GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied')
+      expect(concept.ownerSkim, concept.slug).toBe('approved 2026-10-30')
+    }
+  })
+
+  it('refuses approval without both reviews', () => {
+    const approved = concept('example').replace('status: pending-owner', 'status: approved')
+    expect(() => build({ 'example.md': approved })).toThrow('approved needs panel-review and owner-skim')
+    expect(() => build({ 'example.md': approved.replace('generated-on: 2026-10-30', 'generated-on: 2026-10-30\npanel-review: panel') })).toThrow('owner-skim')
+    expect(build({ 'example.md': approved.replace('generated-on: 2026-10-30', 'generated-on: 2026-10-30\npanel-review: panel\nowner-skim: approved') }).concepts[0].status).toBe('approved')
   })
 
   it('parses sources, citations, concept links, code spans, lists and fences into data', () => {

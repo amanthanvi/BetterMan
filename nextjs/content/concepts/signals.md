@@ -3,10 +3,11 @@ slug: signals
 title: Signals
 term: signals
 summary: How the kernel or another program tells a process to stop, pause, continue or quit, and what happens by default.
-status: pending-owner
+status: approved
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
 panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
+owner-skim: approved 2026-10-30
 sources:
   - page: signal(7)
     package: manpages 6.9.1-1

@@ -68,6 +68,11 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
 export default function ConceptRoute(props: Props) {
   return (
     <>
+      {/* English only for now (lead decision on B9, #475): the query allowlist keeps
+          ['distro'] here, so `?lang=` 308s to the bare URL. If this lands before #475,
+          its agent passes ManShell English i18n props and leaves the language links off
+          (or inert) on this shell, and keeps /concept out of the bm-lang cookie redirect,
+          so nothing loops. No release: this is not a man page, so no "pages · updated" line. */}
       <ManShell urlDistro={props.urlDistro} release={null}>
         {props.kind === 'page' ? (
           <ConceptArticle concept={props.concept} urlDistro={props.urlDistro} published={props.published} reportHref={props.reportHref} />

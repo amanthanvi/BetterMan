@@ -207,6 +207,9 @@ export const config = {
     // Man page prefetches get the release key too, so they are cacheable and a
     // client cannot reach the renderer past the proxy with its own release header.
     { source: '/man/:path*' },
+    // Concept explainers are edge-cached too: a prefetch must still get the CSP,
+    // the security headers and the query redirect, or the CDN could keep a bare page.
+    { source: '/concept/:path*' },
     { source: '/:name.txt' },
   ],
 }

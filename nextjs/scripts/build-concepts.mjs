@@ -12,7 +12,7 @@ export const CONTENT_DIR = path.join(ROOT, 'content', 'concepts')
 export const OUTPUT_FILE = path.join(ROOT, 'lib', 'concepts.generated.json')
 
 export const STATUSES = ['draft', 'pending-owner', 'approved']
-const SCALARS = ['slug', 'title', 'term', 'summary', 'status', 'generated-by', 'generated-on', 'panel-review']
+const SCALARS = ['slug', 'title', 'term', 'summary', 'status', 'generated-by', 'generated-on', 'panel-review', 'owner-skim']
 const LISTS = ['related', 'aliases', 'references', 'headings', 'pages']
 const SOURCE_KEYS = ['page', 'package', 'distros', 'sections']
 const DISTROS = ['debian', 'ubuntu', 'fedora', 'arch', 'alpine', 'freebsd', 'macos']
@@ -164,6 +164,8 @@ function parseConcept(file, raw, slugs) {
   if (!STATUSES.includes(fm.status)) fail(file, `status is one of ${STATUSES.join(', ')}`)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fm['generated-on'])) fail(file, 'generated-on is YYYY-MM-DD')
   if (/`|\[\[/.test(fm.summary)) fail(file, 'summary is plain text, without markup')
+  // Publishing follows the review flow: a model panel, then the owner's skim (README.md).
+  if (fm.status === 'approved' && (!fm['panel-review'] || !fm['owner-skim'])) fail(file, 'approved needs panel-review and owner-skim')
   if (!fm.sources?.length) fail(file, 'at least one source is required')
   const sources = fm.sources.map((source) => {
     for (const key of Object.keys(source)) if (!SOURCE_KEYS.includes(key)) fail(file, `unknown source key ${key}`)
@@ -185,6 +187,7 @@ function parseConcept(file, raw, slugs) {
     generatedBy: fm['generated-by'],
     generatedOn: fm['generated-on'],
     panelReview: fm['panel-review'] ?? null,
+    ownerSkim: fm['owner-skim'] ?? null,
     sources,
     related: refs('related'),
     aliases: splitList(fm.aliases ?? '').map((alias) => alias.toLowerCase()),
