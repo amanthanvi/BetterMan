@@ -176,10 +176,14 @@ RPM, Arch and Alpine names share this bounded union. `lsb_release`,
 slashes, control/non-ASCII characters and longer values are invalid. Keep these
 bounds when applying #469's query allowlist so provider selectors cannot expand
 cache keys through arbitrary query strings. The same validator serves HTML,
-plain text, metadata, API and OG routes. Explicit valid `pkg` lookups bypass
-Next's persistent data cache until resolved, including misses; their syntax alone
-is not proof of a real provider. The default lookup remains release-keyed and
-cached. #469's renderer rules still keep unproven HTML/text/OG responses private.
+plain text, metadata, API and OG routes. Explicit selectors first read a light
+provider-list query, cached only by distro/name/section/release, never by `pkg`.
+It reports the answering release; mismatches are not cached. Only names in that
+list reach the existing release/pkg-keyed page cache. Invented selectors trigger
+no provider lookup or pkg-keyed cache entry, and HTML misses skip related/typo
+reads. This bounded proof replaces the added HTML page-limit mutation; existing
+API/text limits remain. Standard/default HTML lookups are unchanged. #469's
+renderer rules still keep unproven HTML/text/OG responses private.
 
 ## Index deployment safety (#470)
 

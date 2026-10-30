@@ -1,15 +1,16 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-const mocks = vi.hoisted(() => ({ action: vi.fn(), keys: [] as string[][], args: [] as unknown[][] }))
+const mocks = vi.hoisted(() => ({ action: vi.fn(), query: vi.fn(), keys: [] as string[][], args: [] as unknown[][], providerArgs: [] as unknown[][] }))
 vi.mock('next/cache', () => ({
   unstable_cache: <A extends unknown[], R>(fn: (...args: A) => Promise<R>, key: string[]) => (...args: A) => {
     if (key.includes('man-by-name-and-section')) mocks.keys.push(key)
     if (key.includes('man-by-name-and-section')) mocks.args.push(args)
+    if (key.includes('providers-for')) mocks.providerArgs.push(args)
     return fn(...args)
   },
 }))
 vi.mock('./convexClient', () => ({ getConvexClient: () => mocks }))
 import { fetchManByNameAndSectionOrAlias, fetchManMetaByNameAndSection } from './api'
-beforeEach(() => { vi.clearAllMocks(); mocks.args.length = 0; mocks.action.mockResolvedValue({ kind: 'page', data: {} }) })
+beforeEach(() => { vi.clearAllMocks(); mocks.args.length = 0; mocks.providerArgs.length = 0; mocks.query.mockResolvedValue({ packages: ['tar', 'alternate-perl'] }); mocks.action.mockResolvedValue({ kind: 'page', data: {} }) })
 it('normalizes invalid selectors before the persistent cache and Convex arguments', async () => {
   for (const pkg of ['../bad', '_UPPER', 'valid\n', 'x'.repeat(201), '', undefined]) {
     await fetchManByNameAndSectionOrAlias({ distro:'debian', name:'tar', section:'1', pkg })
@@ -18,6 +19,7 @@ it('normalizes invalid selectors before the persistent cache and Convex argument
   }
   mocks.action.mockResolvedValue({ kind: 'page', data: { providers: { packages: ['tar', 'alternate-perl'], defaultPackage: 'tar' } } })
   await fetchManByNameAndSectionOrAlias({ distro:'debian',name:'tar',section:'1',pkg:'alternate-perl' })
+  expect(mocks.providerArgs).toEqual([['debian', 'tar', '1', null]])
   expect(mocks.args.at(-1)).toEqual(['debian', 'tar', '1', null, 'alternate-perl'])
   expect(mocks.action.mock.calls.at(-1)?.[1]).toMatchObject({ pkg: 'alternate-perl' })
 })

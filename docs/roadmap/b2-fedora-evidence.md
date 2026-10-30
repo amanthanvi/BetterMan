@@ -183,7 +183,7 @@ frontend parser test. A COPY-matched source context, with its own offline frozen
 dependency install, passes the full Next build/typecheck. Docker is not installed
 locally, so this is build-context verification rather than a full image build.
 
-## P1 follow-up: bounded providers and immutable index comparison
+## Previous P1 attempt (superseded): full-default proof
 
 Explicit selectors now consume the page rate limit before HTML lookup. The
 shared API first reads the cached default page and proves `pkg` against that
@@ -239,3 +239,40 @@ the main-to-#465 schema audit above is the relevant squash-merge projection and
 passes because the whole table is new. No comparison override was added to the
 deployment CLI. The production default/alternate performance repeat reproduced
 4/26/1 and 7/31/2 exactly.
+
+## Light provider proof rework
+
+Lead rejected the 7/31/2 full-default proof. `queries.providersFor` now returns
+only `{ packages, datasetReleaseId }`, accepts no caller stage, and reads no
+content/storage. Canonical routes read the active pointer and #463's cached
+provider list: two documents. Legacy and alias-owned routes reuse bounded indexed
+provider reads. The internal Next cache is keyed only by distro/name/section/
+release; #449 mismatch handling prevents storing a B answer under A. Only proven
+packages reach the existing release/pkg page cache. Unknown selectors stop before
+page, related or typo reads; their HTML responses remain private. The extra HTML
+page limiter is removed; existing API/text limits remain unchanged. No ingest
+contract, schema or index change; the index preflight design remains intact.
+
+`pnpm perf:check` passes all budgets with the lead-approved alternate limits:
+
+| Cold route | Calls | Documents | Storage reads |
+| --- | ---: | ---: | ---: |
+| Standard man | 4 | 26 | 1 |
+| Provider default | 4 | 26 | 1 |
+| Alternate | 5 | 13 | 1 |
+
+Only the alternate call/document baselines change to 5/13; storage stays 1 and
+all other budgets/tolerances are unchanged. #470 carries perf-budget-change and
+an explicit Budget explanation. Measurement used open #477
+`c8dde15591c21c763ad92257da13d56bf30e710a` with `git cherry-pick --no-commit`,
+ignoring T3 desktop bare GET / probes. Its harness patch was reversed and exact
+original bytes verified before committing; #477 is not in this branch. Logs and
+full measurement artifact remain under .cache/b2/r5-* locally. Remote Linux CI
+does not need the desktop-only patch; local repeats require #477 until merged.
+
+871 frontend, 3,283 Convex, 968 ingestion, 127 ops and 13 workflow tests pass.
+Lint/grammar/typecheck/public-API (21 public functions, stage fixed to prod),
+isolated codegen with no generated drift, and pip dry-run pass. Regressions prove
+one metadata entry/zero page actions or pkg entries across repeated invented
+selectors, alias/case routes, release mismatch/rollback, and public stage rejection.
+No new acquisition run: Fedora projection remains 225/300 minutes and <8 GB.

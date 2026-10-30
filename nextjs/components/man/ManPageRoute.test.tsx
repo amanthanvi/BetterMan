@@ -361,17 +361,14 @@ it('keeps an alias target package ahead of an explicit name-route selector', asy
   await expect(nameProps(context({ name: 'ftp' }, { pkg: 'ftp.app' }).ctx)).resolves.toMatchObject({ redirect: { destination: '/man/tnftp/1' } })
 })
 
-it('limits repeated explicit selectors before lookup and skips typo reads on their misses', async () => {
+it('keeps repeated explicit misses private without a page-limit mutation or typo reads', async () => {
   lookup.lookupManPage.mockResolvedValue({ kind: 'miss', servedRelease: release.datasetReleaseId })
-  limiter.isRateLimited.mockResolvedValueOnce(false).mockResolvedValueOnce(false).mockResolvedValue(true)
-  for (const [index, pkg] of ['invented-one', 'invented-two', 'invented-three', 'invented-four'].entries()) {
+  for (const pkg of ['invented-one', 'invented-two', 'invented-three']) {
     const { ctx, res } = context({ name: 'tar', section: '1' }, { pkg })
     await pageProps(ctx)
-    expect(res.statusCode).toBe(index < 2 ? 404 : 429)
+    expect(res.statusCode).toBe(404)
     expect(res.headers['cache-control']).toBe('private, no-store')
   }
-  expect(limiter.isRateLimited).toHaveBeenCalledTimes(4)
-  expect(limiter.isRateLimited).toHaveBeenLastCalledWith(expect.any(Headers), 'page')
-  expect(lookup.lookupManPage).toHaveBeenCalledTimes(2)
+  expect(limiter.isRateLimited).not.toHaveBeenCalled()
   expect(lookup.manMiss).not.toHaveBeenCalled()
 })

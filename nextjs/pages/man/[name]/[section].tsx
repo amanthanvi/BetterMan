@@ -20,7 +20,6 @@ import { truncateOgText } from '../../../lib/og/input'
 import { OG_SIZE } from '../../../lib/og/size'
 import { packageName } from '../../../lib/packageName'
 import { getPublicOrigin } from '../../../lib/public-origin'
-import { isRateLimited } from '../../../lib/rateLimit'
 import { parseReleaseId, releaseDay } from '../../../lib/release'
 import { reportProblemHref } from '../../../lib/reportProblem'
 import { safeJsonLdStringify } from '../../../lib/seo'
@@ -125,13 +124,6 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   const flag = shareFlag(firstQuery(query.flag))
   const release = trustedRelease(req.headers)
   const releaseKey = release?.datasetReleaseId
-  if (pkg && await isRateLimited(requestHeaders(req.headers), 'page')) {
-    res.statusCode = 429
-    setManCache(res, MAN_PRIVATE_CACHE, { keyed: false })
-    return { props: { kind: 'miss', head: MISSING_MAN_HEAD, release, miss: {
-      name, section, distro, urlDistro, suggestions: [], distros: [], limited: true, answeredByKey: false,
-    } } }
-  }
   const found = await lookupManPage({ name, section, distro, ...(pkg ? { pkg } : {}), ...(releaseKey ? { release: releaseKey } : {}) })
 
   // Shared under the proxy's release key only when that release answered: within the

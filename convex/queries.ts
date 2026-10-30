@@ -1,3 +1,4 @@
+import { readProviderPackages } from "./_providers";
 import { pageIsIndexable, sitemapPageCount } from "./_indexPolicy";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
@@ -125,6 +126,31 @@ export const listSections = query({
         label: stat.label || sectionLabel(stat.section),
       }))
       .sort((a, b) => sectionSortKey(a.section).localeCompare(sectionSortKey(b.section)));
+  },
+});
+
+/** Provider proof reads route metadata only; the active pointer already names its release. */
+export const providersFor = query({
+  args: {
+    distro: distroValidator,
+    name: v.string(),
+    section: v.string(),
+  },
+  returns: v.object({ packages: v.array(v.string()), datasetReleaseId: v.string() }),
+  handler: async (ctx, args) => {
+    const active = await ctx.db.query("activeReleases")
+      .withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", PUBLIC_DATASET_STAGE).eq("locale", "en").eq("distro", args.distro)).unique();
+    if (!active) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
+    const name = normalizeName(args.name);
+    const section = normalizeSection(args.section);
+    const page = await pageByNameAndSection(ctx, { releaseId: active.releaseId, name, section });
+    if (page?.providerPackages) return { packages: page.providerPackages, datasetReleaseId: active.datasetReleaseId };
+    // Legacy and alias-owned routes have no cached list; use their bounded indexed providers.
+    const release = await ctx.db.get(active.releaseId);
+    if (!release) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
+    const packages = await readProviderPackages(ctx, release, name, section, page);
+    if (page?.sourcePackage && !packages.includes(page.sourcePackage)) packages.push(page.sourcePackage);
+    return { packages, datasetReleaseId: active.datasetReleaseId };
   },
 });
 

@@ -255,6 +255,17 @@ const cachedResolveManByName = unstable_cache(
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
+const cachedProvidersFor = unstable_cache(
+  async (distro: Distro, name: string, section: string, _release: string | null) =>
+    cacheableManPage(await convex().query(api.queries.providersFor, { distro, name, section }), _release),
+  ['betterman', 'convex', 'providers-for', 'v1'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
+async function providersFor(opts: { distro: Distro; name: string; section: string; release?: string }) {
+  return await mapConvexError(() => cachedProvidersFor(opts.distro, opts.name, opts.section, opts.release ?? null))
+}
+
 const cachedManByNameAndSection = unstable_cache(
   async (distro: Distro, name: string, section: string, _release: string | null, pkg: string | null = null) =>
     cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section, ...(pkg ? { pkg } : {}), reportRelease: true }), _release),
@@ -407,7 +418,7 @@ export async function listSection(opts: {
   return result
 }
 
-export type ManAlias = { kind: 'alias'; name: string; section: string; pkg?: string; datasetReleaseId?: string; providerPackages?: string[] }
+export type ManAlias = { kind: 'alias'; name: string; section: string; pkg?: string; datasetReleaseId?: string }
 
 export type ManByNameResult =
   | { kind: 'page'; data: ManPageResponse }
@@ -476,16 +487,13 @@ export async function fetchManByNameAndSectionOrAlias(opts: {
   release?: string
 }): Promise<ManByNameAndSectionResult> {
   const pkg = packageName(opts.pkg)
-  const lookup = (provider?: string) => mapConvexError(() =>
-    cachedManByNameAndSection(opts.distro, opts.name, opts.section, opts.release ?? null, provider ?? null),
-  )
-  let result = await lookup() as ConvexManByNameAndSectionResult
   if (pkg) {
-    // Only the release's bounded provider set may create provider cache entries.
-    const packages = result?.kind === 'page' ? (result.data.providers?.packages ?? [result.data.page?.sourcePackage]) : result?.kind === 'alias' ? result.providerPackages : []
-    if (!packages?.includes(pkg)) throw pageNotFound(servedRelease(result))
-    if (result?.kind !== 'page' || pkg !== result.data.page?.sourcePackage) result = await lookup(pkg) as ConvexManByNameAndSectionResult
+    const providers = await providersFor(opts)
+    if (!providers.packages.includes(pkg)) throw pageNotFound(servedRelease(providers))
   }
+  const result = await mapConvexError(() =>
+    cachedManByNameAndSection(opts.distro, opts.name, opts.section, opts.release ?? null, pkg ?? null),
+  ) as ConvexManByNameAndSectionResult
   if (!result || result.kind === 'not_found') throw pageNotFound(servedRelease(result))
   return result
 }

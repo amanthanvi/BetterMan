@@ -4,7 +4,8 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
-- Prove explicit package selectors from cached release providers before lookup and rate-limit them early; compare deployment indexes with the immutable parent schema instead of a target-editable policy (#394).
+- Prove package selectors with cached provider metadata instead of reading default content; remove the extra HTML limiter and retain bounded provider caches within the 5-call/13-document/1-storage-read alternate budget (#394).
+
 
 - Include the index-policy checker in the Next container build context so frontend type checking resolves its test import (#394).
 

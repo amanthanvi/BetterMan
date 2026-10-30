@@ -1,36 +1,38 @@
 # B2 extraction worklog
 
 Goal: #394, #467 Ubuntu → #470 Fedora → #473 Arch → #476 Alpine. Pending
-#445 is v7; all B2 families exact v8; translations v9. No merges, dispatches,
-production/shared config/data/secret/variable writes. Lead owns independent
-review, staging measurement and production sign-off. This child starts no agents.
+#445 v7; all B2 exact v8; translations v9. Main contains #469/#471. No merge,
+dispatch, production/shared config/data/secret/variable writes. Lead owns staging,
+review and production sign-off; this implementation child starts no agents.
 
-Latest #470 P1s implemented: default-first release-cached provider proof, including
-alias-owned routes; early page limiter/private 429 before explicit HTML lookups;
-invented selectors cause no provider lookup/cache entry and skip typo reads.
-Removed editable index policy; trusted tooling compares immutable target/parent
-schemas for every table. New tables pass; added/changed indexes on existing tables
-require confirmation. Malformed input/history fails even confirmed. Audits of
-main f16e8828, #445 82cd2228, #465 4706f03e and translation heads
-05f376a3/dc26540e/6a68d015 all require no confirmation. Full SHAs/bases in Fedora
-evidence. Main already contains #469/#471; pending #445 carried without modifying
-its branch. Prior storedLicenseFiles lifecycle, contract/holds/tier/CAS, archive
-fallbacks, strict redirects, package grammar and Alpine pin behavior preserved.
+Current lead correction: replace full-default proof and HTML limiter with light
+provider metadata, targeting alternate <=5 calls/13 docs/1 storage read and
+standard/default unchanged at 4/26/1. On #470, providersFor public query returns
+only registered packages + answering release, accepts no stage. Canonical route
+uses active pointer + cached page list (2 docs); alias/legacy uses bounded indexed
+providers. Internal Next cache keys only distro/name/section/release; mismatches
+are not stored. Only proven packages reach release/pkg cache. Invented selectors
+skip provider, related and typo reads; the extra HTML limiter is removed.
+Index preflight design/immutable-parent safety remains unchanged.
 
-Fedora: 968 ingestion / 869 frontend / 3,283 Convex / 127 ops / 13 workflow tests
-pass; lint/grammar/typecheck/public-API/codegen-no-drift/pip dry-run pass. Ops also
-passes with bare imports disabled. Production provider/man-query/short-URL E2E:
-22 pass. Cold performance man/default 4/26/1; alternate 7/31/2 vs 4/11/1. Default
-proof plus page limiter costs +3 calls/+20 docs/+1 storage read. Performance check
-fails only these three alternate limits; baseline/harness unchanged. Report for
-lead review. Evidence and original ignored .cache/b2 artifacts preserved.
+Frontend regressions cover repeated invented selectors (one metadata entry,
+zero page actions/pkg entries), unchanged selector case, alias proof and release
+mismatch/rollback. Backend tests cover package lists, alias routes, missing route
+release identity and stage rejection. Fedora checks pass: 871 frontend / 3,283 Convex / 968 ingestion / 127 ops / 13
+workflow tests; lint/grammar/typecheck/public-API/codegen-no-drift/pip all pass.
+Perf passes with standard/default 4/26/1 and alternate 5/13/1. Remaining: commit/
+push #470; restack/check/push #473/#476, final combined E2E, refresh/recheck Proof.
 
-Remaining: final perf repeat, commit/push Fedora; restack/check/push Arch and
-Alpine; refresh/recheck each Proof. Preserve acquisition measurements/projections:
-Ubuntu 266/300 min <10 GB; Fedora 225/300 <8 GB; Arch CDN cold 170.33 MB/20.49 s,
-270/300 <10 GB; Alpine 240/300 <6 GB and all 223 cached package hashes exported.
-Lead commits reviewed Alpine pins after first staging acquisition; required once
-present. Docker absent; full container/cloud rehearsal stays with CI/lead.
+#477 c8dde155 is OPEN. Applied with cherry-pick --no-commit only for local perf;
+patch reversed; exact original bytes verified before committing. Its sole change
+ignores desktop bare GET / probes. Preserve exact original in .cache/b2. Adopt
+only lead's numeric alternate budget 5/13/1; keep other metrics/tolerances intact.
+PR guard requires perf-budget-change + ## Budget on #470; lead numeric target
+provides authorization for that acknowledgement. No harness change is delivered.
 
-Task-local backend 3432/3433 and Next 3460 were started for E2E and stopped via
-owned sessions after exact PID verification. No task server remains.
+Prior acquisition samples/projections unchanged: Ubuntu 266/300 min <10 GB;
+Fedora 121.34 MB/5.51 s, 225/300 <8 GB; Arch CDN 170.33 MB/20.49 s, 270/300
+<10 GB; Alpine 223 packages/168.12 MB, 240/300 <6 GB. Lead commits reviewed Alpine
+whole-file pins after staging. Docker absent; full cloud/container run deferred.
+Task ports 3432/3433/3460; stop only exact verified task-owned processes. All
+original task histories and .cache/b2 evidence retained; no CI watches.
