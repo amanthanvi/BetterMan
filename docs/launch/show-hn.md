@@ -26,7 +26,7 @@ Hi HN. BetterMan is a web reader for Unix manual pages. I've been working on it 
 
 **What it does.**
 
-- `betterman.sh/tar`, `/tar.1`, `/tar/-x` go to the page or flag. `curl betterman.sh/tar.txt` returns plain text. Browsers can add it as a search engine.
+- `betterman.sh/tar`, `/tar.1`, `/tar/-x` go to the page or flag. `curl -L betterman.sh/tar.txt` returns plain text. Browsers can add it as a search engine.
 - Each page opens with a one-sentence summary, up to five examples (each labelled with its source) and the most-used flags. The upstream manual follows unchanged, with a filterable options index.
 - Search matches task phrases ("extract a tarball" finds tar(1)), manual citations such as `open(2)` and clustered flags.
 - *Explain*: paste a shell line, get each command and flag linked to its definition. Clustered flags are split. It is a deterministic parser, not a model. For input it can't parse safely it says so instead of guessing.

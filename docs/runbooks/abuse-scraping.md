@@ -27,7 +27,10 @@
 `429` plus `x-vercel-mitigated: challenge` identifies a Vercel challenge, not an
 app rate-limit response. **Identify the challenge source in Firewall events
 before applying exemptions**: inspect the matched custom rule, managed ruleset,
-or Attack Mode setting. No production settings were inspected or changed here.
+or Attack Mode setting. On 2026-10-30 the source was the managed Bot Protection
+ruleset (action: challenge). The four rules below are live, placed after the
+`Cost guard: API rate limit` custom rule. A bypass skips every later rule, so
+putting it after the rate limit keeps that limit on `/api/v1/suggest`.
 
 Vercel's [Attack Mode](https://vercel.com/docs/vercel-firewall/attack-mode) and
 [bot protection](https://vercel.com/docs/bot-management) already let verified bots
