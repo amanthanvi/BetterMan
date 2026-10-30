@@ -1,7 +1,9 @@
 import { DISTRO_LABEL, manPageHref, type Distro } from './distro'
 import type { ManPage } from './docModel'
 
-export const ISSUES_NEW_URL = 'https://github.com/amanthanvi/BetterMan/issues/new'
+import { ISSUES_NEW_URL } from './githubIssues'
+
+export { ISSUES_NEW_URL }
 // Field ids of .github/ISSUE_TEMPLATE/bug_report.yml. Issue forms ignore `body`.
 const TEMPLATE = 'bug_report.yml'
 // GitHub answers 414 for issue URLs past about 8 KB.

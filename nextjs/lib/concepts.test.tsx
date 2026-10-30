@@ -20,6 +20,7 @@ import {
   type ConceptMatch,
 } from './concepts'
 import data from './concepts.generated.json'
+import { tServer } from './i18n/testing'
 import type { BlockNode } from './docModel'
 
 const ALL = (data as unknown as { concepts: Concept[] }).concepts
@@ -168,7 +169,7 @@ describe('rendering', () => {
   const signals = conceptLink(approve(bySlug('signals')))
 
   it('puts a quiet Concepts line in the man page footer, outside the manual text', () => {
-    const props = { reportHref: 'https://github.com/example/issues/new', urlDistro: null, relatedItems: [] }
+    const props = { reportHref: 'https://github.com/example/issues/new', urlDistro: null, urlLang: null, t: tServer, relatedItems: [] }
     expect(renderToStaticMarkup(<ManPageFooterSections {...props} />)).not.toContain('Concepts')
     const html = renderToStaticMarkup(<ManPageFooterSections {...props} urlDistro="arch" concepts={[signals, conceptLink(bySlug('globbing'))]} />)
     expect(html).toContain('aria-label="Concepts"')
@@ -180,17 +181,17 @@ describe('rendering', () => {
 
   it('labels an explainer in search as a concept and keeps the top hit first', () => {
     const results: SearchResult[] = [{ name: 'signal', section: '7', title: 'signal(7)', description: 'overview of signals' } as SearchResult]
-    const html = renderToStaticMarkup(<SearchResultsBody q="signals" section="" results={results} suggestions={[]} urlDistro={null} concepts={[signals]} />)
+    const html = renderToStaticMarkup(<SearchResultsBody q="signals" section="" results={results} suggestions={[]} urlDistro={null} urlLang={null} t={tServer} concepts={[signals]} />)
     expect(html.indexOf('/man/signal/7')).toBeLessThan(html.indexOf('/concept/signals'))
-    expect(renderToStaticMarkup(<ConceptRow concept={signals} urlDistro={null} />)).toMatch(/small-caps[^>]*>concept<\/span>[\s\S]*BetterMan explainer[\s\S]*signal\(7\)/)
-    expect(renderToStaticMarkup(<SearchResultsBody q="signals" section="1" results={[]} suggestions={[]} urlDistro={null} concepts={[signals]} />)).not.toContain('/concept/')
-    expect(renderToStaticMarkup(<SearchResultsBody q="signals" section="" results={[]} suggestions={[]} urlDistro={null} concepts={[signals]} />)).toContain('/concept/signals')
+    expect(renderToStaticMarkup(<ConceptRow concept={signals} urlDistro={null} t={tServer} />)).toMatch(/small-caps[^>]*>concept<\/span>[\s\S]*BetterMan explainer[\s\S]*signal\(7\)/)
+    expect(renderToStaticMarkup(<SearchResultsBody q="signals" section="1" results={[]} suggestions={[]} urlDistro={null} urlLang={null} t={tServer} concepts={[signals]} />)).not.toContain('/concept/')
+    expect(renderToStaticMarkup(<SearchResultsBody q="signals" section="" results={[]} suggestions={[]} urlDistro={null} urlLang={null} t={tServer} concepts={[signals]} />)).toContain('/concept/signals')
   })
 
   it('lets an alias-only match yield to a command of exactly that name', () => {
     const hit = (name: string, section: string) => [{ name, section, title: `${name}(${section})`, description: 'x' } as SearchResult]
     const body = (q: string, results: SearchResult[], concept: ConceptMatch) =>
-      renderToStaticMarkup(<SearchResultsBody q={q} section="" results={results} suggestions={[]} urlDistro={null} concepts={[concept]} />)
+      renderToStaticMarkup(<SearchResultsBody q={q} section="" results={results} suggestions={[]} urlDistro={null} urlLang={null} t={tServer} concepts={[concept]} />)
     const viaAlias = (slug: string) => ({ ...conceptLink(approve(bySlug(slug))), via: 'alias' as const })
     // stdin(3) is a function, not what the redirection explainer is about.
     expect(body('stdin', hit('stdin', '3'), viaAlias('redirection'))).not.toContain('/concept/redirection')
@@ -204,6 +205,7 @@ describe('rendering', () => {
   it('renders explainer text as text, linking citations and only published concepts', () => {
     const html = renderToStaticMarkup(
       <ConceptText
+        t={tServer}
         urlDistro={null}
         published={new Set(['globbing'])}
         blocks={[

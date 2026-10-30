@@ -1,4 +1,5 @@
 import { h } from './dom'
+import { t } from './i18n'
 
 /**
  * Cross-reference previews: a link to another man page shows that page's
@@ -103,7 +104,7 @@ async function show(link: HTMLAnchorElement) {
   }
   current?.removeAttribute('aria-describedby')
   current = link
-  card.replaceChildren(h('p', { class: 'text-ink-3' }, 'Loading…'))
+  card.replaceChildren(h('p', { class: 'text-ink-3' }, t('Loading…')))
   card.hidden = false
   link.setAttribute('aria-describedby', 'bm-xref-preview')
   position(link)
@@ -111,13 +112,13 @@ async function show(link: HTMLAnchorElement) {
   if (current !== link || !card) return
   card.replaceChildren(
     ...(meta === undefined
-      ? [h('p', { class: 'text-ink-3' }, 'Preview unavailable right now.')]
+      ? [h('p', { class: 'text-ink-3' }, t('Preview unavailable right now.'))]
       : meta
       ? [
           h('p', { class: 'font-serif text-base text-ink' }, h('b', { class: 'font-semibold' }, meta.name), `(${meta.section})`),
           meta.description ? h('p', { class: 'text-ink-2' }, meta.description) : null,
         ].filter((node): node is HTMLParagraphElement => Boolean(node))
-      : [h('p', { class: 'text-ink-3' }, 'No page by this name in this edition.')]),
+      : [h('p', { class: 'text-ink-3' }, t('No page by this name in this edition.'))]),
   )
   position(link)
 }

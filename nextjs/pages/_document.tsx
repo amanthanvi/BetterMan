@@ -9,10 +9,11 @@ import { MAN_BOOT_SCRIPT } from '../lib/manBoot'
  * which the proxy's CSP allows by hash. No nonce: the HTML is cached at the edge.
  */
 export default function ManDocument(props: DocumentProps) {
-  const head = (props.__NEXT_DATA__.props as { pageProps?: { head?: ManHeadData } } | undefined)?.pageProps?.head
+  const pageProps = (props.__NEXT_DATA__.props as { pageProps?: { head?: ManHeadData; i18n?: { lang?: string } } } | undefined)?.pageProps
+  const head = pageProps?.head
   const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN?.trim()
   return (
-    <Html lang="en">
+    <Html lang={pageProps?.i18n?.lang ?? 'en'}>
       <Head>
         {head ? <ManHeadTags {...head} /> : null}
         <script dangerouslySetInnerHTML={{ __html: MAN_BOOT_SCRIPT }} />

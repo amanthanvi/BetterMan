@@ -3,6 +3,8 @@
  * Nothing supplies this data yet; the glyph renders only when it does, and only
  * for flags that are not portable. Unmarked means present on all three.
  */
+import type { ServerT } from '../../lib/i18n/server'
+
 export type Availability = 'yes' | 'no' | 'differs'
 
 export type Portability = { linux: Availability; freebsd: Availability; macos: Availability }
@@ -40,7 +42,7 @@ export function PortabilityGlyph({ portability }: { portability: Portability }) 
 }
 
 /** Shown once per page, above the first glyph. `everyFlag` where every flag carries cells (explain). */
-export function PortabilityLegend({ everyFlag = false }: { everyFlag?: boolean }) {
+export function PortabilityLegend({ everyFlag = false, t }: { everyFlag?: boolean; t: ServerT }) {
   return (
     <p className="text-xs text-ink-3">
       <span className="bm-pg mr-1.5" aria-hidden="true">
@@ -48,9 +50,7 @@ export function PortabilityLegend({ everyFlag = false }: { everyFlag?: boolean }
         <i data-v="differs" />
         <i data-v="no" />
       </span>
-      GNU/Linux · FreeBSD · macOS. A hollow cell means that system lacks the flag; a half-filled cell means it
-      behaves differently there.{everyFlag ? '' : ' Unmarked flags exist on all three.'} The cells show availability,
-      not identical behavior.
+      {t(everyFlag ? 'GNU/Linux · FreeBSD · macOS. A hollow cell means that system lacks the flag; a half-filled cell means it behaves differently there. The cells show availability, not identical behavior.' : 'GNU/Linux · FreeBSD · macOS. A hollow cell means that system lacks the flag; a half-filled cell means it behaves differently there. Unmarked flags exist on all three. The cells show availability, not identical behavior.')}
     </p>
   )
 }

@@ -7,6 +7,7 @@ import type { BlockNode, OptionItem } from '../lib/docModel'
 import { modeAnchors } from '../lib/manBrief'
 import { argumentSpec, commandText, composerWarnings, shellWord, type ComposePick } from './composeModel'
 import { loadMeta, resetPreviews } from './previews'
+import { tMan } from '../lib/i18n/testing'
 
 function fixture(name: string): { blocks: BlockNode[]; options: OptionItem[] } {
   const raw = JSON.parse(readFileSync(join(__dirname, '../components/doc/__fixtures__', name), 'utf8')) as { doc: { blocks: BlockNode[] }; options?: OptionItem[] }
@@ -27,8 +28,8 @@ describe('composer on real pages', () => {
   const tar = picker(fixture('tar.1.json'))
 
   it('warns when two of tar\'s operation modes are picked, and not for a mode with its modifiers', () => {
-    expect(composerWarnings([tar('c', '-c'), tar('x', '-x')])).toBe('Choose one mode: -c and -x conflict.')
-    expect(composerWarnings([tar('c', '-c'), tar('g', '-g', 'snapshot.snar'), tar('f', '-f', 'a.tar')])).toBe('')
+    expect(composerWarnings([tar('c', '-c'), tar('x', '-x')], tMan)).toBe('Choose one mode: -c and -x conflict.')
+    expect(composerWarnings([tar('c', '-c'), tar('g', '-g', 'snapshot.snar'), tar('f', '-f', 'a.tar')], tMan)).toBe('')
   })
 
   it('builds tar -c -g FILE -f ARCHIVE only from typed values', () => {
@@ -44,7 +45,7 @@ describe('composer on real pages', () => {
     expect(argumentSpec(fixture('ls.1.json').options.find((o) => o.anchorId === colorAnchor)!.argument ?? '')).toEqual({ name: 'WHEN', optional: true })
     expect(commandText('ls', [ls(colorAnchor, '--color')])).toEqual({ text: 'ls --color', missing: [] })
     expect(commandText('ls', [ls(colorAnchor, '--color', 'always')])).toEqual({ text: 'ls --color=always', missing: [] })
-    expect(composerWarnings([ls(colorAnchor, '--color', '', 'att')])).toBe('--color: unknown on FreeBSD and macOS.')
+    expect(composerWarnings([ls(colorAnchor, '--color', '', 'att')], tMan)).toBe('--color: unknown on FreeBSD and macOS.')
   })
 
   it('never warns for grep\'s matcher options, whose heading is not an exclusive-modes heading', () => {
@@ -60,7 +61,7 @@ describe('composer on real pages', () => {
       { flags: '-i, --ignore-case', anchorId: 'i', description: '' },
       { flags: '-e, --regexp', anchorId: 'e', argument: 'PATTERNS', description: '' },
     ] })
-    expect(composerWarnings([grep('E', '-E'), grep('i', '-i'), grep('e', '-e', 'foo|bar')])).toBe('')
+    expect(composerWarnings([grep('E', '-E'), grep('i', '-i'), grep('e', '-e', 'foo|bar')], tMan)).toBe('')
     expect(commandText('grep', [grep('E', '-E'), grep('e', '-e', 'foo|bar')]).text).toBe("grep -E -e 'foo|bar'")
   })
 })

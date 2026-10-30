@@ -7,6 +7,10 @@ import { SearchResultsClient } from './SearchResultsClient'
 
 const distroState = vi.hoisted(() => ({ urlDistro: null as Distro | null }))
 
+vi.mock('../../components/state/lang', async () => {
+  const { testLang } = await import('../../lib/i18n/testing')
+  return { useLang: () => testLang, useT: () => testLang.t }
+})
 vi.mock('../../components/ui/LinkPendingHint', () => ({ LinkPendingHint: () => null }))
 vi.mock('../../components/state/distro', () => ({ useDistro: () => ({ urlDistro: distroState.urlDistro }) }))
 

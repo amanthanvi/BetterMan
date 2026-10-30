@@ -4,6 +4,7 @@ import c from 'highlight.js/lib/languages/c'
 import makefile from 'highlight.js/lib/languages/makefile'
 import python from 'highlight.js/lib/languages/python'
 
+import type { ServerT } from '../../lib/i18n/server'
 import { CopyIcon } from '../icons'
 
 hljs.registerLanguage('bash', bash)
@@ -28,12 +29,14 @@ export function CodeBlock({
   text,
   languageHint,
   defaultLanguage = 'bash',
-  label = 'Code',
+  label,
+  t,
 }: {
   id?: string | null
   text: string
-  /** Accessible name for the scrollable block. */
+  /** Accessible name for the scrollable block; `man.code` by default. */
   label?: string
+  t: ServerT
   languageHint?: string | null
   /** Used when `languageHint` is missing or unknown. */
   defaultLanguage?: CodeLanguage
@@ -41,11 +44,11 @@ export function CodeBlock({
   const language = normalizeLanguageHint(languageHint) ?? defaultLanguage
   return (
     <div id={id ?? undefined} className="bm-code">
-      <button type="button" className="bm-copy bm-js" data-bm-action="copy-code" aria-label="Copy code block" title="Copy">
+      <button type="button" className="bm-copy bm-js" data-bm-action="copy-code" aria-label={t('Copy code block')} title={t('Copy')}>
         <CopyIcon />
       </button>
       {/* Long lines scroll sideways rather than wrap, so the block takes keyboard focus. */}
-      <pre tabIndex={0} role="group" aria-label={label}>
+      <pre tabIndex={0} role="group" aria-label={label ?? t('Code')}>
         <code className={`hljs language-${language}`} dangerouslySetInnerHTML={{ __html: highlightCode(text, language) }} />
       </pre>
     </div>

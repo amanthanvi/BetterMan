@@ -131,6 +131,13 @@ test('provider robots combine demand with provider identity and never canonicali
       }
     }
   }
+  // B9's localized UI is noindex too; it keeps an English canonical only where that page is indexable.
+  for (const [pkg, canonical] of [['alternate-perl', null], ['perl', `${route}?distro=macos`]] as const) {
+    await page.goto(`${route}?distro=macos&pkg=${pkg}&lang=de`)
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
+    if (canonical) await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `${new URL(page.url()).origin}${canonical}`)
+    else await expect(page.locator('link[rel="canonical"]')).toHaveCount(0)
+  }
   const sitemap = await request.get('/sitemap-debian-1.xml')
   expect(await sitemap.text()).not.toContain('pkg=')
   await page.goto('/man/ftp?pkg=ftp.app')

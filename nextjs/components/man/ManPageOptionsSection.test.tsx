@@ -1,9 +1,11 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it } from 'vitest'
 import { ManPageOptionsSection } from './ManPageOptionsSection'
+import { tServer } from '../../lib/i18n/testing'
 
 it('describes stale evidence without promising a build and never links to raw JSON', () => {
   const html = renderToStaticMarkup(<ManPageOptionsSection
+    t={tServer}
     options={[{ flags: '--one', anchorId: 'one', description: 'One option.' }]}
     rowIds={new Map()}
     portability={{ stale: true, portability: { systems: [], rows: [['one', 'aep']], total: 1, available: 1, nextOffset: null } }}
@@ -17,6 +19,7 @@ it('describes stale evidence without promising a build and never links to raw JS
 it('keeps the native options disclosure and section locators when derived data is present', () => {
   const options = Array.from({ length: 21 }, (_, i) => ({ flags: `--option-${i}`, anchorId: `option-${i}`, description: `Option ${i}.` }))
   const html = renderToStaticMarkup(<ManPageOptionsSection
+    t={tServer}
     options={options} rowIds={new Map()}
     locators={new Map(options.map((option) => [option.anchorId, '2.1']))}
     portability={{ stale: false, portability: { systems: [], rows: [['option-0', 'aep']], total: options.length, available: options.length, nextOffset: null } }}
