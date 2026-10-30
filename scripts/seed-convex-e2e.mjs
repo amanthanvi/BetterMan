@@ -322,7 +322,7 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     ingestedAt: now,
     packageManifest: { packages: [] },
     pageCount: pages.length,
-    providerCount: 4,
+    providerCount: 5,
     packageBatches: [],
     aliasCount: 3,
     licenseCount: 0,
@@ -351,6 +351,8 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     }] })
   }
   await post('/ingest/pages/storage', { datasetReleaseId, pages: [{
+    ...pages.find((p) => p.name === 'foo::bar'), externalId: crypto.randomUUID(), sourcePackage: 'same-perl', providerOnly: true,
+  }, {
     ...page({ name: 'foo::bar', section: '3pm', title: 'foo::bar(3pm)',
       description: 'Alternate package provider', sourcePackage: 'alternate-perl',
       toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Alternate provider documentation.' }] }],

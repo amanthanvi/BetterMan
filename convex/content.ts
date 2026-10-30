@@ -447,11 +447,23 @@ export const migrateContentToStorageBatch = internalAction({
 
 /** All package choices for this route, from the same release as the document. */
 async function providerChoices(ctx: QueryCtx, release: Doc<"datasetReleases">,
-  name: string, section: string, page: Doc<"manPages"> | null) {
+  name: string, section: string, page: Doc<"manPages"> | null, selectedHash = page?.contentSha256, candidates?: Doc<"manPageProviders">[]) {
   const limit = release.providerCount ?? 0;
   if (!limit) return null;
-  const packages = await readProviderPackages(ctx, release, name, section, page);
-  return { packages, defaultPackage: page?.sourcePackage ?? null,
+  const packages = await readProviderPackages(ctx, release, name, section, page, candidates);
+  let defaultHash = page?.contentSha256;
+  if (!page) {
+    // Case-only routes can have an alias winner; compare against its actual package target.
+    const alias = await aliasTarget(ctx, { releaseId: release._id, name, section });
+    if (alias) {
+      const canonical = await pageByNameAndSection(ctx, { releaseId: release._id, name: alias.name, section: alias.section });
+      const target = !alias.pkg || canonical?.sourcePackage === alias.pkg ? canonical : await ctx.db.query("manPageProviders")
+        .withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", release._id)
+          .eq("name", alias.name).eq("section", alias.section).eq("sourcePackage", alias.pkg!)).first();
+      defaultHash = target?.contentSha256;
+    }
+  }
+  return { packages, sameAsDefault: Boolean(defaultHash && defaultHash === selectedHash), defaultPackage: page?.sourcePackage ?? null,
     policy: release.acquisition === "deb-extraction" ? "debian" as const : "curated" as const };
 }
 
@@ -550,10 +562,11 @@ export const getManByNameAndSectionReadModel = internalQuery({
     // including when the normalized route is a generated alternative alias.
     const requestedName = args.name.trim();
     const sourceName = (path: string) => path.match(/(?:^|\/)([^/]+)\.[1-9][A-Za-z0-9]*(?:\.(?:gz|xz|bz2|zst))?$/i)?.[1];
+    let candidates: Doc<"manPageProviders">[] | undefined;
     let caseProvider: Doc<"manPageProviders"> | null = null;
     if (requestedName !== name && (sourceName(page?.sourcePath ?? "") !== requestedName
       || (args.pkg && page?.sourcePackage !== args.pkg))) {
-      const candidates = await ctx.db.query("manPageProviders")
+      candidates = await ctx.db.query("manPageProviders")
         .withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", release._id)
           .eq("name", name).eq("section", section)).take(100);
       caseProvider = candidates.find(candidate => (!args.pkg || candidate.sourcePackage === args.pkg)
@@ -575,9 +588,9 @@ export const getManByNameAndSectionReadModel = internalQuery({
       if (!blob) return notFound;
       // B7 summaries are keyed to the canonical route/signature, not this
       // provider. B6 briefs are content-hash keyed and can safely follow it.
-      return { kind: "page" as const, data: { release, page: provider, variants: [],
+      return { kind: "page" as const, data: { release, page: { ...provider, indexable: false }, variants: [],
         derived: null, brief: briefFromRecord(generated),
-        providers: await providerChoices(ctx, release, name, section, page),
+        providers: await providerChoices(ctx, release, name, section, page, provider.contentSha256, candidates),
         content: blob.storageId ? { storageId: blob.storageId, fields: null }
           : { storageId: null, fields: await readAllContentBlobFields(ctx, blob) } } };
     }

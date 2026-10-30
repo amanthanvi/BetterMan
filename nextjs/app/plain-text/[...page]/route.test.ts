@@ -165,9 +165,11 @@ it.each(['foo%253A%253Abar', 'foo%ZZ'])('rejects malformed or doubly encoded tex
 })
 
 it('selects an explicit package provider and preserves it through short-route redirects', async () => {
+  vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'page', data: { ...manual, page: { ...manual.page, indexable: false }, providers: { packages: ['tar', 'alternate'], defaultPackage: 'tar', policy: 'curated', sameAsDefault: false } } })
   const res = await GET(req('?pkg=alternate'), ctx())
   expect(res.status).toBe(200)
   expect(res.headers.get('link')).toBe('<https://betterman.sh/man/tar/1?pkg=alternate>; rel="canonical"')
+  expect(res.headers.get('x-robots-tag')).toBe('noindex')
   expect(fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'tar', section: '1', pkg: 'alternate', release: 'test' })
   const redirect = await GET(req('?pkg=alternate'), ctx(['tar']))
   expect(redirect.headers.get('location')).toBe('/man/tar/1.txt?pkg=alternate')
@@ -180,4 +182,16 @@ it('does not share a response when the proxy release is absent or does not match
   expect((await GET(untrusted, ctx())).headers.get('cache-control')).toBe('private, no-store')
   vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'page', data: { ...manual, page: { ...manual.page, datasetReleaseId: 'other' } } })
   expect((await GET(req(), ctx())).headers.get('cache-control')).toBe('private, no-store')
+})
+
+
+it('keeps alternate canonical and robots headers on a release-mismatched private answer', async () => {
+  vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'page', data: {
+    ...manual, page: { ...manual.page, datasetReleaseId: 'other', sourcePackage: 'alternate', indexable: false },
+    providers: { packages: ['tar', 'alternate'], defaultPackage: 'tar', policy: 'curated', sameAsDefault: false },
+  } })
+  const res = await GET(req('?pkg=alternate'), ctx())
+  expect(res.headers.get('cache-control')).toBe('private, no-store')
+  expect(res.headers.get('link')).toBe('<https://betterman.sh/man/tar/1?pkg=alternate>; rel="canonical"')
+  expect(res.headers.get('x-robots-tag')).toBe('noindex')
 })

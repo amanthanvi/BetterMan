@@ -30,30 +30,56 @@ Keyboard activation and navigation work with JavaScript disabled; nothing was
 added to the man-client bundle. The treatment uses the existing sans/mono voices,
 ink, underlined links and global focus ring, with no enclosing chrome.
 
-The release records the election policy rather than a per-page tie-break reason.
-The copy therefore says “Debian default” and explains installation priority,
-popularity and exact ties for archive releases; curated releases say “Curated
-default”. It does not claim that a lower-popularity priority winner was most
-installed.
+The disclosure says “BetterMan’s default for this release” and links to the
+[provider election](../../ingestion/README.md#provider-election) rules. Exact-case
+spelling wins first, then directly shipped manuals over generated alternatives.
+Direct-file collisions rank by pinned popcon installed count, package name and
+source path. Among alternatives, default-installed packages form the first group;
+alternatives priority precedes popcon within that group, while popcon precedes
+priority outside it. Curated preferences break only exact remaining ties. No copy
+implies Debian selected BetterMan’s winner. Routes whose default is an alias
+(`defaultPackage: null`, such as case-only FTP) omit the explanation.
 
 Package names are cached on the canonical page during page/provider/alias uploads,
 including either canonical/provider upload order. Both page-upload protocols are
 covered. These cache writes occur only inside the existing mutable-upload paths;
 sealed releases remain immutable. No ingest-contract or Python document-model
 change is needed. Old releases without the optional cache use indexed provider
-reads within the existing query; no production backfill is performed.
+reads within the existing query; no production backfill is performed. Case-only
+routes whose canonical is an alias still have no canonical page row to hold this
+cache. They retain the indexed fallback: already-fetched real-provider candidates
+are reused when the bounded 100-row scan is complete; a saturated scan is reread
+to avoid truncating the choices. Alias-provider rows still require their indexed
+read. Comparing a case-only manual with an alias winner additionally reads that
+alias and its actual package target, so equal-content canonicals remain correct. Adding an alias-owned cache would require a separate lifecycle/backfill and
+is deferred; it is not claimed as a zero-read path.
 
 ## SEO and caches
 
-Distinct package manuals self-canonicalize with their validated `?pkg=` selector;
-they are different documents, so canonicalizing every provider to the clean
-winner would ask search engines to consolidate useful content. Explicitly selecting
-the winner canonicalizes to the clean URL to avoid duplicate indexing. Debian's
-canonical omits `distro`; other distros retain it. Original-case provider selections
-also get the explicit package canonical. Plain-text `Link: rel="canonical"` and
-share images follow the same rule. Existing index-tier robots behavior is retained;
-missing packages remain noindex 404s. Name-only redirects and section links retain
-an explicit package selector.
+Distinct alternate manuals keep their validated `?pkg=` self-canonical, but are
+**noindex** until a later demand tier explicitly promotes them. An alternate whose
+`contentSha256` equals the winner’s canonicalizes to the clean URL. The winner’s
+own `?pkg=` URL also canonicalizes clean. Missing provider metadata canonicalizes
+clean, including curated releases and pre-deploy cached responses; the persistent
+page cache moved from v4 to v5 so old responses are discarded. Alternates remain
+outside the sitemap, which reads only canonical `manPages` rows.
+
+Every alternate row currently carries `indexable: false`, including identical
+content alternates. HTML emits meta robots; text, JSON (including metadata), and
+OG responses set `X-Robots-Tag: noindex` from that same selected row. Winners keep
+their existing index tier. Debian’s canonical omits `distro`; other distros retain
+it. Plain-text canonical headers and share images use `manCanonicalPath` too. The
+default package link points directly to the clean URL.
+
+**B4 / #445 integration:** B4’s `pageIsIndexable` already returns false for provider
+rows and must remain the source of their index tier when it lands after Nov 1.
+There is an expected textual conflict on the plain-text success response. Whichever
+PR merges second must keep `manCanonicalPath` for the Link header and base
+`X-Robots-Tag` on the same selected row used for HTML. #462 merged during the follow-up and is now rebased into this branch. Its trusted
+proxy-release arguments and private mismatch headers are preserved alongside
+`manCanonicalPath` and row-based robots. A regression asserts all three headers
+on a mismatched alternate answer. Its real promotion/rollback test is run
+separately against this worktree’s local deployment.
 
 The CDN rewrite already preserves `pkg` alongside distro and the answering release;
 unit coverage now explicitly asserts it. The persistent content cache already
@@ -63,10 +89,27 @@ release lookup. Existing mismatched-release outcomes continue to be
 
 ## Performance and validation
 
+The review revision measures these isolated cold browser views:
+
+| Case | Calls | Documents | Storage reads | HTML bytes | JS raw / gzip |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Original manual | 4 | 26 | 1 | 54,353 | 57,490 / 18,851 |
+| Cached default with providers | 4 | 26 | 1 | 55,690 | 57,490 / 18,851 |
+| Distinct alternate provider | 4 | 11 | 1 | 51,896 | 57,490 / 18,851 |
+
+The 1,337-byte disclosure increase is isolated to the provider case. The alternate
+omits canonical B7 metadata and live distro variants, which explains its lower
+read count. It is explicitly asserted to render its own noindex document without
+borrowing the winner’s derived data. All 123 original metric policies and
+baselines are retained; 12 new byte/read metrics enforce the two provider cases.
+
+
 The standard `pnpm perf:check` man page remains **4 calls / 26 documents / 1 storage
-read**, with **57,490 bytes raw / 18,851 bytes gzip** of client JavaScript. The first
-run measured HTML at 54,353 bytes. No baseline, tolerance, fixture, harness or
-client bundle was changed. Cached collision choices add **zero** document reads:
+read**, with **57,490 bytes raw / 18,851 bytes gzip** of client JavaScript. The original
+run measured HTML at 54,353 bytes. The review revision adds two isolated provider browser cases (default and
+alternate), with explicit budgets and the `perf-budget-change` acknowledgement;
+all pre-existing metric baselines and limits remain unchanged. No client bundle
+change is needed. Cached collision choices add **zero** document reads:
 a regression assertion spies on the runtime query boundary while returning all
 real/alias package choices. Older releases without the cache add one document read
 per retained real/alias row on that route, within the same call and with no extra
@@ -86,7 +129,7 @@ exercise real keyboard activation and switching without JavaScript, returning to
 the default, HTML/API/text/OG selection, aliases, case-only providers and omission
 on single-provider pages.
 
-Checks: `pnpm next:lint`, `next:grammar`, `next:test` (659), `next:build`,
+Checks from the initial implementation: `pnpm next:lint`, `next:grammar`, `next:test` (659), `next:build`,
 `convex:typecheck`, `convex:check` with regenerated types (no generated drift),
 `convex:test` (3,256), `ingest:test` (938), `ops:test` (124), and the full
 `CI=1 E2E_BASE_URL=http://127.0.0.1:3400 pnpm next:e2e --workers=1`
@@ -101,3 +144,15 @@ rate-limit enforcement unchanged. Targeted ingestion tests passed individually
 but fell below the suite-wide coverage floor; the complete ingestion run passed
 at 89.88% coverage. Final PR guard and budget results are in the PR body. No production
 access, shared dataset change, workflow dispatch or merge is part of this task.
+
+
+## Independent-review follow-up
+
+All six reported items are addressed on the same branch: the no-provider
+canonical guard and v5 data-cache key, hash-aware canonical/robots policy,
+alias-owned target packages, accurate BetterMan attribution, explicit provider
+performance cases with candidate reuse, and clean default links. A new same-hash
+seed package covers identical content separately from the winner and a distinct
+alternate. Regression coverage includes all representations, alias targets,
+case-only routes, and provider omission from sitemaps. Updated validation counts
+and the exact reviewed head are recorded in the PR Proof section.

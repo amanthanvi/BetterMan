@@ -272,3 +272,13 @@ main's generated-brief lookup adds one document to the earlier derived-only
 ceiling remains 66. All pre-existing metric descriptors and tolerances are
 preserved from the rebased main/branch baselines; measured bytes stay within
 them without raising a threshold.
+
+## Package-provider browser cases
+
+B10 adds isolated `manProviders` (cached default) and `manAlternate` (distinct
+alternate) page views beside the original corpus. Each starts from the same
+seven-distro, stored-content fixture, then adds two retained shell packages:
+one different document and one identical hash. The default disclosure must
+contain both links; the alternate must render its own content and noindex
+metadata. Their cold function/document/blob, HTML and client-byte metrics are
+budgeted separately. Existing metric policies and baselines are preserved.

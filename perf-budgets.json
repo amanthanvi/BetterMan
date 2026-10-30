@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fixture": "scripts/perf-fixture.ts v11: external builtin dispatch and sudo delimiter admission",
+  "fixture": "scripts/perf-fixture.ts v12: cached package providers alongside unchanged browser corpus",
   "profile": "Chromium, 1280x800, device scale 1, light, reduced motion, 4x CPU, no network throttle, cold browser, warm data cache; median of 5; 5s observation after network idle",
   "metrics": {
     "home.htmlBytes": {
@@ -631,6 +631,66 @@
       "baseline": 0,
       "relative": 0,
       "absolute": 0
+    },
+    "manProviders.htmlBytes": {
+      "baseline": 55690,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "manProviders.calls": {
+      "baseline": 4,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manProviders.documents": {
+      "baseline": 26,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manProviders.storageReads": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manProviders.jsBytes": {
+      "baseline": 57490,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "manProviders.jsGzipBytes": {
+      "baseline": 18851,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "manAlternate.htmlBytes": {
+      "baseline": 51896,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "manAlternate.calls": {
+      "baseline": 4,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manAlternate.documents": {
+      "baseline": 11,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manAlternate.storageReads": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manAlternate.jsBytes": {
+      "baseline": 57490,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "manAlternate.jsGzipBytes": {
+      "baseline": 18851,
+      "relative": 0.02,
+      "absolute": 0
     }
   },
   "sourceHead": "a67c36ed74fa210f84ea5425132285990ed5cb5e",
@@ -640,7 +700,7 @@
     "convex": "1.48.0",
     "convexTest": "0.0.60"
   },
-  "fixtureSha256": "6385a414c2a20842ffcd70a5e1b5627af30949bcd5360ddf8d0163cd93b44909",
+  "fixtureSha256": "824493fd477dd1ed442ee0f1c095a8aa864933d12b91f3be42d7acaa931e358f",
   "labBaseline": {
     "platform": "linux",
     "samplesPerRoute": 3,

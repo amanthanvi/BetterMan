@@ -46,6 +46,7 @@ export type OptionItem = { anchorId: string; flags: string; argument?: string | 
 export type SeeAlsoRef = { name: string; section?: string | null; resolvedPageId?: string | null }
 
 export type ManPage = {
+  indexable?: boolean
   id: string
   datasetReleaseId: string
   locale: string

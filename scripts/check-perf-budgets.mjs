@@ -19,7 +19,7 @@ const { chromium } = require('@playwright/test')
 const nextBin = require.resolve('next/dist/bin/next')
 const budgetPath = resolve(root, 'perf-budgets.json')
 const output = resolve(root, '.perf-results')
-const routes = { home: '/', man: '/man/bash/1', search: '/search?q=tar', section: '/section/1' }
+const routes = { home: '/', man: '/man/bash/1', manProviders: '/man/bash/1', manAlternate: '/man/bash/1?pkg=alternate-shell', search: '/search?q=tar', section: '/section/1' }
 const args = process.argv.slice(2)
 assert.ok(args.length === 0 || (args.length === 1 && ['--record', '--stress'].includes(args[0])) ||
   (args.length === 2 && args[0] === '--record-from'), 'Usage: pnpm perf:check [--record | --record-from measurements.json | --stress]')
@@ -145,7 +145,7 @@ async function sample(url, name, { cost = false, cpuRate = 4, fontDelayMs = 0, c
   })
   try {
     // App Router pages fetch dataset info for their footer; plain-HTML man pages render it from the proxy's release.
-    const infoReady = name === 'man' ? null : page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/info', { timeout: 30_000 })
+    const infoReady = name.startsWith('man') ? null : page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/info', { timeout: 30_000 })
     const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 })
     assert.equal(response.status(), 200, `${name} navigation failed`)
     if (infoReady) await (await infoReady).finished()
@@ -176,7 +176,7 @@ async function sample(url, name, { cost = false, cpuRate = 4, fontDelayMs = 0, c
 try {
   process.env.RATE_LIMIT_TAG_KEY = 'perf-fixture-only'
   vite = await createViteServer({ configFile: false, logLevel: 'error', server: { middlewareMode: true, watch: null, hmr: false }, appType: 'custom' })
-  const { createFixture, createSearchFixture, createExplainFixture, createExplainMultiFixture, createDerivedResponseFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
+  const { createFixture, createProviderFixture, createSearchFixture, createExplainFixture, createExplainMultiFixture, createDerivedResponseFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
   let fixture = await createFixture(() => metrics.calls++)
   metrics = { calls: 0, documents: 0, storageReads: 0 }
   const runtime = globalThis.Convex
@@ -219,9 +219,15 @@ try {
       if (delayManFixture) await sleep(150)
       const value = await fixture[method](makeFunctionReference(path), jsonToConvex(args[0]))
       if (path.startsWith('content:getMan') && value?.kind === 'page') {
-        assert.ok(value.data.derived?.version === 2, 'Man data must exercise a ready compact derived snapshot')
+        const alternate = value.data.providers && value.data.page.sourcePackage !== value.data.providers.defaultPackage
+        if (alternate) {
+          assert.equal(value.data.page.indexable, false, 'Alternate provider rows stay noindex')
+          assert.equal(value.data.derived, undefined, 'Alternates must not borrow canonical derived metadata')
+        } else {
+          assert.ok(value.data.derived?.version === 2, 'Canonical man data must exercise a ready compact derived snapshot')
+          manDerivedBytes = Math.max(manDerivedBytes, Buffer.byteLength(JSON.stringify(value.data.derived)))
+        }
         manDataBytes = Math.max(manDataBytes, Buffer.byteLength(JSON.stringify(value.data)))
-        manDerivedBytes = Math.max(manDerivedBytes, Buffer.byteLength(JSON.stringify(value.data.derived)))
       }
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ status: 'success', value: convexToJson(value), logLines: [] }))
@@ -248,7 +254,7 @@ try {
     await rm(resolve(root, 'nextjs/.next/cache/fetch-cache'), { recursive: true, force: true })
     next = startNext(['start', '-H', '127.0.0.1', '-p', new URL(baseUrl).port])
     await ready(baseUrl)
-    fixture = await createFixture(() => metrics.calls++)
+    fixture = await (['manProviders', 'manAlternate'].includes(name) ? createProviderFixture : createFixture)(() => metrics.calls++)
     metrics = { calls: 0, documents: 0, storageReads: 0 }
     manDataBytes = 0
     manDerivedBytes = 0
@@ -257,7 +263,12 @@ try {
     delayManFixture = false
     const { html, costs } = pageView
     if (name === 'man') assertNoManStreaming(html)
-    assert.ok(html.includes(name === 'man' ? 'GNU Bourne-Again SHell' : name === 'home' ? 'Unix manual pages' : 'tar01'), `${name} fixture was not rendered`)
+    if (['manProviders', 'manAlternate'].includes(name)) {
+      assertNoManStreaming(html)
+      assert.ok(html.includes('data-bm-providers') && html.includes('?pkg=alternate-shell') && html.includes('?pkg=same-shell'), 'Provider choices must be rendered')
+      if (name === 'manAlternate') assert.ok(html.includes('Alternate shell provider documentation.') && html.includes('<meta name="robots" content="noindex"'), 'The alternate provider must render its own noindex content')
+    }
+    assert.ok(html.includes(name.startsWith('man') ? 'GNU Bourne-Again SHell' : name === 'home' ? 'Unix manual pages' : 'tar01'), `${name} fixture was not rendered`)
     assert.ok(!html.includes('NEXT_HTTP_ERROR_FALLBACK') && !html.includes('"digest"'), `${name} streamed an error`)
     assert.ok(costs.calls > 0 && costs.documents > 0, `${name} must exercise cold Convex reads`)
     actual[`${name}.htmlBytes`] = Buffer.byteLength(html)

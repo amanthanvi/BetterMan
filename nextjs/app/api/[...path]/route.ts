@@ -1,3 +1,4 @@
+import { isIndexable } from '@/lib/manRobots'
 import { packageName } from '@/lib/packageName'
 import type { NextRequest } from 'next/server'
 
@@ -231,7 +232,7 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
         )
       }
       if (result.kind === 'alias') return aliasRedirect(req, distro, result.name, result.section, result.pkg)
-      return cachedJson(result.data)
+      return cachedJson(result.data, PUBLIC_CACHE_SECONDS, { headers: !isIndexable(result.data.page) ? { 'X-Robots-Tag': 'noindex' } : {} })
     }
 
     // No section is named `distros`, so this cannot shadow a page.
@@ -253,7 +254,7 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
         fetchManByNameAndSectionOrAlias({ distro, name: parts[1], section: parts[2], ...(packageName(new URL(req.url).searchParams.get('pkg')) ? { pkg: packageName(new URL(req.url).searchParams.get('pkg'))! } : {}) }),
       )
       if (result.kind === 'alias') return aliasRedirect(req, distro, result.name, result.section, result.pkg)
-      return cachedJson(result.data)
+      return cachedJson(result.data, PUBLIC_CACHE_SECONDS, { headers: !isIndexable(result.data.page) ? { 'X-Robots-Tag': 'noindex' } : {} })
     }
 
     if (parts.length === 4 && parts[0] === 'man' && parts[3] === 'meta') {
@@ -262,9 +263,9 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       const distro = distroFrom(req)
       if (distro instanceof Response) return distro
       const result = await measure(metrics, 'convex_man_meta', () =>
-        fetchManMetaByNameAndSection({ distro, name: parts[1], section: parts[2] }),
+        fetchManMetaByNameAndSection({ distro, name: parts[1], section: parts[2], ...(packageName(req.nextUrl.searchParams.get('pkg')) ? { pkg: packageName(req.nextUrl.searchParams.get('pkg'))! } : {}) }),
       )
-      return cachedJson(result)
+      return cachedJson(result, PUBLIC_CACHE_SECONDS, { headers: !isIndexable(result.page) ? { 'X-Robots-Tag': 'noindex' } : {} })
     }
 
     if (parts.length === 4 && parts[0] === 'man' && parts[3] === 'portability') {

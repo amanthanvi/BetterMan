@@ -8,12 +8,12 @@ type Provider = {
 };
 
 export async function readProviderPackages(ctx: QueryCtx, release: Doc<"datasetReleases">,
-  name: string, section: string, page: Doc<"manPages"> | null): Promise<string[]> {
+  name: string, section: string, page: Doc<"manPages"> | null, candidates?: Doc<"manPageProviders">[]): Promise<string[]> {
   if (page?.providerPackages) return page.providerPackages;
   const limit = release.providerCount ?? 0;
   if (!limit) return [];
   const [real, aliases] = await Promise.all([
-    ctx.db.query("manPageProviders").withIndex("by_releaseId_and_route_and_package_and_path", q =>
+    candidates && candidates.length < 100 ? Promise.resolve(candidates) : ctx.db.query("manPageProviders").withIndex("by_releaseId_and_route_and_package_and_path", q =>
       q.eq("releaseId", release._id).eq("name", name).eq("section", section)).take(limit),
     ctx.db.query("manPageAliasProviders").withIndex("by_releaseId_and_route_and_package_and_path", q =>
       q.eq("releaseId", release._id).eq("name", name).eq("section", section)).take(limit),
@@ -27,7 +27,7 @@ export async function refreshProviderPackages(ctx: MutationCtx, release: Doc<"da
   if (!release.providerCount) return;
   const page = await ctx.db.query("manPages").withIndex("by_releaseId_and_name_and_section", q =>
     q.eq("releaseId", release._id).eq("name", name).eq("section", section)).unique();
-  if (!page) return; // The canonical upload will collect providers that arrived first.
+  if (!page) return; // shortcut: alias-owned routes use indexed reads; add an alias cache if those reads exceed budget.
   const packages = await readProviderPackages(ctx, release, name, section, { ...page, providerPackages: undefined });
   await ctx.db.patch(page._id, { providerPackages: packages });
 }

@@ -1,3 +1,4 @@
+import { isIndexable } from '@/lib/manRobots'
 import { packageName } from '@/lib/packageName'
 import { notFound } from 'next/navigation'
 
@@ -46,5 +47,6 @@ export async function GET(request: Request, ctx: { params: Promise<{ name: strin
   // Cards change only with a dataset release. A day fresh, then served stale
   // while the CDN refreshes, bounds how long an old card outlives a release.
   response.headers.set('Cache-Control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800')
+  if (!isIndexable(data.page)) response.headers.set('X-Robots-Tag', 'noindex')
   return response
 }

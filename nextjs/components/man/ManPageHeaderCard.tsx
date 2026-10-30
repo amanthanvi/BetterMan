@@ -132,16 +132,17 @@ export function ManPageHeaderCard({
           <summary className="w-fit cursor-pointer hover:text-accent">
             Provided by <span className="font-mono text-xs">{page.sourcePackage}{page.sourcePackageVersion ? ` ${page.sourcePackageVersion}` : null}</span>
           </summary>
-          <p className="mt-2">
-            {providers.policy === 'debian'
-              ? 'Debian default: installation priority, then most installed. Exact ties keep the curated preference.'
-              : 'Curated default: the package selected for this release.'}
-          </p>
+          {providers.defaultPackage ? (
+            <p className="mt-2">
+              BetterMan’s default for this release.{' '}
+              <a href="https://github.com/amanthanvi/BetterMan/blob/main/ingestion/README.md#provider-election" className="text-ink underline decoration-rule-2 underline-offset-4 hover:text-accent">How the default is chosen</a>
+            </p>
+          ) : null}
           <ul aria-label="Package providers" className="mt-2 space-y-1">
             {providers.packages.map((pkg) => (
               <li key={pkg}>
                 <a
-                  href={`${canonicalWithDistro(`/man/${encodeURIComponent(page.name)}/${encodeURIComponent(page.section)}`, distro)}${distro === 'debian' ? '?' : '&'}pkg=${encodeURIComponent(pkg)}`}
+                  href={`${canonicalWithDistro(`/man/${encodeURIComponent(page.name)}/${encodeURIComponent(page.section)}`, distro)}${pkg === providers.defaultPackage ? '' : `${distro === 'debian' ? '?' : '&'}pkg=${encodeURIComponent(pkg)}`}`}
                   aria-current={pkg === page.sourcePackage ? 'page' : undefined}
                   className="font-mono text-xs text-ink underline decoration-rule-2 underline-offset-4 hover:text-accent"
                 >{pkg}</a>

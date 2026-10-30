@@ -56,10 +56,11 @@ it('selects an exact-case real provider ahead of a normalized alternative alias'
   vi.useFakeTimers(); vi.stubEnv('CONVEX_INGEST_SECRET', 'local');
   const t = convexTest(schema, modules);
   await t.mutation(internal.ingest.createRelease, { datasetReleaseId:'case-providers',locale:'en',distro:'debian',imageRef:'pinned',imageDigest:'sha',ingestedAt:'now',packageManifest:null,
-    pageCount:1,aliasCount:1,providerCount:2,licenseCount:0,packageBatches:[],sectionTotals:[{section:'1',total:1}] });
+    pageCount:1,aliasCount:1,providerCount:3,licenseCount:0,packageBatches:[],sectionTotals:[{section:'1',total:1}] });
   const metadata = { section:'1',sourcePackageVersion:'1',sitemapPage:1,hasParseWarnings:false,doc:{blocks:[],toc:[]},synopsis:null,options:null,seeAlso:null,searchText:'fixture',snippetText:'fixture',links:[] };
   const response = await t.fetch('/ingest/pages/storage', { method:'POST',headers:{authorization:'Bearer local','content-type':'application/json'},body:JSON.stringify({datasetReleaseId:'case-providers',pages:[
     {...metadata,externalId:'tnftp',name:'tnftp',title:'tnftp(1)',description:'terminal FTP',sourcePackage:'tnftp',sourcePath:'usr/share/man/man1/tnftp.1.gz',contentSha256:'terminal'},
+    {...metadata,externalId:'FTP-same',name:'ftp',title:'FTP(1)',description:'Same FTP',sourcePackage:'same-ftp',sourcePath:'usr/share/man/man1/FTP.1.gz',contentSha256:'terminal',providerOnly:true},
     {...metadata,externalId:'FTP',name:'ftp',title:'FTP(1)',description:'GNUstep FTP',sourcePackage:'ftp.app',sourcePath:'usr/share/man/man1/FTP.1.gz',contentSha256:'gui',providerOnly:true},
   ]}) });
   expect(response.status).toBe(200);
@@ -69,7 +70,9 @@ it('selects an exact-case real provider ahead of a normalized alternative alias'
   await t.mutation(internal.ingest.activateRelease,{datasetReleaseId:'case-providers',stage:'prod',activatedAt:'now'});
   const args = { distro:'debian' as const, section:'1' };
   expect(await t.action(api.content.getManByNameAndSection,{...args,name:'ftp'})).toEqual({kind:'alias',name:'tnftp',section:'1',datasetReleaseId:expect.any(String)});
+  expect(await t.action(api.content.getManByNameAndSection,{...args,name:'ftp',pkg:'same-ftp'}))
+    .toMatchObject({kind:'page',data:{page:{indexable:false},providers:{defaultPackage:null,sameAsDefault:true}}});
   for (const lookup of [{name:'FTP'}, {name:'ftp',pkg:'ftp.app'}]) {
-    expect(await t.action(api.content.getManByNameAndSection,{...args,...lookup})).toMatchObject({kind:'page',data:{page:{sourcePackage:'ftp.app',description:'GNUstep FTP'}}});
+    expect(await t.action(api.content.getManByNameAndSection,{...args,...lookup})).toMatchObject({kind:'page',data:{page:{sourcePackage:'ftp.app',description:'GNUstep FTP',indexable:false},providers:{sameAsDefault:false}}});
   }
 });

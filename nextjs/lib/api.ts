@@ -258,7 +258,7 @@ const cachedResolveManByName = unstable_cache(
 const cachedManByNameAndSection = unstable_cache(
   async (distro: Distro, name: string, section: string, pkg: string | null, _release: string | null) =>
     cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section, ...(pkg ? { pkg } : {}), reportRelease: true }), _release),
-  ['betterman', 'convex', 'man-by-name-and-section', 'v4'],
+  ['betterman', 'convex', 'man-by-name-and-section', 'v5'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 

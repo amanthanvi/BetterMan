@@ -50,7 +50,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   if (result.kind !== 'ambiguous') {
     // 307, not 308: the target depends on which sections the current release has.
     let destination = withDistro(`/man/${encodeURIComponent(result.name)}/${encodeURIComponent(result.section)}`, urlDistro)
-    const pkg = selectedPackage ?? (result.kind === 'alias' ? packageName(result.pkg) : undefined)
+    const pkg = result.kind === 'alias' ? packageName(result.pkg) : selectedPackage
     if (pkg) destination += `${destination.includes('?') ? '&' : '?'}pkg=${encodeURIComponent(pkg)}`
     setManCache(res, MAN_PAGE_CACHE, { keyed })
     return { redirect: { destination, permanent: false } }

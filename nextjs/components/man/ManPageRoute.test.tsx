@@ -205,7 +205,7 @@ it('renders package choices and canonicalizes distinct providers without discard
     expect(res.headers['cdn-cache-control']).toContain('public')
     const html = renderToStaticMarkup(ManPageRoute(propsOf(result) as Parameters<typeof ManPageRoute>[0]))
     expect(html).toContain('Provided by')
-    expect(html).toContain('Debian default: installation priority, then most installed.')
+    expect(html).toContain('BetterMan’s default for this release.')
     expect(html).toContain('aria-current="page"')
   }
 })
@@ -218,4 +218,12 @@ it('preserves an explicit package in the name-only redirect and section picker',
   const result = await nameProps(context({ name: 'tar' }, { pkg: 'alternate', distro: 'ubuntu' }).ctx)
   const html = renderToStaticMarkup(ManNameRoute(propsOf(result) as Parameters<typeof ManNameRoute>[0]))
   expect(html).toContain('href="/man/tar/1?distro=ubuntu&amp;pkg=alternate"')
+})
+
+
+it('keeps an alias target package ahead of an explicit name-route selector', async () => {
+  lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'alias', name: 'tnftp', section: '1', pkg: 'tnftp' }, servedRelease: release.datasetReleaseId })
+  await expect(nameProps(context({ name: 'ftp' }, { pkg: 'ftp.app' }).ctx)).resolves.toMatchObject({ redirect: { destination: '/man/tnftp/1?pkg=tnftp' } })
+  lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'alias', name: 'tnftp', section: '1' }, servedRelease: release.datasetReleaseId })
+  await expect(nameProps(context({ name: 'ftp' }, { pkg: 'ftp.app' }).ctx)).resolves.toMatchObject({ redirect: { destination: '/man/tnftp/1' } })
 })

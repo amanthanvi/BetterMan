@@ -106,6 +106,35 @@ export async function createFixture(onCall: () => void) {
   return t
 }
 
+// The same seven-distro browser corpus, plus cached package choices on bash(1).
+export async function createProviderFixture(onCall: () => void) {
+  const t = await createFixture(onCall)
+  await t.run(async ctx => {
+    const active = (await ctx.db.query('activeReleases').withIndex('by_stage_and_locale_and_distro', q =>
+      q.eq('stage', 'prod').eq('locale', 'en').eq('distro', 'debian')).unique())!
+    const page = (await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q =>
+      q.eq('releaseId', active.releaseId).eq('name', 'bash').eq('section', '1')).unique())!
+    await ctx.db.patch(active.releaseId, { providerCount: 2 })
+    await ctx.db.patch(page._id, { sourcePackage: 'bash', providerPackages: ['alternate-shell', 'bash', 'same-shell'] })
+    const content = (await ctx.db.query('manPageContents').withIndex('by_pageId', q => q.eq('pageId', page._id)).unique())!
+    const blob = (await ctx.db.get(content.blobId!))!
+    for (const [pkg, hash] of [['alternate-shell', 'alternate-bash'], ['same-shell', page.contentSha256]]) {
+      let blobId = blob._id
+      if (hash !== page.contentSha256) {
+        const payload = JSON.parse(await (await ctx.storage.get(blob.storageId!))!.text())
+        const doc = JSON.parse(payload.content.docJson)
+        doc.blocks.push({ type: 'paragraph', inlines: [{ type: 'text', text: 'Alternate shell provider documentation.' }] })
+        const storageId = await ctx.storage.store(new Blob([serializeStoredPayload(hash, { ...payload.content, docJson: JSON.stringify(doc) })]))
+        blobId = await ctx.db.insert('manPageContentBlobs', { contentSha256: hash, storageId })
+      }
+      await ctx.db.insert('manPageProviders', { releaseId: active.releaseId, datasetReleaseId: active.datasetReleaseId,
+        externalId: pkg, name: 'bash', section: '1', title: page.title, description: page.description,
+        sourcePath: `/fixture/${pkg}/bash.1`, sourcePackage: pkg, contentSha256: hash, hasParseWarnings: false, blobId })
+    }
+  })
+  return t
+}
+
 // Extra query-only data keeps the original browser page-view corpus unchanged.
 export async function createSearchFixture(onCall: () => void) {
   const t = await createFixture(onCall)
