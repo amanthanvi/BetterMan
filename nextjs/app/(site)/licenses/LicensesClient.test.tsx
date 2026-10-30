@@ -1,7 +1,12 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import type { LicensesResponse } from '../../../lib/api'
 import { LicensesClient } from './LicensesClient'
+
+vi.mock('../../../components/state/lang', async () => {
+  const { testLang } = await import('../../../lib/i18n/testing')
+  return { useLang: () => testLang, useT: () => testLang.t }
+})
 
 function data(count: number): LicensesResponse {
   return { datasetReleaseId: 'local', ingestedAt: 'now', imageRef: 'test', imageDigest: 'test',

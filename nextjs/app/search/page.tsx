@@ -2,19 +2,23 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 
 import { search, withDistroFallback } from '../../lib/api'
+import { matchConcepts } from '../../lib/concepts'
 import { sectionLabel } from '../../components/man/RunningHead'
 import type { Distro } from '../../lib/distro'
-import { explicitDistro, getFirst, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
+import type { Lang } from '../../lib/i18n/locales'
+import { getI18n } from '../../lib/i18n/server'
+import { explicitDistro, explicitLang, getFirst, resolveRequestDistro, resolveRequestLang, type SearchParams } from '../../lib/requestContext'
 import { SearchPageInput } from './SearchPageInput'
 import { SearchResultsClient } from './SearchResultsClient'
 
 const SECTIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 
-function buildSearchHref(opts: { q: string; section: string; urlDistro: Distro | null }) {
+function buildSearchHref(opts: { q: string; section: string; urlDistro: Distro | null; urlLang: Lang | null }) {
   const params = new URLSearchParams()
   if (opts.q) params.set('q', opts.q)
   if (opts.section) params.set('section', opts.section)
   if (opts.urlDistro) params.set('distro', opts.urlDistro)
+  if (opts.urlLang) params.set('lang', opts.urlLang)
   const qs = params.toString()
   return qs ? `/search?${qs}` : '/search'
 }
@@ -22,8 +26,9 @@ function buildSearchHref(opts: { q: string; section: string; urlDistro: Distro |
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }): Promise<Metadata> {
   const sp = await searchParams
   const q = getFirst(sp.q)?.trim().slice(0, 120) ?? ''
-  const title = q ? `Search “${q}” — BetterMan` : 'Search — BetterMan'
-  const description = q ? `Search results for “${q}”.` : 'Search the BetterMan dataset.'
+  const { t } = await getI18n(resolveRequestLang(sp))
+  const title = t('{title} — BetterMan', { title: q ? t('Search “{q}”', { q }) : t('meta.searchTitleEmpty\u0004Search') })
+  const description = q ? t('Search results for “{q}”.', { q }) : t('Search the BetterMan dataset.')
   return {
     title,
     description,
@@ -35,6 +40,8 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
 export default async function SearchPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const sp = await searchParams
   const requestedDistro = await resolveRequestDistro(sp)
+  const { t } = await getI18n(resolveRequestLang(sp))
+  const urlLang = explicitLang(sp)
 
   const q = getFirst(sp.q)?.trim().slice(0, 120) ?? ''
   const section = getFirst(sp.section)?.trim() || ''
@@ -44,7 +51,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   )
   const urlDistro = explicitDistro(sp)
   // The nine manual sections, without a per-view listing read; an empty one simply finds nothing.
-  const sectionPills = SECTIONS.map((n) => ({ section: n, label: sectionLabel(n) }))
+  const sectionPills = SECTIONS.map((n) => ({ section: n, label: sectionLabel(n, t, distro) }))
 
   const sectionLinkClass = (active: boolean) =>
     active ? 'font-semibold text-ink no-underline' : 'text-ink-2 no-underline hover:text-accent'
@@ -52,31 +59,32 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   return (
     <div className="mx-auto max-w-[46rem] pt-10">
       {/* No display heading on search (fix 9): the field is the page's title. */}
-      <h1 className="sr-only">Search the manual</h1>
+      <h1 className="sr-only">{t('Search the manual')}</h1>
 
-      <form action="/search" method="get" role="search" aria-label="Search man pages">
+      <form action="/search" method="get" role="search" aria-label={t('Search man pages')}>
         <SearchPageInput initialQ={q} section={section} />
         {section ? <input type="hidden" name="section" value={section} /> : null}
         {urlDistro ? <input type="hidden" name="distro" value={urlDistro} /> : null}
+        {urlLang ? <input type="hidden" name="lang" value={urlLang} /> : null}
       </form>
 
-      <nav aria-label="Section filter" className="mt-4 text-sm leading-[1.9] text-ink-3">
+      <nav aria-label={t('Section filter')} className="mt-4 text-sm leading-[1.9] text-ink-3">
         <Link
-          href={buildSearchHref({ q, section: '', urlDistro })}
+          href={buildSearchHref({ q, section: '', urlDistro, urlLang })}
           aria-current={!section ? 'page' : undefined}
           className={sectionLinkClass(!section)}
         >
-          All sections
+          {t('All sections')}
         </Link>
         {sectionPills.map((s) => (
           <span key={s.section}>
             {' · '}
             <Link
-              href={buildSearchHref({ q, section: s.section, urlDistro })}
+              href={buildSearchHref({ q, section: s.section, urlDistro, urlLang })}
               aria-current={section === s.section ? 'page' : undefined}
               className={`whitespace-nowrap ${sectionLinkClass(section === s.section)}`}
               title={s.label}
-              aria-label={`Section ${s.section}: ${s.label}`}
+              aria-label={t('Section {section}: {label}', { section: s.section, label: s.label })}
             >
               <span className="font-serif text-[0.875rem] text-ink-3 oldstyle-nums">{s.section}</span> {s.label}
             </Link>
@@ -84,7 +92,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         ))}
       </nav>
 
-      <SearchResultsClient distro={distro} q={q} section={section} initial={initial} />
+      <SearchResultsClient distro={distro} q={q} section={section} initial={initial} concepts={q ? matchConcepts(q) : []} />
     </div>
   )
 }

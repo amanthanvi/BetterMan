@@ -2,6 +2,7 @@ import { BOOKMARKS_EVENT, BOOKMARKS_STORAGE_KEY, isBookmarked, toggleBookmark } 
 import { normalizeDistro } from '../lib/distro'
 import { recordRecentPage } from '../lib/recent'
 import { icons } from './dom'
+import { t } from './i18n'
 import { setDefaultDistro } from './state'
 
 /** The header card's actions, the code copy buttons, the system picker, and the recent-pages entry. */
@@ -26,7 +27,7 @@ function pressedFeedback(button: HTMLElement, live: string, title: string, idleT
 function initCopyLink() {
   const button = document.querySelector<HTMLButtonElement>('[data-bm-action="copy-link"]')
   if (!button) return
-  const copied = pressedFeedback(button, 'Link copied', 'Copied', 'Copy link')
+  const copied = pressedFeedback(button, t('Link copied'), t('Copied'), t('Copy link'))
   button.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(window.location.href)
@@ -47,10 +48,10 @@ function initCopyCode() {
     } catch {
       return
     }
-    button.title = 'Copied'
+    button.title = t('Copied')
     button.replaceChildren(icons.check())
     window.setTimeout(() => {
-      button.title = 'Copy'
+      button.title = t('Copy')
       button.replaceChildren(icons.copy())
     }, 2000)
   })
@@ -64,17 +65,17 @@ export function initBookmark(): (() => void) | null {
     section: button.dataset.bmBookmarkSection ?? '',
     description: button.dataset.bmBookmarkDescription || undefined,
   }
-  const key = `${page.name}(${page.section})`
+  const citation = `${page.name}(${page.section})`
   const mark = button.querySelector<HTMLElement>('[data-bm-pressed-mark]')
   const region = button.querySelector<HTMLElement>('[aria-live]')
   let active = false
   const render = (announce: boolean) => {
     const next = isBookmarked(page)
-    if (announce && next !== active && region) region.textContent = next ? `Bookmarked ${key}.` : `Removed bookmark for ${key}.`
+    if (announce && next !== active && region) region.textContent = next ? t('Bookmarked {citation}.', { citation }) : t('Removed bookmark for {citation}.', { citation })
     active = next
     button.setAttribute('aria-pressed', String(active))
-    button.setAttribute('aria-label', active ? `Remove bookmark for ${key}` : `Bookmark ${key}`)
-    button.title = active ? `Bookmarked: ${key} (m)` : `Bookmark: ${key} (m)`
+    button.setAttribute('aria-label', active ? t('man.bookmarkRemoveLabel\u0004Remove bookmark for {citation}', { citation }) : t('Bookmark {citation}', { citation }))
+    button.title = active ? t('Bookmarked: {citation} (m)', { citation }) : t('Bookmark: {citation} (m)', { citation })
     if (mark) mark.hidden = !active
   }
   const toggle = () => {

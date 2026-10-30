@@ -72,12 +72,17 @@ function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0
 }
 
+/** Whether a request header carries this build's secret, which only the proxy knows. */
+export function isProxyToken(token: string | null | undefined): boolean {
+  return Boolean(token && process.env.BM_RELEASE_TOKEN && constantTimeEqual(token, process.env.BM_RELEASE_TOKEN))
+}
+
 type HeaderValue = string | string[] | undefined | null
 
 /** Undefined means untrusted, null means the proxy could not resolve a release. */
 export function trustedProxyRelease(headers: Record<string, HeaderValue>): ReleaseInfo | null | undefined {
   const token = [headers[RELEASE_TOKEN_HEADER]].flat()[0]
-  if (!token || !process.env.BM_RELEASE_TOKEN || !constantTimeEqual(token, process.env.BM_RELEASE_TOKEN)) return undefined
+  if (!isProxyToken(token)) return undefined
   if (headers[RELEASE_HEADER] === UNKNOWN_RELEASE) return null
   return decodeReleaseHeader(headers[RELEASE_HEADER]) ?? undefined
 }

@@ -140,3 +140,45 @@ test('seo: an unscored legacy edition keeps HTML, alternates and the full sitema
   expect(sitemap.status()).toBe(200)
   expect(await sitemap.text()).toContain(`${path}?distro=macos`)
 })
+
+test('seo: a shared flag link unfurls as that option’s card, under the page’s canonical URL', async ({ page, request }) => {
+  await page.goto('/tar/-c')
+  await expect(page).toHaveURL(/\/man\/tar\/1\?flag=-c#opt-create$/)
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/man\/tar\/1$/)
+  const ogImage = page.locator('meta[property="og:image"]')
+  await expect(ogImage).toHaveAttribute('content', /\/man\/tar\/1\/og\?flag=-c$/)
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', 'tar -c · tar(1) — BetterMan')
+  await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute('content', '-c, --create in tar(1)')
+
+  const card = await request.get((await ogImage.getAttribute('content')) ?? '')
+  expect(card.status()).toBe(200)
+  expect(card.headers()['content-type']).toBe('image/png')
+  expect(card.headers()['cache-control']).toBe('public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800')
+
+  // A flag the page does not define has no card, privately; anything that is not one flag
+  // is dropped by the query allowlist before the route.
+  const missing = await request.get('/man/tar/1/og?flag=-Q', { maxRedirects: 0 })
+  expect(missing.status()).toBe(404)
+  expect(missing.headers()['cache-control']).toBe('private, no-store')
+  for (const flag of ['create', '--create=x']) {
+    const res = await request.get(`/man/tar/1/og?flag=${encodeURIComponent(flag)}`, { maxRedirects: 0 })
+    expect(res.status(), flag).toBe(308)
+    expect(res.headers()['location'], flag).toBe('/man/tar/1/og')
+  }
+  await page.goto('/man/tar/1?flag=-Q')
+  await expect(ogImage).toHaveAttribute('content', /\/man\/tar\/1\/og$/)
+})
+
+test('identity: the icons are the print-manual mark, declared on both renderers', async ({ page, request }) => {
+  for (const path of ['/man/tar/1', '/']) {
+    await page.goto(path)
+    await expect(page.locator('link[rel="icon"][type="image/svg+xml"]'), path).toHaveAttribute('href', '/favicon.svg')
+    await expect(page.locator('link[rel="apple-touch-icon"]'), path).toHaveAttribute('href', '/apple-touch-icon.png')
+  }
+  const svg = await (await request.get('/favicon.svg')).text()
+  expect(svg).toContain('fill="#a3261b"')
+  expect(svg).not.toContain('rx=')
+  for (const path of ['/favicon.ico', '/favicon-16.png', '/favicon-32.png', '/apple-touch-icon.png', '/icon-192.png', '/icon-512.png', '/betterman-mark.svg']) {
+    expect((await request.get(path)).status(), path).toBe(200)
+  }
+})

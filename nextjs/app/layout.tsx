@@ -2,19 +2,31 @@ import type { Metadata } from 'next'
 import { cookies, headers } from 'next/headers'
 import './globals.css'
 import { DISTRO_COOKIE, normalizeDistro } from '../lib/distro'
+import { publicLangs } from '../lib/i18n/gate'
+import { LangNav } from '../components/shell/LangNav'
+import { expandPlurals } from '../lib/i18n/expand'
+import { requestLangFromHeaders } from '../lib/i18n/request'
+import { getI18n } from '../lib/i18n/server'
 import { READING_PREFS_COOKIE, prefsFromCookie } from '../lib/readingPrefs'
 import { Providers } from './providers'
 
-export const metadata: Metadata = {
-  metadataBase: new URL('https://betterman.sh'),
-  title: 'BetterMan',
-  description: 'Unix manual pages, typeset for the screen.',
-  manifest: '/site.webmanifest',
-  openGraph: {
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n(requestLangFromHeaders(await headers()))
+  const description = t('Unix manual pages, typeset for the screen.')
+  return {
+    metadataBase: new URL('https://betterman.sh'),
     title: 'BetterMan',
-    description: 'Unix manual pages, typeset for the screen.',
-    type: 'website',
-  },
+    description,
+    manifest: '/site.webmanifest',
+    icons: {
+      icon: [
+        { url: '/favicon.ico', sizes: '48x48' },
+        { url: '/favicon.svg', type: 'image/svg+xml' },
+      ],
+      apple: '/apple-touch-icon.png',
+    },
+    openGraph: { title: 'BetterMan', description, type: 'website' },
+  }
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -27,11 +39,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   const initialCookieDistro = normalizeDistro(cookieStore.get(DISTRO_COOKIE)?.value) ?? undefined
 
-  const nonce = (await headers()).get('x-nonce') ?? undefined
+  const requestHeaders = await headers()
+  const nonce = requestHeaders.get('x-nonce') ?? undefined
+  // The language comes from the URL alone (the proxy hands it over as a header); a cookie never picks it.
+  const available = publicLangs()
+  const lang = requestLangFromHeaders(requestHeaders, available)
+  const { t, catalog } = await getI18n(lang)
+  const messages = lang === 'en' ? undefined : expandPlurals(catalog.client)
   const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN?.trim()
 
   return (
-    <html lang="en" data-theme={theme} suppressHydrationWarning>
+    <html lang={lang} data-theme={theme} suppressHydrationWarning>
       <head>
         {/* The manual's roman, Latin range. Other ranges and the italic load when a page uses them. */}
         <link
@@ -51,7 +69,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         data-bm-code-theme={readingPrefs.codeTheme}
         suppressHydrationWarning
       >
-        <Providers initialCookieDistro={initialCookieDistro} initialReadingPrefs={readingPrefs}>
+        <Providers
+          initialCookieDistro={initialCookieDistro}
+          initialReadingPrefs={readingPrefs}
+          lang={lang}
+          messages={messages}
+          publicLangs={available}
+          langNav={<LangNav t={t} lang={lang} langs={available} />}
+        >
           {children}
         </Providers>
         {plausibleDomain ? (

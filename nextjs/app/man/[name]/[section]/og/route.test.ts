@@ -26,9 +26,12 @@ const apiMocks = vi.hoisted(() => {
   return {
     FastApiError,
     fetchManMetaByNameAndSection: vi.fn(),
+    fetchManByNameAndSectionOrAlias: vi.fn(),
     withDistroFallback: vi.fn(),
   }
 })
+
+const servingRelease = vi.hoisted(() => vi.fn(async () => null as null | { datasetReleaseId: string; lastUpdated: string }))
 
 vi.mock('next/navigation', () => ({ notFound }))
 vi.mock('../../../../../lib/og/card', () => ({ ogCard, OG_SIZE: { width: 1200, height: 630 } }))
@@ -36,8 +39,10 @@ vi.mock('../../../../../lib/rateLimit', () => ({ isRateLimited }))
 vi.mock('../../../../../lib/api', () => ({
   FastApiError: apiMocks.FastApiError,
   fetchManMetaByNameAndSection: apiMocks.fetchManMetaByNameAndSection,
+  fetchManByNameAndSectionOrAlias: apiMocks.fetchManByNameAndSectionOrAlias,
   withDistroFallback: apiMocks.withDistroFallback,
 }))
+vi.mock('../../../../../lib/manRelease', () => ({ servingRelease }))
 vi.mock('../../../../../components/man/RunningHead', () => ({ sectionLabel: (section: string) => `Section ${section}` }))
 
 import { GET } from './route'
@@ -54,6 +59,26 @@ function page() {
       section: '1',
       title: 'GNU Bourne Again SHell',
       description: 'command language interpreter',
+      datasetReleaseId: '2026-10-28T05:14:24Z+debian+2e579f1+mandoc:1.14.6-4',
+    },
+  }
+}
+
+function fullPage(overrides: { description?: string; brief?: unknown } = {}) {
+  return {
+    kind: 'page',
+    data: {
+      page: { ...page().page, ...('description' in overrides ? { description: overrides.description } : {}) },
+      content: {
+        blocks: [],
+        toc: [],
+        options: [
+          { anchorId: 'opt-norc', flags: '--norc', description: 'Do not read the startup file.' },
+          { anchorId: 'opt-c', flags: '-c, --command', argument: 'STRING', description: 'Read commands from STRING.' },
+        ],
+      },
+      variants: [],
+      brief: overrides.brief ?? null,
     },
   }
 }
@@ -66,6 +91,7 @@ beforeEach(() => {
     data: await fn(distro),
   }))
   apiMocks.fetchManMetaByNameAndSection.mockResolvedValue(page())
+  apiMocks.fetchManByNameAndSectionOrAlias.mockResolvedValue(fullPage())
 })
 afterEach(() => vi.unstubAllEnvs())
 
@@ -89,10 +115,19 @@ describe('man page share image route', () => {
     expect(ogCard).not.toHaveBeenCalled()
   })
 
-  it('does not render missing pages', async () => {
+  it('answers a missing page with a private 404', async () => {
     apiMocks.withDistroFallback.mockRejectedValueOnce(new apiMocks.FastApiError(404, 'PAGE_NOT_FOUND', 'Page not found'))
-    await expect(get('missing', '1')).rejects.toThrow('NEXT_NOT_FOUND')
+    const response = await get('missing', '1')
+    expect(response.status).toBe(404)
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store')
     expect(ogCard).not.toHaveBeenCalled()
+  })
+
+  it.each(['random1', 'random2', 'no-such-package'])('answers the made-up package %s with a private 404', async (pkg) => {
+    apiMocks.withDistroFallback.mockRejectedValueOnce(new apiMocks.FastApiError(404, 'PAGE_NOT_FOUND', 'Page not found'))
+    const response = await get('bash', '1', `?pkg=${pkg}`)
+    expect(response.status).toBe(404)
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store')
   })
 
   it('does not turn backend failures into missing images', async () => {
@@ -106,11 +141,89 @@ describe('man page share image route', () => {
     const response = await get('bash', '1')
     expect(response.headers.get('Cache-Control')).toBe('public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800')
     expect(ogCard).toHaveBeenCalledWith({
-      head: 'BASH(1)',
+      name: 'bash',
+      section: '1',
       label: 'Section 1',
-      name: 'bash(1)',
       description: 'command language interpreter',
+      distro: 'Debian',
+      date: 'Oct 28, 2026',
     })
+    expect(apiMocks.fetchManByNameAndSectionOrAlias).not.toHaveBeenCalled()
+    expect(response.headers.get('X-Robots-Tag')).toBeNull()
+  })
+
+  it('names the distro that answered after a fallback', async () => {
+    apiMocks.withDistroFallback.mockImplementationOnce(async (_distro: string, fn: (distro: string) => Promise<unknown>) => ({ distro: 'debian', data: await fn('debian') }))
+    await get('bash', '1', '?distro=arch')
+    expect(ogCard).toHaveBeenCalledWith(expect.objectContaining({ distro: 'Debian' }))
+  })
+
+  it('dates a release whose id carries no day from the active release, only when it is that release', async () => {
+    apiMocks.fetchManMetaByNameAndSection.mockResolvedValue({ page: { ...page().page, datasetReleaseId: 'e2e-debian-1' } })
+    servingRelease.mockResolvedValueOnce({ datasetReleaseId: 'e2e-debian-1', lastUpdated: '2026-10-30T06:48:11Z' })
+    await get('bash', '1')
+    expect(ogCard).toHaveBeenLastCalledWith(expect.objectContaining({ date: 'Oct 30, 2026' }))
+    servingRelease.mockResolvedValueOnce({ datasetReleaseId: 'e2e-debian-2', lastUpdated: '2026-10-30T06:48:11Z' })
+    await get('bash', '1')
+    expect(ogCard).toHaveBeenLastCalledWith(expect.objectContaining({ date: undefined }))
+  })
+
+  it('renders one option for ?flag=, from the page that defines it', async () => {
+    const response = await get('bash', '1', '?flag=--command')
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Cache-Control')).toBe('public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800')
+    expect(apiMocks.fetchManMetaByNameAndSection).not.toHaveBeenCalled()
+    expect(ogCard).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'bash',
+      description: undefined,
+      option: { flags: '-c, --command', argument: 'STRING', description: 'Read commands from STRING.' },
+      distro: 'Debian',
+      date: 'Oct 28, 2026',
+    }))
+  })
+
+  it('answers a flag the page does not define with a private 404', async () => {
+    const response = await get('bash', '1', '?flag=-q')
+    expect(response.status).toBe(404)
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store')
+    expect(ogCard).not.toHaveBeenCalled()
+  })
+
+  it.each(['command', '--command=STRING', '-c x'])('does not render a flag card for %s', async (flag) => {
+    await expect(get('bash', '1', `?flag=${encodeURIComponent(flag)}`)).rejects.toThrow('NEXT_NOT_FOUND')
+    expect(ogCard).not.toHaveBeenCalled()
+  })
+
+  it('keeps noindex on a long-tail flag card', async () => {
+    apiMocks.fetchManByNameAndSectionOrAlias.mockResolvedValue({ ...fullPage(), data: { ...fullPage().data, page: { ...page().page, indexable: false } } })
+    const response = await get('bash', '1', '?flag=--norc')
+    expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
+  })
+
+  it('keeps noindex on a long-tail page card', async () => {
+    apiMocks.fetchManMetaByNameAndSection.mockResolvedValue({ page: { ...page().page, indexable: false } })
+    const response = await get('bash', '1')
+    expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
+  })
+
+  it('labels a generated summary, used only when the page has no NAME line', async () => {
+    apiMocks.fetchManMetaByNameAndSection.mockResolvedValue({ page: { ...page().page, description: '' } })
+    apiMocks.fetchManByNameAndSectionOrAlias.mockResolvedValue(fullPage({
+      description: '',
+      brief: { summary: 'Runs shell commands.', examples: [], taskPhrases: [], tldr: null, generated: { provider: 'p', model: 'm-1', promptVersion: 'v1', generatedAt: '2026-10-28' } },
+    }))
+    await get('bash', '1')
+    expect(ogCard).toHaveBeenCalledWith(expect.objectContaining({
+      description: undefined,
+      generated: { text: 'Runs shell commands.', label: 'generated · m-1, 2026-10-28' },
+    }))
+  })
+
+  it('falls back to the title without a NAME line or a generated summary', async () => {
+    apiMocks.fetchManMetaByNameAndSection.mockResolvedValue({ page: { ...page().page, description: '' } })
+    await get('bash', '1')
+    expect(ogCard).toHaveBeenCalledWith(expect.objectContaining({ description: 'GNU Bourne Again SHell' }))
+    expect(ogCard.mock.calls[0]).not.toHaveProperty('0.generated')
   })
 
   it('resolves the requested distro and defaults an unknown one to Debian', async () => {
@@ -128,7 +241,7 @@ it('decodes encoded Perl names exactly once before OG lookup and rendering', asy
   apiMocks.fetchManMetaByNameAndSection.mockResolvedValue({ page: { ...page().page, name: 'foo::bar', section: '3pm' } })
   expect((await get('foo%3A%3Abar', '3pm')).status).toBe(200)
   expect(apiMocks.fetchManMetaByNameAndSection).toHaveBeenCalledWith({ distro: 'debian', name: 'foo::bar', section: '3pm' })
-  expect(ogCard).toHaveBeenCalledWith(expect.objectContaining({ head: 'FOO::BAR(3PM)', name: 'foo::bar(3pm)' }))
+  expect(ogCard).toHaveBeenCalledWith(expect.objectContaining({ name: 'foo::bar', section: '3pm' }))
 })
 
 it.each(['foo%253A%253Abar', 'foo%ZZ'])('rejects malformed or doubly encoded OG names %s', async name => {
@@ -140,4 +253,9 @@ it('loads metadata from the explicit package provider', async () => {
   const response = await get('foo::bar', '3pm', '?pkg=alternate')
   expect(response.status).toBe(200)
   expect(apiMocks.fetchManMetaByNameAndSection).toHaveBeenCalledWith({ distro: 'debian', name: 'foo::bar', section: '3pm', pkg: 'alternate' })
+})
+
+it.each(['?zz=1', '?distro=junk', '?flag=-c&flag=--command', '?_rsc=abc'])('answers an image query the proxy would have redirected (%s) privately', async (search) => {
+  const response = await get('bash', '1', search)
+  expect(response.headers.get('Cache-Control')).toBe('private, no-store')
 })

@@ -9,12 +9,13 @@ test('overlays: a palette chunk that fails to load closes the palette, and the n
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
 
-  // Production chunk names are hashes, so pick the palette chunk by its content.
+  // Production chunk names are hashes, so pick the palette chunk by its content: code only the palette has.
+  // (Its labels live in the catalog, which the shared shell chunk carries.)
   let blocking = true
   let blocked = 0
   await page.route(/\/_next\/static\/chunks\/.*\.js(\?|$)/, async (route) => {
     const response = await route.fetch()
-    if (blocking && (await response.text()).includes('Command palette input')) {
+    if (blocking && (await response.text()).includes('bm-palette-option-')) {
       blocked += 1
       await route.abort()
       return

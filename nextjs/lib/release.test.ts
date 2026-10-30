@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseReleaseId } from './release'
+import { parseReleaseId, releaseDay } from './release'
 
 describe('parseReleaseId', () => {
   it('splits a production id', () => {
@@ -19,5 +19,13 @@ describe('parseReleaseId', () => {
       gitSha: null,
       mandocVersion: null,
     })
+  })
+})
+
+describe('releaseDay', () => {
+  it('writes a release day as the site footer does, in UTC', () => {
+    expect(releaseDay('2026-10-28T23:59:59Z')).toBe('Oct 28, 2026')
+    expect(releaseDay('not a date')).toBeUndefined()
+    expect(releaseDay(null)).toBeUndefined()
   })
 })

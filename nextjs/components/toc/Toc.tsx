@@ -3,6 +3,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import type { TocItem } from '../../lib/docModel'
+import type { ClientT } from '../../lib/i18n/server'
 import { sectionNumbers } from '../man/sectionNumbers'
 
 /* Sections in small caps, subsections indented under them, deeper headings further in. */
@@ -21,12 +22,14 @@ export function Toc({
   onNavigate,
   onNavigateToId,
   showTitle = true,
+  t,
 }: {
   items: TocItem[]
   activeId?: string | null
   onNavigate?: () => void
   onNavigateToId?: (id: string) => void
   showTitle?: boolean
+  t: ClientT
 }) {
   const listRef = useRef<HTMLOListElement | null>(null)
   const [marker, setMarker] = useState<{ top: number; height: number } | null>(null)
@@ -51,7 +54,8 @@ export function Toc({
 
   return (
     <nav
-      aria-label="On this page"
+      aria-label={t('On this page')}
+      data-bm-toc
       className="space-y-2"
       onKeyDown={(e) => {
         if (e.metaKey || e.ctrlKey || e.altKey) return
@@ -64,7 +68,7 @@ export function Toc({
         }
       }}
     >
-      {showTitle ? <div className="small-caps text-sm text-ink-3">Contents</div> : null}
+      {showTitle ? <div className="small-caps text-sm text-ink-3">{t('Contents')}</div> : null}
       {/* The marker sits beside the list, not in it: an <ol> holds only <li>. */}
       <div className="relative">
         {marker ? (

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 
 import { noteId } from '../../lib/explain'
+import { useT } from '../state/lang'
 
 /**
  * One definition at a time, under the token grid. It floats (on phones it pins
@@ -11,6 +12,7 @@ import { noteId } from '../../lib/explain'
  * card never says anything the list does not.
  */
 export function DefinitionCard({ selected, onClose }: { selected: number | null; onClose: () => void }) {
+  const t = useT()
   const bodyRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -22,7 +24,7 @@ export function DefinitionCard({ selected, onClose }: { selected: number | null;
 
   return (
     <section
-      aria-label="Definition"
+      aria-label={t('Definition')}
       aria-live="polite"
       hidden={selected === null}
       className="bm-xcard border border-rule-2 bg-raised px-4 py-3 shadow-overlay md:mt-5 md:px-5 md:py-4"
@@ -32,7 +34,7 @@ export function DefinitionCard({ selected, onClose }: { selected: number | null;
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close definition"
+          aria-label={t('Close definition')}
           className="-mt-1 -mr-2 inline-flex size-9 shrink-0 items-center justify-center text-ink-2 hover:text-ink"
         >
           <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden="true">

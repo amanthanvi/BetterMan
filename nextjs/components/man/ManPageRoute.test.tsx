@@ -1,12 +1,13 @@
 import type { GetServerSidePropsContext } from 'next'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const lookup = vi.hoisted(() => ({ lookupManPage: vi.fn(), manMiss: vi.fn(), resolveManName: vi.fn() }))
 vi.mock('../../lib/manLookup', () => lookup)
 
 import ManNameRoute, { getServerSideProps as nameProps } from '../../pages/man/[name]/index'
 import ManPageRoute, { config, getServerSideProps as pageProps } from '../../pages/man/[name]/[section]'
+import { holdBack, releaseHeld } from '../../lib/i18n/testing'
 import { encodeReleaseHeader } from '../../lib/manRelease'
 import { ManHeadTags, type ManHeadData } from './ManHead'
 
@@ -35,6 +36,11 @@ function propsOf(result: object): object {
   return result.props as object
 }
 
+afterEach(() => {
+  vi.unstubAllEnvs()
+  releaseHeld()
+})
+
 beforeEach(() => {
   vi.clearAllMocks()
   lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data, related: [], servedRelease: '2026-10-28+debian' })
@@ -47,7 +53,7 @@ it('carries its head to the document: canonical, share image, JSON-LD and the in
   const tail = await pageProps(context({ name: 'tar', section: '1' }).ctx)
   expect(propsOf(result)).toMatchObject({
     head: {
-      title: 'tar(1) - BetterMan',
+      title: 'tar(1) — BetterMan',
       canonical: 'http://localhost:3000/man/tar/1',
       ogImage: { url: 'http://localhost:3000/man/tar/1/og' },
       noindex: false,
@@ -55,6 +61,97 @@ it('carries its head to the document: canonical, share image, JSON-LD and the in
   })
   expect(propsOf(tail)).toMatchObject({ head: { noindex: true } })
   expect(JSON.parse((propsOf(result) as { head: { jsonLd: { json: string } } }).head.jsonLd.json)).toMatchObject({ '@type': 'TechArticle' })
+})
+
+it('shares one option for ?flag= under the page canonical, and ignores a flag the page does not define', async () => {
+  const options = [{ anchorId: 'opt-x', flags: '-x, --extract', description: 'Extract files from an archive.' }]
+  lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data: { ...data, content: { ...data.content, options } }, related: [], servedRelease: '2026-10-28+debian' })
+  const shared = propsOf(await pageProps(context({ name: 'tar', section: '1' }, { flag: '--extract' }).ctx)) as { head: Record<string, unknown> }
+  expect(shared.head).toMatchObject({
+    title: 'tar(1) — BetterMan',
+    canonical: 'http://localhost:3000/man/tar/1',
+    ogImage: { url: 'http://localhost:3000/man/tar/1/og?flag=--extract', alt: '-x, --extract in tar(1)' },
+    share: { title: 'tar --extract · tar(1) — BetterMan', description: 'Extract files from an archive.' },
+  })
+  const cached = context({ name: 'tar', section: '1' }, { flag: '--extract' })
+  await pageProps(cached.ctx)
+  expect(cached.res.headers['cdn-cache-control']).toBe('public, s-maxage=3600, stale-while-revalidate=86400')
+
+  // A flag this release's page does not define is dropped by a private redirect, keeping the rest.
+  for (const flag of ['-q', 'extract', '--extract=X']) {
+    const { ctx, res } = context({ name: 'tar', section: '1' }, { flag, distro: 'ubuntu', pkg: 'tar', portability: 'text', lang: 'de' })
+    expect(await pageProps(ctx)).toEqual({ redirect: { destination: '/man/tar/1?distro=ubuntu&pkg=tar&portability=text&lang=de', permanent: false } })
+    expect(res.headers['cache-control']).toBe('private, no-store')
+    expect(res.headers['cdn-cache-control']).toBeUndefined()
+  }
+})
+
+it('answers privately a query the proxy would have redirected, should one reach the renderer', async () => {
+  for (const query of [{ zz: '1' }, { distro: ['ubuntu', 'fedora'] }, { portability: 'glyph' }, { lang: 'en' }] as Record<string, string | string[]>[]) {
+    const { ctx, res } = context({ name: 'tar', section: '1' }, query as Record<string, string>)
+    await pageProps(ctx)
+    expect(res.headers['cache-control'], JSON.stringify(query)).toBe('private, no-store')
+  }
+  const own = context({ name: 'tar', section: '1' }, { name: 'tar', section: '1', __bm_release: '2026-10-28+debian', portability: 'text' })
+  await pageProps(own.ctx)
+  expect(own.res.headers['cdn-cache-control']).toBe('public, s-maxage=3600, stale-while-revalidate=86400')
+
+  lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' }, servedRelease: '2026-10-28+debian' })
+  const picker = context({ name: 'tar' }, { utm_source: 'hn' })
+  await nameProps(picker.ctx)
+  expect(picker.res.headers['cache-control']).toBe('private, no-store')
+})
+
+it.each(['random1', 'random2', 'no-such-package'])('keeps every HTML answer to the made-up package %s private, name-only and with a section', async (pkg) => {
+  lookup.lookupManPage.mockResolvedValue({ kind: 'miss', servedRelease: '2026-10-28+debian' })
+  const page = context({ name: 'tar', section: '1' }, { pkg })
+  await pageProps(page.ctx)
+  expect(page.res.statusCode).toBe(404)
+  expect(page.res.headers['cache-control']).toBe('private, no-store')
+
+  lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' }, servedRelease: '2026-10-28+debian' })
+  const name = context({ name: 'tar' }, { pkg })
+  await expect(nameProps(name.ctx)).resolves.toEqual({ redirect: { destination: `/man/tar/1?pkg=${pkg}`, permanent: false } })
+  expect(name.res.headers['cache-control']).toBe('private, no-store')
+})
+
+it('answers a request that arrived with a bare _rsc privately, on both man renderers', async () => {
+  const bare = context({ name: 'tar', section: '1' })
+  ;(bare.ctx.req as unknown as { url: string }).url = '/man/tar/1?_rsc=abc'
+  await pageProps(bare.ctx)
+  expect(bare.res.headers['cache-control']).toBe('private, no-store')
+
+  const client = context({ name: 'tar', section: '1' }, {}, { rsc: '1' })
+  ;(client.ctx.req as unknown as { url: string }).url = '/man/tar/1?_rsc=abc'
+  await pageProps(client.ctx)
+  expect(client.res.headers['cdn-cache-control']).toBe('public, s-maxage=3600, stale-while-revalidate=86400')
+
+  lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' }, servedRelease: '2026-10-28+debian' })
+  const name = context({ name: 'tar' })
+  ;(name.ctx.req as unknown as { url: string }).url = '/man/tar?_rsc=abc'
+  await nameProps(name.ctx)
+  expect(name.res.headers['cache-control']).toBe('private, no-store')
+})
+
+it('keeps every answer to an unproven package or flag out of the CDN', async () => {
+  lookup.lookupManPage.mockResolvedValue({ kind: 'miss', servedRelease: '2026-10-28+debian' })
+  for (const query of [{ pkg: 'made-up' }, { flag: '-x' }, {}] as Record<string, string>[]) {
+    const { ctx, res } = context({ name: 'tar', section: '1' }, query)
+    await pageProps(ctx)
+    expect(res.statusCode).toBe(404)
+    if (Object.keys(query).length) expect(res.headers['cache-control'], JSON.stringify(query)).toBe('private, no-store')
+    else expect(res.headers['cdn-cache-control']).toBe('public, s-maxage=600, stale-while-revalidate=3600')
+  }
+
+  lookup.lookupManPage.mockResolvedValue({ kind: 'alias', name: 'gzip', section: '1', servedRelease: '2026-10-28+debian' })
+  const alias = context({ name: 'gunzip', section: '1' }, { pkg: 'made-up' })
+  await pageProps(alias.ctx)
+  expect(alias.res.headers['cache-control']).toBe('private, no-store')
+})
+
+it('prints the running head and foot: name, section label, edition, system and release day', async () => {
+  const result = propsOf(await pageProps(context({ name: 'tar', section: '1' }).ctx)) as { head: Record<string, unknown> }
+  expect(result.head.print).toEqual({ head: ['TAR(1)', 'User Commands', 'TAR(1)'], foot: ['tar 1.35', 'Debian · Oct 28, 2026'] })
 })
 
 it('turns off the Next runtime, so the page is plain HTML', () => {
@@ -213,7 +310,17 @@ describe('/man/<name>', () => {
     expect(html).toContain('href="/man/printf/3"')
   })
 
-  it('answers a missing name with a 404', async () => {
+  it('keeps a requested package private until the page it leads to proves it', async () => {
+    lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' }, servedRelease: '2026-10-28+debian' })
+    const withPkg = context({ name: 'tar' }, { pkg: 'made-up' })
+    await expect(nameProps(withPkg.ctx)).resolves.toEqual({ redirect: { destination: '/man/tar/1?pkg=made-up', permanent: false } })
+    expect(withPkg.res.headers['cache-control']).toBe('private, no-store')
+    const bare = context({ name: 'tar' })
+    await nameProps(bare.ctx)
+    expect(bare.res.headers['cdn-cache-control']).toBe('public, s-maxage=3600, stale-while-revalidate=86400')
+  })
+
+    it('answers a missing name with a 404', async () => {
     lookup.resolveManName.mockResolvedValue({ result: null, servedRelease: '2026-10-28+debian' })
     const { ctx, res } = context({ name: 'gizp' })
     await nameProps(ctx)
@@ -254,4 +361,92 @@ it('keeps an alias target package ahead of an explicit name-route selector', asy
   await expect(nameProps(context({ name: 'ftp' }, { pkg: 'ftp.app' }).ctx)).resolves.toMatchObject({ redirect: { destination: '/man/tnftp/1?pkg=tnftp' } })
   lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'alias', name: 'tnftp', section: '1' }, servedRelease: release.datasetReleaseId })
   await expect(nameProps(context({ name: 'ftp' }, { pkg: 'ftp.app' }).ctx)).resolves.toMatchObject({ redirect: { destination: '/man/tnftp/1' } })
+})
+
+describe('UI language (docs/i18n.md)', () => {
+  const render = (props: object) => renderToStaticMarkup(ManPageRoute(props as Parameters<typeof ManPageRoute>[0]))
+
+  it('renders English with no language machinery when the URL names none', async () => {
+    vi.stubEnv('BM_I18N_PREVIEW', 'all')
+    const html = render(propsOf(await pageProps(context({ name: 'tar', section: '1' }).ctx)))
+    expect(html).toContain('Skip to content')
+    expect(html).not.toContain('bm-i18n')
+    // The switch has nowhere to go until a second language is public; with previews on it appears, in English.
+    expect(html).toContain('data-bm-lang-nav')
+    expect(html).not.toContain('Suggest a fix for this translation')
+  })
+
+  it('renders from the URL alone, whatever a cookie or Accept-Language says', async () => {
+    vi.stubEnv('BM_I18N_PREVIEW', 'all')
+    const plain = context({ name: 'tar', section: '1' })
+    const noisy = context({ name: 'tar', section: '1' }, {}, { cookie: 'bm-lang=de', 'accept-language': 'ja,de;q=0.9' })
+    expect(await pageProps(noisy.ctx)).toEqual(await pageProps(plain.ctx))
+  })
+
+  it('renders a public language: translated chrome, links that keep it, its own script and a fix link', async () => {
+    vi.stubEnv('BM_I18N_PREVIEW', 'de')
+    vi.stubEnv('BM_MAN_SCRIPTS', JSON.stringify({ en: '/_bm/man.0123456789abcdef.js', de: '/_bm/man.de.0123456789abcdef.js' }))
+    const { ctx } = context({ name: 'tar', section: '1' }, { lang: 'de', distro: 'ubuntu' })
+    const html = render(propsOf(await pageProps(ctx)))
+    expect(html).toContain('Zum Inhalt springen')
+    expect(html).toContain('href="/?distro=ubuntu&amp;lang=de"')
+    expect(html).toContain('<nav aria-label="Sprache" data-bm-lang-nav="true"')
+    // The switch remembers the choice through the proxy, which returns to the page by its Referer (the HTML stays small and the same for every URL).
+    expect(html).toContain('href="/-/lang/en"')
+    expect(html).not.toContain('to=%2F')
+    expect(html).not.toContain('localStorage')
+    expect(html).toContain('Korrektur für diese Übersetzung vorschlagen')
+    expect(html).toContain('locale=de')
+    expect(html).toContain('translation_fix.yml')
+    // The script is this language's own bundle, so no strings travel in the HTML and English loads none of them.
+    expect(html).toContain('<script defer="" src="/_bm/man.de.0123456789abcdef.js"></script>')
+    expect(html).not.toContain('bm-i18n')
+  })
+
+  it('canonicalizes a localized page to the English URL and keeps it out of the index', async () => {
+    vi.stubEnv('BM_I18N_PREVIEW', 'de')
+    const english = propsOf(await pageProps(context({ name: 'tar', section: '1' }, { distro: 'ubuntu' }).ctx)) as { head: { canonical: string; noindex: boolean } }
+    const german = propsOf(await pageProps(context({ name: 'tar', section: '1' }, { distro: 'ubuntu', lang: 'de' }).ctx)) as { head: { canonical: string; noindex: boolean }; i18n: { lang: string } }
+    expect(german.i18n.lang).toBe('de')
+    expect(german.head.canonical).toBe(english.head.canonical)
+    expect(german.head.canonical).not.toContain('lang=')
+    expect(english.head.noindex).toBe(false)
+    expect(german.head.noindex).toBe(true)
+    // An explicit ?lang=en is English: indexable under the bare canonical.
+    const explicit = propsOf(await pageProps(context({ name: 'tar', section: '1' }, { lang: 'en' }).ctx)) as { head: { noindex: boolean } }
+    expect(explicit.head.noindex).toBe(false)
+  })
+
+  it('shows the switch with all six languages in production, where nothing is previewed', async () => {
+    vi.stubEnv('BM_I18N_PREVIEW', '')
+    const html = render(propsOf(await pageProps(context({ name: 'tar', section: '1' }).ctx)))
+    expect(html).toContain('data-bm-lang-nav')
+    for (const name of ['Deutsch', 'Français', 'Español', 'Português (Brasil)', '日本語', 'Русский']) expect(html).toContain(name)
+    const russian = propsOf(await pageProps(context({ name: 'tar', section: '1' }, { lang: 'ru' }).ctx)) as { head: { noindex: boolean }; i18n: { lang: string } }
+    expect(russian.i18n.lang).toBe('ru')
+    // Localized pages stay out of the index, with the English canonical, until translated manuals ship (B3).
+    expect(russian.head.noindex).toBe(true)
+  })
+
+  it('does not render a language that is not reviewed: the page is English and the parameter is ignored', async () => {
+    holdBack('de', 'fr', 'es', 'pt-BR', 'ja', 'ru')
+    vi.stubEnv('BM_I18N_PREVIEW', '')
+    const result = propsOf(await pageProps(context({ name: 'tar', section: '1' }, { lang: 'de' }).ctx)) as { head: { noindex: boolean }; i18n: { lang: string; urlLang: string | null } }
+    expect(result.i18n).toMatchObject({ lang: 'en', urlLang: null })
+    expect(result.head.noindex).toBe(false)
+    const html = render(result)
+    expect(html).toContain('Skip to content')
+    expect(html).not.toContain('bm-i18n')
+    expect(html).not.toContain('data-bm-lang-nav')
+  })
+
+  it('keeps the language on a redirect, the section picker and a miss', async () => {
+    vi.stubEnv('BM_I18N_PREVIEW', 'fr')
+    lookup.lookupManPage.mockResolvedValue({ kind: 'alias', name: 'gzip', section: '1', distro: 'debian', servedRelease: '2026-10-28+debian' })
+    await expect(pageProps(context({ name: 'gunzip', section: '1' }, { lang: 'fr' }).ctx)).resolves.toEqual({ redirect: { destination: '/man/gzip/1?lang=fr', permanent: false } })
+
+    lookup.lookupManPage.mockResolvedValue({ kind: 'miss', servedRelease: '2026-10-28+debian' })
+    const miss = await pageProps(context({ name: 'ta', section: '9' }, { lang: 'fr' }).ctx)
+    expect(render(propsOf(miss))).toContain('Aucune entrée de manuel pour ta dans la section 9')
+  })
 })

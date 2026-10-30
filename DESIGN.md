@@ -109,6 +109,89 @@ Light is paper; dark is the same plate in warm ink on black.
 - **Focus:** one global rule, a 2px solid `accent` outline at 2px offset on
   `:focus-visible`; underline fields show it as a red rule instead.
 
+## Typographic finesse
+
+- **Ligatures belong to prose.** Code, flags, mono, anything typed, troff's bold
+  literals and citations' names (`b`, `strong`), and the man page's title are set
+  with `font-variant-ligatures: none`, so `fflush`, `-fi` and `diff` never take an
+  ﬀ or ﬁ. The rule sits after the layers in `globals.css`, so no `font` shorthand
+  resets it. The share-card fonts carry no ligatures at all.
+- **Hanging punctuation** (`first allow-end last`) on the manual, BetterMan's
+  added prose and the man page lede, where the browser has it (Safari). Code,
+  option terms and tables keep their alignment.
+- **Quotes and dashes.** BetterMan's own copy uses curly quotes and apostrophes,
+  en and em dashes and the ellipsis; page titles read `tar(1) — BetterMan`.
+  `pnpm next:grammar` rejects straight quotes, a straight apostrophe between
+  letters, `...` and a hyphen set as a dash in JSX text and in `title`,
+  `aria-label`, `placeholder` and `alt` strings (text on its own line between
+  tags is not read). Upstream manual text is never rewritten.
+
+## Print
+
+A man page prints as the manual (`@page` and `@media print` in `globals.css`):
+
+- **Running head and foot on every page.** The first page opens with the running
+  head in the text; later pages carry `TAR(1) · User Commands · TAR(1)` in the top
+  margin, and every page carries the edition, the system and release day, and the
+  page number in the bottom margin, each over or under a hairline. The text of
+  those parts is per page: `ManHeadTags` writes a small `@page` rule from
+  `head.print`. Chromium draws page-margin boxes; a browser without them still
+  prints the first page's head. A margin box takes no `font-variant`, so its small
+  caps are capitals set small and spaced.
+- **No site chrome:** header, footer, contents, overlays, controls, the composer,
+  the providers disclosure, the system picker label and “Report a problem” are
+  hidden. Light monochrome through the colour tokens.
+- **Section numbering** prints inline before each heading. The manual is set at
+  10.5pt/1.45 in BM Text whatever the reading preferences, code at 8.5pt and
+  wrapped rather than cut.
+- **URLs:** an outside link in the manual prints its address after it, unless its
+  text already spells it (`data-bm-print-url`, set by `DocRenderer`). Links to
+  other manual pages are citations already.
+- **Breaks:** a heading or an option term stays with what follows; code blocks,
+  list items and table rows do not split; table headers repeat; three-line orphans
+  and widows. The whole index of options prints, its disclosure opened.
+- Nothing may overflow the measure (the browser would shrink the whole page).
+
+## Identity: icons and share cards
+
+- **The mark** is a semibold BM Text “b” in ink on paper over a short red rule:
+  the focused search field. Square, no border. `favicon.svg` and the 16/32/48 px
+  favicons use a pixel-fitted 32-unit grid; `betterman-mark.svg`, the Apple touch
+  icon and the 192/512 px icons a 512-unit grid inside the maskable safe zone.
+  `scripts/icons/build-icons.py` draws them from the share-card font. Both
+  renderers declare the ICO, the SVG and the touch icon; the web manifest's
+  colours are paper.
+- **Share cards** (`lib/og/card.tsx`, 1200×630, light plate) are set like a page:
+  the running head over a hairline, the name in semibold BM Text with its
+  section in old-style figures, the NAME line as an italic lede, and a running
+  foot naming the distro and the release day beside the `betterman(1)` wordmark.
+  The one red is a 4px marker in the gutter beside the card's subject, as the
+  contents marker marks the active heading. A long name steps down to stay on one
+  line and is cut past 40 characters; a long head drops its middle.
+- **Per-flag cards.** A flag's share URL is its short URL, `/tar/-x`, which lands
+  on `/man/tar/1?flag=-x#x`: the fragment selects the option and `?flag=` makes
+  the page's `og:image` `/man/tar/1/og?flag=-x`, with the option's terms in bold
+  mono over its definition, and `og:title` / `og:description` for that option. The
+  document title and canonical URL stay the page's. `flag` is one key as the
+  options index stores it (`-x`, `--extract`, `--sort` for `--sort=WORD`),
+  case-sensitive. A flag the page does not define is dropped by a private 307 to
+  the URL without it, and the image route answers 404 for it (`lib/manShare.ts`).
+  Man URLs carry only an allowlist of query parameters (`lib/manQuery.ts`,
+  `docs/runbooks/vercel-ops.md`).
+- **Text on cards is plain text**: controls and direction overrides are stripped
+  and every string is a text node. The cards use the manual's own words. Only a
+  page without a NAME line may show BetterMan's generated summary instead, with
+  “generated · <model>, <date>” under it.
+- **Fonts** (`public/fonts/og/`, `scripts/fonts/build-og-fonts.py`, with the OFL
+  and a FONTLOG): static WOFF instances of BM Text (roman, semibold, italic, and
+  small caps) with old-style figures and small caps baked into the character map,
+  since satori reads no OpenType features, and a JetBrains Mono subset with no
+  layout features for flags. Server-side only: no page loads them. Scripts beyond
+  Latin, Latin Extended, Greek and Cyrillic fall back to the fonts next/og loads.
+- **Caching:** a card is fresh for a day and served stale for a week while the CDN
+  refreshes; a long-tail or provider-alternate page's card sends
+  `X-Robots-Tag: noindex`.
+
 ## The man page
 
 - **Layout.** Running head across the page, then a 12.5rem sticky contents
@@ -247,6 +330,30 @@ the numbered definitions and the safety note.
   its edge, the one red in the note): "Before you run this" and the engine's
   fixed facts verbatim. The page adds no claim (`docs/explain-contract.md`).
 
+## Concept explainers
+
+`/concept/<slug>` (`pages/concept/[slug].tsx`, B8 #400) is BetterMan's own
+plain-English text over a section 7 page, plain server HTML in the man page
+shell (`ManShell`, the boot script, the man page script), complete without
+JavaScript and cacheable at the edge. A running head (Concept · title · BetterMan), the title in the
+serif, the summary as a sans lede, then "The manual's page": the section 7
+citations in large serif, first, because the manual is the authority. A source
+link keeps the reader's `?distro=` only where the source was read. The
+explainer itself (article "Explainer") is sans on paper with a provenance line
+("BetterMan's own explainer, not text from the manual. Generated · model,
+date"), mono for anything typed; citations in it link to the manual. Sources
+list each cited page with its package, distros and the sections read; Related
+pages follow. Only approved explainers render (`nextjs/content/concepts/README.md`);
+an opted-in local, CI or preview server (`BETTERMAN_CONCEPT_DRAFTS=1`) shows
+drafts with a red "not published" note and `noindex`.
+
+On a man page that references a concept, one quiet line closes the footer, nav
+"Concepts" (`[data-bm-concepts]`): "Concepts: signals · globbing", at most three,
+strongest reference first. It sits
+beside "Report a problem", never in the manual text and never as a card. In
+search, an explainer is a row with the kind `concept`, evidence "BetterMan
+explainer · on signal(7)", after the first result.
+
 ## Component vocabulary
 
 `components/ui/`: `Button` (outline = underlined text, ghost = quiet ink,
@@ -296,13 +403,16 @@ combinator.
   "Key flags of <name>(<section>)" and link "Package <name>", regions "Recent" /
   "Bookmarks" (home, only once they have entries) / "Browse sections" / "In brief" / "Options" / "Command composer" /
   "Other distributions" / "Did you mean" (man page 404), complementaries "See
-  also" / "Related commands", headings "Browse" and "Search the manual", TOC
+  also" / "Related commands", nav "Concepts" (man page footer, only when the
+  page references a published explainer), on a concept page regions "The
+  manual's page" / "Sources" and article "Explainer", headings "Browse" and "Search the manual", TOC
   active link `aria-current="location"`, link "Report a problem" (man page
   footer), and on explain: search form "Explain a command line", textbox
   "Command line to explain", region "Reading", list "Tokens" (a cluster's flags
   are its links), list "Definitions" (items `#x-<n>`), region "Definition" with
   button "Close definition", complementary "Safety note". Labels may render in
   small caps; name matching is case-insensitive.
+- **Language:** the interface language is `?lang=` (`en` default; `de fr es pt-BR ja ru` once reviewed), carried by in-app links like `?distro=`. A footer `nav` "Language" switches it, as plain links the proxy answers (`/-/lang/<code>` remembers the choice in a cookie); it renders only once a second language is public. Localized pages are `noindex` with the English canonical. Accessible names above are the English ones; each language has its own (`docs/i18n.md`), and a visible control label stays inside its `aria-label`.
 - **Robustness:** scrollable `<pre>` and table wrappers take `tabindex="0"`
   with a label; lists hold only `<li>`; no interactive element nests another;
   controls that need JavaScript are hidden without it.
@@ -330,8 +440,7 @@ combinator.
   `data-bm-hydrated` when its handlers attach. JSON-LD is a data block with no
   nonce. A bare man page URL is Debian; a reader whose default distro is another
   one is redirected to the explicit `?distro=` URL, whose links keep it.
-- Print forces light monochrome through the colour tokens and renders every
-  block. A full print stylesheet is later work.
+- Print is the printed manual; see Print below.
 
 ## Derived corpus metadata
 

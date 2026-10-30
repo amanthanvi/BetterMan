@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type MouseEvent } from 'react'
 
 import { noteId } from '../../lib/explain'
+import { useT } from '../state/lang'
 import { DefinitionCard } from './DefinitionCard'
 
 export type TokenCellView = {
@@ -24,6 +25,7 @@ function range(cell: TokenCellView) {
  * its one definition in a card; a cluster's flags open one at a time.
  */
 export function ExplainTokens({ cells }: { cells: TokenCellView[] }) {
+  const t = useT()
   const [selected, setSelected] = useState<number | null>(null)
   const close = useCallback(() => setSelected(null), [])
 
@@ -55,7 +57,7 @@ export function ExplainTokens({ cells }: { cells: TokenCellView[] }) {
 
   return (
     <>
-      <ol aria-label="Tokens" className="bm-tks">
+      <ol aria-label={t('Tokens')} className="bm-tks">
         {cells.map((cell) =>
           cell.tokens.length === 1 ? (
             <li key={cell.tokens[0].n} className="bm-tk" data-kind={cell.kind}>

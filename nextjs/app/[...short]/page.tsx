@@ -2,11 +2,13 @@ import { notFound, permanentRedirect, redirect } from 'next/navigation'
 
 import { search, withDistroFallback } from '../../lib/api'
 import { withDistro } from '../../lib/distro'
-import { explicitDistro, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
+import { explicitDistro, explicitLang, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
+import { normalizeManQuery } from '../../lib/manQuery'
+import { shareFlag, withShareFlag } from '../../lib/manShare'
 import { manPath, parseShortUrl, type ShortUrl } from '../../lib/shortUrl'
 
 function reservedSegments(): Set<string> {
-  // Inlined at build time by next.config.ts from the app and public directories.
+  // Inlined at build time by next.config.ts from the app, pages and public directories.
   const raw = process.env.BM_RESERVED_PATH_SEGMENTS
   if (!raw) throw new Error('BM_RESERVED_PATH_SEGMENTS is not set')
   return new Set(raw.split('/'))
@@ -30,12 +32,21 @@ function queryString(sp: SearchParams): string {
   return qs ? `?${qs}` : ''
 }
 
+// Only what the man page reads travels on (lib/manQuery.ts), so `?utm_source=` and
+// the like are dropped here rather than by a second redirect.
+function manQueryString(path: string, sp: SearchParams): string {
+  const qs = queryString(sp)
+  return normalizeManQuery(path, qs) ?? qs
+}
+
 // The option index, as search reads it for `tar -x`, maps a flag to its row.
+// `?flag=` gives the landing page that option's share card (lib/manShare.ts).
 // Without a match, or when the search fails, the reader still lands on the
 // page (or its section picker), which settles its own status.
 async function optionHref(target: Extract<ShortUrl, { kind: 'option' }>, sp: SearchParams): Promise<string> {
   const urlDistro = explicitDistro(sp)
-  const pageHref = withDistro(manPath(target.name, target.section), urlDistro)
+  const urlLang = explicitLang(sp)
+  const pageHref = withDistro(manPath(target.name, target.section), urlDistro, urlLang)
   const found = await withDistroFallback(await resolveRequestDistro(sp), (activeDistro) =>
     search({
       distro: activeDistro,
@@ -49,8 +60,10 @@ async function optionHref(target: Extract<ShortUrl, { kind: 'option' }>, sp: Sea
   const hit = found.data.results.find(
     (result) => result.match === 'option' && result.anchorId && result.name.toLowerCase() === target.name,
   )
-  if (hit) return `${withDistro(manPath(target.name, hit.section), urlDistro)}#${hit.anchorId}`
-  return pageHref
+  if (!hit) return pageHref
+  const page = withDistro(manPath(target.name, hit.section), urlDistro, urlLang)
+  const flag = shareFlag(target.flag)
+  return `${flag ? withShareFlag(page, flag) : page}#${hit.anchorId}`
 }
 
 export default async function ShortUrlPage({
@@ -67,9 +80,9 @@ export default async function ShortUrlPage({
 
   switch (target.kind) {
     case 'name':
-      return permanentRedirect(`${manPath(target.name)}${queryString(sp)}`)
+      return permanentRedirect(`${manPath(target.name)}${manQueryString(manPath(target.name), sp)}`)
     case 'page':
-      return permanentRedirect(`${manPath(target.name, target.section)}${queryString(sp)}`)
+      return permanentRedirect(`${manPath(target.name, target.section)}${manQueryString(manPath(target.name, target.section), sp)}`)
     case 'option':
       // 307: the anchor depends on the release and the reader's distro.
       return redirect(await optionHref(target, sp))

@@ -522,6 +522,15 @@
     text-wrap: pretty;
   }
 
+  /* Hanging punctuation where the browser has it (Safari): an opening quote or bracket
+     hangs into the margin and the measure stays optically flush. Code, terms and tables
+     keep their own alignment (the rule after the layers). */
+  .bm-manual,
+  .bm-added,
+  .bm-lede {
+    hanging-punctuation: first allow-end last;
+  }
+
   /* Long pages wrap each block so far-off blocks skip style, layout and paint.
      content-visibility clips paint to the padding box, so the padding leaves room
      for hanging numbers and focus rings and the negative margin gives it back. */
@@ -998,6 +1007,105 @@
   }
 }
 
+/* Ligatures belong to prose. Code, flags, literals (troff's bold, citations' names), the
+   command name and anything typed are set letter by letter, as the terminal shows them:
+   `fflush`, `-fi` and `diff` never take an ﬀ or ﬁ. Unlayered, so it outlasts the `font`
+   shorthands in the components above, which would reset it. Hanging punctuation stops here too. */
+:is(code, kbd, pre, samp, b, strong, input, textarea, .font-mono, .bm-tk-t, .bm-tk-f, .bm-manual dt, [data-bm-manual] h1) {
+  font-variant-ligatures: none;
+}
+
+:is(pre, code, kbd, samp, table, .font-mono, .bm-manual dt) {
+  hanging-punctuation: none;
+}
+
+/* Print: the page as the printed manual. Light monochrome through the tokens, no site
+   chrome, the running head on every page and the running foot under it, numbered sections,
+   URLs beside outside links, and breaks that keep a heading or a term with what follows.
+   The running parts' text is per page (ManHeadTags writes an @page rule); Chromium draws
+   page-margin boxes, and elsewhere the first page still opens with the running head. A
+   margin box takes no font-variant, so its small caps are capitals set small and spaced. */
+@page {
+  size: auto;
+  margin: 20mm 18mm 18mm;
+
+  @top-left {
+    vertical-align: bottom;
+    padding-bottom: 2.5mm;
+    border-bottom: 0.5pt solid #bbb;
+    font: 400 7pt/1.2 "BM Text", Georgia, serif;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #444;
+  }
+
+  @top-center {
+    vertical-align: bottom;
+    padding-bottom: 2.5mm;
+    border-bottom: 0.5pt solid #bbb;
+    font: 400 7pt/1.2 "BM Text", Georgia, serif;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #444;
+  }
+
+  @top-right {
+    vertical-align: bottom;
+    padding-bottom: 2.5mm;
+    border-bottom: 0.5pt solid #bbb;
+    font: 400 7pt/1.2 "BM Text", Georgia, serif;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #444;
+  }
+
+  @bottom-left {
+    vertical-align: top;
+    padding-top: 2.5mm;
+    border-top: 0.5pt solid #bbb;
+    font: 400 7pt/1.2 "BM Text", Georgia, serif;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #444;
+  }
+
+  @bottom-center {
+    vertical-align: top;
+    padding-top: 2.5mm;
+    border-top: 0.5pt solid #bbb;
+    font: 400 7pt/1.2 "BM Text", Georgia, serif;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #444;
+  }
+
+  @bottom-right {
+    content: counter(page);
+    vertical-align: top;
+    padding-top: 2.5mm;
+    border-top: 0.5pt solid #bbb;
+    font: 400 7pt/1.2 "BM Text", Georgia, serif;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #444;
+  }
+}
+
+/* The first page opens with the running head in the text, in every browser. */
+@page :first {
+  @top-left {
+    content: none;
+  }
+
+  @top-center {
+    content: none;
+  }
+
+  @top-right {
+    content: none;
+  }
+}
+
 @media print {
   :root {
     --color-paper: #fff;
@@ -1019,44 +1127,155 @@
 
   body {
     background: #fff !important;
+    min-height: 0;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
+  /* No site chrome: header, footer, contents, overlays, controls and the composer. */
   [data-bm-app-header],
   [data-bm-app-footer],
   [data-bm-sidebar],
   [data-bm-findbar],
+  [data-bm-composer],
+  [data-bm-providers],
   [role="dialog"],
-  .bm-copy {
-    display: none !important;
-  }
-
+  [role="tooltip"],
+  .bm-copy,
+  .bm-js,
   button,
   input,
   select,
-  textarea {
+  textarea,
+  summary {
     display: none !important;
   }
 
   main {
     max-width: none !important;
     padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  [data-bm-layout] {
+    display: block !important;
+    margin-top: 0 !important;
+  }
+
+  [data-bm-layout] > div {
+    max-width: none !important;
+  }
+
+  /* The running foot prints in the page margin; the head opens the first page. */
+  .bm-rh {
+    display: flex !important;
+    margin-bottom: 14pt;
+    font-size: 8.5pt;
+  }
+
+  .bm-rh > :nth-child(2) {
+    display: block !important;
+  }
+
+  .bm-rf {
+    display: none !important;
+  }
+
+  [data-bm-manual] h1 {
+    font-size: 26pt;
+    break-after: avoid;
+  }
+
+  .bm-lede {
+    font-size: 13pt;
+  }
+
+  /* The manual at book size, whatever the reader set on screen. */
+  .bm-manual {
+    max-width: none;
+    font-family: var(--font-serif) !important;
+    font-size: 10.5pt !important;
+    line-height: 1.45 !important;
+    orphans: 3;
+    widows: 3;
+  }
+
+  .bm-manual h2 {
+    margin-top: 16pt;
+  }
+
+  .bm-manual :is(h2, h3, h4, h5, h6, dt) {
+    break-after: avoid;
+  }
+
+  .bm-manual dd {
+    break-before: avoid;
+  }
+
+  .bm-manual :is(pre, .bm-code, li, tr, figure) {
+    break-inside: avoid;
+  }
+
+  .bm-manual thead {
+    display: table-header-group;
+  }
+
+  :is(pre, .bm-tbl) {
+    overflow: visible !important;
+  }
+
+  pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 8.5pt !important;
+  }
+
+  [data-bm-code-theme] .bm-code {
+    background: none;
+    color-scheme: light;
   }
 
   a {
     text-decoration: none;
   }
 
-  pre,
-  table {
-    break-inside: avoid;
+  /* An outside link prints its address unless its text already spells it; a link to
+     another manual page is already a citation. */
+  .bm-manual .bm-ext::after {
+    content: none;
   }
 
-  h1,
-  h2,
-  h3 {
-    break-after: avoid;
+  .bm-manual .bm-ext[data-bm-print-url]::after {
+    content: " <" attr(href) ">";
+    margin-left: 0;
+    font: 400 0.8em var(--font-mono);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    color: #444;
+  }
+
+  /* Nothing may push past the measure, or the browser shrinks the whole page to fit. */
+  [data-bm-manual] * {
+    max-width: 100%;
+  }
+
+  .bm-added :is(span, a) {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+
+  /* The whole index of options, in two columns, its disclosure opened. */
+  [data-bm-options] {
+    break-before: auto;
+  }
+
+  [data-bm-options] details::details-content {
+    content-visibility: visible;
+    display: block;
+  }
+
+  [data-bm-options] table {
+    font-size: 8.5pt;
   }
 
   .bm-mark,
@@ -1069,6 +1288,8 @@
   /* Print renders the whole page, not only what was near the viewport. */
   .bm-doc > * {
     content-visibility: visible;
+    margin: 0;
+    padding: 0;
   }
 
   .bm-manual [data-n]::before {

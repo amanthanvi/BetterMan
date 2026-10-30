@@ -27,13 +27,13 @@ BetterMan 2 aims, in order, to be the default lookup, a daily-driver tool, and a
 - Playwright e2e specs in `nextjs/e2e/` are the behavioral contract (semantic roles, aria-labels, `data-bm-*` hooks); reading prefs bind via `body[data-bm-*]` attributes.
 - Convex is the runtime data source, read server-side only; read-cost frugality is an active goal — no client subscriptions.
 - Zero-account product: all personalization stays in localStorage/cookies.
-- No runtime LLM. Generated text (summaries, gap-fill examples, task phrases, concept explainers) is built at ingest. It is labeled with model and date, and generated examples are checked flag by flag against the page's options table.
+- No runtime LLM. Generated text (summaries, gap-fill examples, task phrases) is built at ingest; concept explainers are reviewed files committed to the repository and bundled at build time. All of it is labeled with model and date, generated examples are checked flag by flag against the page's options table, and explainers publish only after a model panel and the owner have read them.
 
 ## Brand commitments (decided 2026-10-27)
 
 The owner signed off on the BetterMan 2 direction (`docs/roadmap/betterman-2.md`); `DESIGN.md` records the system.
 
-- **Name and mark:** BetterMan, with the wordmark set the way the manual sets a command, **betterman**(1). The `>_` glyph is retired from the interface (the app icons and share cards follow in C6); the typesetting is the identity.
+- **Name and mark:** BetterMan, with the wordmark set the way the manual sets a command, **betterman**(1). The `>_` glyph is retired: the app icons are a BM Text “b” over the one red rule, and share cards are set like a page of the manual (C6). The typesetting is the identity.
 - **The print manual:** the finest edition of the Unix manual, typeset for the screen. Running heads and foot, true small caps, old-style figures, hanging section numbers, hairlines and square corners.
 - **Three voices:** the upstream manual in the serif BM Text; everything BetterMan adds in system sans, on a quiet tint when it sits in the page; anything you type in system mono.
 - **One red,** for selection, focus and warnings, never decoration.
@@ -51,4 +51,4 @@ web
 
 ## Open decisions
 
-- How concepts surface on a man page (a footer line plus search, or hover/tap cards) is decided from bake-off drafts.
+- None at present. Concept surfacing was settled by the owner: a quiet footer line plus search, with no cards inside the manual text (B8, #400).

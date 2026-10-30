@@ -208,6 +208,13 @@ try {
   await fixture.mutation(makeFunctionReference('rateLimit:consume'), rateArgs)
   assert.deepEqual(metrics, { calls: 2, documents: 1, storageReads: 0 }, 'Rate-limit mutation counter is not installed')
   backend = createServer(async (req, res) => {
+    // Desktop tools on a developer machine probe new localhost listeners with a bare
+    // `GET /`. Next never sends one to Convex, so answer it without counting a failure.
+    if (req.method === 'GET' && req.url === '/') {
+      res.writeHead(404)
+      res.end()
+      return
+    }
     try {
       const method = req.url?.slice('/api/'.length)
       assert.ok(req.method === 'POST' && ['query', 'action', 'mutation'].includes(method), 'Unexpected Convex transport')

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 
 import { fetchSeoReleases } from '../../../lib/api'
+import { conceptSitemapXml } from '../../../lib/concepts'
 import { getPublicOrigin } from '../../../lib/public-origin'
 
 export const dynamic = 'force-dynamic'
@@ -22,6 +23,13 @@ export async function GET(request: Request, ctx: { params: Promise<{ distro?: st
   const { distro } = await ctx.params
   if (!distro) return new Response(null, { status: 404 })
   const origin = getPublicOrigin(request)
+  // /sitemap-concepts.xml: approved concept explainers, bundled with the build.
+  if (distro === 'concepts') {
+    const xml = conceptSitemapXml(origin)
+    return xml
+      ? new Response(xml, { headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } })
+      : new Response(null, { status: 404 })
+  }
   const releases = await fetchSeoReleases()
 
   const release = releases.items.find((r: SeoRelease) => r.distro === distro)

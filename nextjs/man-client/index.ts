@@ -3,6 +3,7 @@ import { withDistro } from '../lib/distro'
 import { restoreReadingPrefs } from '../lib/readingPrefs'
 import { cancelScrollPin, getScrollBehavior, scrollElementIntoView } from '../lib/scroll'
 import { formatRelativeTime } from '../lib/time'
+import { pageLang, t, urlLang } from './i18n'
 import { initActions, initBookmark } from './actions'
 import { initComposer } from './composer'
 import { initFind, openFind } from './find'
@@ -121,7 +122,7 @@ function bindKeys(isManPage: boolean, toggleBookmark: (() => void) | null) {
     } else if (key === 'h') {
       e.preventDefault()
       showNavigating()
-      window.location.assign(`${withDistro('/', urlDistro())}#recent`)
+      window.location.assign(`${withDistro('/', urlDistro(), urlLang())}#recent`)
     } else if (isManPage && key === 'p') {
       e.preventDefault()
       openPrefs()
@@ -155,7 +156,7 @@ function initOffline() {
 
 function initRelativeTimes() {
   for (const time of document.querySelectorAll<HTMLTimeElement>('time[data-bm-relative-time]')) {
-    time.textContent = formatRelativeTime(time.dateTime)
+    time.textContent = formatRelativeTime(time.dateTime, pageLang(), t('just now'))
   }
 }
 
