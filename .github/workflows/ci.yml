@@ -142,6 +142,9 @@ jobs:
       - run: cd ingestion && uv run ruff check .
       - run: cd ingestion && uv run ruff format --check .
       - run: cd ingestion && uv run python -m pytest
+      # Distro containers and the FreeBSD job install the package with pip.
+      - name: Check the package installs with pip
+        run: python -m pip install --dry-run --quiet ./ingestion
 
   performance_budgets:
     runs-on: ubuntu-latest
