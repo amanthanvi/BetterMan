@@ -114,7 +114,7 @@ export function ManPageFooterSections({
         </div>
       ) : null}
 
-      <div className="mt-8 space-y-1 text-xs text-ink-3">
+      <div className="mt-8 space-y-1 text-xs text-ink-3 print:hidden">
         {hasParseWarnings ? <p>mandoc reported formatting warnings for this page. Some structure may be lost.</p> : null}
         <p>
           <a href={reportHref} target="_blank" rel="noopener noreferrer" className="underline">

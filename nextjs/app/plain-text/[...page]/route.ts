@@ -8,7 +8,8 @@ import {
 } from '@/lib/api'
 import { normalizeDistro, withDistro } from '@/lib/distro'
 import { manCanonicalPath } from '@/lib/manCanonical'
-import { trustedProxyRelease } from '@/lib/manRelease'
+import { isManQuery } from '@/lib/manQuery'
+import { RELEASE_PARAM, trustedProxyRelease } from '@/lib/manRelease'
 import { isIndexable } from '@/lib/manRobots'
 import { renderManText } from '@/lib/manText'
 import { getPublicOrigin } from '@/lib/public-origin'
@@ -58,8 +59,17 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
   const release = proxyRelease?.datasetReleaseId
   // A request that bypasses the proxy cannot use a shared data-cache key.
   const lookupRelease = proxyRelease === undefined ? `unknown:${crypto.randomUUID()}` : release
-  const cacheHeaders = (answered: string | null): HeadersInit =>
-    release && answered === release ? {} : { 'Cache-Control': 'private, no-store' }
+  // Anything the proxy would have redirected (lib/manQuery.ts) is answered privately.
+  const query: Record<string, string | string[]> = {}
+  for (const key of new Set(new URL(request.url).searchParams.keys())) {
+    const values = new URL(request.url).searchParams.getAll(key)
+    query[key] = values.length === 1 ? values[0]! : values
+  }
+  const canonicalQuery = isManQuery('/man/_/_.txt', query, [RELEASE_PARAM])
+  // `?pkg=` is proven only by the page it names: a redirect, an alias or a picker that
+  // carries it stays private, so made-up package names never fill the CDN.
+  const cacheHeaders = (answered: string | null, proven: boolean): HeadersInit =>
+    release && answered === release && canonicalQuery && (proven || !pkg) ? {} : { 'Cache-Control': 'private, no-store' }
   if (await isRateLimited(request.headers, 'page')) return text('Too many requests\n', 429)
 
   try {
@@ -68,7 +78,7 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
         ? await fetchManResolve({ distro, name: name.toLowerCase(), release: lookupRelease })
         : await fetchManByNameAndSectionOrAlias({ distro, name, section: section.toLowerCase(), release: lookupRelease, ...(pkg ? { pkg } : {}) }),
     )
-    const headers = cacheHeaders(servedRelease(data))
+    const headers = cacheHeaders(servedRelease(data), data.kind === 'page' && 'data' in data)
     if (data.kind === 'ambiguous') {
       return text(`Multiple sections match ${name}. Choose a plain-text page:\n${data.options.map((option) => textHref(`${manPath(name, option.section)}.txt`)).join('\n')}\n`, 409)
     }

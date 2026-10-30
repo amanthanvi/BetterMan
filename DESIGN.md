@@ -109,6 +109,89 @@ Light is paper; dark is the same plate in warm ink on black.
 - **Focus:** one global rule, a 2px solid `accent` outline at 2px offset on
   `:focus-visible`; underline fields show it as a red rule instead.
 
+## Typographic finesse
+
+- **Ligatures belong to prose.** Code, flags, mono, anything typed, troff's bold
+  literals and citations' names (`b`, `strong`), and the man page's title are set
+  with `font-variant-ligatures: none`, so `fflush`, `-fi` and `diff` never take an
+  ﬀ or ﬁ. The rule sits after the layers in `globals.css`, so no `font` shorthand
+  resets it. The share-card fonts carry no ligatures at all.
+- **Hanging punctuation** (`first allow-end last`) on the manual, BetterMan's
+  added prose and the man page lede, where the browser has it (Safari). Code,
+  option terms and tables keep their alignment.
+- **Quotes and dashes.** BetterMan's own copy uses curly quotes and apostrophes,
+  en and em dashes and the ellipsis; page titles read `tar(1) — BetterMan`.
+  `pnpm next:grammar` rejects straight quotes, a straight apostrophe between
+  letters, `...` and a hyphen set as a dash in JSX text and in `title`,
+  `aria-label`, `placeholder` and `alt` strings (text on its own line between
+  tags is not read). Upstream manual text is never rewritten.
+
+## Print
+
+A man page prints as the manual (`@page` and `@media print` in `globals.css`):
+
+- **Running head and foot on every page.** The first page opens with the running
+  head in the text; later pages carry `TAR(1) · User Commands · TAR(1)` in the top
+  margin, and every page carries the edition, the system and release day, and the
+  page number in the bottom margin, each over or under a hairline. The text of
+  those parts is per page: `ManHeadTags` writes a small `@page` rule from
+  `head.print`. Chromium draws page-margin boxes; a browser without them still
+  prints the first page's head. A margin box takes no `font-variant`, so its small
+  caps are capitals set small and spaced.
+- **No site chrome:** header, footer, contents, overlays, controls, the composer,
+  the providers disclosure, the system picker label and “Report a problem” are
+  hidden. Light monochrome through the colour tokens.
+- **Section numbering** prints inline before each heading. The manual is set at
+  10.5pt/1.45 in BM Text whatever the reading preferences, code at 8.5pt and
+  wrapped rather than cut.
+- **URLs:** an outside link in the manual prints its address after it, unless its
+  text already spells it (`data-bm-print-url`, set by `DocRenderer`). Links to
+  other manual pages are citations already.
+- **Breaks:** a heading or an option term stays with what follows; code blocks,
+  list items and table rows do not split; table headers repeat; three-line orphans
+  and widows. The whole index of options prints, its disclosure opened.
+- Nothing may overflow the measure (the browser would shrink the whole page).
+
+## Identity: icons and share cards
+
+- **The mark** is a semibold BM Text “b” in ink on paper over a short red rule:
+  the focused search field. Square, no border. `favicon.svg` and the 16/32/48 px
+  favicons use a pixel-fitted 32-unit grid; `betterman-mark.svg`, the Apple touch
+  icon and the 192/512 px icons a 512-unit grid inside the maskable safe zone.
+  `scripts/icons/build-icons.py` draws them from the share-card font. Both
+  renderers declare the ICO, the SVG and the touch icon; the web manifest's
+  colours are paper.
+- **Share cards** (`lib/og/card.tsx`, 1200×630, light plate) are set like a page:
+  the running head over a hairline, the name in semibold BM Text with its
+  section in old-style figures, the NAME line as an italic lede, and a running
+  foot naming the distro and the release day beside the `betterman(1)` wordmark.
+  The one red is a 4px marker in the gutter beside the card's subject, as the
+  contents marker marks the active heading. A long name steps down to stay on one
+  line and is cut past 40 characters; a long head drops its middle.
+- **Per-flag cards.** A flag's share URL is its short URL, `/tar/-x`, which lands
+  on `/man/tar/1?flag=-x#x`: the fragment selects the option and `?flag=` makes
+  the page's `og:image` `/man/tar/1/og?flag=-x`, with the option's terms in bold
+  mono over its definition, and `og:title` / `og:description` for that option. The
+  document title and canonical URL stay the page's. `flag` is one key as the
+  options index stores it (`-x`, `--extract`, `--sort` for `--sort=WORD`),
+  case-sensitive. A flag the page does not define is dropped by a private 307 to
+  the URL without it, and the image route answers 404 for it (`lib/manShare.ts`).
+  Man URLs carry only an allowlist of query parameters (`lib/manQuery.ts`,
+  `docs/runbooks/vercel-ops.md`).
+- **Text on cards is plain text**: controls and direction overrides are stripped
+  and every string is a text node. The cards use the manual's own words. Only a
+  page without a NAME line may show BetterMan's generated summary instead, with
+  “generated · <model>, <date>” under it.
+- **Fonts** (`public/fonts/og/`, `scripts/fonts/build-og-fonts.py`, with the OFL
+  and a FONTLOG): static WOFF instances of BM Text (roman, semibold, italic, and
+  small caps) with old-style figures and small caps baked into the character map,
+  since satori reads no OpenType features, and a JetBrains Mono subset with no
+  layout features for flags. Server-side only: no page loads them. Scripts beyond
+  Latin, Latin Extended, Greek and Cyrillic fall back to the fonts next/og loads.
+- **Caching:** a card is fresh for a day and served stale for a week while the CDN
+  refreshes; a long-tail or provider-alternate page's card sends
+  `X-Robots-Tag: noindex`.
+
 ## The man page
 
 - **Layout.** Running head across the page, then a 12.5rem sticky contents
@@ -330,8 +413,7 @@ combinator.
   `data-bm-hydrated` when its handlers attach. JSON-LD is a data block with no
   nonce. A bare man page URL is Debian; a reader whose default distro is another
   one is redirected to the explicit `?distro=` URL, whose links keep it.
-- Print forces light monochrome through the colour tokens and renders every
-  block. A full print stylesheet is later work.
+- Print is the printed manual; see Print below.
 
 ## Derived corpus metadata
 

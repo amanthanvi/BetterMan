@@ -44,14 +44,14 @@ export function ManPageHeaderCard({
         <span className="ml-[0.08em] text-[0.5em] font-normal tracking-normal text-ink-3 oldstyle-nums">({page.section})</span>
       </h1>
       {page.description ? (
-        <p className="mt-2.5 max-w-text font-serif text-lg italic text-ink-2 md:text-[1.375rem] md:leading-[1.35]">
+        <p className="bm-lede mt-2.5 max-w-text font-serif text-lg italic text-ink-2 md:text-[1.375rem] md:leading-[1.35]">
           {page.description}
         </p>
       ) : null}
 
       <div className="mt-6 flex flex-wrap items-baseline gap-x-6 gap-y-2 text-sm text-ink-2">
         {variantPicker ? (
-          <label className="inline-flex items-baseline gap-2">
+          <label className="inline-flex items-baseline gap-2 print:hidden">
             <span className="text-ink-3">System</span>
             {/* Choosing a system loads that variant's URL; without JavaScript the select shows what is served.
                 bg-paper, not bg-transparent: Chromium draws the dropdown as its own page with a

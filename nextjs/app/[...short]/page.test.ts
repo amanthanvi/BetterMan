@@ -61,7 +61,9 @@ describe('short URL redirects', () => {
     ['/tar', {}, '308 /man/tar'],
     ['/tar', { distro: 'ubuntu' }, '308 /man/tar?distro=ubuntu'],
     ['/tar.1', {}, '308 /man/tar/1'],
-    ['/ssh_config.5', { distro: 'fedora', x: ['1', '2'] }, '308 /man/ssh_config/5?distro=fedora&x=1&x=2'],
+    ['/ssh_config.5', { distro: 'fedora', x: ['1', '2'] }, '308 /man/ssh_config/5?distro=fedora'],
+    ['/tar', { utm_source: 'hn', distro: ['ubuntu', 'arch'], pkg: 'tar' }, '308 /man/tar?distro=ubuntu&pkg=tar'],
+    ['/tar.1', { portability: 'text', flag: '-x', lang: 'de' }, '308 /man/tar/1?portability=text&flag=-x&lang=de'],
     ['/2/open', {}, '308 /man/open/2'],
     ['/c%2B%2B', {}, '308 /man/c%2B%2B'],
     ['/Foo%3A%3ABar.3pm', {}, '308 /man/foo%3A%3Abar/3pm'],
@@ -90,7 +92,7 @@ describe('short URL options', () => {
     mocks.search.mockResolvedValue(
       results({ name: 'tar', section: '1', match: 'option', anchorId: 'x' }),
     )
-    await expect(visit('/tar/--extract')).rejects.toHaveProperty('message', '307 /man/tar/1#x')
+    await expect(visit('/tar/--extract')).rejects.toHaveProperty('message', '307 /man/tar/1?flag=--extract#x')
     expect(mocks.search).toHaveBeenCalledWith({ distro: 'debian', q: 'tar --extract', section: undefined, limit: 10 })
   })
 
@@ -102,20 +104,25 @@ describe('short URL options', () => {
         { name: 'TAR', section: '5', match: 'option', anchorId: 'opt-create' },
       ),
     )
-    await expect(visit('/tar/-c')).rejects.toHaveProperty('message', '307 /man/tar/5#opt-create')
+    await expect(visit('/tar/-c')).rejects.toHaveProperty('message', '307 /man/tar/5?flag=-c#opt-create')
   })
 
   it('scopes the lookup to the reader distro and leaves a bare URL bare', async () => {
     mocks.cookieDistro = 'ubuntu'
     mocks.search.mockResolvedValue(results({ match: 'option', anchorId: 'C' }))
-    await expect(visit('/tar.1/-C')).rejects.toHaveProperty('message', '307 /man/tar/1#C')
+    await expect(visit('/tar.1/-C')).rejects.toHaveProperty('message', '307 /man/tar/1?flag=-C#C')
     expect(mocks.search).toHaveBeenCalledWith({ distro: 'ubuntu', q: 'tar -C', section: '1', limit: 10 })
   })
 
   it('searches the Debian fallback and keeps the explicit distro', async () => {
     mocks.search.mockResolvedValue(results({ match: 'option', anchorId: 'x' }))
-    await expect(visit('/tar/-x', { distro: 'arch' })).rejects.toHaveProperty('message', '307 /man/tar/1?distro=arch#x')
+    await expect(visit('/tar/-x', { distro: 'arch' })).rejects.toHaveProperty('message', '307 /man/tar/1?distro=arch&flag=-x#x')
     expect(mocks.search).toHaveBeenCalledWith(expect.objectContaining({ distro: 'debian' }))
+  })
+
+  it('leaves a flag the options index cannot key off the landing URL', async () => {
+    mocks.search.mockResolvedValue(results({ match: 'option', anchorId: 'x' }))
+    await expect(visit('/tar/-xzf=1')).rejects.toHaveProperty('message', '307 /man/tar/1#x')
   })
 
   it.each([

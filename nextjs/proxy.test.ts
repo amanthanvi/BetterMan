@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 
 import { unstable_doesMiddlewareMatch } from 'next/experimental/testing/server'
 import { NextRequest } from 'next/server'
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const release = vi.hoisted(() => ({ servingRelease: vi.fn() }))
 vi.mock('./lib/manRelease', async (importOriginal) => ({
@@ -64,7 +64,10 @@ it('keys a man page on the active release and forwards it to the renderer', asyn
 
 it('drops a client-sent release and uses an unknown key when no release answers', async () => {
   release.servingRelease.mockResolvedValue(null)
-  const response = await proxy(new NextRequest('https://betterman.sh/man/tar/1?__bm_release=forged', { headers: { 'x-bm-release': JSON.stringify(releaseFor('debian')) } }))
+  const forged = await proxy(new NextRequest('https://betterman.sh/man/tar/1?__bm_release=forged'))
+  expect(forged.status).toBe(308)
+  expect(forged.headers.get('location')).toBe('https://betterman.sh/man/tar/1')
+  const response = await proxy(new NextRequest('https://betterman.sh/man/tar/1', { headers: { 'x-bm-release': JSON.stringify(releaseFor('debian')) } }))
   expect(new URL(response.headers.get('x-middleware-rewrite')!).searchParams.get('__bm_release')).toBe('unknown')
   expect(response.headers.get('x-middleware-request-x-bm-release')).toBe('unknown')
   expect(response.headers.get('x-middleware-request-x-bm-release-token')).toBe('test-release-token')
@@ -73,7 +76,7 @@ it('drops a client-sent release and uses an unknown key when no release answers'
 it.each([
   ['/man/tar/1', 'ubuntu', '/man/tar/1?distro=ubuntu'],
   ['/man/tar', 'macos', '/man/tar?distro=macos'],
-  ['/man/tar/1?distro=nonsense&pkg=tar', 'fedora', '/man/tar/1?distro=fedora&pkg=tar'],
+  ['/man/tar/1?pkg=tar', 'fedora', '/man/tar/1?pkg=tar&distro=fedora'],
 ])('sends a bare %s with a %s default to the explicit URL, privately', async (path, cookie, location) => {
   const response = await proxy(new NextRequest(`https://betterman.sh${path}`, { headers: { cookie: `bm-distro=${cookie}` } }))
   expect(response.status).toBe(307)
@@ -141,7 +144,10 @@ it.each(['/explain?cmd=tar%20-x', '/search?q=tar'])('keeps the nonce CSP on %s',
 
 it.each(['/tar.txt', '/tar.1.txt', '/man/tar/1.txt'])('keys text URL and its prefetch on the active release: %s', async (path) => {
   expect(unstable_doesMiddlewareMatch({ config, url: path, headers: { purpose: 'prefetch' } })).toBe(true)
-  const response = await proxy(new NextRequest(`https://betterman.sh${path}?__bm_release=forged`))
+  const forged = await proxy(new NextRequest(`https://betterman.sh${path}?__bm_release=forged&distro=ubuntu`))
+  expect(forged.status).toBe(308)
+  expect(forged.headers.get('location')).toBe(`https://betterman.sh${path}?distro=ubuntu`)
+  const response = await proxy(new NextRequest(`https://betterman.sh${path}`))
   expect(new URL(response.headers.get('x-middleware-rewrite')!).searchParams.get('__bm_release')).toBe('2026-10-28+debian')
 })
 
@@ -151,4 +157,61 @@ it('keeps explicit provider selectors in the release-keyed CDN rewrite', async (
   expect(target.searchParams.get('pkg')).toBe('alternate')
   expect(target.searchParams.get('distro')).toBe('ubuntu')
   expect(target.searchParams.get('__bm_release')).toBe('2026-10-28+ubuntu')
+})
+
+describe('man page query allowlist', () => {
+  it.each([
+    ['/man/tar/1?zz=1', '/man/tar/1'],
+    ['/man/tar/1?zz=1&zz=2&utm_source=hn', '/man/tar/1'],
+    ['/man/tar/1?flag=-c&flag=-x', '/man/tar/1?flag=-c'],
+    ['/man/tar/1?flag=-%63', '/man/tar/1?flag=-c'],
+    ['/man/tar/1?flag=nope&distro=ubuntu', '/man/tar/1?distro=ubuntu'],
+    ['/man/tar/1?flag=-c&distro=ubuntu&zz=1', '/man/tar/1?flag=-c&distro=ubuntu'],
+    ['/man/tar/1?distro=Ubuntu&portability=glyph&lang=en', '/man/tar/1'],
+    ['/man/tar/1?pkg=g++', '/man/tar/1?pkg=g%2B%2B'],
+    ['/man/tar/1?_rsc=abc', '/man/tar/1'],
+    ['/man/tar?flag=-x&distro=arch', '/man/tar?distro=arch'],
+    ['/man/tar/1.txt?zz=1', '/man/tar/1.txt'],
+    ['/tar.1.txt?distro=ubuntu&x=1', '/tar.1.txt?distro=ubuntu'],
+    ['/man/tar/1/og?zz=1', '/man/tar/1/og'],
+    ['/man/tar/1/og?distro=junk&flag=-x&portability=text', '/man/tar/1/og?flag=-x'],
+  ])('redirects %s to %s, privately and before any release lookup', async (path, location) => {
+    const response = await proxy(new NextRequest(`https://betterman.sh${path}`, { headers: { cookie: 'bm-distro=fedora' } }))
+    expect(response.status).toBe(308)
+    const target = new URL(response.headers.get('location')!)
+    expect(`${target.pathname}${target.search}`).toBe(location)
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff')
+    expect(response.headers.get('x-middleware-rewrite')).toBeNull()
+    expect(release.servingRelease).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    '/man/tar/1?distro=ubuntu&pkg=tar&portability=text&flag=-x&lang=pt-BR',
+    '/man/tar/1?flag=--extract',
+    '/man/tar/1?distro=debian',
+    '/man/tar?distro=ubuntu&pkg=tar',
+    '/man/tar/1.txt?distro=ubuntu',
+  ])('keys a canonical %s on the release with exactly its own parameters', async (path) => {
+    const response = await proxy(new NextRequest(`https://betterman.sh${path}`))
+    expect(response.status).toBe(200)
+    const target = new URL(response.headers.get('x-middleware-rewrite')!)
+    const expected = new URL(`https://betterman.sh${path}`).searchParams
+    expect([...target.searchParams.keys()].sort()).toEqual([...expected.keys(), '__bm_release'].sort())
+  })
+
+  it.each(['/man/tar/1?zz=1', '/man/tar/1.txt?zz=1'])('normalizes %s whatever the headers: a client (RSC) header is no way around it', async (path) => {
+    const response = await proxy(new NextRequest(`https://betterman.sh${path}`, { headers: { rsc: '1', 'next-router-prefetch': '1' } }))
+    expect(response.status).toBe(308)
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
+  })
+
+  it('passes a canonical share image query', async () => {
+    expect((await proxy(new NextRequest('https://betterman.sh/man/tar/1/og?distro=ubuntu&flag=-x'))).status).toBe(200)
+  })
+
+  it('passes a real client fetch, whose `_rsc` Next has already removed', async () => {
+    const response = await proxy(new NextRequest('https://betterman.sh/man/tar/1?distro=ubuntu', { headers: { rsc: '1' } }))
+    expect(response.status).toBe(200)
+  })
 })

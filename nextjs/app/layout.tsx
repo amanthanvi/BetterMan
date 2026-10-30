@@ -10,6 +10,13 @@ export const metadata: Metadata = {
   title: 'BetterMan',
   description: 'Unix manual pages, typeset for the screen.',
   manifest: '/site.webmanifest',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '48x48' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
   openGraph: {
     title: 'BetterMan',
     description: 'Unix manual pages, typeset for the screen.',

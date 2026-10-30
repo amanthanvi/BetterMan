@@ -22,3 +22,11 @@ export function parseReleaseId(id: string): ReleaseParts {
     mandocVersion,
   }
 }
+
+/** A release's day as the site writes it, Oct 28, 2026; undefined for an unreadable date. */
+export function releaseDay(iso: string | null | undefined): string | undefined {
+  if (!iso) return undefined
+  const date = new Date(iso)
+  if (!Number.isFinite(date.getTime())) return undefined
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })
+}

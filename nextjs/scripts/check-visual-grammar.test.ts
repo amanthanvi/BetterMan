@@ -114,6 +114,26 @@ describe('checkSource', () => {
   it('ignores comments', () => {
     expect(reasons('// a border border-rule box, rounded corners and bg-accent are banned')).toEqual([])
   })
+
+  it.each([
+    ['<p>Don\'t panic</p>', 'apostrophe'],
+    ['<p>Search "tar"</p>', 'straight quotes'],
+    ['<span>Loading...</span>', 'three dots'],
+    ['<span>tar(1) - BetterMan</span>', 'hyphen as a dash'],
+    ['<span title="Not in this page\'s previous release" />', 'title'],
+    ['<input aria-label="Search..." />', 'aria-label'],
+  ])('rejects untypeset copy: %s (%s)', (source) => {
+    expect(reasons(source)).toContain('BetterMan copy uses “curly quotes”, ’ apostrophes, – and — dashes, and …')
+  })
+
+  it.each([
+    ['<p>Don’t panic, “tar” — 1–9 …</p>'],
+    ['<code>{"--extract"}</code>'],
+    ['<span className="text-ink-3">-x</span>'],
+    ['if (a > b - 1 && c < d) return'],
+  ])('accepts typeset copy and code: %s', (source) => {
+    expect(reasons(source)).toEqual([])
+  })
 })
 
 describe('checkCss', () => {

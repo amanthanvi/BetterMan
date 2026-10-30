@@ -174,5 +174,35 @@ Man pages (`/man/<name>`, `/man/<name>/<section>`) send `CDN-Cache-Control: publ
 1. `curl -sI https://<preview>/man/tar/1` twice: the second response shows `x-vercel-cache: HIT`, and the CSP's `script-src` has a `sha256-` source and no nonce.
 2. `curl -sI -H 'Cookie: bm-distro=ubuntu' https://<preview>/man/tar/1` answers `307` to `/man/tar/1?distro=ubuntu` with `cache-control: private, no-store`, even right after step 1's HIT (the proxy runs before the CDN).
 3. After a promotion, the next request misses (`x-vercel-cache: MISS`) and its footer names the new release. If it still hits the old entry, the CDN is keying on the original URL rather than the rewrite. Pages then refresh within the hour (`s-maxage`), and the rewrite key needs replacing with a cache tag and a purge on promotion.
+4. **`_rsc` and the cache key.** Next strips its `_rsc` cache-busting parameter before the proxy runs, even without the `rsc` header, so the proxy cannot redirect it. The man renderers see it in `req.url` and answer a request that carries `_rsc` without the `rsc` header with `private, no-store`, so it should never fill the CDN. Check on a preview and after deploy (`HEAD` with `curl -sI`):
+
+   ```bash
+   B=https://<preview>
+   curl -sI "$B/man/tar/1" >/dev/null; curl -sI "$B/man/tar/1" | grep -i 'x-vercel-cache'          # HIT
+   curl -sI "$B/man/tar/1?_rsc=aaaaa" | grep -iE '^(cache-control|cdn-cache-control|x-vercel-cache)'  # private, no-store; no CDN-Cache-Control; MISS
+   curl -sI "$B/man/tar/1?_rsc=aaaaa" | grep -i 'x-vercel-cache'                                     # MISS again: nothing was stored
+   curl -sI "$B/man/tar/1?_rsc=bbbbb" | grep -i 'x-vercel-cache'                                     # MISS
+   curl -sI "$B/man/tar/1.txt?_rsc=aaaaa" | grep -i '^cache-control'                                 # private, no-store
+   ```
+
+   If the second `_rsc=aaaaa` request answers `HIT`, or any `_rsc` request returns the page's public `CDN-Cache-Control`, the renderer no longer sees `_rsc`: treat it as a regression of the query allowlist below. If `?_rsc=aaaaa` answers `HIT` straight after the bare URL's `HIT`, Vercel collapses `_rsc` into the page's key, which is harmless, but record it here.
+
+**Query allowlist (#408).** Every man URL that renders can fill the CDN and costs a render plus Convex calls, so the proxy lets only these query parameters through (`nextjs/lib/manQuery.ts`, `MAN_QUERY`):
+
+| Parameter | Valid values | Read on |
+|---|---|---|
+| `distro` | a known distro, lower case (`debian` too: explicit Debian is its own URL) | pages, section pickers, `.txt` |
+| `pkg` | a well-formed package name (`packageName`) | pages, section pickers, `.txt` |
+| `portability` | `text` (the glyphs are the bare URL) | pages |
+| `flag` | one options-index key (`shareFlag`): `-x`, `--extract` | pages |
+| `lang` | B9's UI languages except English, which is the bare URL (`MAN_LANGUAGES`) | pages, section pickers, `.txt` |
+
+Share images (`/man/<name>/<section>/og`) take `distro`, `pkg` and `flag` under the same rules: they are cached for a day.
+
+A request with any other parameter (`utm_*`, `ref`, `_rsc` without a client fetch, a client-sent `__bm_release`), a repeated parameter, an invalid value or another spelling of a valid one (`pkg=g++` for `pkg=g%2B%2B`) gets a `308` to the URL it means, with `cache-control: private, no-store`. The redirect keeps the valid parameters in their order and is decided before the release lookup, so it costs no Convex call; browsers re-apply the fragment. The proxy adds `__bm_release` only to its own rewrite. Headers change nothing: a request with an `rsc` header is normalized like any other. Next has already dropped a client fetch's `_rsc` and decoded unreserved escapes (`%2D` is `-`) before the proxy runs, so real client navigations pass, and the release-keyed rewrite is built from the canonical query even when the original URL was spelled otherwise. As a second line, the renderers (`pages/man/**`, the plain-text and share-image routes) answer `private, no-store` to any query outside the allowlist that reaches them (`isManQuery`), and to a request that arrived with `_rsc` but no `rsc` header (`hasBareRsc`; see step 4 above).
+
+What the allowlist cannot know, the renderer settles: a `flag` the page does not define in the serving release gets a private `307` to the URL without it, and any answer to a `pkg` or `flag` other than the page that has them is `private, no-store`: a miss, an alias, a section picker, and the name-only text redirect (`/tar.txt?pkg=…`), which resolves the name without the package. A share image for a package or flag the page lacks is a private 404. So the cacheable URLs per page are bounded: its real providers × one variant per real option × `portability` × the languages × the distros.
+
+Adding a parameter means adding it to `MAN_QUERY` with a validator over a bounded set and to `manQueryParams` for the URLs that read it, then here. Verify on a preview: `curl -sI 'https://<preview>/man/tar/1?zz=1'` answers `308` to `/man/tar/1` with `private, no-store`; `curl -sI 'https://<preview>/man/tar/1?flag=-Q'` answers `307`; and `/man/tar/1?flag=%2Dc` after `/man/tar/1?flag=-c` shows `x-vercel-cache: HIT` (one entry for both spellings).
 
 **Deploy order.** Man pages need the Convex functions that report the serving release (`reportRelease`). New Convex with old Next is safe. New Next with old Convex answers 500, because the old validator rejects the argument. `deploy.yml` always pushes Convex before Vercel and stops if the Convex deploy fails, so keep that order for any manual deploy too.

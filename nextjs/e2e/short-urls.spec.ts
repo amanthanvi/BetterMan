@@ -46,16 +46,16 @@ test('short urls: name.section and section/name answer a 308 to the page', async
 })
 
 test('short urls: a flag lands on its option row', async ({ page, request }) => {
-  for (const path of ['/tar/-c', '/tar/--create', '/tar.1/--create']) {
+  for (const [path, flag] of [['/tar/-c', '-c'], ['/tar/--create', '--create'], ['/tar.1/--create', '--create']]) {
     const res = await request.get(path, { maxRedirects: 0 })
     expect(res.status(), path).toBe(307)
-    expect(res.headers()['location'], path).toBe('/man/tar/1#opt-create')
+    expect(res.headers()['location'], path).toBe(`/man/tar/1?flag=${flag}#opt-create`)
   }
   const withDistro = await request.get('/tar/-c?distro=ubuntu', { maxRedirects: 0 })
-  expect(withDistro.headers()['location']).toBe('/man/tar/1?distro=ubuntu#opt-create')
+  expect(withDistro.headers()['location']).toBe('/man/tar/1?distro=ubuntu&flag=-c#opt-create')
 
   await page.goto('/tar/--create')
-  await expect(page).toHaveURL(/\/man\/tar\/1#opt-create$/)
+  await expect(page).toHaveURL(/\/man\/tar\/1\?flag=--create#opt-create$/)
   await expect(page.locator('mark[data-bm-opt]').filter({ hasText: '--create' }).first()).toBeVisible()
 })
 

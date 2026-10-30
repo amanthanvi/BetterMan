@@ -5,17 +5,22 @@ import { ManNotFound } from '../../../components/man/ManNotFound'
 import { ManPageDocument } from '../../../components/man/ManPageDocument'
 import { firstQuery, ManScript, requestHeaders } from '../../../components/man/ManPageFrame'
 import { ManShell } from '../../../components/man/ManShell'
+import { sectionLabel } from '../../../components/man/RunningHead'
 import type { SectionPage } from '../../../lib/api'
-import { normalizeDistro, withDistro, type Distro } from '../../../lib/distro'
+import { DISTRO_LABEL, normalizeDistro, withDistro, type Distro } from '../../../lib/distro'
 import type { ManPageResponse } from '../../../lib/docModel'
 import { manCanonicalPath } from '../../../lib/manCanonical'
+import { hasBareRsc, isManQuery } from '../../../lib/manQuery'
+import { manOption, shareFlag, withShareFlag } from '../../../lib/manShare'
 import { MAN_MISS_CACHE, MAN_PAGE_CACHE, MAN_PRIVATE_CACHE, setManCache } from '../../../lib/manCache'
 import { lookupManPage, manMiss, type ManMiss } from '../../../lib/manLookup'
-import { trustedRelease, type ReleaseInfo } from '../../../lib/manRelease'
+import { RELEASE_PARAM, trustedRelease, type ReleaseInfo } from '../../../lib/manRelease'
 import { isIndexable } from '../../../lib/manRobots'
+import { truncateOgText } from '../../../lib/og/input'
 import { OG_SIZE } from '../../../lib/og/size'
 import { packageName } from '../../../lib/packageName'
 import { getPublicOrigin } from '../../../lib/public-origin'
+import { parseReleaseId, releaseDay } from '../../../lib/release'
 import { reportProblemHref } from '../../../lib/reportProblem'
 import { safeJsonLdStringify } from '../../../lib/seo'
 
@@ -45,18 +50,36 @@ type MissProps = { kind: 'miss'; head: ManHeadData; miss: ManMiss; release: Rele
 
 type Props = PageProps | MissProps
 
-function pageHead(data: ManPageResponse, servedDistro: Distro, pkg: string | null, origin: string): ManHeadData {
+/** The printed running head and foot: TAR(1) · User Commands · TAR(1) over the text; edition, system and release day under it. */
+function printParts(page: ManPageResponse['page'], servedDistro: Distro, release: ReleaseInfo | null): NonNullable<ManHeadData['print']> {
+  const title = `${page.name.toUpperCase()}(${page.section})`
+  const edition = page.sourcePackage ? `${page.sourcePackage}${page.sourcePackageVersion ? ` ${page.sourcePackageVersion}` : ''}` : ''
+  const day = releaseDay(parseReleaseId(page.datasetReleaseId).builtAt ?? (release?.datasetReleaseId === page.datasetReleaseId ? release.lastUpdated : null))
+  return { head: [title, sectionLabel(page.section), title], foot: [edition, [DISTRO_LABEL[servedDistro], day].filter(Boolean).join(' · ')] }
+}
+
+function pageHead(data: ManPageResponse, servedDistro: Distro, pkg: string | null, origin: string, flag: string | null, release: ReleaseInfo | null): ManHeadData {
   const { page } = data
   const path = `/man/${encodeURIComponent(page.name)}/${encodeURIComponent(page.section)}`
-  const title = `${page.name}(${page.section}) - BetterMan`
-  const description = page.description || page.title || `${page.name}(${page.section}) man page.`
+  const citation = `${page.name}(${page.section})`
+  const title = `${citation} — BetterMan`
+  const description = page.description || page.title || `${citation} man page.`
   const canonical = manCanonicalPath(data, servedDistro, pkg)
   const ogPath = canonical.replace(path, `${path}/og`)
+  // `?flag=` shares one option: its card and its definition, under the page's canonical URL.
+  const option = flag ? manOption(data.content.options, flag) : null
+  const share = option
+    ? {
+        title: `${page.name} ${flag} · ${citation} — BetterMan`,
+        description: option.description ? truncateOgText(option.description, 300) : description,
+        image: { url: `${origin}${withShareFlag(ogPath, flag!)}`, ...OG_SIZE, alt: `${option.flags} in ${citation}` },
+      }
+    : { title, description, image: { url: `${origin}${ogPath}`, ...OG_SIZE, alt: page.description ? `${citation}: ${page.description}` : citation } }
   const json = safeJsonLdStringify({
     '@context': 'https://schema.org',
     '@type': 'TechArticle',
-    headline: `${page.name}(${page.section}) - ${page.title}`,
-    name: `${page.name}(${page.section})`,
+    headline: `${citation} — ${page.title}`,
+    name: citation,
     description,
     dateModified: page.datasetReleaseId.split('+')[0] ?? undefined,
     author: { '@type': 'Organization', name: `${page.sourcePackage || page.name} maintainers` },
@@ -65,22 +88,27 @@ function pageHead(data: ManPageResponse, servedDistro: Distro, pkg: string | nul
     title,
     description,
     canonical: `${origin}${canonical}`,
-    ogImage: { url: `${origin}${ogPath}`, ...OG_SIZE, alt: 'Man page' },
+    ogImage: share.image,
+    ...(option ? { share: { title: share.title, description: share.description } } : {}),
     jsonLd: { id: `bm-jsonld:${page.id}`, json },
     noindex: !isIndexable(page),
+    print: printParts(page, servedDistro, release),
   }
 }
 
-/** This page's URL with the other portability mode, keeping its own `?distro=` and `?pkg=`. */
-function portabilityToggle(name: string, section: string, query: Record<string, string | string[] | undefined>, mode: 'glyph' | 'text'): string {
-  const params = new URLSearchParams()
-  for (const key of ['distro', 'pkg']) {
+/** This page's URL with only `keep` of its parameters, spelled as lib/manQuery.ts expects. */
+function manPageUrl(name: string, section: string, query: Record<string, string | string[] | undefined>, keep: string[], extra = ''): string {
+  const pairs = keep.flatMap((key) => {
     const value = firstQuery(query[key])
-    if (value) params.set(key, value)
-  }
-  if (mode === 'glyph') params.set('portability', 'text')
-  const search = params.toString()
-  return `/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}${search ? `?${search}` : ''}#options-index`
+    return value ? [`${key}=${encodeURIComponent(value)}`] : []
+  })
+  if (extra) pairs.push(extra)
+  return `/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}${pairs.length ? `?${pairs.join('&')}` : ''}`
+}
+
+/** This page's URL with the other portability mode, keeping its own `?distro=`, `?pkg=` and `?lang=`. */
+function portabilityToggle(name: string, section: string, query: Record<string, string | string[] | undefined>, mode: 'glyph' | 'text'): string {
+  return `${manPageUrl(name, section, query, ['distro', 'pkg', 'lang'], mode === 'glyph' ? 'portability=text' : '')}#options-index`
 }
 
 export const getServerSideProps: GetServerSideProps<Props> = async ({ params, query, req, res }) => {
@@ -90,6 +118,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   const distro = urlDistro ?? 'debian'
   const pkg = packageName(firstQuery(query.pkg)) ?? null
   const portabilityMode = firstQuery(query.portability) === 'text' ? 'text' : 'glyph'
+  const flag = shareFlag(firstQuery(query.flag))
   const release = trustedRelease(req.headers)
   const releaseKey = release?.datasetReleaseId
   const found = await lookupManPage({ name, section, distro, ...(pkg ? { pkg } : {}), ...(releaseKey ? { release: releaseKey } : {}) })
@@ -98,11 +127,16 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   // proxy's TTL after a promotion (or a rollback) the two can differ, for misses and
   // aliases as well as pages.
   const keyed = Boolean(releaseKey) && found.servedRelease === releaseKey
+  // `?pkg=` and `?flag=` are well formed by now (proxy.ts, lib/manQuery.ts), but only a
+  // page that has the package and the option makes them a variant worth sharing: any
+  // other answer to them is private, so made-up values never fill the CDN.
+  const offList = !isManQuery('/man/_/_', query, ['name', 'section', RELEASE_PARAM]) || hasBareRsc(req.url, req.headers)
+  const unproven = Boolean(firstQuery(query.pkg) || firstQuery(query.flag)) || offList
 
   if (found.kind === 'miss') {
     const miss = await manMiss({ name, section, distro, urlDistro, headers: requestHeaders(req.headers), ...(releaseKey ? { release: releaseKey } : {}) })
     res.statusCode = 404
-    setManCache(res, miss.limited ? MAN_PRIVATE_CACHE : MAN_MISS_CACHE, { keyed: keyed && miss.answeredByKey })
+    setManCache(res, miss.limited || unproven ? MAN_PRIVATE_CACHE : MAN_MISS_CACHE, { keyed: keyed && miss.answeredByKey })
     return { props: { kind: 'miss', head: MISSING_MAN_HEAD, miss, release } }
   }
 
@@ -110,19 +144,25 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
     let destination = withDistro(`/man/${encodeURIComponent(found.name)}/${encodeURIComponent(found.section)}`, urlDistro)
     const targetPkg = packageName(found.pkg)
     if (targetPkg) destination += `${destination.includes('?') ? '&' : '?'}pkg=${encodeURIComponent(targetPkg)}`
-    setManCache(res, MAN_PAGE_CACHE, { keyed })
+    setManCache(res, unproven ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })
     // Browsers cache a 308, so only an explicit `?distro=` gets one; a bare URL
     // resolved the alias on Debian's current release, which can change.
     return { redirect: { destination, permanent: Boolean(urlDistro) } }
   }
 
+  // A flag this page does not define is dropped, privately: it depends on the release.
+  if (firstQuery(query.flag) && !(flag && manOption(found.data.content.options, flag))) {
+    setManCache(res, MAN_PRIVATE_CACHE, { keyed })
+    return { redirect: { destination: manPageUrl(name, section, query, ['distro', 'pkg', 'portability', 'lang']), permanent: false } }
+  }
+
   const origin = getPublicOrigin({ headers: requestHeaders(req.headers) })
   const { page } = found.data
-  setManCache(res, MAN_PAGE_CACHE, { keyed })
+  setManCache(res, offList ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })
   return {
     props: {
       kind: 'page',
-      head: pageHead(found.data, found.distro, pkg, origin),
+      head: pageHead(found.data, found.distro, pkg, origin, flag, release),
       data: found.data,
       related: found.related,
       servedDistro: found.distro,

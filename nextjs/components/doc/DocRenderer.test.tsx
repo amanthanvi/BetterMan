@@ -31,6 +31,21 @@ describe('DocRenderer plain-text URLs', () => {
   })
 })
 
+describe('DocRenderer printed addresses', () => {
+  const link = (href: string, label: string) => render(paragraph({ type: 'link', linkType: 'external', href, inlines: [text(label)] }))
+
+  it('marks an outside link whose text hides its address, so print sets the address after it', () => {
+    expect(link('https://www.gnu.org/software/tar/manual/', 'the tar manual')).toContain('data-bm-print-url="true"')
+  })
+
+  it('leaves a link whose text is its address, with or without the scheme or a trailing slash', () => {
+    for (const label of ['https://curl.se/docs/', 'curl.se/docs', 'HTTPS://CURL.SE/docs']) {
+      expect(link('https://curl.se/docs/', label), label).not.toContain('data-bm-print-url')
+    }
+    expect(render(paragraph(text('See https://curl.se/docs/ for more.')))).not.toContain('data-bm-print-url')
+  })
+})
+
 describe('DocRenderer cross-references', () => {
   const xref = paragraph({ type: 'link', linkType: 'internal', href: '/man/gzip/1', inlines: [text('gzip(1)')] })
   const hrefFor = (urlDistro: 'debian' | 'ubuntu' | null) =>
