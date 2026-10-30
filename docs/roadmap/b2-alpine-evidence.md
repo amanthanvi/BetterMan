@@ -173,7 +173,7 @@ checkpoint/export verification, not a new download-throughput measurement. The
 proposals stay ignored/uncommitted; they are not the lead's reviewed staging pins.
 
 Final main integration: see [combined evidence](b2-integration-evidence.md).
-1,020 ingestion / 3,287 Convex / 861 frontend / 131 ops / 13 workflow tests pass,
+1,020 ingestion / 3,287 Convex / 865 frontend / 127 ops / 13 workflow tests pass,
 with codegen no drift, pip dry-run and all guards. Production Next build and all
 17 man-query/short-URL E2E tests pass on the final stack. Prior native acquisition
 measurements and the 240/300-minute, under-6-GB staging projection are unchanged.

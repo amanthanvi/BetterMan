@@ -15,9 +15,9 @@ and PR whitespace/mixed-config/performance/Proof guards.
 | Family | Ingestion | Convex | Frontend | Ops | Dataset/deploy workflows |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Ubuntu | 956 | 3,280 | 850 | 126 | 12 |
-| Fedora | 968 | 3,283 | 861 | 131 | 13 |
-| Arch | 990 | 3,285 | 861 | 131 | 13 |
-| Alpine | 1,020 | 3,287 | 861 | 131 | 13 |
+| Fedora | 968 | 3,283 | 865 | 127 | 13 |
+| Arch | 990 | 3,285 | 865 | 127 | 13 |
+| Alpine | 1,020 | 3,287 | 865 | 127 | 13 |
 
 Fedora and descendants also pass the new index preflight without confirmation.
 The only new schema indexes compared with Ubuntu are on the new, initially empty
@@ -43,7 +43,7 @@ Command:
 E2E_BASE_URL=http://127.0.0.1:3460 pnpm next:e2e e2e/man-query.spec.ts e2e/short-urls.spec.ts
 ```
 
-**17 passed in 1.6 seconds.** This exercises made-up package private misses on
+**17 passed in 1.5 seconds.** This exercises made-up package private misses on
 HTML/text/OG forms, query normalization, bare _rsc, real option redirects, aliases
 and canonical short URLs against actual seeded Convex data and the production
 Next build. Local unit/cache tests separately establish zero persistent miss
@@ -62,3 +62,12 @@ and explicit owner approval before production promotion. Prior acquisition
 measurements/projections remain evidence, not full cloud completion. Deploy index
 baseline updates must follow a confirmed rollout, not precede it just to bypass
 the fail-closed preflight. See docs/runbooks/vercel-ops.md for the CLI limitation.
+
+CI-specific verification: the lightweight ci_contracts job installs no dependencies.
+The four TypeScript parser regressions run in the installed frontend suite, and
+ops keeps the deployment-failure test. All 127 ops tests pass with bare dependency
+imports disabled by a Node resolve hook (the hook separately rejects TypeScript).
+No guard behavior or regressions were removed. Frontend now includes those four
+cases, for 865 passing tests. The final production build and 17 E2E tests were
+rerun after that test-layout correction. Application/Convex/ingestion/deploy-guard
+source is byte-identical across the correction, checked with git diff.
