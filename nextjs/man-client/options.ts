@@ -3,6 +3,7 @@ import { OPTION_LINK_IDLE, OPTION_LINK_SELECTED } from '../components/man/option
 import { cancelScrollPin, getScrollBehavior, scrollToIdWhenRendered } from '../lib/scroll'
 import { BUTTON, h } from './dom'
 import { setHighlight } from './highlights'
+import { t, tn } from './i18n'
 
 const FLASH_MS = 1400
 
@@ -12,6 +13,14 @@ let selected: HTMLAnchorElement | null = null
 let banner: HTMLElement | null = null
 let flashTimer = 0
 const targets = new Map<string, Target>()
+
+/** "Highlighting <terms>": the terms stand in the catalog's sentence, wherever the language puts them. */
+function highlightingParts(terms: string): Array<string | HTMLElement> {
+  const marker = '\uE000'
+  return t('Highlighting {terms}', { terms: marker })
+    .split(marker)
+    .flatMap((part, index) => (index ? [h('span', { class: 'font-mono font-bold text-ink' }, terms), part] : [part]))
+}
 
 function links(): HTMLAnchorElement[] {
   return [...document.querySelectorAll<HTMLAnchorElement>('[data-bm-options] a[data-bm-anchor]')]
@@ -37,12 +46,12 @@ function renderBanner(terms: string[]) {
   banner?.remove()
   banner = null
   if (!terms.length) return
-  const clear = h('button', { type: 'button', class: `${BUTTON.base} ${BUTTON.sm} ${BUTTON.ghost}` }, 'Clear')
+  const clear = h('button', { type: 'button', class: `${BUTTON.base} ${BUTTON.sm} ${BUTTON.ghost}` }, t('options.clear\u0004Clear'))
   clear.addEventListener('click', () => select(null))
   banner = h(
     'div',
     { class: 'mb-8 flex flex-wrap items-baseline justify-between gap-3 border-b border-rule pb-2 text-sm text-ink-3' },
-    h('p', { class: 'min-w-0' }, 'Highlighting ', h('span', { class: 'font-mono font-bold text-ink' }, terms.join(' '))),
+    h('p', { class: 'min-w-0' }, ...highlightingParts(terms.join(' '))),
     clear,
   )
   document.querySelector('[data-bm-options]')?.before(banner)
@@ -129,7 +138,7 @@ function initFilter() {
       summary.hidden = filtering
     }
     if (empty) empty.hidden = !filtering || shown > 0
-    if (count) count.textContent = filtering ? `${shown} of ${total}` : `${total} options`
+    if (count) count.textContent = filtering ? t('{shown} of {total}', { shown, total }) : tn('{count, plural, one {# option} other {# options}}', total, `${total} options`)
   }
   input?.addEventListener('input', apply)
   portable?.addEventListener('change', apply)

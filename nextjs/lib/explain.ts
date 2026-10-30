@@ -1,5 +1,8 @@
 import type { Explanation } from '../../convex/explain'
 import { manPageHref, type Distro } from './distro'
+import type { Lang } from './i18n/locales'
+import type { ServerKey } from './i18n/catalog/en/server'
+import type { ServerT } from './i18n/server'
 
 /**
  * Arranges the explain engine's response (docs/explain-contract.md) for the
@@ -9,14 +12,15 @@ import { manPageHref, type Distro } from './distro'
 export type ExplainToken = Explanation['stages'][number]['tokens'][number]
 export type ExplainStage = Explanation['stages'][number]
 
-export type NumberedToken = ExplainToken & { n: number; stage: number; label: string; href: string | null; source: string | null }
+/** `argumentOf` is the flag an option argument belongs to; the reader's label is made from it and the kind (`tokenLabel`). */
+export type NumberedToken = ExplainToken & { n: number; stage: number; argumentOf: string | null; href: string | null; source: string | null }
 
 /** Tokens that came out of one typed word, such as `-xzvf` or `-C/srv`. */
 export type TokenCell = { text: string; tokens: NumberedToken[] }
 
 const CLUSTER_KINDS = new Set<ExplainToken['kind']>(['option', 'optionArgument', 'unknown', 'expansion'])
 
-const KIND_LABELS: Record<ExplainToken['kind'], string> = {
+const KIND_MESSAGE = {
   command: 'command',
   subcommand: 'subcommand',
   option: 'flag',
@@ -31,6 +35,11 @@ const KIND_LABELS: Record<ExplainToken['kind'], string> = {
   comment: 'comment',
   endOfOptions: 'end of options',
   unknown: 'unresolved',
+} as const satisfies Record<ExplainToken['kind'], ServerKey>
+
+/** What a token is, in the reader's language. */
+export function tokenLabel(token: Pick<NumberedToken, 'kind' | 'argumentOf'>, t: ServerT): string {
+  return token.argumentOf ? t('argument of {flag}', { flag: token.argumentOf }) : t(KIND_MESSAGE[token.kind])
 }
 
 function citation(page: { name: string; section: string }) {
@@ -38,27 +47,27 @@ function citation(page: { name: string; section: string }) {
 }
 
 /** Every token in input order, numbered from 1, with its label, link and cited source. */
-export function numberTokens(explanation: Explanation, urlDistro: Distro | null): NumberedToken[] {
+export function numberTokens(explanation: Explanation, urlDistro: Distro | null, urlLang: Lang | null = null): NumberedToken[] {
   const all = explanation.stages.flatMap((stage) => stage.tokens.map((token) => ({ token, stage: stage.id })))
   // Stable: tokens sharing a span (`--file=x`) keep the engine's order.
   const ordered = all.map((item, index) => ({ ...item, index })).sort((a, b) => a.token.start - b.token.start || a.index - b.index)
   const out: NumberedToken[] = []
   for (const [i, { token, stage }] of ordered.entries()) {
-    let label = KIND_LABELS[token.kind]
+    let argumentOf: string | null = null
     if (token.kind === 'optionArgument') {
       const flag = [...out].reverse().find((prev) => prev.stage === stage && prev.kind === 'option' && prev.anchor === token.anchor)
-      if (flag) label = `argument of ${flag.value}`
+      if (flag) argumentOf = flag.value
     }
     let href: string | null = null
     let source: string | null = null
     if (token.page && token.kind !== 'unknown') {
-      href = manPageHref(token.page.name, token.page.section, urlDistro, token.anchor ?? undefined)
+      href = manPageHref(token.page.name, token.page.section, urlDistro, token.anchor ?? undefined, urlLang)
       source = token.kind === 'option' ? `${citation(token.page)} · ${token.value}` : citation(token.page)
     } else if (token.shell) {
-      href = manPageHref(token.shell.page.name, token.shell.page.section, urlDistro, token.shell.anchor ?? undefined)
+      href = manPageHref(token.shell.page.name, token.shell.page.section, urlDistro, token.shell.anchor ?? undefined, urlLang)
       source = citation(token.shell.page)
     }
-    out.push({ ...token, n: i + 1, stage, label, href, source })
+    out.push({ ...token, n: i + 1, stage, argumentOf, href, source })
   }
   return out
 }

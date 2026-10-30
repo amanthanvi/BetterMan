@@ -207,6 +207,9 @@ jobs:
     runs-on: ubuntu-latest
     # Covers a 15-minute prefetch plus the installer's retries (about 12 minutes).
     timeout-minutes: 30
+    env:
+      # The E2E server shows the unreviewed languages except ru, so the tests cover both a language that renders and the gate (docs/i18n.md).
+      BM_I18N_PREVIEW: de,fr,es,pt-BR,ja
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

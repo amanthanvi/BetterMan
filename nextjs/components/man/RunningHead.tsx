@@ -1,21 +1,23 @@
 import type { ReactNode } from 'react'
 
-const SECTION_LABELS: Record<string, string> = {
+import type { ServerT } from '../../lib/i18n/server'
+
+const SECTION_KEYS = {
   '1': 'User Commands',
   '2': 'System Calls',
   '3': 'Library Functions',
-  '4': 'Kernel Interfaces',
+  '4': 'Special Files',
   '5': 'File Formats',
   '6': 'Games',
-  '7': 'Miscellaneous',
+  '7': 'Miscellany',
   '8': 'System Administration',
   '9': 'Kernel Routines',
-}
+} as const
 
 /* Keyed on the leading digit so extended sections (1ssl, 3p) resolve too. */
-export function sectionLabel(section: string): string {
-  const digit = section.trim().charAt(0)
-  return SECTION_LABELS[digit] ?? 'Manual'
+export function sectionLabel(section: string, t: ServerT): string {
+  const digit = section.trim().charAt(0) as keyof typeof SECTION_KEYS
+  return t(SECTION_KEYS[digit] ?? 'Manual')
 }
 
 /**

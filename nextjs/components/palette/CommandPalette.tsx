@@ -15,10 +15,13 @@ import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
 import { isTypingTarget } from '../../lib/dom'
 import { getScrollBehavior } from '../../lib/scroll'
 import { useDistro } from '../state/distro'
+import { useLang } from '../state/lang'
 import { useTheme } from '../state/theme'
 import { useToc } from '../state/toc'
 import { Kbd } from '../ui/Kbd'
 import { parsePaletteInput, parseSearchText } from '../../lib/paletteInput'
+import type { ClientT } from '../../lib/i18n/server'
+import { symbolKindKey } from '../search/resultKind'
 
 type PaletteItem =
   | {
@@ -121,12 +124,12 @@ function resultToItem(result: SearchResult, ctx: { query: string; distro: Distro
   }
 }
 
-function itemLabel(item: PaletteItem) {
+function itemLabel(item: PaletteItem, t: ClientT) {
   switch (item.kind) {
     case 'action':
       return item.label
     case 'search':
-      return `Search: ${item.query}`
+      return t('Search: {query}', { query: item.query })
     case 'page':
       return `${item.name}(${item.section})`
     case 'heading':
@@ -153,6 +156,7 @@ function dedupePages(items: PaletteItem[]): PaletteItem[] {
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const router = useRouter()
   const distro = useDistro()
+  const { t, tn, urlLang } = useLang()
   const theme = useTheme()
   const toc = useToc()
 
@@ -197,7 +201,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     const query = q.trim()
     if (!query) return
     recordRecentSearch(query)
-    distro.startNavigation(() => router.push(withDistro(`/search?q=${encodeURIComponent(query)}`, distroOverride ?? linkDistro)))
+    distro.startNavigation(() => router.push(withDistro(`/search?q=${encodeURIComponent(query)}`, distroOverride ?? linkDistro, urlLang)))
     close()
   }
 
@@ -213,7 +217,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       if (window.location.hash === `#${anchorId}`) window.dispatchEvent(new HashChangeEvent('hashchange'))
       else window.location.hash = anchorId
     } else {
-      distro.startNavigation(() => router.push(manPageHref(name, section, targetDistro, anchorId)))
+      distro.startNavigation(() => router.push(manPageHref(name, section, targetDistro, anchorId, urlLang)))
     }
     close()
   }
@@ -284,9 +288,9 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   const sectionActions: ActionItem[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((s) => ({
     kind: 'action',
     id: `action-section-${s}`,
-    label: `Go to section ${s}`,
+    label: t('Go to section {section}', { section: s }),
     run: () => {
-      distro.startNavigation(() => router.push(withDistro(`/section/${encodeURIComponent(s)}`, linkDistro)))
+      distro.startNavigation(() => router.push(withDistro(`/section/${encodeURIComponent(s)}`, linkDistro, urlLang)))
       close()
     },
   }))
@@ -295,16 +299,16 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     {
       kind: 'action',
       id: 'action-theme',
-      label: 'Toggle theme',
-      detail: 'Cycle: system → light → dark',
+      label: t('Toggle theme'),
+      detail: t('Cycle: system → light → dark'),
       run: () => theme.cycle(),
     },
     {
       kind: 'action',
       id: 'action-home',
-      label: 'Go home',
+      label: t('Go home'),
       run: () => {
-        distro.startNavigation(() => router.push(withDistro('/', linkDistro)))
+        distro.startNavigation(() => router.push(withDistro('/', linkDistro, urlLang)))
         close()
       },
     },
@@ -312,7 +316,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     {
       kind: 'action',
       id: 'action-clear-recent',
-      label: 'Clear recent history',
+      label: t('Clear recent history'),
       run: () => {
         clearRecent()
         setInput('')
@@ -399,13 +403,13 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
   if (!rendered) return null
 
-  const modeHint = parsed.mode === 'actions' ? 'Actions' : parsed.mode === 'headings' ? 'Headings' : null
+  const modeHint = parsed.mode === 'actions' ? t('Actions') : parsed.mode === 'headings' ? t('Headings') : null
 
   return createPortal(
     <div
       role={open ? 'dialog' : undefined}
       aria-modal={open ? 'true' : undefined}
-      aria-label={open ? 'Command palette' : undefined}
+      aria-label={open ? t('Command palette') : undefined}
       aria-hidden={open ? undefined : true}
       className={`fixed inset-0 z-50 flex items-end justify-center pb-[env(safe-area-inset-bottom)] sm:items-start sm:pt-[16vh] sm:pb-0 ${
         open ? '' : 'pointer-events-none'
@@ -425,11 +429,11 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         <div className="border-b border-rule px-4 py-2">
           <div aria-live="polite" className="sr-only">
             {searchState.status === 'loading'
-              ? 'Searching'
+              ? t('Searching')
               : parsed.text.trim()
                 ? items.length
-                  ? `${items.length} results`
-                  : 'No matches'
+                  ? tn('{count, plural, one {# result} other {# results}}', items.length, `${items.length} results`)
+                  : t('No matches')
                 : ''}
           </div>
           <div className="flex items-center gap-2">
@@ -441,9 +445,9 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                 setInput(e.target.value)
                 setActiveIndex(0)
               }}
-              placeholder="Search man pages…"
+              placeholder={t('Search man pages…')}
               className="h-10 w-full min-w-0 flex-1 bg-transparent text-base text-ink placeholder:text-ink-3"
-              aria-label="Command palette input"
+              aria-label={t('Command palette input')}
               role="combobox"
               aria-autocomplete="list"
               aria-expanded={items.length > 0}
@@ -458,16 +462,16 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-2" role="region" aria-label="Command palette results">
+        <div className="min-h-0 flex-1 overflow-y-auto p-2" role="region" aria-label={t('Command palette results')}>
           {parsed.mode === 'search' && parsed.text.trim() && searchState.status === 'loading' ? (
-            <div className="p-3 text-sm text-ink-3">Searching…</div>
+            <div className="p-3 text-sm text-ink-3">{t('Searching…')}</div>
           ) : null}
 
           {parsed.mode === 'search' && parsed.text.trim() && searchState.status === 'error' ? (
-            <div className="p-3 text-sm text-ink-3">Search failed.</div>
+            <div className="p-3 text-sm text-ink-3">{t('Search failed.')}</div>
           ) : null}
 
-          {!items.length && parsed.text.trim() ? <div className="p-3 text-sm text-ink-3">No matches.</div> : null}
+          {!items.length && parsed.text.trim() ? <div className="p-3 text-sm text-ink-3">{t('No matches.')}</div> : null}
 
           <div id="bm-palette-list" role="listbox" className="space-y-0.5">
             {items.map((item, idx) => {
@@ -500,11 +504,11 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                           {item.title}
                         </>
                       ) : (
-                        itemLabel(item)
+                        itemLabel(item, t)
                       )}
                     </div>
                     {item.kind === 'page' && (item.anchorId || item.symbolKind) ? (
-                      <span className="shrink-0 small-caps text-sm text-ink-3">{item.match === 'option' ? 'flag' : item.match === 'task' ? 'task' : item.symbolKind ? ({config:'directive',environment:'environment',files:'file',errors:'errno',subcommand:'subcommand',shell:'shell'} as const)[item.symbolKind] : 'definition'}</span>
+                      <span className="shrink-0 small-caps text-sm text-ink-3">{t(item.match === 'option' ? 'flag' : item.match === 'task' ? 'task' : item.symbolKind ? symbolKindKey(item.symbolKind) : 'definition')}</span>
                     ) : null}
                     {item.kind === 'page' ? (
                       <div className="min-w-0 flex-1 truncate text-sm text-ink-2">{item.description}</div>
@@ -514,7 +518,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                     {bookmark ? (
                       <div className="shrink-0 text-xs text-ink-3">
                         <span aria-hidden="true">★</span>
-                        <span className="sr-only">Bookmarked</span>
+                        <span className="sr-only">{t('Bookmarked')}</span>
                       </div>
                     ) : null}
                   </div>
@@ -526,15 +530,15 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-rule px-4 py-2 text-xs text-ink-3">
           <span className="flex items-center gap-1.5">
-            <Kbd>↑↓</Kbd> navigate
+            <Kbd>↑↓</Kbd> {t('navigate')}
           </span>
           <span className="flex items-center gap-1.5">
-            <Kbd>↵</Kbd> open
+            <Kbd>↵</Kbd> {t('open')}
           </span>
           <span className="flex items-center gap-1.5">
-            <Kbd>esc</Kbd> close
+            <Kbd>esc</Kbd> {t('close')}
           </span>
-          <span className="ml-auto hidden font-mono sm:inline">&gt; actions · # headings · @distro</span>
+          <span className="ml-auto hidden font-mono sm:inline">{t('> actions · # headings · @distro')}</span>
         </div>
       </div>
     </div>,

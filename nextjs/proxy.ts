@@ -1,6 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
 import { DISTRO_COOKIE, normalizeDistro } from './lib/distro'
+import { resolvePublicLang } from './lib/i18n/gate'
+import { DEFAULT_LANG, LANG_COOKIE, LANG_PARAM, type Lang } from './lib/i18n/locales'
+import { LANG_HEADER } from './lib/i18n/request'
+import { translationFixHref } from './lib/i18n/fix'
+import { LANG_SWITCH_PATH, FIX_PATH, pathInLang, safeLocalPath } from './lib/i18n/switch'
 import { manBootScriptHash } from './lib/manBoot'
 import { normalizeManQuery } from './lib/manQuery'
 import { encodeReleaseHeader, RELEASE_HEADER, RELEASE_PARAM, RELEASE_TOKEN_HEADER, releaseToken, servingRelease, UNKNOWN_RELEASE, type ReleaseInfo } from './lib/manRelease'
@@ -104,15 +109,30 @@ function manQueryRedirect(request: NextRequest, csp: string | null): NextRespons
 }
 
 /**
+ * The remembered language, when this URL names none and it is not English. The
+ * language comes from the URL alone, so a bare URL cannot be rendered in it:
+ * the reader is sent to the explicit `?lang=` URL, privately, as for the distro.
+ * `/-/lang/en` is the way back to English: it remembers English, so the bare URL stays.
+ */
+function rememberedLang(request: NextRequest): Lang | null {
+  if (resolvePublicLang(request.nextUrl.searchParams.get(LANG_PARAM))) return null
+  const preferred = resolvePublicLang(request.cookies.get(LANG_COOKIE)?.value)
+  return preferred && preferred !== DEFAULT_LANG ? preferred : null
+}
+
+/**
  * Man pages are cached at the edge (see pages/man), so their HTML never depends
- * on a cookie. A bare URL serves Debian; a reader whose default distro is another
- * one is sent to the explicit URL, privately. Explicit URLs, and bare ones without
- * such a cookie, are rewritten to carry the active release, which keys the cache.
+ * on a cookie. A bare URL serves Debian in English; a reader whose default distro
+ * or language is another one is sent to the explicit URL, privately. Explicit
+ * URLs, and bare ones without such a cookie, are rewritten to carry the active
+ * release, which keys the cache.
  */
 async function manProxy(request: NextRequest, cspEnabled: boolean, text = false): Promise<NextResponse> {
   const url = request.nextUrl
   const explicit = normalizeDistro(url.searchParams.get('distro'))
   const preferred = normalizeDistro(request.cookies.get(DISTRO_COOKIE)?.value)
+  // The plain-text export is upstream text and has no interface to translate.
+  const remembered = text ? null : rememberedLang(request)
   const csp = cspEnabled ? text
     ? buildCsp([`'nonce-${createNonce()}'`], { strictDynamic: true })
     : buildCsp([await manBootScriptHash()], { strictDynamic: false }) : null
@@ -120,10 +140,12 @@ async function manProxy(request: NextRequest, cspEnabled: boolean, text = false)
   const redirect = manQueryRedirect(request, csp)
   if (redirect) return redirect
 
-  if (!text && !explicit && preferred && preferred !== 'debian') {
+  const sendToDistro = !text && !explicit && preferred && preferred !== 'debian'
+  if (sendToDistro || remembered) {
     const target = url.clone()
     target.searchParams.delete(RELEASE_PARAM)
-    target.searchParams.set('distro', preferred)
+    if (sendToDistro) target.searchParams.set('distro', preferred)
+    if (remembered) target.searchParams.set(LANG_PARAM, remembered)
     const response = NextResponse.redirect(target, 307)
     response.headers.set('Cache-Control', 'private, no-store')
     return setSecurityHeaders(response, csp)
@@ -161,7 +183,75 @@ function homeQueryRedirect(request: NextRequest): NextResponse | null {
   return NextResponse.redirect(target, 307)
 }
 
+/** Paths with a file extension (assets, `robots.txt`, sitemaps, `/tar.txt`) and the API are not pages to translate. */
+function isPagePath(pathname: string): boolean {
+  return !/^\/(?:api|assets|_next|_bm|fonts)(?:\/|$)/.test(pathname) && !/\.[A-Za-z0-9]+$/.test(pathname) && !/\/(?:og|opengraph-image)$/.test(pathname)
+}
+
+/** A document navigation to a bare App Router URL, by a reader who remembers a language: send it to the explicit URL. */
+function langRedirect(request: NextRequest): NextResponse | null {
+  if (request.method !== 'GET' && request.method !== 'HEAD') return null
+  if (!request.headers.get('accept')?.includes('text/html')) return null
+  if (!isPagePath(request.nextUrl.pathname)) return null
+  const remembered = rememberedLang(request)
+  if (!remembered) return null
+  const target = request.nextUrl.clone()
+  target.searchParams.set(LANG_PARAM, remembered)
+  const response = NextResponse.redirect(target, 307)
+  response.headers.set('Cache-Control', 'private, no-store')
+  return response
+}
+
+/** The page a reader came from, when it is on this site; the switch links carry no URL of their own on App Router pages. */
+function refererPath(request: NextRequest): string | null {
+  try {
+    const from = new URL(request.headers.get('referer') ?? '')
+    if (from.host !== request.headers.get('host') || from.pathname.startsWith('/-/')) return null
+    return `${from.pathname}${from.search}`
+  } catch {
+    return null
+  }
+}
+
+/**
+ * `/-/lang/<code>` remembers a language (a cookie, on a private redirect) and returns to the page with
+ * that language in its URL; `/-/fix/<code>` opens the translation-fix issue for the page. Plain links,
+ * so the switch needs no script (lib/i18n/switch.ts). An unknown or unreviewed code changes nothing.
+ */
+function languageLink(request: NextRequest): NextResponse | null {
+  const match = new RegExp(`^(${LANG_SWITCH_PATH}|${FIX_PATH})/([^/]+)$`).exec(request.nextUrl.pathname)
+  if (!match || (request.method !== 'GET' && request.method !== 'HEAD')) return null
+  let code: string
+  try {
+    code = decodeURIComponent(match[2])
+  } catch {
+    code = ''
+  }
+  const lang = resolvePublicLang(code)
+  const to = safeLocalPath(request.nextUrl.searchParams.get('to')) ?? refererPath(request) ?? '/'
+  const target = request.nextUrl.clone()
+  const place = (path: string) => {
+    const url = new URL(path, 'https://example.invalid')
+    url.searchParams.delete(RELEASE_PARAM)
+    target.pathname = url.pathname
+    target.search = url.search
+    target.hash = ''
+  }
+  let response: NextResponse
+  if (match[1] === FIX_PATH) {
+    response = lang && lang !== DEFAULT_LANG ? NextResponse.redirect(translationFixHref({ lang, page: to }), 307) : (place(to), NextResponse.redirect(target, 307))
+  } else {
+    place(lang ? pathInLang(to, lang) : to)
+    response = NextResponse.redirect(target, 307)
+    if (lang) response.cookies.set(LANG_COOKIE, lang, { path: '/', maxAge: 31536000, sameSite: 'lax' })
+  }
+  response.headers.set('Cache-Control', 'private, no-store')
+  return response
+}
+
 export async function proxy(request: NextRequest) {
+  const switched = languageLink(request)
+  if (switched) return setSecurityHeaders(switched, null)
   const redirect = homeQueryRedirect(request)
   if (redirect) return setSecurityHeaders(redirect, null)
   const cspEnabled = process.env.CSP_ENABLED !== 'false'
@@ -183,12 +273,21 @@ export async function proxy(request: NextRequest) {
     if (imageRedirect) return imageRedirect
   }
 
-  if (!cspEnabled) return setSecurityHeaders(NextResponse.next(), null)
+  const toLang = langRedirect(request)
+  if (toLang) return setSecurityHeaders(toLang, cspEnabled ? buildCsp([`'nonce-${createNonce()}'`], { strictDynamic: true }) : null)
+
+  // The language the renderer shows, from the URL alone; whatever a client sent in this header is dropped.
+  const pageHeaders = new Headers(request.headers)
+  pageHeaders.delete(LANG_HEADER)
+  const urlLang = resolvePublicLang(request.nextUrl.searchParams.get(LANG_PARAM))
+  if (urlLang) pageHeaders.set(LANG_HEADER, urlLang)
+
+  if (!cspEnabled) return setSecurityHeaders(NextResponse.next({ request: { headers: pageHeaders } }), null)
 
   const nonce = createNonce()
   const csp = buildCsp([`'nonce-${nonce}'`], { strictDynamic: true })
 
-  const requestHeaders = new Headers(request.headers)
+  const requestHeaders = pageHeaders
   requestHeaders.set('x-nonce', nonce)
   requestHeaders.set('Content-Security-Policy', csp)
 

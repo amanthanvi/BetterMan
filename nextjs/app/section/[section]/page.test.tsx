@@ -19,6 +19,10 @@ const mocks = vi.hoisted(() => {
   }
 })
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }))
+vi.mock('../../../components/state/lang', async () => {
+  const { testLang } = await import('../../../lib/i18n/testing')
+  return { useLang: () => testLang, useT: () => testLang.t }
+})
 vi.mock('next/navigation', () => ({ notFound: mocks.notFound, permanentRedirect: mocks.permanentRedirect }))
 vi.mock('../../../lib/api', () => ({
   FastApiError: mocks.FastApiError,

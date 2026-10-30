@@ -1,6 +1,7 @@
 import type { PageDerivedResponse } from '../../../convex/_derivedEncoding'
 
 import type { OptionItem } from '../../lib/docModel'
+import type { ServerT } from '../../lib/i18n/server'
 
 import { OptionsTable } from './OptionsTable'
 import { PortabilityLegend } from './Portability'
@@ -23,6 +24,7 @@ export function ManPageOptionsSection({
   portabilityMode = 'glyph',
   portabilityToggleHref,
   modes,
+  t,
 }: {
   options?: OptionItem[] | null
   rowIds: ReadonlyMap<string, string>
@@ -32,6 +34,7 @@ export function ManPageOptionsSection({
   portabilityMode?: 'glyph' | 'text'
   portabilityToggleHref?: string
   modes?: ReadonlySet<string>
+  t: ServerT
 }) {
   const allOptions = options ?? []
   const optionsCount = allOptions.length
@@ -51,15 +54,16 @@ export function ManPageOptionsSection({
       portabilityMode={portabilityMode}
       newIn={newIn}
       modes={modes}
+      t={t}
     />
   )
 
   return (
-    <section id="options-index" data-bm-options className="mb-12 border-y border-rule pt-6 pb-4" aria-label="Options">
+    <section id="options-index" data-bm-options className="mb-12 border-y border-rule pt-6 pb-4" aria-label={t('Options')}>
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <h2 className="small-caps text-lg font-semibold text-ink">Index of options</h2>
+        <h2 className="small-caps text-lg font-semibold text-ink">{t('Index of options')}</h2>
         <p className="text-xs text-ink-3">
-          Compiled by BetterMan from the definitions below{hasLocators ? '; numbers are section locators' : ''}.
+          {t(hasLocators ? 'Compiled by BetterMan from the definitions below; numbers are section locators.' : 'Compiled by BetterMan from the definitions below.')}
         </p>
       </div>
 
@@ -71,49 +75,49 @@ export function ManPageOptionsSection({
               type="search"
               name="bm-options-filter"
               data-bm-options-filter
-              placeholder={`Filter ${optionsCount} options`}
+              placeholder={t('Filter {count, plural, one {# option} other {# options}}', { count: optionsCount })}
               autoComplete="off"
               spellCheck={false}
-              aria-label="Filter options"
+              aria-label={t('Filter options')}
               className="bm-field max-w-64 py-1 text-sm"
             />
           ) : null}
           {hasPortability ? (
             <label className="inline-flex items-baseline gap-1.5 text-sm text-ink-2">
               <input type="checkbox" name="bm-options-portable" data-bm-options-portable className="accent-accent" />
-              Portable only
+              {t('Portable only')}
             </label>
           ) : null}
           <span aria-live="polite" data-bm-options-count className="text-xs text-ink-3 tabular-nums">
-            {`${optionsCount} options`}
+            {t('{count, plural, one {# option} other {# options}}', { count: optionsCount })}
           </span>
         </div>
       ) : null}
 
       {hasPortability ? <div className="mt-3">
-        {portabilityMode === 'glyph' ? <PortabilityLegend /> : <p className="text-xs text-ink-3">Portability across GNU/Linux, FreeBSD and macOS, in words. Unmarked flags exist on all three; this shows availability, not identical behavior.</p>}
-        {portabilityMode === 'glyph' ? <p className="mt-1 text-xs text-ink-3">A dash means the manual is not included in that dataset; ? means unknown or not loaded.</p> : null}
+        {portabilityMode === 'glyph' ? <PortabilityLegend t={t} /> : <p className="text-xs text-ink-3">{t('Portability across GNU/Linux, FreeBSD and macOS, in words. Unmarked flags exist on all three; this shows availability, not identical behavior.')}</p>}
+        {portabilityMode === 'glyph' ? <p className="mt-1 text-xs text-ink-3">{t('A dash means the manual is not included in that dataset; ? means unknown or not loaded.')}</p> : null}
         {portabilityToggleHref ? (
           <p className="mt-1 text-xs">
             <a href={portabilityToggleHref} className="text-ink-2 underline decoration-rule-2 underline-offset-2 hover:text-accent">
-              {portabilityMode === 'glyph' ? 'Show portability as words' : 'Show portability as cells'}
+              {portabilityMode === 'glyph' ? t('Show portability as words') : t('Show portability as cells')}
             </a>
           </p>
         ) : null}
       </div> : null}
-      {portability?.stale ? <p className="mt-2 text-xs text-ink-3">Portability reflects an earlier snapshot. Some comparison data may be unavailable.</p> : null}
+      {portability?.stale ? <p className="mt-2 text-xs text-ink-3">{t('Portability reflects an earlier snapshot. Some comparison data may be unavailable.')}</p> : null}
 
       <div className="mt-3">{table(previewOptions)}</div>
       <p data-bm-options-empty hidden className="mt-3 font-serif italic text-ink-2">
-        No option matches.
+        {t('No option matches.')}
       </p>
 
       {/* A native disclosure, so the whole index opens without JavaScript and find-in-page reaches it. */}
       {restOptions.length ? (
         <details className="group/more">
           <summary className="mt-2 w-fit cursor-pointer list-none text-sm text-ink-2 underline decoration-rule-2 underline-offset-[3px] hover:text-accent hover:decoration-accent [&::-webkit-details-marker]:hidden">
-            <span className="group-open/more:hidden">Show all {optionsCount} options</span>
-            <span className="hidden group-open/more:inline">Show fewer options</span>
+            <span className="group-open/more:hidden">{t('Show all {count} options', { count: optionsCount })}</span>
+            <span className="hidden group-open/more:inline">{t('Show fewer options')}</span>
           </summary>
           <div className="mt-1">{table(restOptions)}</div>
         </details>

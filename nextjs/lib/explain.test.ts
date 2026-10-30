@@ -23,8 +23,8 @@ describe('explain view model', () => {
 
   it('names an option argument by the flag that takes it', () => {
     const tokens = numberTokens(tar, null)
-    expect(tokens.find((t) => t.value === 'backup.tar.gz')?.label).toBe('argument of -f')
-    expect(tokens.find((t) => t.value === '/srv/www')?.label).toBe('argument of -C')
+    expect(tokens.find((t) => t.value === 'backup.tar.gz')?.argumentOf).toBe('-f')
+    expect(tokens.find((t) => t.value === '/srv/www')?.argumentOf).toBe('-C')
   })
 
   it('keeps the URL distro on every manual link', () => {

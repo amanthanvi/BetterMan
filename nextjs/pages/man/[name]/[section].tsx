@@ -1,14 +1,16 @@
 import type { GetServerSideProps } from 'next'
 
-import { MISSING_MAN_HEAD, type ManHeadData } from '../../../components/man/ManHead'
+import { missingManHead, type ManHeadData } from '../../../components/man/ManHead'
 import { ManNotFound } from '../../../components/man/ManNotFound'
 import { ManPageDocument } from '../../../components/man/ManPageDocument'
-import { firstQuery, ManScript, requestHeaders } from '../../../components/man/ManPageFrame'
+import { currentHref, firstQuery, ManScript, requestHeaders } from '../../../components/man/ManPageFrame'
 import { ManShell } from '../../../components/man/ManShell'
 import { sectionLabel } from '../../../components/man/RunningHead'
 import type { SectionPage } from '../../../lib/api'
 import { DISTRO_LABEL, normalizeDistro, withDistro, type Distro } from '../../../lib/distro'
 import type { ManPageResponse } from '../../../lib/docModel'
+import { manI18n, manT, type ManI18n } from '../../../lib/i18n/page'
+import type { ServerT } from '../../../lib/i18n/server'
 import { manCanonicalPath } from '../../../lib/manCanonical'
 import { hasBareRsc, isManQuery } from '../../../lib/manQuery'
 import { manOption, shareFlag, withShareFlag } from '../../../lib/manShare'
@@ -47,26 +49,27 @@ type PageProps = {
   reportHref: string
   portabilityMode: 'glyph' | 'text'
   portabilityToggleHref: string
+  i18n: ManI18n
 }
 
-type MissProps = { kind: 'miss'; head: ManHeadData; miss: ManMiss; release: ReleaseInfo | null }
+type MissProps = { kind: 'miss'; head: ManHeadData; miss: ManMiss; release: ReleaseInfo | null; i18n: ManI18n }
 
 type Props = PageProps | MissProps
 
 /** The printed running head and foot: TAR(1) · User Commands · TAR(1) over the text; edition, system and release day under it. */
-function printParts(page: ManPageResponse['page'], servedDistro: Distro, release: ReleaseInfo | null): NonNullable<ManHeadData['print']> {
+function printParts(page: ManPageResponse['page'], servedDistro: Distro, release: ReleaseInfo | null, t: ServerT): NonNullable<ManHeadData['print']> {
   const title = `${page.name.toUpperCase()}(${page.section})`
   const edition = page.sourcePackage ? `${page.sourcePackage}${page.sourcePackageVersion ? ` ${page.sourcePackageVersion}` : ''}` : ''
   const day = releaseDay(parseReleaseId(page.datasetReleaseId).builtAt ?? (release?.datasetReleaseId === page.datasetReleaseId ? release.lastUpdated : null))
-  return { head: [title, sectionLabel(page.section), title], foot: [edition, [DISTRO_LABEL[servedDistro], day].filter(Boolean).join(' · ')] }
+  return { head: [title, sectionLabel(page.section, t), title], foot: [edition, [DISTRO_LABEL[servedDistro], day].filter(Boolean).join(' · ')] }
 }
 
-function pageHead(data: ManPageResponse, servedDistro: Distro, pkg: string | null, origin: string, flag: string | null, release: ReleaseInfo | null): ManHeadData {
+function pageHead(data: ManPageResponse, servedDistro: Distro, pkg: string | null, origin: string, flag: string | null, release: ReleaseInfo | null, t: ServerT, localized: boolean): ManHeadData {
   const { page } = data
   const path = `/man/${encodeURIComponent(page.name)}/${encodeURIComponent(page.section)}`
   const citation = `${page.name}(${page.section})`
   const title = `${citation} — BetterMan`
-  const description = page.description || page.title || `${citation} man page.`
+  const description = page.description || page.title || t('{citation} man page.', { citation })
   const canonical = manCanonicalPath(data, servedDistro, pkg)
   const ogPath = canonical.replace(path, `${path}/og`)
   // `?flag=` shares one option: its card and its definition, under the page's canonical URL.
@@ -94,8 +97,10 @@ function pageHead(data: ManPageResponse, servedDistro: Distro, pkg: string | nul
     ogImage: share.image,
     ...(option ? { share: { title: share.title, description: share.description } } : {}),
     jsonLd: { id: `bm-jsonld:${page.id}`, json },
-    noindex: !isIndexable(page),
-    print: printParts(page, servedDistro, release),
+    // Until B3 ships translated manuals (#395), a localized-UI page is the English manual under translated chrome:
+    // its canonical is the English URL (above) and search engines get no duplicate (docs/i18n.md).
+    noindex: !isIndexable(page) || localized,
+    print: printParts(page, servedDistro, release, t),
   }
 }
 
@@ -122,6 +127,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   const pkg = packageName(firstQuery(query.pkg)) ?? null
   const portabilityMode = firstQuery(query.portability) === 'text' ? 'text' : 'glyph'
   const flag = shareFlag(firstQuery(query.flag))
+  const i18n = await manI18n(query.lang, currentHref(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, query))
+  const { urlLang } = i18n
   const release = trustedRelease(req.headers)
   const releaseKey = release?.datasetReleaseId
   const found = await lookupManPage({ name, section, distro, ...(pkg ? { pkg } : {}), ...(releaseKey ? { release: releaseKey } : {}) })
@@ -140,11 +147,11 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
     const miss = await manMiss({ name, section, distro, urlDistro, headers: requestHeaders(req.headers), ...(releaseKey ? { release: releaseKey } : {}) })
     res.statusCode = 404
     setManCache(res, miss.limited || unproven ? MAN_PRIVATE_CACHE : MAN_MISS_CACHE, { keyed: keyed && miss.answeredByKey })
-    return { props: { kind: 'miss', head: MISSING_MAN_HEAD, miss, release } }
+    return { props: { kind: 'miss', head: missingManHead(manT(i18n)), miss, release, i18n } }
   }
 
   if (found.kind === 'alias') {
-    let destination = withDistro(`/man/${encodeURIComponent(found.name)}/${encodeURIComponent(found.section)}`, urlDistro)
+    let destination = withDistro(`/man/${encodeURIComponent(found.name)}/${encodeURIComponent(found.section)}`, urlDistro, urlLang)
     const targetPkg = packageName(found.pkg)
     if (targetPkg) destination += `${destination.includes('?') ? '&' : '?'}pkg=${encodeURIComponent(targetPkg)}`
     setManCache(res, unproven ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })
@@ -165,7 +172,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   return {
     props: {
       kind: 'page',
-      head: pageHead(found.data, found.distro, pkg, origin, flag, release),
+      head: pageHead(found.data, found.distro, pkg, origin, flag, release, manT(i18n), urlLang !== null && urlLang !== 'en'),
       data: found.data,
       related: found.related,
       servedDistro: found.distro,
@@ -174,26 +181,28 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
       reportHref: reportProblemHref({ page, distro: found.distro, origin }),
       portabilityMode,
       portabilityToggleHref: portabilityToggle(name, section, query, portabilityMode),
+      i18n,
     },
   }
 }
 
 export default function ManPageRoute(props: Props) {
+  const t = manT(props.i18n)
   if (props.kind === 'miss') {
     return (
       <>
-        <ManShell urlDistro={props.miss.urlDistro} release={props.release}>
-          <ManNotFound miss={props.miss} />
+        <ManShell urlDistro={props.miss.urlDistro} release={props.release} i18n={props.i18n} t={t}>
+          <ManNotFound miss={props.miss} urlLang={props.i18n.urlLang} t={t} />
         </ManShell>
-        <ManScript />
+        <ManScript i18n={props.i18n} />
       </>
     )
   }
 
-  const { data, related, servedDistro, urlDistro, release, reportHref, portabilityMode, portabilityToggleHref } = props
+  const { data, related, servedDistro, urlDistro, release, reportHref, portabilityMode, portabilityToggleHref, i18n } = props
   return (
     <>
-      <ManShell urlDistro={urlDistro} release={release}>
+      <ManShell urlDistro={urlDistro} release={release} i18n={i18n} t={t}>
         <ManPageDocument
           page={data.page}
           content={data.content}
@@ -207,9 +216,11 @@ export default function ManPageRoute(props: Props) {
           portabilityMode={portabilityMode}
           portabilityToggleHref={portabilityToggleHref}
           reportHref={reportHref}
+          urlLang={i18n.urlLang}
+          t={t}
         />
       </ManShell>
-      <ManScript />
+      <ManScript i18n={i18n} />
     </>
   )
 }

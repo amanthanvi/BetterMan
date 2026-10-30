@@ -1,4 +1,5 @@
 import { normalizeDistro } from './distro'
+import { LANGS } from './i18n/locales'
 import { shareFlag } from './manShare'
 import { packageName } from './packageName'
 
@@ -20,13 +21,14 @@ export const MAN_QUERY = {
   pkg: (value: string) => packageName(value) === value,
   portability: (value: string) => value === 'text',
   flag: (value: string) => shareFlag(value) === value,
-  // B9's language switch (#401); English is the bare URL. Keep in step with its list.
+  // B9's language switch (#401); English is the bare URL, so `?lang=en` normalizes away. The list is lib/i18n/locales.ts's.
   lang: (value: string) => MAN_LANGUAGES.includes(value),
 } as const satisfies Record<string, (value: string) => boolean>
 
 export type ManQueryParam = keyof typeof MAN_QUERY
 
-export const MAN_LANGUAGES: readonly string[] = ['de', 'fr', 'es', 'pt-BR', 'ja', 'ru']
+/** The languages a man page URL may name: every language but English, from the one list (lib/i18n/locales.ts). */
+export const MAN_LANGUAGES: readonly string[] = LANGS.filter((lang) => lang !== 'en')
 
 /** Which parameters each kind of man page URL reads. */
 export function manQueryParams(pathname: string): readonly ManQueryParam[] | null {
