@@ -146,3 +146,29 @@ avoid that cost. Production count inspection was denied by the explicit cloud
 project selector, so it is not claimed verified. Before deploy, the lead must
 check the count and use reviewed `confirm_large_indexes` at 100,000+ rows, as
 documented in the Vercel runbook. Local codegen is not evidence of cloud size.
+
+## Final integration review (#470)
+
+Rebased onto current main `f16e8828` (#469 query allowlist/private misses and #471
+concepts). Explicit valid package selectors now take an uncached Convex action;
+they never become persistent Next data-cache keys. The default-provider lookup
+retains its release-keyed cache. Three different invented package names produce
+three uncached misses and zero cache writes. Valid RPM selectors preserve their
+case. Invalid-query tests now use slashes, rather than valid underscores.
+
+The earlier `licenses.by_storageId` deployment prerequisite above is superseded:
+that index is removed. A new, initially empty `storedLicenseFiles` table supplies
+the reverse index. The license mutation writes its reference transactionally;
+replay/failed uploads, orphan safety and release pruning remain tested. No legacy
+license table backfill or live row-count approval is needed for this change.
+
+A separate deploy syntax preflight conservatively lists all existing tables and
+requires the manual current-main confirmation for index-definition changes. It
+fails closed on unknown/computed schema, missing policy and invalid confirmation,
+and does not depend on Convex 1.48's nullable schema evaluation. The workflow tests
+prove preflight failure stops before Convex deploy. See the updated Vercel runbook
+for baseline maintenance and future confirmed/staged index rollout.
+
+Final integration checks: **968 ingestion / 3,283 Convex / 861 frontend / 131 ops /
+13 dataset/deploy workflow tests** pass. Lint/grammar/typecheck/public API, isolated
+codegen with no drift, pip dry-run and the unconfirmed index preflight pass.

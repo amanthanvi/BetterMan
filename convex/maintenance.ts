@@ -59,6 +59,7 @@ const storageStatsTableValidator = v.union(
   v.literal("derivedPageInputs"),
   v.literal("licensePackages"),
   v.literal("licenses"),
+  v.literal("storedLicenseFiles"),
   v.literal("manPageContentBlobChunks"),
   v.literal("manPageContentBlobs"),
   v.literal("manPageContentChunks"),
@@ -101,6 +102,7 @@ export const STORAGE_STATS_FIELDS: { [T in StorageStatsTable]: Array<Extract<key
   manPageDerived: ["key", "summaryJson"],
   licensePackages: ["packageName", "version"],
   licenses: ["licenseId", "licenseName", "licenseText"],
+  storedLicenseFiles: [],
   manPageContentBlobChunks: ["chunk"],
   manPageContentBlobs: ["docJson", "synopsisJson", "optionsJson", "seeAlsoJson"],
   manPageContentChunks: ["chunk"],
@@ -1080,7 +1082,7 @@ export const cleanupOrphanManifestFilesBatch = internalMutation({
     for (const file of batch.page) {
       if (![MANIFEST_CONTENT_TYPE, LICENSE_CONTENT_TYPE].includes(file.contentType ?? "") || file._creationTime > Date.now() - MANIFEST_ORPHAN_MIN_AGE_MS) continue;
       const ref = file.contentType === LICENSE_CONTENT_TYPE
-        ? await ctx.db.query("licenses").withIndex("by_storageId", q => q.eq("storageId", file._id)).first()
+        ? await ctx.db.query("storedLicenseFiles").withIndex("by_storageId", q => q.eq("storageId", file._id)).first()
         : await ctx.db.query("releaseManifests").withIndex("by_storageId", q => q.eq("storageId", file._id)).first();
       if (ref) continue;
       orphans++;

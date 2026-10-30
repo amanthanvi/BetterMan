@@ -13,8 +13,16 @@ Ubuntu rebased onto main f16e8828 with pending #445 changes carried locally, lea
 #445's branch untouched. Reconciled concept/share metadata and B4 tier robots with
 #469 query privacy. 956 ingestion / 3,280 Convex / 850 frontend / 126 ops / 12
 workflow tests pass; lint/grammar/typecheck/public API/codegen no-drift/pip pass.
-Next: push Ubuntu/Proof; restack Fedora and implement fixes, then Arch/Alpine;
-rerun each family's checks and final-stack man-query/short-URL E2E.
+Ubuntu pushed/Proof refreshed. Fedora fixes complete: explicit pkg lookups bypass
+persistent data cache; three invented names produce zero entries. No new licenses
+index: storedLicenseFiles is an initially empty, release-owned reverse-reference
+table with transactional insertion, replay/orphan/prune checks. Added deploy index
+syntax preflight and reviewed baseline, independent of nullable CLI evaluation.
+Replaced invalid examples with slash-containing names; kept #469 private misses.
+Fedora checks: 968 ingestion / 3,283 Convex / 861 frontend / 131 ops / 13 workflows;
+lint/grammar/typecheck/public API/codegen no-drift/pip and index preflight pass.
+Next: push Fedora/Proof, restack/check Arch and Alpine, final-stack man-query and
+short-URL E2E, final push/Proof/clean-state verification.
 
 Preserve prior cold/cached acquisition measurements and projections: Ubuntu
 266/300 min <10 GB; Fedora 225/300 <8 GB; Arch CDN cold 170.33 MB in 20.49 s,

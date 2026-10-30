@@ -350,7 +350,13 @@ export default defineSchema({
     licenseText: v.string(),
     storageId: v.optional(v.id("_storage")),
     sourceUrl: v.optional(v.string()),
-  }).index("by_releaseId_and_packageName", ["releaseId", "packageName"])
+  }).index("by_releaseId_and_packageName", ["releaseId", "packageName"]),
+
+  // New and initially empty: reverse references need no index backfill on licenses.
+  storedLicenseFiles: defineTable({
+    releaseId: v.id("datasetReleases"),
+    storageId: v.id("_storage"),
+  }).index("by_releaseId", ["releaseId"])
     .index("by_storageId", ["storageId"]),
 
   // Operational progress and pins are separate from frequently-read release records.

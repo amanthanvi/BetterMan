@@ -22,9 +22,18 @@ it('retains the shared cache for ordinary small manual responses', async () => {
   expect(mocks.action).toHaveBeenCalledTimes(1)
   expect(mocks.writes).toHaveBeenCalledTimes(1)
 })
-it.each(['lsb_release', 'SDL2_sound-devel', 'SDL_sound-devel', 'R'])('preserves provider %s through the cached Convex lookup', async pkg => {
+it.each(['lsb_release', 'SDL2_sound-devel', 'SDL_sound-devel', 'R'])('preserves provider %s through an uncached Convex lookup', async pkg => {
   const result = { kind: 'page', data: { page: { name: 'shared' }, content: {}, variants: [] } }
   mocks.action.mockResolvedValue(result)
   expect(await fetchManByNameAndSectionOrAlias({ distro: 'fedora', name: 'shared', section: '1', pkg })).toEqual(result)
   expect(mocks.action).toHaveBeenCalledExactlyOnceWith(expect.anything(), { distro: 'fedora', name: 'shared', section: '1', pkg, reportRelease: true })
+  expect(mocks.writes).not.toHaveBeenCalled()
+})
+it('creates no persistent entries for three made-up package selectors', async () => {
+  mocks.action.mockResolvedValue({ kind: 'not_found' })
+  for (const pkg of ['made-up-one', 'Made_Up_Two', 'made-up-three']) {
+    await expect(fetchManByNameAndSectionOrAlias({ distro: 'fedora', name: 'shared', section: '1', pkg })).rejects.toMatchObject({ code: 'PAGE_NOT_FOUND' })
+  }
+  expect(mocks.action).toHaveBeenCalledTimes(3)
+  expect(mocks.writes).not.toHaveBeenCalled()
 })

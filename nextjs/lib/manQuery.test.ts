@@ -41,7 +41,7 @@ describe('man page query allowlist', () => {
     ['?flag=x', ''],
     ['?flag=--sort=WORD', ''],
     ['?flag=-x%20-y', ''],
-    ['?pkg=Not_A_Package', ''],
+    ['?pkg=Not/A/Package', ''],
     ['?pkg=' + 'a'.repeat(201), ''],
     ['?lang=en', ''],
     ['?lang=xx', ''],

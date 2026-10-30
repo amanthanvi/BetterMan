@@ -196,7 +196,7 @@ it('keeps alternate robots and omits a noindex canonical on a release-mismatched
   expect(res.headers.get('x-robots-tag')).toBe('noindex')
 })
 
-it.each(['?zz=1', '?distro=ubuntu&distro=fedora', '?pkg=Bad_Name'])('answers a query the proxy would have redirected (%s) privately', async (query) => {
+it.each(['?zz=1', '?distro=ubuntu&distro=fedora', '?pkg=Bad/Name'])('answers a query the proxy would have redirected (%s) privately', async (query) => {
   const res = await GET(req(query), ctx())
   expect(res.headers.get('cache-control')).toBe('private, no-store')
 })

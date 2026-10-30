@@ -256,9 +256,9 @@ const cachedResolveManByName = unstable_cache(
 )
 
 const cachedManByNameAndSection = unstable_cache(
-  async (distro: Distro, name: string, section: string, pkg: string | null, _release: string | null) =>
-    cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section, ...(pkg ? { pkg } : {}), reportRelease: true }), _release),
-  ['betterman', 'convex', 'man-by-name-and-section', 'v7'],
+  async (distro: Distro, name: string, section: string, _release: string | null) =>
+    cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section, reportRelease: true }), _release),
+  ['betterman', 'convex', 'man-by-name-and-section', 'v8'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -475,8 +475,12 @@ export async function fetchManByNameAndSectionOrAlias(opts: {
   pkg?: string
   release?: string
 }): Promise<ManByNameAndSectionResult> {
+  const pkg = packageName(opts.pkg)
+  // Syntax does not prove a provider; explicit selectors must not fill the data cache.
   const result = (await mapConvexError(() =>
-    cachedManByNameAndSection(opts.distro, opts.name, opts.section, packageName(opts.pkg) ?? null, opts.release ?? null),
+    pkg
+      ? convex().action(api.content.getManByNameAndSection, { distro: opts.distro, name: opts.name, section: opts.section, pkg, reportRelease: true })
+      : cachedManByNameAndSection(opts.distro, opts.name, opts.section, opts.release ?? null),
   )) as ConvexManByNameAndSectionResult
   if (!result || result.kind === 'not_found') throw pageNotFound(servedRelease(result))
   return result

@@ -176,23 +176,42 @@ RPM, Arch and Alpine names share this bounded union. `lsb_release`,
 slashes, control/non-ASCII characters and longer values are invalid. Keep these
 bounds when applying #469's query allowlist so provider selectors cannot expand
 cache keys through arbitrary query strings. The same validator serves HTML,
-plain text, metadata, API and OG routes.
+plain text, metadata, API and OG routes. Explicit valid `pkg` lookups bypass
+Next's persistent data cache until resolved, including misses; their syntax alone
+is not proof of a real provider. The default lookup remains release-keyed and
+cached. #469's renderer rules still keep unproven HTML/text/OG responses private.
 
-## Fedora stored-notice index deployment (#470)
+## Index deployment safety (#470)
 
-`licenses.by_storageId` is a new index on the existing `licenses` table. Optional
-`storageId` values do not exempt historical rows from index backfill. The Convex
-large-index check applies at **100,000 documents**. The live production row count
-could not be verified from this implementation worktree: the explicit cloud
-project selector returned an access denial; anonymous local codegen is not a
-production size measurement. Treat this as a deployment prerequisite.
+B2 adds **no index to the existing `licenses` table**. Large-notice reverse
+references live in the new, initially empty `storedLicenseFiles` table. Its two
+indexes are created with that empty table. License rows and reverse references
+are linked in the same mutation; replay adds no duplicate reference, and release
+pruning removes both. The orphan sweep uses the new table's index, so notice
+cleanup does not scan or backfill historical license text.
 
-Before deploying #470, an authorized operator must check the live `licenses`
-row count in the Convex dashboard/system table-size query. At or above 100,000,
-follow the `confirm_large_indexes` procedure above for the reviewed current-main
-SHA (90-minute deploy budget), or stage the index in a separate reviewed rollout
-before deploying readers that use it. Automatic deploys retain the large-index
-check. No production deploy or confirmation was run by this task.
+Do not rely on Convex 1.48's large-index check alone: `schemaEvaluation.ts` can
+return null when evaluation fails, and `checkForLargeIndexBackfill.ts` skips its
+check in that case. It does not reliably fail closed at the 100,000-row threshold.
+
+Before every current-main Convex deployment, `scripts/check-convex-indexes.mjs`
+inspects `convex/schema.ts` as TypeScript syntax, without executing it or asking
+Convex to evaluate it. `scripts/convex-index-policy.json` lists all existing tables
+conservatively as potentially large, with their reviewed index definitions. The
+initial baseline matches the pre-B2 indexes; only the new empty reference table
+adds entries. Changed, added or removed indexes on listed tables require the
+manual current-main `confirm_large_indexes` input. Missing policy, malformed schema
+or computed/uninspectable definitions stop deployment even with confirmation.
+The check runs before `convex deploy`; a failed check cannot start a backfill.
+New tables can be added with their indexes because there are no legacy rows.
+
+For a future index change, leave the old baseline in that PR so automatic deploys
+stop. After review, use the existing current-main confirmation procedure (90-minute
+deploy budget), or stage the index in a separate rollout before enabling readers.
+Update the reviewed policy baseline only after the index rollout is confirmed;
+do not regenerate it merely to make the preflight pass. The SDK check remains an
+additional check, not the safety boundary. No production deploy or confirmation
+was run by this implementation task.
 
 ## Man page edge caching (C4, #406)
 
@@ -219,7 +238,7 @@ Man pages (`/man/<name>`, `/man/<name>/<section>`) send `CDN-Cache-Control: publ
 | Parameter | Valid values | Read on |
 |---|---|---|
 | `distro` | a known distro, lower case (`debian` too: explicit Debian is its own URL) | pages, section pickers, `.txt` |
-| `pkg` | a well-formed package name (`packageName`) | pages, section pickers, `.txt` |
+| `pkg` | 1–200 ASCII characters, initial alphanumeric then alphanumeric/`+_.-`, case preserved (`packageName`) | pages, section pickers, `.txt` |
 | `portability` | `text` (the glyphs are the bare URL) | pages |
 | `flag` | one options-index key (`shareFlag`): `-x`, `--extract` | pages |
 | `lang` | B9's UI languages except English, which is the bare URL (`MAN_LANGUAGES`) | pages, section pickers, `.txt` |

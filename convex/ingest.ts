@@ -811,6 +811,9 @@ export const insertLicenses = internalMutation({
         storageId: license.storageId,
         sourceUrl: optionalString(license.sourceUrl),
       });
+      if (license.storageId) await ctx.db.insert("storedLicenseFiles", {
+        releaseId: release._id, storageId: license.storageId,
+      });
       inserted += 1;
     }
 

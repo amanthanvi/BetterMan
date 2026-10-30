@@ -32,6 +32,9 @@ it("preserves large license bytes, replay counts, failed-upload cleanup and rele
     expect(await t.run(async ctx => (await ctx.storage.get(license!.storageId!))?.text())).toBe(JSON.stringify({ package: "large", licenseId: "pkg:large", licenseName: "large", text }));
     expect((await t.run(ctx => ctx.db.get(releaseId)))?.uploadedLicenseCount).toBe(1);
     expect((await t.run(ctx => ctx.db.system.query("_storage").collect())).length).toBe(1);
+    expect(await t.run(ctx => ctx.db.query("storedLicenseFiles").take(2))).toMatchObject([
+      { releaseId, storageId: license!.storageId! },
+    ]);
     const pointer = await t.run(ctx => ctx.db.insert("activeReleases", { stage: "prod", locale: "en", distro: "fedora", releaseId, datasetReleaseId: "licenses", activatedAt: "now" }));
     expect(await t.query(api.queries.getLicense, { distro: "fedora", packageName: "large" })).toMatchObject({ text: "", textUrl: expect.any(String) });
     const orphan = await t.run(ctx => ctx.storage.store(new Blob(["orphan"], { type: LICENSE_CONTENT_TYPE })));
@@ -44,5 +47,6 @@ it("preserves large license bytes, replay counts, failed-upload cleanup and rele
     await t.run(ctx => ctx.db.delete(pointer));
     await t.mutation(internal.maintenance.deleteInactiveReleaseBatch, { datasetReleaseId: "licenses", confirmDatasetReleaseId: "licenses", maxDocs: 100 });
     expect(await t.run(async ctx => (await ctx.storage.get(license!.storageId!)) !== null)).toBe(false);
+    expect(await t.run(ctx => ctx.db.query("storedLicenseFiles").take(1))).toEqual([]);
   } finally { vi.useRealTimers(); vi.unstubAllEnvs(); }
 });
