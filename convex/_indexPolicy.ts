@@ -1,11 +1,11 @@
 import type { Doc } from "./_generated/dataModel";
 
-/** Unscored releases retain main's serving behavior; only scored releases filter. */
+/** Unscored canonical pages retain legacy indexing; provider alternates never index. */
 export function pageIsIndexable(
   release: Pick<Doc<"datasetReleases">, "indexablePageCount">,
-  page: { indexable?: boolean },
+  page: { indexable?: boolean; providerOnly?: boolean },
 ): boolean {
-  return release.indexablePageCount === undefined || page.indexable === true;
+  return page.providerOnly !== true && (release.indexablePageCount === undefined || page.indexable === true);
 }
 
 export function sitemapPageCount(

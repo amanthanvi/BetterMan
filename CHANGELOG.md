@@ -4,6 +4,8 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Combine demand and provider indexability, retain release-keyed text responses, and omit canonicals that would point at noindex pages.
+
 - Man pages: isolate plain-text manuals and redirects by dataset release across promotions and rollbacks (#452).
 - CI: the e2e job fails when the committed `convex/_generated` differs from what `npx convex dev` generates, so a Convex upgrade or a new Convex module cannot merge with stale generated code. The AI guideline files under `convex/_generated/ai/` are not compared.
 - Add a keyboard-accessible, no-JavaScript package provider switch on colliding manual pages, with hash-aware canonicals, noindex alternate representations, and measured provider read budgets.
