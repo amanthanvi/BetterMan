@@ -6,8 +6,10 @@ import {
   withDistroFallback,
   servedRelease,
 } from '@/lib/api'
-import { canonicalWithDistro, normalizeDistro, withDistro } from '@/lib/distro'
+import { normalizeDistro, withDistro } from '@/lib/distro'
+import { manCanonicalPath } from '@/lib/manCanonical'
 import { trustedProxyRelease } from '@/lib/manRelease'
+import { isIndexable } from '@/lib/manRobots'
 import { renderManText } from '@/lib/manText'
 import { getPublicOrigin } from '@/lib/public-origin'
 import { isRateLimited } from '@/lib/rateLimit'
@@ -73,8 +75,8 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
     if (data.kind === 'alias' || !('data' in data)) {
       return text('', 308, { ...headers, Location: textHref(`${manPath(data.name, data.section)}.txt`, 'pkg' in data ? packageName(data.pkg) : undefined) })
     }
-    const canonical = `${getPublicOrigin(request)}${canonicalWithDistro(manPath(data.data.page.name, data.data.page.section), distro)}`
-    return text(renderManText(data.data), 200, { ...headers, Link: `<${canonical}>; rel="canonical"` })
+    const canonical = `${getPublicOrigin(request)}${manCanonicalPath(data.data, distro, pkg)}`
+    return text(renderManText(data.data), 200, { ...headers, Link: `<${canonical}>; rel="canonical"`, ...(!isIndexable(data.data.page) ? { 'X-Robots-Tag': 'noindex' } : {}) })
   } catch (err) {
     if (err instanceof FastApiError) {
       return text(err.status === 404 ? 'Page not found\n' : 'Page temporarily unavailable\n', err.status)

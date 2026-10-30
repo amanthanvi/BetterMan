@@ -144,3 +144,11 @@ it.each(['/tar.txt', '/tar.1.txt', '/man/tar/1.txt'])('keys text URL and its pre
   const response = await proxy(new NextRequest(`https://betterman.sh${path}?__bm_release=forged`))
   expect(new URL(response.headers.get('x-middleware-rewrite')!).searchParams.get('__bm_release')).toBe('2026-10-28+debian')
 })
+
+it('keeps explicit provider selectors in the release-keyed CDN rewrite', async () => {
+  const response = await proxy(new NextRequest('https://betterman.sh/man/tar/1?pkg=alternate&distro=ubuntu'))
+  const target = new URL(response.headers.get('x-middleware-rewrite')!)
+  expect(target.searchParams.get('pkg')).toBe('alternate')
+  expect(target.searchParams.get('distro')).toBe('ubuntu')
+  expect(target.searchParams.get('__bm_release')).toBe('2026-10-28+ubuntu')
+})

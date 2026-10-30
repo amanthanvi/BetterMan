@@ -6,8 +6,9 @@ import { ManPageDocument } from '../../../components/man/ManPageDocument'
 import { firstQuery, ManScript, requestHeaders } from '../../../components/man/ManPageFrame'
 import { ManShell } from '../../../components/man/ManShell'
 import type { SectionPage } from '../../../lib/api'
-import { canonicalWithDistro, normalizeDistro, withDistro, type Distro } from '../../../lib/distro'
-import type { ManPage, ManPageResponse } from '../../../lib/docModel'
+import { normalizeDistro, withDistro, type Distro } from '../../../lib/distro'
+import type { ManPageResponse } from '../../../lib/docModel'
+import { manCanonicalPath } from '../../../lib/manCanonical'
 import { MAN_MISS_CACHE, MAN_PAGE_CACHE, MAN_PRIVATE_CACHE, setManCache } from '../../../lib/manCache'
 import { lookupManPage, manMiss, type ManMiss } from '../../../lib/manLookup'
 import { trustedRelease, type ReleaseInfo } from '../../../lib/manRelease'
@@ -44,11 +45,13 @@ type MissProps = { kind: 'miss'; head: ManHeadData; miss: ManMiss; release: Rele
 
 type Props = PageProps | MissProps
 
-function pageHead(page: ManPage, servedDistro: Distro, pkg: string | null, origin: string): ManHeadData {
+function pageHead(data: ManPageResponse, servedDistro: Distro, pkg: string | null, origin: string): ManHeadData {
+  const { page } = data
   const path = `/man/${encodeURIComponent(page.name)}/${encodeURIComponent(page.section)}`
   const title = `${page.name}(${page.section}) - BetterMan`
   const description = page.description || page.title || `${page.name}(${page.section}) man page.`
-  const ogPath = `${canonicalWithDistro(`${path}/og`, servedDistro)}${pkg ? `${servedDistro === 'debian' ? '?' : '&'}pkg=${encodeURIComponent(pkg)}` : ''}`
+  const canonical = manCanonicalPath(data, servedDistro, pkg)
+  const ogPath = canonical.replace(path, `${path}/og`)
   const json = safeJsonLdStringify({
     '@context': 'https://schema.org',
     '@type': 'TechArticle',
@@ -61,7 +64,7 @@ function pageHead(page: ManPage, servedDistro: Distro, pkg: string | null, origi
   return {
     title,
     description,
-    canonical: `${origin}${canonicalWithDistro(path, servedDistro)}`,
+    canonical: `${origin}${canonical}`,
     ogImage: { url: `${origin}${ogPath}`, ...OG_SIZE, alt: 'Man page' },
     jsonLd: { id: `bm-jsonld:${page.id}`, json },
     noindex: !isIndexable(page),
@@ -119,7 +122,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   return {
     props: {
       kind: 'page',
-      head: pageHead(page, found.distro, pkg, origin),
+      head: pageHead(found.data, found.distro, pkg, origin),
       data: found.data,
       related: found.related,
       servedDistro: found.distro,
@@ -157,6 +160,7 @@ export default function ManPageRoute(props: Props) {
           relatedItems={related}
           derived={data.derived}
           brief={data.brief}
+          providers={data.providers}
           portabilityMode={portabilityMode}
           portabilityToggleHref={portabilityToggleHref}
           reportHref={reportHref}

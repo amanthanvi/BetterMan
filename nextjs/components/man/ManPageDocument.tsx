@@ -2,7 +2,7 @@ import type { PageDerivedResponse } from '../../../convex/_derivedEncoding'
 
 import type { SectionPage } from '../../lib/api'
 import { DISTRO_LABEL, type Distro } from '../../lib/distro'
-import type { ManPage, ManPageBrief, ManPageContent, ManPageVariant } from '../../lib/docModel'
+import type { ManPage, ManPageBrief, ManPageContent, ManPageResponse, ManPageVariant } from '../../lib/docModel'
 import { extractExamples } from '../../lib/examples'
 import { briefView, modeAnchors } from '../../lib/manBrief'
 import { ChevronDownIcon } from '../icons'
@@ -35,6 +35,7 @@ export function ManPageDocument({
   relatedItems,
   derived,
   brief,
+  providers,
   portabilityMode = 'glyph',
   portabilityToggleHref,
   reportHref,
@@ -48,6 +49,7 @@ export function ManPageDocument({
   relatedItems: SectionPage[]
   /** B7's derived corpus metadata: portability, new-in marks, most-used flags, cross-references. */
   derived?: PageDerivedResponse
+  providers?: ManPageResponse['providers']
   /** B6's generated layer: summary and sourced examples. */
   brief?: ManPageBrief | null
   /** `?portability=text` shows the cells as words. */
@@ -111,7 +113,7 @@ export function ManPageDocument({
         ) : null}
 
         <div className="mx-auto w-full min-w-0 max-w-[var(--bm-reading-column-width)] lg:mx-0">
-          <ManPageHeaderCard page={page} synopsis={content.synopsis} variants={variants} distro={servedDistro} hasToc={hasToc} />
+          <ManPageHeaderCard page={page} synopsis={content.synopsis} variants={variants} providers={providers} distro={servedDistro} hasToc={hasToc} />
 
           <article className="mt-10">
             {inBrief ? <ManPageBriefSection view={inBrief} /> : null}

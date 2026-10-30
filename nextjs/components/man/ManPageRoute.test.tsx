@@ -193,3 +193,37 @@ describe('/man/<name>', () => {
     expect(lookup.manMiss).toHaveBeenCalledWith(expect.objectContaining({ name: 'gizp', section: null, distro: 'debian', urlDistro: null }))
   })
 })
+
+
+it('renders package choices and canonicalizes distinct providers without discarding the index tier', async () => {
+  const providers = { packages: ['alternate', 'tar'], defaultPackage: 'tar', policy: 'debian' }
+  for (const [pkg, expected] of [['alternate', '?distro=ubuntu&pkg=alternate'], ['tar', '?distro=ubuntu']]) {
+    lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'ubuntu', data: { ...data, providers, page: { ...page, sourcePackage: pkg, indexable: false } }, related: [], servedRelease: release.datasetReleaseId })
+    const { ctx, res } = context({ name: 'tar', section: '1' }, { distro: 'ubuntu', pkg })
+    const result = await pageProps(ctx)
+    expect(propsOf(result)).toMatchObject({ head: { canonical: `http://localhost:3000/man/tar/1${expected}`, noindex: true } })
+    expect(res.headers['cdn-cache-control']).toContain('public')
+    const html = renderToStaticMarkup(ManPageRoute(propsOf(result) as Parameters<typeof ManPageRoute>[0]))
+    expect(html).toContain('Provided by')
+    expect(html).toContain('BetterMan’s default for this release.')
+    expect(html).toContain('aria-current="page"')
+  }
+})
+
+
+it('preserves an explicit package in the name-only redirect and section picker', async () => {
+  lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' }, servedRelease: release.datasetReleaseId })
+  await expect(nameProps(context({ name: 'tar' }, { pkg: 'alternate' }).ctx)).resolves.toMatchObject({ redirect: { destination: '/man/tar/1?pkg=alternate' } })
+  lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'ambiguous', options: [{ section: '1', description: 'archive' }] }, servedRelease: release.datasetReleaseId })
+  const result = await nameProps(context({ name: 'tar' }, { pkg: 'alternate', distro: 'ubuntu' }).ctx)
+  const html = renderToStaticMarkup(ManNameRoute(propsOf(result) as Parameters<typeof ManNameRoute>[0]))
+  expect(html).toContain('href="/man/tar/1?distro=ubuntu&amp;pkg=alternate"')
+})
+
+
+it('keeps an alias target package ahead of an explicit name-route selector', async () => {
+  lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'alias', name: 'tnftp', section: '1', pkg: 'tnftp' }, servedRelease: release.datasetReleaseId })
+  await expect(nameProps(context({ name: 'ftp' }, { pkg: 'ftp.app' }).ctx)).resolves.toMatchObject({ redirect: { destination: '/man/tnftp/1?pkg=tnftp' } })
+  lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'alias', name: 'tnftp', section: '1' }, servedRelease: release.datasetReleaseId })
+  await expect(nameProps(context({ name: 'ftp' }, { pkg: 'ftp.app' }).ctx)).resolves.toMatchObject({ redirect: { destination: '/man/tnftp/1' } })
+})

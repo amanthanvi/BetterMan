@@ -46,6 +46,7 @@ export type OptionItem = { anchorId: string; flags: string; argument?: string | 
 export type SeeAlsoRef = { name: string; section?: string | null; resolvedPageId?: string | null }
 
 export type ManPage = {
+  indexable?: boolean
   id: string
   datasetReleaseId: string
   locale: string
@@ -104,6 +105,7 @@ export type ManPageResponse = {
   page: ManPage; content: ManPageContent; variants: ManPageVariant[]
   derived?: import('../../convex/_derivedEncoding').PageDerivedResponse
   brief?: ManPageBrief | null
+  providers?: import('../../convex/lib').ManProviders | null
 }
 
 export type ErrorDetail = { code: string; message: string }

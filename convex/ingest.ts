@@ -8,7 +8,7 @@ import { scheduleRelatedMetadataBackfill } from "./related";
 import { scheduleTaskPhraseBackfill } from "./taskPhrases";
 import { scheduleDerivedBuild } from "./derived";
 import { fullDebianPromotionHeld, releaseAcquisition, recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
-import { insertProvider, recordProviderUploads } from "./_providers";
+import { insertProvider, recordProviderUploads, refreshProviderPackages } from "./_providers";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, type OptionFlagRow } from "./_optionFlags";
 import { insertSymbols, symbolInput } from './_symbols';
@@ -480,6 +480,7 @@ export const insertPages = internalMutation({
         contentSha256: page.contentSha256,
         hasParseWarnings: page.hasParseWarnings,
       });
+      await refreshProviderPackages(ctx, release, page.name, page.section);
 
       const contentFields: ContentField[] = [
         { kind: "docJson", value: JSON.stringify(page.doc) },
@@ -594,6 +595,7 @@ export const insertStoredPages = internalMutation({
         contentSha256: page.contentSha256,
         hasParseWarnings: page.hasParseWarnings,
       });
+      await refreshProviderPackages(ctx, release, page.name, page.section);
 
       const blobId = await findOrCreateStoredContentBlob(ctx, {
         contentSha256: page.contentSha256,
@@ -685,6 +687,7 @@ export const insertAliases = internalMutation({
           .withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", release._id).eq("name", alias.targetName).eq("section", alias.targetSection).eq("sourcePackage", alias.targetPackage!)).first();
         if (canonicalTarget?.sourcePackage !== alias.targetPackage && !alternateTarget) throw new Error("ALIAS_TARGET_NOT_FOUND");
           await ctx.db.insert("manPageAliasProviders", { releaseId: release._id, name, section, sourcePackage: alias.sourcePackage, sourcePath: alias.sourcePath, targetName: alias.targetName, targetSection: alias.targetSection, targetPackage: alias.targetPackage });
+          await refreshProviderPackages(ctx, release, name, section);
           providerInserted++;
         }
         if (alias.providerOnly) { skipped++; continue; }

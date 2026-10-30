@@ -263,11 +263,14 @@ OpenJDK/xz templates are supported. Values assigned only in some conditional
 branches stay unresolved after the branch joins. Unknown expressions are
 skipped with package/line/reason evidence.
 
+### Provider election
+
 A package-owned manual wins over a generated alternative only for an exact-case
 basename match. A case-only variant stays an explicit provider: lowercase ftp
 follows tnftp, uppercase FTP and `?pkg=ftp.app` serve GNUstep's manual. Original
 spelling is retained in source paths; request case survives HTML/API/text/OG.
-For elections, treat Debian's `required`/`important`/`standard` Priority values
+Direct-file collisions rank by pinned popcon installed count, then package name
+and source path. For alternatives elections, treat Debian's `required`/`important`/`standard` Priority values
 as one installed-by-default group. Pick its highest alternatives priority,
 with pinned popcon `by_inst` breaking ties, as update-alternatives would on a
 default install. Only if that group is absent, rank by popcon then alternatives
