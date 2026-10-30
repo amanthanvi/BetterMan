@@ -48,6 +48,11 @@ export function definitionHeadings(blocks: BlockNode[]): Map<string, string> {
   return out
 }
 
+/** Options a page defines under its modes heading: picking two of them is a conflict. */
+export function modeAnchors(blocks: BlockNode[]): Set<string> {
+  return new Set([...definitionHeadings(blocks)].filter(([, heading]) => isModeHeading(heading)).map(([id]) => id))
+}
+
 /** The first sentence of a definition, cut to fit one line. */
 export function gloss(description: string): string {
   const text = description.replace(/\s+/g, ' ').trim()

@@ -36,6 +36,8 @@ export const OVERLAY_FILES = new Set([
   'man-client/palette.ts',
   'man-client/find.ts',
   'man-client/dom.ts',
+  'man-client/composer.ts',
+  'man-client/previews.ts',
 ])
 
 // BetterMan's own voice: In brief, examples, the addendum. Tinted, never boxed.

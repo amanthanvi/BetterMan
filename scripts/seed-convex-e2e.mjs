@@ -275,13 +275,13 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
       ['-t', 'time', 'Sort by modification time, newest first.'],
       ['-S', 'size', 'Sort by file size, largest first.'],
       ['-r', 'reverse', 'Reverse the order while sorting.'],
-      ['-1', 'one', 'List one file per line.'],
+      ['-w', 'width', 'Set the output width to COLS.', 'COLS'],
       ...(distro === 'debian' ? [
-        ['--color', 'color', 'Colorize the output.'],
+        ['--color', 'color', 'Colorize the output.', '[=WHEN]'],
         ['--group-directories-first', 'group-directories-first', 'Group directories before files.'],
       ] : []),
     ]
-    const items = flags.map(([flag, id, description]) => ({ id: `opt-${id}`, termInlines: [{ type: 'code', text: flag }], definitionBlocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: description }] }] }))
+    const items = flags.map(([flag, id, description, argument]) => ({ id: `opt-${id}`, termInlines: [{ type: 'code', text: flag }, ...(argument ? [{ type: 'text', text: ` ${argument}` }] : [])], definitionBlocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: description }] }] }))
     pages.push(page({
       name: 'ls', section: '1', title: 'ls(1)', description: 'list directory contents', sourcePackage: 'coreutils',
       toc: [{ id: 'description', title: 'DESCRIPTION', level: 2 }, { id: 'options', title: 'OPTIONS', level: 2 }],
@@ -291,9 +291,20 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
         { type: 'heading', id: 'options', level: 2, text: 'OPTIONS' },
         { type: 'definition_list', items },
       ],
-      options: flags.map(([flag, id, description]) => ({ flags: flag, anchorId: `opt-${id}`, description })),
+      options: flags.map(([flag, id, description, argument]) => ({ flags: flag, anchorId: `opt-${id}`, description, ...(argument ? { argument } : {}) })),
     }))
   }
+  // ascii(7): a reference table for the man page's row lookup and column sort.
+  const asciiRows = [['060', '48', '30', '0'], ['061', '49', '31', '1'], ['062', '50', '32', '2'], ['101', '65', '41', 'A'], ['102', '66', '42', 'B'], ['103', '67', '43', 'C'], ['141', '97', '61', 'a'], ['142', '98', '62', 'b'], ['143', '99', '63', 'c'], ['040', '32', '20', 'SPACE']]
+  pages.push(page({
+    name: 'ascii', section: '7', title: 'ascii(7)', description: 'ASCII character set encoded in octal, decimal, and hexadecimal',
+    toc: [{ id: 'description', title: 'DESCRIPTION', level: 2 }],
+    blocks: [
+      { type: 'heading', id: 'description', level: 2, text: 'DESCRIPTION' },
+      { type: 'paragraph', inlines: [{ type: 'text', text: 'ASCII is the American Standard Code for Information Interchange.' }] },
+      { type: 'table', headers: ['Oct', 'Dec', 'Hex', 'Char'], rows: asciiRows },
+    ],
+  }))
   const datasetReleaseId = `e2e-${distro}-${Date.now()}`
   const sectionTotals = Object.entries(
     pages.reduce((acc, p) => {

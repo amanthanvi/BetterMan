@@ -4,7 +4,7 @@ import type { SectionPage } from '../../lib/api'
 import { DISTRO_LABEL, type Distro } from '../../lib/distro'
 import type { ManPage, ManPageBrief, ManPageContent, ManPageVariant } from '../../lib/docModel'
 import { extractExamples } from '../../lib/examples'
-import { briefView } from '../../lib/manBrief'
+import { briefView, modeAnchors } from '../../lib/manBrief'
 import { ChevronDownIcon } from '../icons'
 import { defaultCodeLanguage } from '../doc/CodeBlock'
 import { DocRenderer } from '../doc/DocRenderer'
@@ -121,6 +121,7 @@ export function ManPageDocument({
               newIn={derived?.newIn}
               portabilityMode={portabilityMode}
               portabilityToggleHref={portabilityToggleHref}
+              modes={modeAnchors(content.blocks)}
               options={content.options}
               rowIds={optionRows}
               locators={locators}

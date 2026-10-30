@@ -22,6 +22,7 @@ export function ManPageOptionsSection({
   newIn,
   portabilityMode = 'glyph',
   portabilityToggleHref,
+  modes,
 }: {
   options?: OptionItem[] | null
   rowIds: ReadonlyMap<string, string>
@@ -30,6 +31,7 @@ export function ManPageOptionsSection({
   newIn?: PageDerivedResponse['newIn']
   portabilityMode?: 'glyph' | 'text'
   portabilityToggleHref?: string
+  modes?: ReadonlySet<string>
 }) {
   const allOptions = options ?? []
   const optionsCount = allOptions.length
@@ -48,6 +50,7 @@ export function ManPageOptionsSection({
       portability={portability?.portability}
       portabilityMode={portabilityMode}
       newIn={newIn}
+      modes={modes}
     />
   )
 

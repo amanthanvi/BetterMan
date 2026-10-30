@@ -134,6 +134,23 @@ Light is paper; dark is the same plate in warm ink on black.
   it to flags on all three systems. Neither ever hides manual text. Past 20,
   the rest sit in a native `<details>`. Options new since the page's previous
   release carry "new in <version>".
+- **Command composer** (`man-client/composer.ts`). Each index row has an add
+  control that shows only on the row's hover or focus, or a tap on touch, never
+  as a standing "+" (fix 6). A picked flag is marked "in command" on its term
+  and listed in a bar at the bottom (region "Command composer"), mode flags
+  first. The reader types each argument into an input whose placeholder is the
+  manual's notation; the notation is never copied as a value. An empty optional
+  argument (`--color[=WHEN]`) is left off; an empty required one (`-f ARCHIVE`)
+  keeps Copy disabled. It warns in words where a flag is not on all three
+  systems, and when two exclusive modes are picked together. Only whole
+  headings such as "Operation mode" mark exclusive modes (`isModeHeading`).
+- **Cross-reference previews** (`man-client/previews.ts`). A link to another
+  man page in the article shows that page's name(section) and description on
+  hover or keyboard focus, as a tooltip that describes the link (`aria-describedby`).
+  Escape dismisses it.
+- **Live reference tables** (`man-client/tables.ts`). A manual table of 8 or
+  more rows gets "Find a row", which marks and scrolls to matches, and sortable
+  column headers with "Original order". Rows are never hidden.
 - **Portability glyph** (`components/man/Portability.tsx`). Three 7px cells,
   GNU/Linux · FreeBSD · macOS: filled present, hollow absent, half-filled
   present but different. Drawn beside the flag and only on non-portable flags,
@@ -196,7 +213,7 @@ combinator.
   exact text), select "Select distribution variant" (a real `<select>`), list
   "Search results" with small-caps kind labels (`flag` for an option match;
   `command`, `function`, `file format`, … by section), regions "Recent" /
-  "Bookmarks" / "Browse sections" / "In brief" / "Options" /
+  "Bookmarks" / "Browse sections" / "In brief" / "Options" / "Command composer" /
   "Other distributions" / "Did you mean" (man page 404), complementaries "See
   also" / "Related commands", headings "Browse" and "Search the manual", TOC
   active link `aria-current="location"`, link "Report a problem" (man page

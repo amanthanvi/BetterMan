@@ -22,6 +22,7 @@ export function OptionsTable({
   portability,
   portabilityMode = 'glyph',
   newIn,
+  modes,
 }: {
   options: OptionItem[]
   /** Row anchor per `anchorId`, distinct from the body definition's id. */
@@ -34,6 +35,8 @@ export function OptionsTable({
   portabilityMode?: 'glyph' | 'text'
   /** Options added since the previous release of this page. */
   newIn?: PageDerivedResponse['newIn']
+  /** Options defined under the page's modes heading, for the composer's conflict warning. */
+  modes?: ReadonlySet<string>
 }) {
   const portabilityByAnchor = new Map(portability?.rows ?? [])
   const newInByAnchor = new Map((newIn ?? []).map((mark) => [mark.anchorId, mark]))
@@ -52,7 +55,14 @@ export function OptionsTable({
           const codes = portability ? portabilityByAnchor.get(opt.anchorId) ?? 'lll' : null
 
           return (
-            <tr key={opt.anchorId} data-bm-option-row data-bm-portable={codes === 'aaa' ? '' : undefined}>
+            <tr
+              key={opt.anchorId}
+              data-bm-option-row
+              data-bm-portable={codes === 'aaa' ? '' : undefined}
+              data-bm-portability={codes && codes !== 'aaa' ? codes : undefined}
+              data-bm-mode={modes?.has(opt.anchorId) ? '' : undefined}
+              className="group/opt"
+            >
               <td className="w-[45%] py-1 pr-4 align-baseline sm:w-[18rem]">
                 <a
                   href={`#${rowId}`}
@@ -78,6 +88,20 @@ export function OptionsTable({
                     </>
                   )
                 ) : null}
+                {/* The composer's add control: shown on the row's hover or focus, or a tap on touch (fix 6), never standing. */}
+                <button
+                  type="button"
+                  data-bm-action="compose"
+                  aria-pressed="false"
+                  aria-label={`Add ${splitFlags(opt.flags)[0]} to the command`}
+                  className="bm-js ml-2 align-baseline text-xs text-ink-3 underline decoration-rule-2 underline-offset-2 opacity-0 hover:text-accent focus-visible:opacity-100 group-hover/opt:opacity-100 group-focus-within/opt:opacity-100 group-data-[bm-revealed]/opt:opacity-100"
+                >
+                  add
+                </button>
+                {/* A picked flag is marked on its term; the control itself still shows only on hover, focus or tap. */}
+                <span data-bm-composed-mark className="bm-js ml-2 hidden whitespace-nowrap text-xs text-accent group-data-[bm-composed]/opt:inline">
+                  in command
+                </span>
                 {newInByAnchor.has(opt.anchorId) ? (
                   <span className="ml-2 whitespace-nowrap text-xs text-ink-3" title="Not in this page's previous release">
                     new{newInByAnchor.get(opt.anchorId)!.packageVersion ? ` in ${newInByAnchor.get(opt.anchorId)!.packageVersion}` : ''}
