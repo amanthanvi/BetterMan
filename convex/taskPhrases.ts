@@ -124,7 +124,7 @@ export async function scheduleTaskPhraseBackfill(ctx: MutationCtx, release: Doc<
   const resume = sameVersion && !refreshFlags;
   const jobId = await ctx.scheduler.runAfter(0, internal.taskPhrases.backfillRelease, { releaseId: release._id, generation });
   const progress = {
-    version: TASK_PHRASE_VERSION, generation, jobId, clearingFlags: resume ? status?.clearingFlags ?? false : true, rescanFlags: false, attempts: attempts + 1, updatedAt: Date.now(),
+    version: TASK_PHRASE_VERSION, generation, jobId, clearingFlags: resume ? status?.clearingFlags ?? false : true, rescanFlags: resume ? status?.rescanFlags ?? false : false, attempts: attempts + 1, updatedAt: Date.now(),
     cursor: resume ? status?.cursor ?? null : null,
     scanned: resume ? status?.scanned ?? 0 : 0, written: resume ? status?.written ?? 0 : 0,
   };

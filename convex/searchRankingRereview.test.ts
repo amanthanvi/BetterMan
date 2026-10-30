@@ -96,6 +96,12 @@ describe("re-review #465: realistic recall", () => {
       const status = await t.run(ctx => ctx.db.query("taskPhraseBackfills").withIndex("by_releaseId", q => q.eq("releaseId", releaseId)).unique());
       expect(status?.generation).toBe(1);
       expect(status?.completedVersion).toBe(4);
+      // A failed/interrupted scan must retain requests received before it stopped.
+      await t.run(ctx => ctx.db.patch(status!._id, { completedVersion: undefined, jobId: undefined, rescanFlags: true }));
+      await t.mutation(internal.taskPhrases.backfillActiveReleases, {});
+      expect(await t.run(async ctx => (await ctx.db.get(status!._id))?.rescanFlags)).toBe(true);
+      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      expect(await t.run(async ctx => (await ctx.db.get(status!._id))?.completedVersion)).toBe(4);
     } finally { vi.useRealTimers(); }
   });
 
