@@ -2,6 +2,7 @@ import { SIDEBAR_CLOSED_COLUMNS, SIDEBAR_OPEN_COLUMNS } from '../components/man/
 import { getScrollBehavior, scrollToIdWhenRendered } from '../lib/scroll'
 import { BUTTON, h } from './dom'
 import { createOverlay, drawer, type Overlay } from './overlay'
+import { t } from './i18n'
 
 /** The contents: the sticky sidebar from lg, a drawer below it, the active section, and its marker. */
 export type TocItem = { id: string; level: number; title: string }
@@ -14,7 +15,7 @@ let drawerOverlay: Overlay | null = null
 let activeId: string | null = null
 
 export function tocItems(): TocItem[] {
-  return [...document.querySelectorAll<HTMLAnchorElement>('[data-bm-sidebar] nav[aria-label="On this page"] a[href^="#"]')].map((a) => ({
+  return [...document.querySelectorAll<HTMLAnchorElement>('[data-bm-sidebar] nav[data-bm-toc] a[href^="#"]')].map((a) => ({
     id: decodeURIComponent(a.hash.slice(1)),
     level: Number(a.dataset.bmLevel ?? 2),
     title: a.title || a.lastElementChild?.textContent || a.textContent || '',
@@ -22,7 +23,7 @@ export function tocItems(): TocItem[] {
 }
 
 function navs(): HTMLElement[] {
-  return [...document.querySelectorAll<HTMLElement>('nav[aria-label="On this page"]')]
+  return [...document.querySelectorAll<HTMLElement>('nav[data-bm-toc]')]
 }
 
 function swap(el: Element, remove: string, add: string) {
@@ -111,18 +112,18 @@ function setSidebar(open: boolean) {
 }
 
 function openDrawer() {
-  const source = document.querySelector<HTMLElement>('[data-bm-sidebar] nav[aria-label="On this page"]')
+  const source = document.querySelector<HTMLElement>('[data-bm-sidebar] nav[data-bm-toc]')
   if (!source) return
   if (!drawerOverlay) {
-    drawerOverlay = createOverlay({ label: 'Table of contents', ...drawer('left', 'p-5') })
-    const close = h('button', { type: 'button', class: `${BUTTON.base} ${BUTTON.sm} ${BUTTON.outline}` }, 'Close')
+    drawerOverlay = createOverlay({ label: t('Table of contents'), ...drawer('left', 'p-5') })
+    const close = h('button', { type: 'button', class: `${BUTTON.base} ${BUTTON.sm} ${BUTTON.outline}` }, t('Close'))
     close.addEventListener('click', () => drawerOverlay?.close())
     const nav = source.cloneNode(true) as HTMLElement
     nav.querySelector('.bm-toc-marker')?.remove()
     bindNav(nav, () => drawerOverlay?.close())
     drawerOverlay.panel.append(
-      h('div', { class: 'flex items-center justify-between' }, h('h2', { class: 'small-caps text-lg font-semibold text-ink' }, 'Contents'), close),
-      h('div', { class: 'sr-only' }, 'Jump to a section in this man page.'),
+      h('div', { class: 'flex items-center justify-between' }, h('h2', { class: 'small-caps text-lg font-semibold text-ink' }, t('Contents')), close),
+      h('div', { class: 'sr-only' }, t('Jump to a section in this man page.')),
       h('div', { class: '-ml-3.5 mt-4' }, nav),
     )
   }
@@ -184,7 +185,7 @@ function bindSwipe() {
 export function initToc() {
   const items = tocItems()
   if (!items.length) return
-  const sidebarNav = document.querySelector<HTMLElement>('[data-bm-sidebar] nav[aria-label="On this page"]')
+  const sidebarNav = document.querySelector<HTMLElement>('[data-bm-sidebar] nav[data-bm-toc]')
   if (sidebarNav) bindNav(sidebarNav)
   document.querySelector('[data-bm-action="collapse-sidebar"]')?.addEventListener('click', () => setSidebar(false))
   document.querySelector('[data-bm-action="expand-sidebar"]')?.addEventListener('click', () => setSidebar(true))

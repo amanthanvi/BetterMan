@@ -216,7 +216,8 @@ test('reader: link hrefs on an explicit-distro URL do not depend on the distro c
   const hrefs = async (path: string, cookie: string | null) => {
     const res = await request.get(path, { headers: cookie ? { cookie: `bm-distro=${cookie}` } : {} })
     expect(res.status(), path).toBe(200)
-    return [...(await res.text()).matchAll(/<a\b[^>]*\shref="(\/[^"]*)"/g)].map((m) => m[1])
+    // The language switch's own links (`/-/lang/…`) carry the page to return to, not the reading context.
+    return [...(await res.text()).matchAll(/<a\b[^>]*\shref="(\/[^"]*)"/g)].map((m) => m[1]).filter((href) => !href.startsWith('/-/'))
   }
   for (const path of ['/man/tar/1?distro=debian', '/?distro=debian', '/search?q=tar&distro=debian', '/section/1?distro=debian']) {
     const plain = await hrefs(path, null)

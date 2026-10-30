@@ -7,6 +7,7 @@ import { parsePaletteInput, parseSearchText } from '../lib/paletteInput'
 import { clearRecent, getRecent, recordRecentSearch } from '../lib/recent'
 import { getScrollBehavior } from '../lib/scroll'
 import { h, kbd } from './dom'
+import { t, tn, urlLang } from './i18n'
 import { createOverlay, type Overlay } from './overlay'
 import { cycleTheme, preferredDistro, showNavigating, urlDistro } from './state'
 import { tocItems } from './toc'
@@ -28,12 +29,12 @@ type Item = {
 }
 
 const SYMBOL_BADGE: Record<NonNullable<SearchResult['symbolKind']>, string> = {
-  config: 'directive',
-  environment: 'environment',
-  files: 'file',
-  errors: 'errno',
-  subcommand: 'subcommand',
-  shell: 'shell',
+  config: t('directive'),
+  environment: t('environment'),
+  files: t('file'),
+  errors: t('errno'),
+  subcommand: t('subcommand'),
+  shell: t('shell'),
 }
 
 let overlay: Overlay | null = null
@@ -76,7 +77,7 @@ function runSearch(q: string, distroOverride?: Distro) {
   if (!query) return
   recordRecentSearch(query)
   close()
-  navigate(withDistro(`/search?q=${encodeURIComponent(query)}`, distroOverride ?? context().linkDistro))
+  navigate(withDistro(`/search?q=${encodeURIComponent(query)}`, distroOverride ?? context().linkDistro, urlLang()))
 }
 
 function runMan(name: string, section: string, distroOverride?: Distro, anchorId?: string) {
@@ -92,7 +93,7 @@ function runMan(name: string, section: string, distroOverride?: Distro, anchorId
     else window.location.hash = anchorId
     return
   }
-  navigate(manPageHref(name, section, targetDistro, anchorId))
+  navigate(manPageHref(name, section, targetDistro, anchorId, urlLang()))
 }
 
 function pageLabel(name: string, section: string) {
@@ -107,18 +108,18 @@ function actions(): Item[] {
   const { linkDistro } = context()
   const action = (id: string, label: string, run: () => void, detail?: string): Item => ({ id, text: label, label: textLabel('> ', label), detail, run })
   return [
-    action('action-theme', 'Toggle theme', () => cycleTheme(), 'Cycle: system → light → dark'),
-    action('action-home', 'Go home', () => {
+    action('action-theme', t('Toggle theme'), () => cycleTheme(), t('Cycle: system → light → dark')),
+    action('action-home', t('Go home'), () => {
       close()
-      navigate(withDistro('/', linkDistro))
+      navigate(withDistro('/', linkDistro, urlLang()))
     }),
     ...['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((s) =>
-      action(`action-section-${s}`, `Go to section ${s}`, () => {
+      action(`action-section-${s}`, t('Go to section {section}', { section: s }), () => {
         close()
-        navigate(withDistro(`/section/${encodeURIComponent(s)}`, linkDistro))
+        navigate(withDistro(`/section/${encodeURIComponent(s)}`, linkDistro, urlLang()))
       }),
     ),
-    action('action-clear-recent', 'Clear recent history', () => {
+    action('action-clear-recent', t('Clear recent history'), () => {
       clearRecent()
       input.value = ''
       activeIndex = 0
@@ -155,7 +156,7 @@ function buildItems(): Item[] {
     const out: Item[] = []
     for (const r of getRecent().slice(0, 12)) {
       if (r.kind === 'search') {
-        out.push({ id: `search:${r.query}`, label: textLabel('', `Search: ${r.query}`), run: () => runSearch(r.query, parseSearchText(r.query).distro) })
+        out.push({ id: `search:${r.query}`, label: textLabel('', t('Search: {query}', { query: r.query })), run: () => runSearch(r.query, parseSearchText(r.query).distro) })
         continue
       }
       const key = `${r.name}:${r.section}`
@@ -184,7 +185,7 @@ function resultItems(data: SearchResponse, bookmarks: Set<string>): Item[] {
     return {
       id: `page:${key}`,
       label: pageLabel(result.name, result.section),
-      badge: result.anchorId || result.symbolKind ? (result.match === 'option' ? 'flag' : result.symbolKind ? SYMBOL_BADGE[result.symbolKind] : 'definition') : undefined,
+      badge: result.anchorId || result.symbolKind ? result.match === 'option' ? t('flag') : result.symbolKind ? SYMBOL_BADGE[result.symbolKind] : t('definition') : undefined,
       detail: result.description,
       bookmarked: bookmarks.has(key),
       run: () => {
@@ -200,16 +201,16 @@ function render() {
   const text = parsed.mode === 'search' ? parsedSearch.text : parsed.text.trim()
   const safeIndex = items.length ? Math.min(activeIndex, items.length - 1) : 0
 
-  modeHint.textContent = parsed.mode === 'actions' ? 'Actions' : parsed.mode === 'headings' ? 'Headings' : ''
+  modeHint.textContent = parsed.mode === 'actions' ? t('Actions') : parsed.mode === 'headings' ? t('Headings') : ''
   modeHint.hidden = parsed.mode === 'search'
-  live.textContent = search.status === 'loading' && parsed.mode === 'search' ? 'Searching' : parsed.text.trim() ? (items.length ? `${items.length} results` : 'No matches') : ''
+  live.textContent = search.status === 'loading' && parsed.mode === 'search' ? t('Searching') : parsed.text.trim() ? (items.length ? tn('{count, plural, one {# result} other {# results}}', items.length, `${items.length} results`) : t('No matches')) : ''
   status.textContent =
     parsed.mode === 'search' && text && search.status === 'loading'
-      ? 'Searching…'
+      ? t('Searching…')
       : parsed.mode === 'search' && text && search.status === 'error'
-        ? 'Search failed.'
+        ? t('Search failed.')
         : !items.length && parsed.text.trim()
-          ? 'No matches.'
+          ? t('No matches.')
           : ''
   status.hidden = !status.textContent
 
@@ -235,7 +236,7 @@ function render() {
           item.label(),
           item.badge ? h('span', { class: 'shrink-0 small-caps text-sm text-ink-3' }, item.badge) : null,
           item.detail ? h('div', { class: 'min-w-0 flex-1 truncate text-sm text-ink-2' }, item.detail) : null,
-          item.bookmarked ? h('div', { class: 'shrink-0 text-xs text-ink-3' }, h('span', { 'aria-hidden': 'true' }, '★'), h('span', { class: 'sr-only' }, 'Bookmarked')) : null,
+          item.bookmarked ? h('div', { class: 'shrink-0 text-xs text-ink-3' }, h('span', { 'aria-hidden': 'true' }, '★'), h('span', { class: 'sr-only' }, t('Bookmarked'))) : null,
         ),
       )
       row.addEventListener('mouseenter', () => {
@@ -290,9 +291,9 @@ function update() {
 function build(): Overlay {
   input = h('input', {
     name: 'bm-palette',
-    placeholder: 'Search man pages…',
+    placeholder: t('Search man pages…'),
     class: 'h-10 w-full min-w-0 flex-1 bg-transparent text-base text-ink placeholder:text-ink-3',
-    'aria-label': 'Command palette input',
+    'aria-label': t('Command palette input'),
     role: 'combobox',
     'aria-autocomplete': 'list',
     'aria-expanded': 'false',
@@ -305,7 +306,7 @@ function build(): Overlay {
   list = h('div', { id: 'bm-palette-list', role: 'listbox', class: 'space-y-0.5' })
 
   const created = createOverlay({
-    label: 'Command palette',
+    label: t('Command palette'),
     exitMs: 150,
     hideWhenClosing: true,
     initialFocus: () => input,
@@ -322,14 +323,14 @@ function build(): Overlay {
   })
   created.panel.append(
     h('div', { class: 'border-b border-rule px-4 py-2' }, live, h('div', { class: 'flex items-center gap-2' }, input, modeHint)),
-    h('div', { class: 'min-h-0 flex-1 overflow-y-auto p-2', role: 'region', 'aria-label': 'Command palette results' }, status, list),
+    h('div', { class: 'min-h-0 flex-1 overflow-y-auto p-2', role: 'region', 'aria-label': t('Command palette results') }, status, list),
     h(
       'div',
       { class: 'flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-rule px-4 py-2 text-xs text-ink-3' },
-      h('span', { class: 'flex items-center gap-1.5' }, kbd('↑↓'), ' navigate'),
-      h('span', { class: 'flex items-center gap-1.5' }, kbd('↵'), ' open'),
-      h('span', { class: 'flex items-center gap-1.5' }, kbd('esc'), ' close'),
-      h('span', { class: 'ml-auto hidden font-mono sm:inline' }, '> actions · # headings · @distro'),
+      h('span', { class: 'flex items-center gap-1.5' }, kbd('↑↓'), ` ${t('navigate')}`),
+      h('span', { class: 'flex items-center gap-1.5' }, kbd('↵'), ` ${t('open')}`),
+      h('span', { class: 'flex items-center gap-1.5' }, kbd('esc'), ` ${t('close')}`),
+      h('span', { class: 'ml-auto hidden font-mono sm:inline' }, t('> actions · # headings · @distro')),
     ),
   )
 

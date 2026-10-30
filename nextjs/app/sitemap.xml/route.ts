@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 
 import { fetchSeoReleases } from '../../lib/api'
+import { approvedConcepts } from '../../lib/concepts'
 import { getPublicOrigin } from '../../lib/public-origin'
 
 export const dynamic = 'force-dynamic'
@@ -20,8 +21,10 @@ export async function GET(request: Request) {
   const origin = getPublicOrigin(request)
   const releases = await fetchSeoReleases()
 
+  const concepts = approvedConcepts()
   const etag = weakEtag([
     'sitemap-index-b4-v2',
+    ...concepts.map((concept) => `concept:${concept.slug}`),
     ...releases.items.flatMap((r: (typeof releases.items)[number]) => [
       r.distro,
       r.datasetReleaseId,
@@ -49,6 +52,7 @@ export async function GET(request: Request) {
       const loc = `${origin}/sitemap-${r.distro}.xml`
       return `  <sitemap>\n    <loc>${loc}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}\n  </sitemap>`
     })
+    .concat(concepts.length ? [`  <sitemap>\n    <loc>${origin}/sitemap-concepts.xml</loc>\n  </sitemap>`] : [])
     .join('\n')
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n` +

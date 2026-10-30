@@ -95,12 +95,6 @@ export type ManPageBrief = {
   tldr: { path: string; commit: string; url: string; license: 'CC-BY-4.0' } | null
   generated: { provider: string; model: string; promptVersion: string; generatedAt: string } | null
 }
-/** Short source labels the reader shows beside each example. */
-export const BRIEF_SOURCE_LABELS: Record<BriefExampleSource, string> = {
-  page: 'from EXAMPLES',
-  tldr: 'tldr-pages',
-  generated: 'generated · verified',
-}
 
 // Response enrichment is separate from the upstream Python/TS document model.
 export type ManPageResponse = {

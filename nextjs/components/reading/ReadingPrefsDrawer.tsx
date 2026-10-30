@@ -4,6 +4,7 @@ import { DISTRO_GROUPS, type Distro } from '../../lib/distro'
 import { PREFERENCE_AXES, trackEvent } from '../../lib/analytics'
 import { DEFAULT_PREFS, type ReadingPreferences } from '../../lib/readingPrefs'
 import { useDistro } from '../state/distro'
+import { useLang } from '../state/lang'
 import { useReadingPrefs } from '../state/readingPrefs'
 import { Button } from '../ui/Button'
 import { cx } from '../ui/cx'
@@ -82,6 +83,7 @@ function SegmentedRadioGroup<T extends string>({
 export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { prefs, updatePrefs, reset } = useReadingPrefs()
   const distro = useDistro()
+  const { t } = useLang()
 
   const changePref = <K extends keyof Omit<ReadingPreferences, 'version'>>(axis: K, value: ReadingPreferences[K]) => {
     if (prefs[axis] === value) return
@@ -95,23 +97,23 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
     <Drawer
       open={open}
       onOpenChange={onOpenChange}
-      label="Reading preferences"
+      label={t('Reading preferences')}
       side="sheet-right"
       panelClassName="p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6"
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="small-caps text-lg font-semibold text-ink">Reading preferences</h2>
-          <p className="mt-1 text-sm text-ink-3">How the manual is set on every page.</p>
+          <h2 className="small-caps text-lg font-semibold text-ink">{t('Reading preferences')}</h2>
+          <p className="mt-1 text-sm text-ink-3">{t('How the manual is set on every page.')}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} aria-label="Close reading preferences, Esc">
+        <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} aria-label={t('Close reading preferences, Esc')}>
           Esc
         </Button>
       </div>
 
       <div className="mt-6 space-y-6">
         <SegmentedRadioGroup
-          label="Default distro"
+          label={t('Default distro')}
           value={distro.preferred}
           options={distroOptions}
           onChange={(next) => distro.setDistro(next)}
@@ -119,7 +121,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
         />
 
         <SegmentedRadioGroup
-          label="Font size"
+          label={t('Font size')}
           value={prefs.fontSize}
           options={[
             { id: 'small', label: 'S' },
@@ -131,45 +133,45 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
         />
 
         <SegmentedRadioGroup
-          label="Font family"
+          label={t('Font family')}
           value={prefs.fontFamily}
           options={[
-            { id: 'serif', label: 'Serif' },
-            { id: 'sans', label: 'Sans' },
-            { id: 'mono', label: 'Mono' },
+            { id: 'serif', label: t('Serif') },
+            { id: 'sans', label: t('Sans') },
+            { id: 'mono', label: t('Mono') },
           ]}
           onChange={(fontFamily) => changePref('fontFamily', fontFamily)}
         />
 
         <SegmentedRadioGroup
-          label="Line height"
+          label={t('Line height')}
           value={prefs.lineHeight}
           options={[
-            { id: 'compact', label: 'Compact' },
-            { id: 'normal', label: 'Normal' },
-            { id: 'relaxed', label: 'Relaxed' },
+            { id: 'compact', label: t('Compact') },
+            { id: 'normal', label: t('Normal') },
+            { id: 'relaxed', label: t('Relaxed') },
           ]}
           onChange={(lineHeight) => changePref('lineHeight', lineHeight)}
         />
 
         <SegmentedRadioGroup
-          label="Column width"
+          label={t('Column width')}
           value={prefs.columnWidth}
           options={[
-            { id: 'narrow', label: 'Narrow' },
-            { id: 'normal', label: 'Normal' },
-            { id: 'wide', label: 'Wide' },
+            { id: 'narrow', label: t('Narrow') },
+            { id: 'normal', label: t('Normal') },
+            { id: 'wide', label: t('Wide') },
           ]}
           onChange={(columnWidth) => changePref('columnWidth', columnWidth)}
         />
 
         <SegmentedRadioGroup
-          label="Code theme"
+          label={t('Code theme')}
           value={prefs.codeTheme}
           options={[
-            { id: 'auto', label: 'Auto' },
-            { id: 'light', label: 'Light' },
-            { id: 'dark', label: 'Dark' },
+            { id: 'auto', label: t('Auto') },
+            { id: 'light', label: t('Light') },
+            { id: 'dark', label: t('Dark') },
           ]}
           onChange={(codeTheme) => changePref('codeTheme', codeTheme)}
         />
@@ -181,7 +183,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
             }
             reset()
           }}>
-            Reset to defaults
+            {t('Reset to defaults')}
           </Button>
         </div>
       </div>

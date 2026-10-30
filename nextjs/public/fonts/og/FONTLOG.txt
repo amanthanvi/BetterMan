@@ -1,0 +1,33 @@
+Share-card fonts
+----------------
+
+These files are read on the server by the share-card routes
+(nextjs/lib/og/card.tsx) and rasterized into PNG images. No page loads them.
+Built by scripts/fonts/build-og-fonts.py in the BetterMan repository
+(https://github.com/amanthanvi/BetterMan).
+
+bm-text-og-*.woff
+  Modified Versions of Source Serif 4 4.005 by Adobe, licensed under the SIL
+  Open Font License 1.1 (OFL-BM-Text.txt). Source Serif 4 has the Reserved
+  Font Name "Source", so these carry the name BM Text, as the web fonts in
+  ../bm-text/ do.
+
+  Changes from the Original Version:
+
+  - Static instances of SourceSerif4Variable-Roman.ttf at weights 400
+    (roman), 600 (semibold) and 400 (caps), and of -Italic.ttf at 400, with
+    the optical-size axis pinned at 20.
+  - The character maps point digits at the old-style figures (onum). The caps
+    file also points capitals at their small capitals (c2sc) and lower case at
+    small capitals (smcp).
+  - Subset to Latin, Latin Extended, Greek and Cyrillic, keeping only the kern
+    feature: no ligatures. Hinting is removed.
+  - Family, full, PostScript and instance names are renamed to BM Text /
+    BMText. Copyright, trademark and license names are unchanged.
+
+jetbrains-mono-og-*.woff
+  Subsets of JetBrains Mono 2.211 Regular and SemiBold by The JetBrains Mono
+  Project Authors, licensed under the SIL Open Font License 1.1
+  (OFL-JetBrainsMono.txt), which reserves no font name. Subset to the Latin
+  range of the BM Text web fonts with no layout features, so no code ligature
+  can form. Hinting is removed.

@@ -6,8 +6,8 @@
   "scope": "/",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#131210",
-  "theme_color": "#131210",
+  "background_color": "#f9f7f2",
+  "theme_color": "#f9f7f2",
   "shortcuts": [
     { "name": "Search", "url": "/search" },
     { "name": "Bookmarks", "url": "/#bookmarks" },

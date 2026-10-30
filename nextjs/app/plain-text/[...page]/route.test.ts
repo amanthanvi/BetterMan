@@ -205,3 +205,42 @@ it.each([true, false, undefined])('carries tier robots on text GET and HEAD: %s'
     expect(res.headers.get('link')).toBe(indexable === false ? null : '<https://betterman.sh/man/tar/1>; rel="canonical"')
   }
 })
+
+it.each(['?zz=1', '?distro=ubuntu&distro=fedora', '?pkg=Bad_Name'])('answers a query the proxy would have redirected (%s) privately', async (query) => {
+  const res = await GET(req(query), ctx())
+  expect(res.headers.get('cache-control')).toBe('private, no-store')
+})
+
+it('keeps the shared cache for the release key and allowed parameters', async () => {
+  const res = await GET(req('?distro=ubuntu&__bm_release=test'), ctx())
+  expect(res.headers.get('cache-control')).toBe('public, max-age=60, s-maxage=3600, stale-while-revalidate=3600')
+})
+
+const reqAt = (path: string) => new Request(`https://betterman.sh${path}`, { headers: { 'x-vercel-forwarded-for': '192.0.2.1', 'x-bm-release-token': 'test-token', 'x-bm-release': JSON.stringify({ datasetReleaseId: 'test', distro: 'debian', pageCount: 1, lastUpdated: '' }) } })
+
+it.each(['random1', 'random2', 'no-such-package'])('keeps a name-only redirect that carries the unproven package %s private', async (pkg) => {
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'page', name: 'tar', section: '1', title: 'tar(1)', description: 'archive', datasetReleaseId: 'test' })
+  const res = await GET(reqAt(`/tar.txt?pkg=${pkg}`), ctx(['tar']))
+  expect(res.status).toBe(308)
+  expect(res.headers.get('location')).toBe(`/man/tar/1.txt?pkg=${pkg}`)
+  expect(res.headers.get('cache-control')).toBe('private, no-store')
+})
+
+it('shares a name-only redirect without a package, and a page its package proves', async () => {
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'page', name: 'tar', section: '1', title: 'tar(1)', description: 'archive', datasetReleaseId: 'test' })
+  expect((await GET(reqAt('/tar.txt'), ctx(['tar']))).headers.get('cache-control')).toBe('public, max-age=60, s-maxage=3600, stale-while-revalidate=3600')
+  const proven = await GET(reqAt('/man/tar/1.txt?pkg=tar'), ctx())
+  expect(proven.status).toBe(200)
+  expect(proven.headers.get('cache-control')).toBe('public, max-age=60, s-maxage=3600, stale-while-revalidate=3600')
+})
+
+it.each(['random1', 'random2'])('keeps an alias reached with the unproven package %s private', async (pkg) => {
+  vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'alias', name: 'gzip', section: '1', datasetReleaseId: 'test' })
+  const res = await GET(reqAt(`/man/gunzip/1.txt?pkg=${pkg}`), ctx(['gunzip', '1']))
+  expect(res.status).toBe(308)
+  expect(res.headers.get('cache-control')).toBe('private, no-store')
+})
+
+it('answers a bare _rsc privately', async () => {
+  expect((await GET(reqAt('/man/tar/1.txt?_rsc=abc'), ctx())).headers.get('cache-control')).toBe('private, no-store')
+})

@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import { CodeBlock, defaultCodeLanguage } from './CodeBlock'
+import { tServer } from '../../lib/i18n/testing'
 
 describe('defaultCodeLanguage', () => {
   it('uses C for system calls, library functions and kernel interfaces', () => {
@@ -15,12 +16,12 @@ describe('defaultCodeLanguage', () => {
 
 describe('CodeBlock language', () => {
   it('falls back to the default language when the hint is missing or unknown', () => {
-    expect(renderToStaticMarkup(<CodeBlock text="int x;" defaultLanguage="c" />)).toContain('language-c')
-    expect(renderToStaticMarkup(<CodeBlock text="int x;" languageHint="cobol" defaultLanguage="c" />)).toContain('language-c')
+    expect(renderToStaticMarkup(<CodeBlock text="int x;" defaultLanguage="c" t={tServer} />)).toContain('language-c')
+    expect(renderToStaticMarkup(<CodeBlock text="int x;" languageHint="cobol" defaultLanguage="c" t={tServer} />)).toContain('language-c')
   })
 
   it('prefers an explicit hint', () => {
-    expect(renderToStaticMarkup(<CodeBlock text="make all" languageHint="makefile" defaultLanguage="c" />)).toContain(
+    expect(renderToStaticMarkup(<CodeBlock text="make all" languageHint="makefile" defaultLanguage="c" t={tServer} />)).toContain(
       'language-makefile',
     )
   })
