@@ -19,7 +19,7 @@ inside that language's release and uses the existing
 the upstream release a translation documents (its `.TH` source field, for
 example `GNU tar 1.34`), which the drift note compares with English.
 
-Ingest contract v7 adds: release locales are validated against
+Ingest contract v9 (after #445's v7 and B2's v8) requires the exact version both ways, in `X-BetterMan-Ingest-Contract` on every release-contract request, and adds: release locales are validated against
 `convex/_locales.ts`; `getPromotionSource` and `promoteActiveReleases` take an
 optional `locale` (English when absent, one locale per request); stored pages
 may carry `documentedVersion`. Derived corpus data, task phrases and generated

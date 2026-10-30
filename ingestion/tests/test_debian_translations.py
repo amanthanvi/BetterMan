@@ -292,13 +292,13 @@ def test_contract_failure_precedes_translation_acquisition(monkeypatch):
 
     class Client:
         def require_deployed_contract(self):
-            raise ConvexContractError("deploy v7 first")
+            raise ConvexContractError("deploy v9 first")
 
     monkeypatch.setattr(l10n, "ConvexIngestClient", lambda *_: Client())
     monkeypatch.setattr(
         l10n, "TranslationWorkspace", lambda *_a, **_k: pytest.fail("no acquisition")
     )
-    with pytest.raises(ConvexContractError, match="v7"):
+    with pytest.raises(ConvexContractError, match="v9"):
         l10n.ingest_debian_translation(
             locale="de",
             activate=False,

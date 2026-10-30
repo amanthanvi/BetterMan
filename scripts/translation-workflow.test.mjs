@@ -92,7 +92,8 @@ class TranslationWorkflowTest(unittest.TestCase):
                      {'promoted': [{'distro': 'debian', 'datasetReleaseId': 'de-1'}]})
         with patch.dict(os.environ, env):
             self.assertEqual(w.promote('de'), 0)
-        (source_url, source, _), (promote_url, body, headers) = self.requests
+        (source_url, source, source_headers), (promote_url, body, headers) = self.requests
+        self.assertEqual(source_headers['X-betterman-ingest-contract'], str(REQUIRED_SCHEMA_VERSION))
         self.assertTrue(source_url.endswith('/ingest/promotion-source'))
         self.assertEqual(source, {'distro': 'debian', 'locale': 'de'})
         self.assertTrue(promote_url.endswith('/ingest/promote'))

@@ -322,7 +322,7 @@ describe("release sealing", () => {
     const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("source"));
     await pointRelease(t, releaseId, "staging");
     const request = (body: object, authorized = true) => t.fetch("/ingest/promotion-source", {
-      method: "POST", headers: { "content-type": "application/json", ...(authorized ? { authorization: "Bearer test-secret" } : {}) }, body: JSON.stringify(body),
+      method: "POST", headers: { "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion), ...(authorized ? { authorization: "Bearer test-secret" } : {}) }, body: JSON.stringify(body),
     });
     expect((await request({ distro: "debian" }, false)).status).toBe(401);
     expect((await request({ distro: "debian", stage: "prod" })).status).toBe(400);

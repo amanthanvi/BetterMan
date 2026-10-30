@@ -2,6 +2,7 @@
 import { convexTest } from 'convex-test';
 import { afterEach, expect, it, vi } from 'vitest';
 import schema from './schema';
+import { INGEST_CONTRACT } from "./ingestContract";
 import { api, internal } from './_generated/api';
 const modules = import.meta.glob('./**/*.ts');
 afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); });
@@ -10,7 +11,7 @@ it('stores stub providers without page/search duplicates, verifies counts and re
   const t = convexTest(schema, modules);
   await t.mutation(internal.ingest.createRelease, { datasetReleaseId:'stub-providers',locale:'en',distro:'debian',imageRef:'pinned',imageDigest:'sha',ingestedAt:'now',packageManifest:null,
     pageCount:1,aliasCount:1,providerCount:2,licenseCount:0,packageBatches:[],sectionTotals:[{section:'3',total:1}] });
-  const res = await t.fetch('/ingest/pages/storage', { method:'POST',headers:{authorization:'Bearer local','content-type':'application/json'},body:JSON.stringify({datasetReleaseId:'stub-providers',pages:[{
+  const res = await t.fetch('/ingest/pages/storage', { method:'POST',headers:{authorization:'Bearer local','content-type':'application/json','x-betterman-ingest-contract':String(INGEST_CONTRACT.schemaVersion)},body:JSON.stringify({datasetReleaseId:'stub-providers',pages:[{
     externalId:'acos',name:'acos',section:'3',sourcePackage:'math-doc',sourcePackageVersion:'1',sourcePath:'man3/acos.3',sitemapPage:1,title:'acos(3)',description:'inverse cosine',contentSha256:'abc',hasParseWarnings:false,
     doc:{blocks:[],toc:[]},synopsis:null,options:null,seeAlso:null,searchText:'acos',snippetText:'acos',links:[],
   }]}) });
@@ -58,7 +59,7 @@ it('selects an exact-case real provider ahead of a normalized alternative alias'
   await t.mutation(internal.ingest.createRelease, { datasetReleaseId:'case-providers',locale:'en',distro:'debian',imageRef:'pinned',imageDigest:'sha',ingestedAt:'now',packageManifest:null,
     pageCount:1,aliasCount:1,providerCount:3,licenseCount:0,packageBatches:[],sectionTotals:[{section:'1',total:1}] });
   const metadata = { section:'1',sourcePackageVersion:'1',sitemapPage:1,hasParseWarnings:false,doc:{blocks:[],toc:[]},synopsis:null,options:null,seeAlso:null,searchText:'fixture',snippetText:'fixture',links:[] };
-  const response = await t.fetch('/ingest/pages/storage', { method:'POST',headers:{authorization:'Bearer local','content-type':'application/json'},body:JSON.stringify({datasetReleaseId:'case-providers',pages:[
+  const response = await t.fetch('/ingest/pages/storage', { method:'POST',headers:{authorization:'Bearer local','content-type':'application/json','x-betterman-ingest-contract':String(INGEST_CONTRACT.schemaVersion)},body:JSON.stringify({datasetReleaseId:'case-providers',pages:[
     {...metadata,externalId:'tnftp',name:'tnftp',title:'tnftp(1)',description:'terminal FTP',sourcePackage:'tnftp',sourcePath:'usr/share/man/man1/tnftp.1.gz',contentSha256:'terminal'},
     {...metadata,externalId:'FTP-same',name:'ftp',title:'FTP(1)',description:'Same FTP',sourcePackage:'same-ftp',sourcePath:'usr/share/man/man1/FTP.1.gz',contentSha256:'terminal',providerOnly:true},
     {...metadata,externalId:'FTP',name:'ftp',title:'FTP(1)',description:'GNUstep FTP',sourcePackage:'ftp.app',sourcePath:'usr/share/man/man1/FTP.1.gz',contentSha256:'gui',providerOnly:true},

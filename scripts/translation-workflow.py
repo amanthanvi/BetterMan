@@ -79,7 +79,7 @@ def plan():
 
 def promote(locale):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ingestion"))
-    from ingestion.convex_client import ConvexIngestClient
+    from ingestion.convex_client import CONTRACT_HEADER, REQUIRED_SCHEMA_VERSION, ConvexIngestClient
 
     if locale not in LOCALES:
         raise ValueError("Unsupported translation locale")
@@ -100,6 +100,8 @@ def promote(locale):
             headers={
                 "Authorization": f"Bearer {os.environ['CONVEX_INGEST_SECRET']}",
                 "Content-Type": "application/json",
+                # Every release-contract request names the exact version it was written for.
+                CONTRACT_HEADER: str(REQUIRED_SCHEMA_VERSION),
             },
             method="POST",
         )
@@ -108,7 +110,7 @@ def promote(locale):
         client = ConvexIngestClient(
             http_url=os.environ["CONVEX_HTTP_URL"], ingest_secret=os.environ["CONVEX_INGEST_SECRET"]
         )
-        contract = dataset.retry_request(client.require_deployed_contract)
+        dataset.retry_request(client.require_deployed_contract)  # Exact version, before any request.
         record["stage"] = "verify staging source"
         dataset.save(name, record)
         if not ingested:
@@ -136,7 +138,6 @@ def promote(locale):
                 "expectedDatasetReleaseId": {"debian": expected},
             },
         )
-        request.add_header("X-BetterMan-Ingest-Contract", str(contract["schemaVersion"]))
         record["stage"] = "promote"
         dataset.save(name, record)
         result = dataset.request_json(request)

@@ -3,6 +3,7 @@ import { convexTest } from "convex-test";
 import { afterEach, expect, it, vi } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
+import { INGEST_CONTRACT } from "./ingestContract";
 import debianManifest from "../ingestion/data/debian-trixie.json";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -11,7 +12,7 @@ afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); });
 it("derives the persistent full-Debian hold from the manifest and refuses HTTP prod activation", async () => {
   vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
   const t = convexTest(schema, modules);
-  const headers = { authorization: "Bearer test-secret", "content-type": "application/json" };
+  const headers = { authorization: "Bearer test-secret", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) };
   const response = await t.fetch("/ingest/release", { method: "POST", headers, body: JSON.stringify({
     datasetReleaseId: "archive", locale: "en", distro: "debian", imageRef: "https://changed-mirror.example",
     imageDigest: "test", ingestedAt: "now", packageManifest: debianManifest,
@@ -45,7 +46,7 @@ it("returns pending until hydration completes, then publishes through the authen
     sourcePath: "page.1", sourcePackage: null, sourcePackageVersion: null, contentSha256: "page", hasParseWarnings: false,
     doc: {}, synopsis: null, options: null, seeAlso: null, searchText: "page", snippetText: "page", links: [],
   }] });
-  const request = { method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
+  const request = { method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
     body: JSON.stringify({ datasetReleaseId: "http-test", stage: "prod", activatedAt: "2026-09-07T00:00:00Z" }) };
   const pending = await t.fetch("/ingest/activate", request);
   expect(pending.status).toBe(409);
@@ -83,7 +84,7 @@ it("cleans up storage uploaded by a rejected late batch without altering the sea
     searchText: "late", snippetText: "late", links: [],
   };
   const response = await t.fetch("/ingest/pages/storage", {
-    method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
+    method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
     body: JSON.stringify({ datasetReleaseId: "sealed", pages: [page] }),
   });
   expect(response.status).toBe(409);

@@ -5,6 +5,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import type { DatasetStage, Distro } from "./lib";
 import schema from "./schema";
+import { INGEST_CONTRACT } from "./ingestContract";
 import debianManifest from "../ingestion/data/debian-trixie.json";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -135,7 +136,7 @@ describe("translated releases (#395)", () => {
     await readyRelease(t, "de-http", "de", null);
     const response = await t.fetch("/ingest/activate", {
       method: "POST",
-      headers: { "content-type": "application/json", authorization: "Bearer test-secret" },
+      headers: { "content-type": "application/json", authorization: "Bearer test-secret", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
       body: JSON.stringify({ datasetReleaseId: "de-http", stage: "prod", activatedAt: "now", allowTranslations: true }),
     });
     expect(response.status).toBe(409);

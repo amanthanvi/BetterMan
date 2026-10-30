@@ -2,6 +2,7 @@
 import { convexTest } from "convex-test";
 import { afterEach, expect, it, vi } from "vitest";
 import schema from "./schema";
+import { INGEST_CONTRACT } from "./ingestContract";
 import { api, internal } from "./_generated/api";
 import { readProviderPackages } from "./_providers";
 import { requireMutableBlob } from "./_releaseIntegrity";
@@ -25,7 +26,7 @@ it("preserves every provider, seals only complete uploads, and isolates canonica
     ...(providerOnly ? { providerOnly: true } : {}),
   });
   const upload = (pages: unknown[]) => t.fetch("/ingest/pages/storage", { method: "POST",
-    headers: { authorization: "Bearer local", "content-type": "application/json" },
+    headers: { authorization: "Bearer local", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
     body: JSON.stringify({ datasetReleaseId: "providers", pages }),
   });
   expect((await upload([page("case-A", true)])).status).toBe(200); // Alternate can arrive first.

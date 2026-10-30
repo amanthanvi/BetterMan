@@ -244,10 +244,44 @@ def test_require_deployed_contract_accepts_a_matching_deployment(monkeypatch):
     assert "ingest.activateRelease" in result["functions"]
 
 
-def test_require_deployed_contract_accepts_extra_functions(monkeypatch):
-    body = _contract_body(functions=[*REQUIRED_FUNCTIONS, "ingest.futureFunction"])
+@pytest.mark.parametrize(
+    "payload",
+    [
+        # Same number, different contract (two branches once both claimed v7).
+        {"declarationCounts": [*REQUIRED_DECLARATION_COUNTS, "indexablePageCount"]},
+        {"functions": [*REQUIRED_FUNCTIONS, "ingest.futureFunction"]},
+        {"functions": list(reversed(REQUIRED_FUNCTIONS))},
+    ],
+)
+def test_require_deployed_contract_rejects_a_superset_under_the_same_version(monkeypatch, payload):
+    body = _contract_body(**payload)
     monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(return_value=BytesIO(body)))
-    ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+    with pytest.raises(ConvexContractError, match="!="):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+@pytest.mark.parametrize("delta", [-1, 1])
+def test_client_rejects_a_server_one_version_lower_or_higher(monkeypatch, delta):
+    body = _contract_body(schemaVersion=REQUIRED_SCHEMA_VERSION + delta)
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(return_value=BytesIO(body)))
+    with pytest.raises(
+        ConvexContractError,
+        match=f"schemaVersion {REQUIRED_SCHEMA_VERSION + delta} != {REQUIRED_SCHEMA_VERSION}",
+    ):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+def test_every_post_names_the_exact_contract_version(monkeypatch):
+    opened = Mock(side_effect=lambda *_args, **_kwargs: BytesIO(b"{}"))
+    monkeypatch.setattr("ingestion.convex_client.urlopen", opened)
+    client = ConvexIngestClient("https://test.convex.site", "test-secret")
+    for path in ["/ingest/release", "/ingest/pages/storage", "/ingest/activate", "/ingest/promote"]:
+        client.post(path, {})
+    for call in opened.call_args_list:
+        assert call.args[0].get_header("X-betterman-ingest-contract") == str(
+            REQUIRED_SCHEMA_VERSION
+        )
+    assert opened.call_count == 4
 
 
 @pytest.mark.parametrize(
@@ -259,8 +293,8 @@ def test_require_deployed_contract_accepts_extra_functions(monkeypatch):
         ({"schemaVersion": 3}, "schemaVersion"),
         ({"schemaVersion": REQUIRED_SCHEMA_VERSION - 1}, "schemaVersion"),
         ({"schemaVersion": REQUIRED_SCHEMA_VERSION + 1}, "schemaVersion"),
-        ({"functions": ["ingest.createRelease"]}, "missing functions"),
-        ({"declarationCounts": ["pageCount"]}, "declaration counts"),
+        ({"functions": ["ingest.createRelease"]}, "functions"),
+        ({"declarationCounts": ["pageCount"]}, "declarationCounts"),
         ({"activatePending": False}, "activatePending"),
     ],
 )

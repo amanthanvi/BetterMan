@@ -236,7 +236,7 @@ def promote(distro):
     # The promotion-only runner has Python but no installed ingestion package.
     # This client uses only the standard library; share its exact-version gate.
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ingestion"))
-    from ingestion.convex_client import ConvexIngestClient
+    from ingestion.convex_client import CONTRACT_HEADER, REQUIRED_SCHEMA_VERSION, ConvexIngestClient
 
     record = load(distro)
     matrix, ingest, enabled = selection()
@@ -263,6 +263,8 @@ def promote(distro):
             headers={
                 "Authorization": f"Bearer {os.environ['CONVEX_INGEST_SECRET']}",
                 "Content-Type": "application/json",
+                # Every release-contract request names the exact version it was written for.
+                CONTRACT_HEADER: str(REQUIRED_SCHEMA_VERSION),
             },
             method="POST",
         )
@@ -273,7 +275,7 @@ def promote(distro):
             http_url=os.environ["CONVEX_HTTP_URL"],
             ingest_secret=os.environ["CONVEX_INGEST_SECRET"],
         )
-        contract = retry_request(client.require_deployed_contract)
+        retry_request(client.require_deployed_contract)  # Exact version, before any request.
         record["stage"] = "verify staging source"
         save(distro, record)
         if not ingest:
@@ -291,7 +293,6 @@ def promote(distro):
             expected = pinned
         payload["expectedDatasetReleaseId"] = {distro: expected}
         request = ingest_request("promote", payload)
-        request.add_header("X-BetterMan-Ingest-Contract", str(contract["schemaVersion"]))
         record["stage"] = "read previous prod"
         save(distro, record)
         info = request_json(

@@ -42,18 +42,38 @@ it("does not advertise the ingest contract when the secret is unset", async () =
   expect(response.status).toBe(503);
 });
 
-it.each([undefined, "6", "8"])("rejects promotion from a workflow with contract header %s before touching pointers", async (version) => {
+const RELEASE_ROUTES = [
+  "/ingest/release", "/ingest/license-packages", "/ingest/pages", "/ingest/pages/storage", "/ingest/aliases",
+  "/ingest/licenses", "/ingest/activate", "/ingest/promotion-source", "/ingest/promote",
+];
+const current = INGEST_CONTRACT.schemaVersion;
+
+it.each(RELEASE_ROUTES.flatMap((route) => [undefined, String(current - 1), String(current + 1), "v" + current].map((version) => [route, version] as const)))(
+  "the server rejects %s from a client with contract header %s before any read or write",
+  async (route, version) => {
+    vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
+    const t = convexTest(schema, modules);
+    const response = await t.fetch(route, {
+      method: "POST",
+      headers: { authorization: "Bearer test-secret", "content-type": "application/json", ...(version ? { "x-betterman-ingest-contract": version } : {}) },
+      body: JSON.stringify({ fromStage: "staging", toStage: "prod", distros: ["debian"], activatedAt: "now", datasetReleaseId: "r", stage: "staging", distro: "debian" }),
+    });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: { code: "INGEST_CONTRACT_MISMATCH" } });
+    expect(await t.run((ctx) => ctx.db.query("datasetReleases").take(1))).toEqual([]);
+    expect(await t.run((ctx) => ctx.db.query("activeReleases").take(1))).toEqual([]);
+    expect(await t.run((ctx) => ctx.db.system.query("_scheduled_functions").take(1))).toEqual([]);
+  },
+);
+
+it("checks the secret before the contract, and leaves the generated layer to its own contract", async () => {
   vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
   const t = convexTest(schema, modules);
-  const response = await t.fetch("/ingest/promote", {
-    method: "POST",
-    headers: { authorization: "Bearer test-secret", "content-type": "application/json", ...(version ? { "x-betterman-ingest-contract": version } : {}) },
-    body: JSON.stringify({ fromStage: "staging", toStage: "prod", distros: ["debian"], activatedAt: "now" }),
+  expect((await t.fetch("/ingest/release", { method: "POST", headers: { "x-betterman-ingest-contract": String(current) }, body: "{}" })).status).toBe(401);
+  const generated = await t.fetch("/ingest/generated/candidates", {
+    method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json" }, body: "{}",
   });
-  expect(response.status).toBe(409);
-  expect(await response.json()).toMatchObject({ error: { code: "INGEST_CONTRACT_MISMATCH" } });
-  expect(await t.run(ctx => ctx.db.query("activeReleases").take(10))).toEqual([]);
-  expect(await t.run(ctx => ctx.db.system.query("_scheduled_functions").take(10))).toEqual([]);
+  expect(generated.status).not.toBe(409);
 });
 
 it("accepts the deployed promotion contract while keeping CAS optional for manual callers", async () => {
@@ -83,7 +103,7 @@ it("combines package batches, symbols, signatures, optional arguments and provid
       datasetReleaseId: "combined-contract", batchIndex: 0, packages,
     })).toEqual({ inserted: 1, skipped: 0 });
     const response = await t.fetch("/ingest/pages/storage", {
-      method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
+      method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
       body: JSON.stringify({ datasetReleaseId: "combined-contract", pages: [{
         externalId: "tar", name: "tar", section: "1", sitemapPage: 0, title: "tar", description: "archive",
         sourcePath: "tar.1", sourcePackage: "tar", sourcePackageVersion: "1", contentSha256: "tar-source",
@@ -95,7 +115,7 @@ it("combines package batches, symbols, signatures, optional arguments and provid
     });
     expect(response.status).toBe(200);
     const alternate = await t.fetch("/ingest/pages/storage", {
-      method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
+      method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
       body: JSON.stringify({ datasetReleaseId: "combined-contract", pages: [{
         externalId: "tar-alternate", name: "tar", section: "1", sitemapPage: 0, title: "alternate tar", description: "alternate archive",
         sourcePath: "alternate/tar.1", sourcePackage: "alternate-tar", sourcePackageVersion: "2", contentSha256: "alternate-source",
