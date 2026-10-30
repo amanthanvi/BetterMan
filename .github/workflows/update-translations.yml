@@ -37,6 +37,11 @@ on:
         type: boolean
         required: false
         default: false
+      expected_release_id:
+        description: Required with debian_translations_promote (one locale) - the inspected staging release ID the owner signed off on
+        type: string
+        required: false
+        default: ''
   schedule:
     # Monthly on the 1st at 11:00 UTC, after update-dataset; a no-op unless enabled.
     - cron: "0 11 1 * *"
@@ -58,6 +63,7 @@ env:
   BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT: ${{ inputs.debian_translations_promote && 'true' || 'false' }}
   BETTERMAN_DEBIAN_FULL_PROMOTE: ${{ vars.BETTERMAN_DEBIAN_FULL_PROMOTE }}
   BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT: ${{ inputs.debian_full_promote && 'true' || 'false' }}
+  BETTERMAN_EXPECTED_RELEASE_ID_INPUT: ${{ inputs.expected_release_id || '' }}
   BETTERMAN_INGEST_SAMPLE: 'false'
 
 jobs:

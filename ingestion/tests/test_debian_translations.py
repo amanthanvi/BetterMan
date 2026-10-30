@@ -64,12 +64,23 @@ def deb(tmp_path: Path, name: str, members: dict[str, bytes | str], installed=1)
     )
 
 
+_OPEN_STORES: list[ArchiveStore] = []
+
+
+@pytest.fixture(autouse=True)
+def _close_stores():
+    yield
+    while _OPEN_STORES:
+        _OPEN_STORES.pop().db.close()
+
+
 def workspace(tmp_path: Path, packages: dict[str, tuple[dict, int]], locales=("de",)):
     obj = object.__new__(l10n.TranslationWorkspace)
     obj.root = tmp_path
     obj.locales = tuple(locales)
     obj.localized_roots = frozenset(TRANSLATION_ROOTS[locale] for locale in locales)
     obj.store = ArchiveStore(tmp_path)
+    _OPEN_STORES.append(obj.store)
     obj.packages = [
         deb(tmp_path, name, members, installed) for name, (members, installed) in packages.items()
     ]
@@ -219,6 +230,41 @@ def test_routes_conflicts_aliases_and_includes_stay_in_one_language(tmp_path):
     assert not any(path.startswith("usr/share/man/man1/") for _pkg, path, *_ in sources)
 
 
+@pytest.mark.parametrize(
+    "member",
+    [
+        # A symlink into the English root, a stub naming the English page, and
+        # relative and absolute inline includes of it.
+        "../../man1/foo.1.gz",
+        b".so ../../man1/foo.1\n",
+        b".TH FOO 1\n.SH BEZEICHNUNG\nfoo \\- x\n.so ../../man1/foo.1\n",
+        b".TH FOO 1\n.SH BEZEICHNUNG\nfoo \\- x\n.so /usr/share/man/man1/foo.1\n",
+    ],
+)
+def test_english_text_is_never_published_as_a_translation(tmp_path, member):
+    obj = workspace(
+        tmp_path,
+        {
+            "foo": (
+                {
+                    "usr/share/man/man1/foo.1.gz": b".TH FOO 1\n.SH NAME\nfoo \\- English text\n",
+                    "usr/share/man/de/man1/foo.1.gz": member,
+                },
+                10,
+            )
+        },
+    )
+    sources = list(obj.translated_sources("de"))
+    assert not any(name == "foo" for _pkg, _path, name, *_ in sources)
+    assert [item["path"] for item in obj.missing] == ["usr/share/man/de/man1/foo.1.gz"]
+    assert any(
+        "outside its language root" in item["error"]
+        or "escapes manual root" in item["error"]
+        or "no translated manual identity" in item["error"]
+        for item in obj.missing
+    )
+
+
 def test_publish_declares_a_staging_translation_with_documented_versions(tmp_path, monkeypatch):
     obj = workspace(
         tmp_path,
@@ -315,6 +361,7 @@ def test_contract_failure_precedes_translation_acquisition(monkeypatch):
         (["--debian-translation", "de"], "prod", "cannot use stage prod"),
         (["--distro", "ubuntu", "--debian-translation", "de"], "staging", "--distro debian"),
         (["--debian-full", "--debian-translation", "de"], "staging", "--distro debian"),
+        (["--in-container", "--debian-translation", "de"], "staging", "--in-container"),
     ],
 )
 def test_cli_translation_opt_in_is_staging_only_and_debian_only(monkeypatch, argv, stage, error):

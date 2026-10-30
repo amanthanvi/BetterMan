@@ -103,15 +103,17 @@ def main(argv: list[str] | None = None) -> int:
                 "and use the gated promotion workflow",
             )
             return 2
-        if args.debian_translation and (args.distro != "debian" or args.debian_full):
+        if args.debian_translation and (
+            args.distro != "debian" or args.debian_full or args.in_container
+        ):
             _log(
                 "ingest_error",
-                error="--debian-translation needs --distro debian and its own run, "
-                "not --debian-full",
+                error="--debian-translation needs --distro debian and its own host run, "
+                "not --debian-full or --in-container",
             )
             return 2
         activate = bool(args.activate) if args.activate is not None else (not args.sample)
-        if args.debian_translation and not args.in_container:
+        if args.debian_translation:
             return _run_ingest(
                 sample=args.sample,
                 activate=activate,

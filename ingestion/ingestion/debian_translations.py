@@ -230,10 +230,12 @@ class TranslationWorkspace(Workspace):
             try:
                 _owner, final_path, raw = self.resolve(pkg, path, details=True, follow_stubs=False)
                 identity = localized_manual(final_path, {root})
-                alias = is_so_stub(raw) is not None or (
-                    identity is not None
-                    and (identity[2].lower(), identity[3].lower()) != (name, section)
-                )
+                stub = is_so_stub(raw) is not None
+                if identity is None and not stub:
+                    # A link out of the language root (e.g. to the English page)
+                    # would publish other-language text under this language.
+                    raise ValueError("Translated manual resolves outside its language root")
+                alias = stub or (identity[2].lower(), identity[3].lower()) != (name, section)
                 target = None
                 if alias:
                     target_owner, target_path, _raw = self.resolve(pkg, path, details=True)

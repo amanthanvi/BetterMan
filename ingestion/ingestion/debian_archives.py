@@ -339,11 +339,14 @@ class ArchiveStore:
                 resolved = posixpath.join(posixpath.dirname(path), target)
             resolved = safe_path(posixpath.normpath(resolved))
             localized = LOCALIZED_MAN_PATH.fullmatch(path)
-            if not (
-                MAN_PATH.fullmatch(resolved)
-                # A translation may include pages from its own language root.
-                or (localized and localized_manual(resolved, {localized[1]}))
-            ):
+            # A translation includes only its own language root: English (or
+            # another language) included into it would publish under its lang.
+            allowed = (
+                localized_manual(resolved, {localized[1]})
+                if localized
+                else MAN_PATH.fullmatch(resolved)
+            )
+            if not allowed:
                 raise ValueError("Roff include escapes manual root")
             return self.resolve(owner, resolved, set(seen), details=with_details)
 

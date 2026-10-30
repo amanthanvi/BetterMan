@@ -280,7 +280,9 @@ Translated releases never reach prod by default. Convex holds them
 They are archive extractions, so they also need `debian_full_promote: true`
 (or `BETTERMAN_DEBIAN_FULL_PROMOTE=1`). Promotion needs owner sign-off on the
 measured staging cost first. A promotion-only dispatch:
-`gh workflow run update-translations -f locale=de -f debian_translations_promote=true -f debian_full_promote=true`.
+`gh workflow run update-translations -f locale=de -f debian_translations_promote=true -f debian_full_promote=true -f expected_release_id=<inspected-staging-release-id>`.
+A dispatched promotion requires one language and that ID; the run fails if
+staging holds any other release.
 A held promotion records `held: <reason>` and succeeds without moving prod.
 
 Archive payloads now try the regular Debian CDN before the pinned snapshot,

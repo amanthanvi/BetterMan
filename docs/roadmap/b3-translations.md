@@ -38,8 +38,10 @@ the translated roots, with the same integrity guarantees:
   confined paths, per-member and total disk limits. Translated roots are kept
   only when a workspace asks for them (`localized_roots`), so English
   workspaces and their receipts are unchanged.
-- Roff includes resolve only inside the same language root. A translation
-  cannot include English or another language.
+- Roff includes and links stay inside the same language root. A translated
+  includer may include only its own root, and a page whose links resolve
+  outside it (for example a `de/man1/foo.1.gz` symlink to the English page) is
+  recorded as missing, never published under the language.
 - The same 2% parse gate, copyright notice for every published package, and
   declared counts verified before activation.
 
@@ -126,6 +128,7 @@ drift notes rely mostly on missing options. Two Japanese aliases (`url.7`,
 The owner signs off on measured staging cost first. The lead dispatches
 `update-translations` with `debian_translations: true` after merge; inspect
 each language's staging release (`maintenance:measureReleaseBatch` per table),
-then authorize a promotion-only dispatch with `debian_translations_promote`
-and `debian_full_promote`. Serving (`?lang=`, search, sitemaps, hreflang) and
+then authorize a promotion-only dispatch for that one language with
+`debian_translations_promote`, `debian_full_promote` and the signed-off
+`expected_release_id`, which Convex checks as the compare-and-swap expectation. Serving (`?lang=`, search, sitemaps, hreflang) and
 the drift note land in the following pull requests.

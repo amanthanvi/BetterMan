@@ -49,10 +49,24 @@ def promotion_enabled():
     )
 
 
+def pinned_release():
+    """The release the owner signed off on; dispatched promotion must name exactly one."""
+    if not (dispatch() and os.environ.get("BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT") == "true"):
+        return None
+    target = os.environ.get("BETTERMAN_TRANSLATION_LOCALE", "all") or "all"
+    pinned = os.environ.get("BETTERMAN_EXPECTED_RELEASE_ID_INPUT", "").strip()
+    if target == "all":
+        raise ValueError("Dispatched translation promotion needs one locale, not all")
+    if not dataset.RELEASE_ID_PATTERN.fullmatch(pinned):
+        raise ValueError("Dispatched translation promotion needs expected_release_id: the inspected staging release ID")
+    return pinned
+
+
 def selection():
     target = os.environ.get("BETTERMAN_TRANSLATION_LOCALE", "all") or "all"
     if target != "all" and target not in LOCALES:
         raise ValueError("Unsupported translation locale target")
+    pinned_release()  # Fail the plan before any job when a dispatch lacks its pin.
     ingest, promote = ingestion_enabled(), promotion_enabled()
     locales = LOCALES if target == "all" else [target]
     return {
@@ -124,6 +138,12 @@ def promote(locale):
         expected = record.get("releaseId")
         if not isinstance(expected, str) or not expected.strip():
             raise ValueError("Missing verified staging release ID; refusing unconditional promotion")
+        pinned = pinned_release()
+        if pinned is not None and expected != pinned:
+            raise ValueError(
+                "STAGING_RELEASE_CONFLICT: verified staging source differs from the signed-off "
+                "expected_release_id; refusing promotion"
+            )
         request = ingest_request(
             "promote",
             {

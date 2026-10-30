@@ -74,8 +74,13 @@ class TranslationWorkflowTest(unittest.TestCase):
         self.assertEqual(self.matrix(**dispatch), [])
         self.assertEqual(self.matrix(**dispatch, BETTERMAN_DEBIAN_TRANSLATIONS_INPUT='true'),
             [{'distro': 'debian-ja', 'locale': 'ja', 'ingest': True, 'promote': False, 'timeout': 120}])
-        self.assertEqual(self.matrix(**dispatch, BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT='true'),
+        self.assertEqual(self.matrix(**dispatch, BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT='true', BETTERMAN_EXPECTED_RELEASE_ID_INPUT='ja-1'),
             [{'distro': 'debian-ja', 'locale': 'ja', 'ingest': False, 'promote': True, 'timeout': 10}])
+        # A dispatched promotion names one signed-off release for one language.
+        for env in ({'BETTERMAN_EXPECTED_RELEASE_ID_INPUT': ''}, {'BETTERMAN_EXPECTED_RELEASE_ID_INPUT': '../x'},
+                    {'BETTERMAN_EXPECTED_RELEASE_ID_INPUT': 'ja-1', 'BETTERMAN_TRANSLATION_LOCALE': 'all'}):
+            with self.assertRaises(ValueError):
+                self.matrix(**{**dispatch, 'BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT': 'true', **env})
         # Schedules ignore dispatch inputs.
         self.assertEqual(self.matrix(BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT='true'), [])
         with self.assertRaises(ValueError):
@@ -87,7 +92,8 @@ class TranslationWorkflowTest(unittest.TestCase):
         self.assertEqual(self.requests, [])
 
     def test_promotion_only_dispatch_reads_the_locale_source_and_sends_both_holds(self):
-        env = {'BETTERMAN_WORKFLOW_EVENT': 'workflow_dispatch', 'BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT': 'true'}
+        env = {'BETTERMAN_WORKFLOW_EVENT': 'workflow_dispatch', 'BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT': 'true',
+               'BETTERMAN_TRANSLATION_LOCALE': 'de', 'BETTERMAN_EXPECTED_RELEASE_ID_INPUT': 'de-1'}
         self.respond({'distro': 'debian', 'datasetReleaseId': 'de-1'},
                      {'promoted': [{'distro': 'debian', 'datasetReleaseId': 'de-1'}]})
         with patch.dict(os.environ, env):
@@ -106,7 +112,7 @@ class TranslationWorkflowTest(unittest.TestCase):
 
     def test_convex_hold_is_reported_as_held_not_promoted(self):
         env = {'BETTERMAN_WORKFLOW_EVENT': 'workflow_dispatch', 'BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT': 'true',
-               'BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT': 'true'}
+               'BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT': 'true', 'BETTERMAN_TRANSLATION_LOCALE': 'fr', 'BETTERMAN_EXPECTED_RELEASE_ID_INPUT': 'fr-1'}
         self.respond({'distro': 'debian', 'datasetReleaseId': 'fr-1'},
                      {'promoted': [], 'skipped': [{'distro': 'debian', 'datasetReleaseId': 'fr-1', 'reason': 'TRANSLATED_PROMOTION_HELD'}]})
         with patch.dict(os.environ, env):
@@ -118,13 +124,14 @@ class TranslationWorkflowTest(unittest.TestCase):
 
     def test_same_run_promotion_requires_this_runs_staging_activation(self):
         env = {'BETTERMAN_WORKFLOW_EVENT': 'workflow_dispatch', 'BETTERMAN_DEBIAN_TRANSLATIONS_INPUT': 'true',
-               'BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT': 'true'}
+               'BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT': 'true', 'BETTERMAN_TRANSLATION_LOCALE': 'es', 'BETTERMAN_EXPECTED_RELEASE_ID_INPUT': 'es-1'}
         with patch.dict(os.environ, env), self.assertRaises(ValueError):
             w.promote('es')
         self.assertEqual(self.requests, [])
 
     def test_unexpected_promotion_response_fails_without_leaking_the_secret(self):
-        env = {'BETTERMAN_WORKFLOW_EVENT': 'workflow_dispatch', 'BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT': 'true'}
+        env = {'BETTERMAN_WORKFLOW_EVENT': 'workflow_dispatch', 'BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT': 'true',
+               'BETTERMAN_TRANSLATION_LOCALE': 'ru', 'BETTERMAN_EXPECTED_RELEASE_ID_INPUT': 'ru-1'}
         self.respond({'distro': 'debian', 'datasetReleaseId': 'ru-1'},
                      {'promoted': [{'distro': 'debian', 'datasetReleaseId': 'other'}]})
         with patch.dict(os.environ, env):
@@ -132,6 +139,15 @@ class TranslationWorkflowTest(unittest.TestCase):
         text = Path('dataset-results/debian-ru.json').read_text()
         self.assertIn('Unexpected promotion response', text)
         self.assertNotIn('test-secret-do-not-print', text)
+
+    def test_promotion_refuses_a_staging_release_other_than_the_signed_off_one(self):
+        env = {'BETTERMAN_WORKFLOW_EVENT': 'workflow_dispatch', 'BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT': 'true',
+               'BETTERMAN_TRANSLATION_LOCALE': 'de', 'BETTERMAN_EXPECTED_RELEASE_ID_INPUT': 'de-measured'}
+        self.respond({'distro': 'debian', 'datasetReleaseId': 'de-newer'})
+        with patch.dict(os.environ, env):
+            self.assertEqual(w.promote('de'), 1)
+        self.assertEqual(len(self.requests), 1)  # The promotion-source read; never a promote.
+        self.assertIn('STAGING_RELEASE_CONFLICT', json.loads(Path('dataset-results/debian-de.json').read_text())['error'])
 
 unittest.main(argv=['translations'], verbosity=1)
 `], { encoding: 'utf8' })
@@ -141,6 +157,7 @@ unittest.main(argv=['translations'], verbosity=1)
 test('translation workflow wiring stays staging-only and shares the dataset concurrency group', () => {
   const source = readFileSync(new URL('../.github/workflows/update-translations.yml', import.meta.url), 'utf8')
   assert.match(source, /concurrency:\n  group: update-dataset\n  cancel-in-progress: false/)
+  assert.match(source, /BETTERMAN_EXPECTED_RELEASE_ID_INPUT: \$\{\{ inputs\.expected_release_id \|\| '' \}\}/)
   for (const input of ['debian_translations', 'debian_translations_promote', 'debian_full_promote']) {
     assert.match(source, new RegExp(`      ${input}:\\n(?:        .*\\n)*?        default: false`))
   }
