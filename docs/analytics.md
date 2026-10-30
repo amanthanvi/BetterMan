@@ -16,8 +16,13 @@ script path and any configured `eventEndpoint` / `viewEndpoint` must be
 same-origin paths starting with one `/`; absolute, protocol-relative, malformed
 paths, queries and fragments are rejected. Missing or invalid configuration
 renders nothing, with **no fallback script**. The build retains Vercel's config
-for both server renderers. Tracking starts on the first production deploy built
-with the configuration supplied after enablement. A deployment built before
+for both server renderers. Production is built by `scripts/deploy-vercel.sh`
+in GitHub Actions (`vercel build`, then `vercel deploy --prebuilt`), which never
+receives the configuration Vercel injects on its own builders. That script
+therefore passes `VERCEL_ENV=production` and the documented `/_vercel/insights`
+script, view and event routes, which an enabled project serves; a value already
+in the environment wins. Tracking starts on the first production deploy built
+after enablement. A deployment built before
 enablement needs a redeploy; changing runtime configuration alone is insufficient.
 Previews (whose events would also be billed), local runs, CI/E2E and the Docker
 image emit no analytics script or bootstrap. Do not supply production

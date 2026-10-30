@@ -31,3 +31,15 @@ it.each(['preview', 'development', ''])('rejects valid config outside production
   vi.stubEnv('VERCEL_OBSERVABILITY_CLIENT_CONFIG', JSON.stringify({ analytics: valid }))
   expect(analyticsConfig()).toBeNull()
 })
+
+it('accepts the routes the prebuilt production deploy passes to its build', async () => {
+  const { readFile } = await import('node:fs/promises')
+  const script = await readFile(new URL('../../scripts/deploy-vercel.sh', import.meta.url), 'utf8')
+  const raw = /^analytics_client_config='([^']+)'$/m.exec(script)?.[1]
+  const build = /PUBLIC_BASE_URL=[^\n]*\\\n(?:[^\n]*\\\n)*\s*vercel build --prod/.exec(script)?.[0] ?? ''
+  expect(build).toContain('VERCEL_ENV=production')
+  expect(build).toContain('VERCEL_OBSERVABILITY_CLIENT_CONFIG="${VERCEL_OBSERVABILITY_CLIENT_CONFIG:-$analytics_client_config}"')
+  vi.stubEnv('VERCEL_ENV', 'production')
+  vi.stubEnv('VERCEL_OBSERVABILITY_CLIENT_CONFIG', raw ?? '')
+  expect(analyticsConfig()).toEqual({ scriptSrc: '/_vercel/insights/script.js', eventEndpoint: '/_vercel/insights/event', viewEndpoint: '/_vercel/insights/view' })
+})
