@@ -71,3 +71,10 @@ No guard behavior or regressions were removed. Frontend now includes those four
 cases, for 865 passing tests. The final production build and 17 E2E tests were
 rerun after that test-layout correction. Application/Convex/ingestion/deploy-guard
 source is byte-identical across the correction, checked with git diff.
+
+Container build-context correction: the frontend parser test's root guard import
+must exist in Next's Docker build stage. The builder now copies that one module.
+A source context matching Docker COPY inputs, with its own offline frozen pnpm
+install (no external node_modules links), passes the complete Next build and
+typecheck. Docker is not installed locally; this does not claim a full image build.
+Application, ingest, Convex and deploy-guard behavior is unchanged by the COPY.
