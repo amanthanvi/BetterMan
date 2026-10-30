@@ -1,38 +1,36 @@
 # B2 extraction worklog
 
-Goal: #394, #467 Ubuntu → #470 Fedora → #473 Arch → #476 Alpine. #445 remains
-pending v7; B2 exact v8; translations v9. No merge, dispatch, production/shared
-config/data/secret/variable writes. Lead handles review/staging and prod sign-off.
+Goal: #394, #467 Ubuntu → #470 Fedora → #473 Arch → #476 Alpine. Pending
+#445 is v7; all B2 families exact v8; translations v9. No merges, dispatches,
+production/shared config/data/secret/variable writes. Lead owns independent
+review, staging measurement and production sign-off. This child starts no agents.
 
-Current review: #470 must bypass persistent cache for unproven package selectors;
-avoid licenses.by_storageId on legacy data; add a fail-closed deploy index preflight
-independent of Convex 1.48's nullable schema evaluation; integrate #469/#471 from
-main and keep allowlist/private misses. Rebase/restack/push/Proof every family.
+Latest #470 P1s implemented: default-first release-cached provider proof, including
+alias-owned routes; early page limiter/private 429 before explicit HTML lookups;
+invented selectors cause no provider lookup/cache entry and skip typo reads.
+Removed editable index policy; trusted tooling compares immutable target/parent
+schemas for every table. New tables pass; added/changed indexes on existing tables
+require confirmation. Malformed input/history fails even confirmed. Audits of
+main f16e8828, #445 82cd2228, #465 4706f03e and translation heads
+05f376a3/dc26540e/6a68d015 all require no confirmation. Full SHAs/bases in Fedora
+evidence. Main already contains #469/#471; pending #445 carried without modifying
+its branch. Prior storedLicenseFiles lifecycle, contract/holds/tier/CAS, archive
+fallbacks, strict redirects, package grammar and Alpine pin behavior preserved.
 
-Ubuntu rebased onto main f16e8828 with pending #445 changes carried locally, leaving
-#445's branch untouched. Reconciled concept/share metadata and B4 tier robots with
-#469 query privacy. 956 ingestion / 3,280 Convex / 850 frontend / 126 ops / 12
-workflow tests pass; lint/grammar/typecheck/public API/codegen no-drift/pip pass.
-Ubuntu pushed/Proof refreshed. Fedora fixes complete: explicit pkg lookups bypass
-persistent data cache; three invented names produce zero entries. No new licenses
-index: storedLicenseFiles is an initially empty, release-owned reverse-reference
-table with transactional insertion, replay/orphan/prune checks. Added deploy index
-syntax preflight and reviewed baseline, independent of nullable CLI evaluation.
-Replaced invalid examples with slash-containing names; kept #469 private misses.
-Fedora checks: 968 ingestion / 3,283 Convex / 861 frontend / 131 ops / 13 workflows;
-lint/grammar/typecheck/public API/codegen no-drift/pip and index preflight pass.
-Next: push Fedora/Proof, restack/check Arch and Alpine, final-stack man-query and
-short-URL E2E, final push/Proof/clean-state verification.
+Fedora: 968 ingestion / 869 frontend / 3,283 Convex / 127 ops / 13 workflow tests
+pass; lint/grammar/typecheck/public-API/codegen-no-drift/pip dry-run pass. Ops also
+passes with bare imports disabled. Production provider/man-query/short-URL E2E:
+22 pass. Cold performance man/default 4/26/1; alternate 7/31/2 vs 4/11/1. Default
+proof plus page limiter costs +3 calls/+20 docs/+1 storage read. Performance check
+fails only these three alternate limits; baseline/harness unchanged. Report for
+lead review. Evidence and original ignored .cache/b2 artifacts preserved.
 
-Preserve prior cold/cached acquisition measurements and projections: Ubuntu
-266/300 min <10 GB; Fedora 225/300 <8 GB; Arch CDN cold 170.33 MB in 20.49 s,
-270/300 <10 GB; Alpine 240/300 <6 GB, cached export of all 223 acquired hashes.
-Alpine reviewed pin map is required when present; lead commits full staging pins
-later. Original evidence and .cache/b2 artifacts remain; no subagents or CI watches.
-Task-local Convex ports 3432/3433; stop only freshly verified task-owned processes.
+Remaining: final perf repeat, commit/push Fedora; restack/check/push Arch and
+Alpine; refresh/recheck each Proof. Preserve acquisition measurements/projections:
+Ubuntu 266/300 min <10 GB; Fedora 225/300 <8 GB; Arch CDN cold 170.33 MB/20.49 s,
+270/300 <10 GB; Alpine 240/300 <6 GB and all 223 cached package hashes exported.
+Lead commits reviewed Alpine pins after first staging acquisition; required once
+present. Docker absent; full container/cloud rehearsal stays with CI/lead.
 
-CI-specific correction: ci_contracts intentionally installs no dependencies.
-Moved all four TypeScript parser regressions to the installed frontend suite;
-left deployment-stop tests in dependency-free ops. No guard/application behavior
-changed. Current totals: 865 frontend, 127 ops, 13 workflow tests. Validate ops
-with bare dependency imports disabled, then restack descendants and refresh Proof.
+Task-local backend 3432/3433 and Next 3460 were started for E2E and stopped via
+owned sessions after exact PID verification. No task server remains.

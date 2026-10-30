@@ -194,23 +194,22 @@ Do not rely on Convex 1.48's large-index check alone: `schemaEvaluation.ts` can
 return null when evaluation fails, and `checkForLargeIndexBackfill.ts` skips its
 check in that case. It does not reliably fail closed at the 100,000-row threshold.
 
-Before every current-main Convex deployment, `scripts/check-convex-indexes.mjs`
-inspects `convex/schema.ts` as TypeScript syntax, without executing it or asking
-Convex to evaluate it. `scripts/convex-index-policy.json` lists all existing tables
-conservatively as potentially large, with their reviewed index definitions. The
-initial baseline matches the pre-B2 indexes; only the new empty reference table
-adds entries. Changed, added or removed indexes on listed tables require the
-manual current-main `confirm_large_indexes` input. Missing policy, malformed schema
-or computed/uninspectable definitions stop deployment even with confirmation.
-The check runs before `convex deploy`; a failed check cannot start a backfill.
-New tables can be added with their indexes because there are no legacy rows.
+Before every current-main Convex deployment, the trusted tooling checkout's
+`scripts/check-convex-indexes.mjs` compares the target commit's `convex/schema.ts`
+with its parent commit's schema using TypeScript syntax, without executing either.
+Main uses squash merges: that parent is the previously deployed revision on both
+automatic runs and manual dispatches of main's head. The application checkout
+fetches both commits. Missing history/schema or computed/uninspectable definitions
+stop deployment even with confirmation. The comparison reads Git objects, not a
+working-tree policy or baseline; target edits cannot approve their own indexes.
 
-For a future index change, leave the old baseline in that PR so automatic deploys
-stop. After review, use the existing current-main confirmation procedure (90-minute
-deploy budget), or stage the index in a separate rollout before enabling readers.
-Update the reviewed policy baseline only after the index rollout is confirmed;
-do not regenerate it merely to make the preflight pass. The SDK check remains an
-additional check, not the safety boundary. No production deploy or confirmation
+Any added or changed index on any previously existing table requires the manual
+current-main `confirm_large_indexes` input, regardless of table size. New tables
+and their indexes pass because they have no existing rows. Removing an index alone
+does not backfill. The check runs before `convex deploy`; failures stop the push.
+After review, use the current-main confirmation procedure (90-minute budget), or
+stage the index in a separate rollout before enabling readers. The SDK guard is
+an additional check, not the safety boundary. No production deploy or confirmation
 was run by this implementation task.
 
 ## Man page edge caching (C4, #406)

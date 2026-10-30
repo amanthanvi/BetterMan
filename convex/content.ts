@@ -596,7 +596,11 @@ export const getManByNameAndSectionReadModel = internalQuery({
     }
     if (!page) {
       const target = await aliasTarget(ctx, { releaseId: release._id, name, section });
-      if (target) return { kind: "alias" as const, ...target, datasetReleaseId: release.datasetReleaseId };
+      if (target) {
+        const providerPackages = await readProviderPackages(ctx, release, name, section, null);
+        return { kind: "alias" as const, ...target, datasetReleaseId: release.datasetReleaseId,
+          ...(providerPackages.length ? { providerPackages } : {}) };
+      }
       return notFound;
     }
 
@@ -659,7 +663,8 @@ export const getManByNameAndSection = action({
     // Older callers, still live during a deploy, read a miss as null.
     if (result.kind === "not_found") return reportRelease ? result : null;
     if (result.kind === "alias") {
-      return { kind: "alias" as const, name: result.name, section: result.section, ...(result.pkg ? { pkg: result.pkg } : {}), datasetReleaseId: result.datasetReleaseId };
+      return { kind: "alias" as const, name: result.name, section: result.section, ...(result.pkg ? { pkg: result.pkg } : {}), datasetReleaseId: result.datasetReleaseId,
+        ...("providerPackages" in result ? { providerPackages: result.providerPackages } : {}) };
     }
 
     const content = await resolveContent(ctx, result.data.content);

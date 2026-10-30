@@ -182,3 +182,51 @@ Container integration: Next's builder now copies the guard module imported by th
 frontend parser test. A COPY-matched source context, with its own offline frozen
 dependency install, passes the full Next build/typecheck. Docker is not installed
 locally, so this is build-context verification rather than a full image build.
+
+## P1 follow-up: bounded providers and immutable index comparison
+
+Explicit selectors now consume the page rate limit before HTML lookup. The
+shared API first reads the cached default page and proves `pkg` against that
+release's provider names; only proven choices can create provider cache entries.
+Nine invented requests across three names cause one default lookup, zero provider
+lookups and zero provider cache entries. HTML misses remain private and skip typo
+reads; requests denied by the early limiter return private 429 before lookup.
+Alias-owned routes expose registered provider names so stub/case providers retain
+the same proof. No ingestion contract, table or index is added by this follow-up.
+
+`pnpm perf:check` on cold routes measured ordinary man and provider-default
+**4 calls / 26 documents / 1 storage read**. The alternate measured **7/31/2**,
+versus **4/11/1**: +3 calls, +20 documents, +1 storage read. It first loads the
+default document for proof, then the alternate, and consumes the page limiter.
+This is bounded by real providers and fixes the unbounded acquisition path; warm
+requests reuse both release-keyed entries. The unchanged performance budget fails
+on those three alternate metrics. No tolerance/baseline/harness was changed; the
+lead must assess that explicit cold-read cost before merge.
+
+Deploy preflight no longer has a policy/baseline file. Trusted tooling compares
+Git's target schema with its parent (squash-only main's previously deployed
+revision), on both automatic and manual-current-head paths. New tables pass;
+any added/changed index on a pre-existing table needs explicit confirmation.
+Missing Git history, malformed/duplicate/computed definitions fail even when
+confirmed. Tests run the CLI against a scratch Git history and prove editing a
+target policy/baseline cannot approve the index. Convex 1.48's nullable evaluation
+remains only a secondary SDK guard; the runbook documents its limitation.
+
+Requested schema audits (unmerged PRs compared with main or their stack base,
+not represented as deployed; none require confirmation):
+
+| Target | Head | Compared with | Result |
+| --- | --- | --- | --- |
+| main | `f16e88288d4397e3e24d06febbc39dc131641e4a` | `833f1332064ae982f03ae404a7049fbbdf7bf93d` | No confirmation; new tables: none |
+| 445 | `82cd2228c31b011bfc2ba7e4de5879055556850c` | `f16e88288d4397e3e24d06febbc39dc131641e4a` | No confirmation; new tables: none |
+| 465 | `4706f03ef5cfe771fa03aa0d703f20688adf9a5c` | `f16e88288d4397e3e24d06febbc39dc131641e4a` | No confirmation; new tables: flagSearchCandidates |
+| 468 | `05f376a36ddb01a77f2214e97f6e9ebd1f0151d1` | `f16e88288d4397e3e24d06febbc39dc131641e4a` | No confirmation; new tables: none |
+| 472 | `dc26540e075e83fbba98f3bd26edc7dcdb2d9fb6` | `05f376a36ddb01a77f2214e97f6e9ebd1f0151d1` | No confirmation; new tables: none |
+| 474 | `6a68d01595ef5565e7a1f6ae4806f1fef58215e1` | `dc26540e075e83fbba98f3bd26edc7dcdb2d9fb6` | No confirmation; new tables: manPageTranslationDrift, translationDriftBuilds |
+
+Validation: 968 ingestion tests; 869 frontend tests; 3,283 Convex tests; 127 ops
+and 13 dataset/deploy workflow tests pass. Ingestion/frontend lint, visual grammar,
+Convex typecheck, public API, isolated codegen with no generated drift, and Python
+3.14 pip dry-run pass. Combined provider/man-query/short-URL production E2E:
+22 passed. Performance has the three alternate-only read-budget failures above.
+No dispatch, merge, shared/production write or new independent review was run.

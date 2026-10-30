@@ -256,9 +256,9 @@ const cachedResolveManByName = unstable_cache(
 )
 
 const cachedManByNameAndSection = unstable_cache(
-  async (distro: Distro, name: string, section: string, _release: string | null) =>
-    cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section, reportRelease: true }), _release),
-  ['betterman', 'convex', 'man-by-name-and-section', 'v8'],
+  async (distro: Distro, name: string, section: string, _release: string | null, pkg: string | null = null) =>
+    cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section, ...(pkg ? { pkg } : {}), reportRelease: true }), _release),
+  ['betterman', 'convex', 'man-by-name-and-section', 'provider-proof-v1'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -407,7 +407,7 @@ export async function listSection(opts: {
   return result
 }
 
-export type ManAlias = { kind: 'alias'; name: string; section: string; pkg?: string; datasetReleaseId?: string }
+export type ManAlias = { kind: 'alias'; name: string; section: string; pkg?: string; datasetReleaseId?: string; providerPackages?: string[] }
 
 export type ManByNameResult =
   | { kind: 'page'; data: ManPageResponse }
@@ -476,12 +476,16 @@ export async function fetchManByNameAndSectionOrAlias(opts: {
   release?: string
 }): Promise<ManByNameAndSectionResult> {
   const pkg = packageName(opts.pkg)
-  // Syntax does not prove a provider; explicit selectors must not fill the data cache.
-  const result = (await mapConvexError(() =>
-    pkg
-      ? convex().action(api.content.getManByNameAndSection, { distro: opts.distro, name: opts.name, section: opts.section, pkg, reportRelease: true })
-      : cachedManByNameAndSection(opts.distro, opts.name, opts.section, opts.release ?? null),
-  )) as ConvexManByNameAndSectionResult
+  const lookup = (provider?: string) => mapConvexError(() =>
+    cachedManByNameAndSection(opts.distro, opts.name, opts.section, opts.release ?? null, provider ?? null),
+  )
+  let result = await lookup() as ConvexManByNameAndSectionResult
+  if (pkg) {
+    // Only the release's bounded provider set may create provider cache entries.
+    const packages = result?.kind === 'page' ? (result.data.providers?.packages ?? [result.data.page?.sourcePackage]) : result?.kind === 'alias' ? result.providerPackages : []
+    if (!packages?.includes(pkg)) throw pageNotFound(servedRelease(result))
+    if (result?.kind !== 'page' || pkg !== result.data.page?.sourcePackage) result = await lookup(pkg) as ConvexManByNameAndSectionResult
+  }
   if (!result || result.kind === 'not_found') throw pageNotFound(servedRelease(result))
   return result
 }
