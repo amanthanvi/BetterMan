@@ -1,6 +1,7 @@
 import type { PageDerivedResponse } from '../../../convex/_derivedEncoding'
 import type { OptionItem } from '../../lib/docModel'
 
+import { portabilityWords } from '../../lib/manBrief'
 import { parseOptionTerms } from './find'
 import { OPTION_LINK_CLASS, OPTION_LINK_IDLE } from './optionRowClasses'
 import { PortabilityGlyph } from './PortabilityGlyph'
@@ -19,6 +20,8 @@ export function OptionsTable({
   rowIds,
   locators,
   portability,
+  portabilityMode = 'glyph',
+  newIn,
 }: {
   options: OptionItem[]
   /** Row anchor per `anchorId`, distinct from the body definition's id. */
@@ -27,8 +30,13 @@ export function OptionsTable({
   locators?: ReadonlyMap<string, string>
   /** Per `anchorId`; a glyph is drawn only beside flags that are not portable. */
   portability?: PageDerivedResponse['portability']
+  /** `text` writes the cells as words (`?portability=text`). */
+  portabilityMode?: 'glyph' | 'text'
+  /** Options added since the previous release of this page. */
+  newIn?: PageDerivedResponse['newIn']
 }) {
   const portabilityByAnchor = new Map(portability?.rows ?? [])
+  const newInByAnchor = new Map((newIn ?? []).map((mark) => [mark.anchorId, mark]))
   return (
     <table className="w-full border-collapse text-left" aria-label="Command-line options">
       <thead className="sr-only">
@@ -44,7 +52,7 @@ export function OptionsTable({
           const codes = portability ? portabilityByAnchor.get(opt.anchorId) ?? 'lll' : null
 
           return (
-            <tr key={opt.anchorId} data-bm-option-row>
+            <tr key={opt.anchorId} data-bm-option-row data-bm-portable={codes === 'aaa' ? '' : undefined}>
               <td className="w-[45%] py-1 pr-4 align-baseline sm:w-[18rem]">
                 <a
                   href={`#${rowId}`}
@@ -61,10 +69,19 @@ export function OptionsTable({
                   {opt.argument ? <i data-bm-option-argument className="font-normal text-ink-2"> {opt.argument}</i> : null}
                 </a>
                 {portability && codes ? (
-                  <>
-                    {' '}
-                    <PortabilityGlyph codes={codes} systems={portability.systems} />
-                  </>
+                  portabilityMode === 'text' ? (
+                    codes === 'aaa' ? null : <span className="ml-2 text-xs text-ink-3">{portabilityWords(codes)}</span>
+                  ) : (
+                    <>
+                      {' '}
+                      <PortabilityGlyph codes={codes} systems={portability.systems} />
+                    </>
+                  )
+                ) : null}
+                {newInByAnchor.has(opt.anchorId) ? (
+                  <span className="ml-2 whitespace-nowrap text-xs text-ink-3" title="Not in this page's previous release">
+                    new{newInByAnchor.get(opt.anchorId)!.packageVersion ? ` in ${newInByAnchor.get(opt.anchorId)!.packageVersion}` : ''}
+                  </span>
                 ) : null}
               </td>
               <td data-bm-option-description className="py-1 pr-4 align-baseline text-sm text-ink-2">{opt.description}</td>

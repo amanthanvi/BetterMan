@@ -2,15 +2,16 @@ import type { PageDerivedResponse } from '../../../convex/_derivedEncoding'
 
 import type { SectionPage } from '../../lib/api'
 import { DISTRO_LABEL, type Distro } from '../../lib/distro'
-import type { ManPage, ManPageContent, ManPageVariant } from '../../lib/docModel'
+import type { ManPage, ManPageBrief, ManPageContent, ManPageVariant } from '../../lib/docModel'
 import { extractExamples } from '../../lib/examples'
+import { briefView } from '../../lib/manBrief'
 import { ChevronDownIcon } from '../icons'
 import { defaultCodeLanguage } from '../doc/CodeBlock'
 import { DocRenderer } from '../doc/DocRenderer'
 import { Toc } from '../toc/Toc'
 import { IconButton } from '../ui/IconButton'
 import { stripHeaderSections } from './manBody'
-import { ManPageExamples } from './ManPageExamples'
+import { ManPageBriefSection } from './ManPageBrief'
 import { ManPageFooterSections } from './ManPageFooterSections'
 import { ManPageHeaderCard } from './ManPageHeaderCard'
 import { ManPageOptionsSection } from './ManPageOptionsSection'
@@ -32,8 +33,10 @@ export function ManPageDocument({
   servedDistro,
   urlDistro,
   relatedItems,
-  derivedLinks,
-  portability,
+  derived,
+  brief,
+  portabilityMode = 'glyph',
+  portabilityToggleHref,
   reportHref,
 }: {
   page: ManPage
@@ -43,12 +46,24 @@ export function ManPageDocument({
   servedDistro: Distro
   urlDistro: Distro | null
   relatedItems: SectionPage[]
-  derivedLinks?: Pick<PageDerivedResponse, 'referencedBy' | 'family' | 'package'>
-  portability?: Pick<PageDerivedResponse, 'portability' | 'stale'>
+  /** B7's derived corpus metadata: portability, new-in marks, most-used flags, cross-references. */
+  derived?: PageDerivedResponse
+  /** B6's generated layer: summary and sourced examples. */
+  brief?: ManPageBrief | null
+  /** `?portability=text` shows the cells as words. */
+  portabilityMode?: 'glyph' | 'text'
+  /** This URL with the other portability mode. */
+  portabilityToggleHref?: string
   /** A prefilled GitHub issue for this page, built with the public origin. */
   reportHref: string
 }) {
-  const examples = extractExamples(content.blocks)
+  const inBrief = briefView({
+    brief,
+    fallbackExamples: extractExamples(content.blocks),
+    mostUsed: derived?.mostUsed,
+    options: content.options ?? [],
+    blocks: content.blocks,
+  })
   const codeLanguage = defaultCodeLanguage(page.section)
   const body = stripHeaderSections(content.blocks, content.toc ?? [], { hasSynopsis: Boolean(content.synopsis?.length) })
   const bodyIds = collectBlockIds(body.blocks)
@@ -99,9 +114,17 @@ export function ManPageDocument({
           <ManPageHeaderCard page={page} synopsis={content.synopsis} variants={variants} distro={servedDistro} hasToc={hasToc} />
 
           <article className="mt-10">
-            <ManPageExamples examples={examples} codeLanguage={codeLanguage} />
+            {inBrief ? <ManPageBriefSection view={inBrief} /> : null}
 
-            <ManPageOptionsSection portability={portability} options={content.options} rowIds={optionRows} locators={locators} />
+            <ManPageOptionsSection
+              portability={derived ? { portability: derived.portability, stale: derived.stale } : undefined}
+              newIn={derived?.newIn}
+              portabilityMode={portabilityMode}
+              portabilityToggleHref={portabilityToggleHref}
+              options={content.options}
+              rowIds={optionRows}
+              locators={locators}
+            />
 
             <DocRenderer blocks={body.blocks} urlDistro={urlDistro} codeLanguage={codeLanguage} sectionNumbers={numbers} />
 
@@ -110,7 +133,7 @@ export function ManPageDocument({
               urlDistro={urlDistro}
               seeAlso={content.seeAlso}
               relatedItems={relatedItems}
-              derived={derivedLinks}
+              derived={derived}
               hasParseWarnings={page.hasParseWarnings === true}
             />
           </article>

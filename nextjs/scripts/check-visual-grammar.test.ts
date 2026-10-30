@@ -71,8 +71,8 @@ describe('checkSource', () => {
   it('keeps the added tint to BetterMan-voice files, unboxed', () => {
     expect(reasons(line('bm-added px-5'))).toContain("the added tint is BetterMan's voice; add the file to ADDED_FILES deliberately")
     expect(reasons(line('bg-added/60'))).toContain("the added tint is BetterMan's voice; add the file to ADDED_FILES deliberately")
-    expect(reasons(line('bm-added px-5'), 'components/man/ManPageExamples.tsx')).toEqual([])
-    expect(reasons(line('bm-added border border-rule'), 'components/man/ManPageExamples.tsx')).toContain('the added tint is never boxed')
+    expect(reasons(line('bm-added px-5'), 'components/man/ManPageBrief.tsx')).toEqual([])
+    expect(reasons(line('bm-added border border-rule'), 'components/man/ManPageBrief.tsx')).toContain('the added tint is never boxed')
   })
 
   it.each(['rounded', 'rounded-md', 'sm:rounded-lg', 'rounded-[4px]', '[border-radius:2px]'])('rejects rounded corners: %s', (classes) => {

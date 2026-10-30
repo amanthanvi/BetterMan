@@ -91,9 +91,10 @@ function applyFragment() {
 }
 
 function initFilter() {
-  const input = document.querySelector<HTMLInputElement>('[data-bm-options-filter]')
-  if (!input) return
-  const section = input.closest('[data-bm-options]')!
+  const section = document.querySelector<HTMLElement>('[data-bm-options]')
+  const input = section?.querySelector<HTMLInputElement>('[data-bm-options-filter]') ?? null
+  const portable = section?.querySelector<HTMLInputElement>('[data-bm-options-portable]') ?? null
+  if (!section || (!input && !portable)) return
   const count = section.querySelector<HTMLElement>('[data-bm-options-count]')
   const empty = section.querySelector<HTMLElement>('[data-bm-options-empty]')
   const details = section.querySelector('details')
@@ -102,43 +103,47 @@ function initFilter() {
     const row = link.closest('tr')!
     const argument = link.querySelector('[data-bm-option-argument]')?.textContent?.trim() ?? ''
     const description = row.querySelector('[data-bm-option-description]')?.textContent ?? ''
-    return { row, text: `${link.dataset.bmFlags ?? ''} ${argument} ${description}`.toLowerCase() }
+    return { row, portable: row.hasAttribute('data-bm-portable'), text: `${link.dataset.bmFlags ?? ''} ${argument} ${description}`.toLowerCase() }
   })
   const total = rows.length
   let detailsWasOpen = details?.open ?? false
 
-  input.addEventListener('input', () => {
-    const needle = input.value.trim().toLowerCase()
+  const apply = () => {
+    const needle = input?.value.trim().toLowerCase() ?? ''
+    const portableOnly = Boolean(portable?.checked)
+    const filtering = Boolean(needle) || portableOnly
     let shown = 0
-    for (const { row, text } of rows) {
-      const visible = !needle || text.includes(needle)
+    for (const { row, portable: isPortable, text } of rows) {
+      const visible = (!needle || text.includes(needle)) && (!portableOnly || isPortable)
       row.hidden = !visible
       if (visible) shown++
     }
     if (details && summary) {
       // Filtering lists every match, the collapsed rest included; clearing restores the disclosure.
-      if (needle && !summary.hidden) {
+      if (filtering && !summary.hidden) {
         detailsWasOpen = details.open
         details.open = true
-      } else if (!needle && summary.hidden) {
+      } else if (!filtering && summary.hidden) {
         details.open = detailsWasOpen
       }
-      summary.hidden = Boolean(needle)
+      summary.hidden = filtering
     }
-    if (empty) empty.hidden = !needle || shown > 0
-    if (count) count.textContent = needle ? `${shown} of ${total}` : `${total} options`
-  })
+    if (empty) empty.hidden = !filtering || shown > 0
+    if (count) count.textContent = filtering ? `${shown} of ${total}` : `${total} options`
+  }
+  input?.addEventListener('input', apply)
+  portable?.addEventListener('change', apply)
+  // A restored form state (back/forward) filters as it shows.
+  if (input?.value || portable?.checked) apply()
 }
 
 export function initOptions() {
-  const bodyIds = new Set<string>()
   for (const link of links()) {
     const rowId = link.id
     const anchorId = link.dataset.bmAnchor ?? ''
     targets.set(rowId, { link, targetId: rowId, isRow: true })
     if (!targets.has(anchorId)) {
       const inBody = Boolean(document.getElementById(anchorId)?.closest('.bm-manual'))
-      if (inBody) bodyIds.add(anchorId)
       targets.set(anchorId, { link, targetId: inBody ? anchorId : rowId, isRow: !inBody })
     }
 
