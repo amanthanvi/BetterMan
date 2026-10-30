@@ -369,6 +369,53 @@ def test_catalog_verifies_release_contents_packages_and_popcon(tmp_path, monkeyp
         indexes.catalog(tmp_path / "indexes")
 
 
+def test_catalog_refuses_private_manuals_without_an_audit_for_the_release(tmp_path, monkeypatch):
+    import gzip
+    import json
+    import lzma
+
+    counts = gzip.compress(b"postgresql-client-17\t42\n", mtime=0)
+    (tmp_path / "popcon.gz").write_bytes(counts)
+    artifacts = {
+        "main/Contents-all.gz": gzip.compress(
+            b"usr/share/postgresql/17/man/man1/psql.1.gz database/postgresql-client-17\n",
+            mtime=0,
+        ),
+        "main/Contents-amd64.gz": gzip.compress(b"", mtime=0),
+        "main/binary-amd64/Packages.xz": lzma.compress(
+            b"Package: postgresql-client-17\nVersion: 1\n"
+            + b"Filename: pool/main/p/postgresql-client-17.deb\nSHA256: "
+            + b"a" * 64
+            + b"\nSize: 100\n\n"
+        ),
+    }
+    release = "SHA256:\n" + "".join(
+        f" {hashlib.sha256(data).hexdigest()} {len(data)} {name}\n"
+        for name, data in artifacts.items()
+    )
+    artifacts["Release"] = release.encode()
+    pins = tmp_path / "pins.json"
+    # A Release other than the one the private-manual registrations were audited for.
+    pins.write_text(
+        json.dumps(
+            {
+                "mirror": "https://example.test/snapshot",
+                "suite": "trixie",
+                "releaseSha256": hashlib.sha256(release.encode()).hexdigest(),
+                "popcon": {"file": "popcon.gz", "sha256": hashlib.sha256(counts).hexdigest()},
+            }
+        )
+    )
+    monkeypatch.setattr(indexes, "PINS", pins)
+    monkeypatch.setattr(
+        indexes,
+        "urlopen",
+        lambda req, **_: io.BytesIO(artifacts[req.full_url.split("/dists/trixie/")[1]]),
+    )
+    with pytest.raises(ValueError, match="need an audit for this Release"):
+        indexes.catalog(tmp_path / "indexes")
+
+
 def test_zstd_archive_and_compressed_source_are_streamed_without_installing(tmp_path):
     import tarfile
 
@@ -791,6 +838,8 @@ def test_unrelated_command_provider_cannot_satisfy_curated_gate(
     obj = archive_workspace
     monkeypatch.setattr(pipeline, "FULL_PACKAGE_SET_DEBIAN", [requested])
     obj.available[requested] = replace(obj.packages[0], name=requested)
+    # Providing the requested name is not enough (make-guile Provides make in the pin).
+    obj.available[wrong_owner] = replace(obj.packages[0], name=wrong_owner, provides=(requested,))
     obj.alias_providers = []
     with pytest.raises(RuntimeError, match="wrong command-page owner"):
         obj.require_command_owners(

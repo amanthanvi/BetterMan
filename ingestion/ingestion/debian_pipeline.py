@@ -397,9 +397,12 @@ class Workspace:
                 if current in allowed:
                     continue
                 allowed.add(current)
-                pending.extend(providers.get(current, ()))
                 if current in self.available:
                     pending.extend(self.available[current].depends)
+                else:
+                    # Only a virtual name is satisfied by its providers; a real
+                    # package (make) is not by another that Provides it (make-guile).
+                    pending.extend(providers.get(current, ()))
             owner = actual[(name, section)]
             if owner not in allowed:
                 raise RuntimeError(

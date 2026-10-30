@@ -133,7 +133,8 @@ existing explicit `util-linux` → `mount` companion request is preserved (mount
 is not a util-linux dependency); other hints do not authorize an owner. An exact
 section is preferred before suffixes, so `ls(1plan9)` cannot shadow the ownership
 check for `ls(1)`. 9base's ls/grep/sed and make-guile's make fail wrong-owner
-regressions. The full curated/private/public-competitor audit verifies **53
+regressions. Providers count only for virtual names: make-guile's
+`Provides: make` does not stand in for the real make package. The full curated/private/public-competitor audit verifies **53
 notices**, with **zero parse failures or unresolved sources** and no new command
 exclusions.
 
