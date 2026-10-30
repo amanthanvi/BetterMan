@@ -205,7 +205,7 @@ test.describe('a fix for a translation', () => {
       page.context().waitForEvent('page'),
       page.getByRole('link', { name: 'Korrektur für diese Übersetzung vorschlagen' }).click(),
     ])
-    await popup.waitForURL(/github\.com\/amanthanvi\/BetterMan\/issues\/new/)
+    await popup.waitForURL((url) => url.origin === 'https://github.com' && url.pathname === '/amanthanvi/BetterMan/issues/new')
     const appIssue = new URL(popup.url())
     expect(appIssue.searchParams.get('locale')).toBe('de')
     expect(appIssue.searchParams.get('page')).toBe('/search?q=tar&lang=de')

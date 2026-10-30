@@ -47,17 +47,18 @@ function entries(body) {
   let depth = 0
   let start = 0
   const parts = []
-  for (let i = 0; i <= body.length; i += 1) {
+  for (let i = 0; i < body.length; i += 1) {
     const ch = body[i]
     if (ch === "'" || ch === '"' || ch === '`') {
       for (i += 1; i < body.length && body[i] !== ch; i += 1) if (body[i] === '\\') i += 1
-    } else if (ch && '([{'.includes(ch)) depth += 1
-    else if (ch && ')]}'.includes(ch)) depth -= 1
-    else if ((ch === ',' && depth === 0) || i === body.length) {
+    } else if ('([{'.includes(ch)) depth += 1
+    else if (')]}'.includes(ch)) depth -= 1
+    else if (ch === ',' && depth === 0) {
       parts.push(body.slice(start, i).trim())
       start = i + 1
     }
   }
+  parts.push(body.slice(start).trim())
   for (const part of parts.filter(Boolean)) {
     const match = /^(\w+)\s*(?::\s*([\s\S]+))?$/.exec(part)
     if (!match) return null
