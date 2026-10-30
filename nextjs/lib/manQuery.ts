@@ -34,6 +34,8 @@ export function manQueryParams(pathname: string): readonly ManQueryParam[] | nul
   if (/^\/man\/[^/]+\/[^/]+\/og$/.test(pathname)) return ['distro', 'pkg', 'flag']
   if (/^\/man\/[^/]+\/[^/]+$/.test(pathname)) return ['distro', 'pkg', 'portability', 'flag', 'lang']
   if (/^\/man\/[^/]+$/.test(pathname)) return ['distro', 'pkg', 'lang']
+  // Concept explainers (pages/concept) are cached the same way; only the reader's distro changes their links.
+  if (/^\/concept\/[^/]+$/.test(pathname)) return ['distro']
   return null
 }
 

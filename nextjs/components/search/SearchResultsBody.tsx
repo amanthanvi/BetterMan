@@ -1,9 +1,11 @@
 import Link from 'next/link'
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 
 import type { SearchResult, TopHit } from '../../lib/api'
+import type { ConceptLink, ConceptMatch } from '../../lib/concepts'
 import { withDistro, type Distro } from '../../lib/distro'
 import { looksLikeCommandLine } from '../../lib/explain'
+import { ConceptRow } from './ConceptRow'
 import { ResultRow } from './ResultRow'
 
 function DidYouMean({ suggestions, urlDistro }: { suggestions: string[]; urlDistro: Distro | null }) {
@@ -48,6 +50,7 @@ export function SearchResultsBody({
   suggestions,
   top,
   urlDistro,
+  concepts = [],
   footer,
 }: {
   q: string
@@ -56,8 +59,33 @@ export function SearchResultsBody({
   suggestions: string[]
   top?: TopHit | null
   urlDistro: Distro | null
+  /** BetterMan explainers the query names (lib/concepts.ts matchConcepts). */
+  concepts?: (ConceptLink & Partial<Pick<ConceptMatch, 'via'>>)[]
   footer?: ReactNode
 }) {
+  // Explainers explain the manual's section 7 pages, so another section filter leaves them out.
+  // An alias-only match yields when the first hit is a command of exactly that name that
+  // the explainer is not about: `nice` finds nice(1), not the scheduling explainer.
+  const first = results[0]
+  const asked = q.trim().toLowerCase()
+  const conceptRows = section && !section.startsWith('7')
+    ? []
+    : concepts.filter((concept) =>
+      concept.via !== 'alias' || !first || first.name.toLowerCase() !== asked || concept.sources.some((s) => s.name === first.name))
+  if (!results.length && conceptRows.length) {
+    return (
+      <div className="mt-10">
+        <h2 className="mb-3 font-serif text-xl">
+          Results for <q>{q}</q>
+        </h2>
+        <ol aria-label="Search results" className="border-b border-rule">
+          {conceptRows.map((concept) => (
+            <ConceptRow key={concept.slug} concept={concept} urlDistro={urlDistro} />
+          ))}
+        </ol>
+      </div>
+    )
+  }
   if (!results.length) {
     return (
       <div className="mt-10 text-sm text-ink-2">
@@ -80,7 +108,6 @@ export function SearchResultsBody({
     )
   }
 
-  const first = results[0]
   const leads = top && top.name === first.name && top.section === first.section ? top : null
   return (
     <div className="mt-10">
@@ -97,7 +124,11 @@ export function SearchResultsBody({
       </h2>
       <ol aria-label="Search results" className="border-b border-rule">
         {results.map((r, index) => (
-          <ResultRow key={`${r.name}:${r.section}`} r={r} q={q} urlDistro={urlDistro} top={index === 0 ? leads : null} />
+          <Fragment key={`${r.name}:${r.section}`}>
+            <ResultRow r={r} q={q} urlDistro={urlDistro} top={index === 0 ? leads : null} />
+            {/* An explainer follows the first hit, so the top hit still leads. */}
+            {index === 0 ? conceptRows.map((concept) => <ConceptRow key={concept.slug} concept={concept} urlDistro={urlDistro} />) : null}
+          </Fragment>
         ))}
       </ol>
       {footer}

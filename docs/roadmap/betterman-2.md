@@ -62,7 +62,7 @@ Decided: deterministic features computed from the corpus, plus build-time genera
   - `less(1)` keys on man pages.
   - Cross-reference previews.
   - Live reference tables such as ascii(7).
-  - Concept surfacing: both variants (a footer line plus search, or hover/tap cards) are prototyped before choosing.
+  - Concept surfacing: a quiet footer line on man pages that reference the concept, plus search with the `concept` kind; no cards inside the manual text (owner decision, B8 #400).
 - **Address bar.** Short URLs (`/tar`, `/tar/-x`) plus OpenSearch with suggestions. No CLI, MCP server, or editor extensions for now.
 - **Access.**
   - AI answer engines may crawl `/man/*` HTML; `/api/` stays disallowed.

@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { HomeDashboardClient } from './HomeDashboardClient'
 import { SearchPageInput } from '../search/SearchPageInput'
 import { fetchInfo, listSections, search, withDistroFallback } from '../../lib/api'
+import { matchConcepts } from '../../lib/concepts'
 import { withDistro } from '../../lib/distro'
 import { explicitDistro, getFirst, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
 import { sectionsLabel } from '../../lib/sectionsLabel'
@@ -85,6 +86,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           suggestions={results.results.length && !results.correctedQuery ? [] : results.suggestions.filter((s) => s.toLowerCase() !== q.toLowerCase())}
           top={results.top}
           urlDistro={urlDistro}
+          concepts={matchConcepts(q)}
           footer={
             results.hasMore ? (
               <p className="mt-4 text-sm">

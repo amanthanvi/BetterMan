@@ -53,6 +53,11 @@ export function isManHtmlPath(pathname: string): boolean {
   return /^\/man\/[^/]+(?:\/[^/]+)?$/.test(pathname) && !/^\/man\/[^/]+\/[^/]+\.txt$/.test(pathname)
 }
 
+/** `/concept/<slug>`, the explainers the Pages Router renders as plain HTML (pages/concept). */
+export function isConceptHtmlPath(pathname: string): boolean {
+  return /^\/concept\/[^/]+$/.test(pathname)
+}
+
 /**
  * Next normalises a loopback host in middleware URLs to `localhost`, so behind
  * `next start -H 127.0.0.1` (the budget harness) a rewrite no longer matches the
@@ -161,6 +166,11 @@ export async function proxy(request: NextRequest) {
   if (redirect) return setSecurityHeaders(redirect, null)
   const cspEnabled = process.env.CSP_ENABLED !== 'false'
   if (isManHtmlPath(request.nextUrl.pathname)) return await manProxy(request, cspEnabled)
+  // Explainers depend only on the URL and the deployment: the man pages' hash-only CSP, no nonce, no cookie.
+  if (isConceptHtmlPath(request.nextUrl.pathname)) {
+    const csp = cspEnabled ? buildCsp([await manBootScriptHash()], { strictDynamic: false }) : null
+    return manQueryRedirect(request, csp) ?? setSecurityHeaders(NextResponse.next(), csp)
+  }
   const path = request.nextUrl.pathname
   // Keep root concrete .txt routes in sync with the afterFiles rewrites in next.config.ts.
   if (/^\/man\/[^/]+\/[^/]+\.txt$/.test(path) || (/^\/[^/]+\.txt$/.test(path) && path !== '/robots.txt')) {
@@ -197,6 +207,9 @@ export const config = {
     // Man page prefetches get the release key too, so they are cacheable and a
     // client cannot reach the renderer past the proxy with its own release header.
     { source: '/man/:path*' },
+    // Concept explainers are edge-cached too: a prefetch must still get the CSP,
+    // the security headers and the query redirect, or the CDN could keep a bare page.
+    { source: '/concept/:path*' },
     { source: '/:name.txt' },
   ],
 }

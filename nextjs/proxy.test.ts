@@ -13,7 +13,7 @@ vi.mock('./lib/manRelease', async (importOriginal) => ({
 import { MAN_BOOT_SCRIPT } from './lib/manBoot'
 
 process.env.BM_RELEASE_TOKEN = 'test-release-token'
-import { config, isManHtmlPath, proxy } from './proxy'
+import { config, isConceptHtmlPath, isManHtmlPath, proxy } from './proxy'
 
 const bootHash = `'sha256-${createHash('sha256').update(MAN_BOOT_SCRIPT).digest('base64')}'`
 const releaseFor = (distro: string) => ({ datasetReleaseId: `2026-10-28+${distro}`, distro, pageCount: 10, lastUpdated: '2026-10-28T00:00:00Z' })
@@ -49,6 +49,39 @@ it('serves man pages under a hash-only CSP with no nonce, so the HTML can be cac
   expect(csp).not.toMatch(/nonce|strict-dynamic|unsafe-eval|script-src[^;]*unsafe-inline/)
   expect(response.headers.get('x-middleware-request-x-nonce')).toBeNull()
   expect(response.headers.get('strict-transport-security')).toContain('max-age=31536000')
+})
+
+it('serves concept explainers under the same hash-only CSP, with no release lookup or distro redirect', async () => {
+  vi.stubEnv('NODE_ENV', 'production')
+  const request = new NextRequest('https://betterman.sh/concept/signals', { headers: { cookie: 'bm-distro=freebsd' } })
+  const response = await proxy(request)
+  const csp = response.headers.get('content-security-policy')!
+  expect(csp).toContain(`script-src 'self' ${bootHash};`)
+  expect(csp).not.toMatch(/nonce|strict-dynamic/)
+  expect(response.status).toBe(200)
+  expect(response.headers.get('location')).toBeNull()
+  expect(release.servingRelease).not.toHaveBeenCalled()
+  expect(isConceptHtmlPath('/concept/signals')).toBe(true)
+  // A prefetch must not slip past the proxy into a cacheable, CSP-less response.
+  for (const headers of [{ 'next-router-prefetch': '1' }, { purpose: 'prefetch' }] as Record<string, string>[]) {
+    expect(unstable_doesMiddlewareMatch({ config, url: '/concept/signals', headers })).toBe(true)
+    const prefetched = await proxy(new NextRequest('https://betterman.sh/concept/signals', { headers }))
+    expect(prefetched.headers.get('content-security-policy')).toContain(`script-src 'self' ${bootHash};`)
+    expect(prefetched.headers.get('x-frame-options')).toBe('DENY')
+    const stray = await proxy(new NextRequest('https://betterman.sh/concept/signals?utm_source=x', { headers }))
+    expect(stray.status).toBe(308)
+    expect(stray.headers.get('location')).toBe('https://betterman.sh/concept/signals')
+  }
+  // Explainers are English only for now (B9, #475): `?lang=` goes back to the bare URL.
+  const lang = await proxy(new NextRequest('https://betterman.sh/concept/signals?lang=de&distro=arch'))
+  expect(lang.status).toBe(308)
+  expect(lang.headers.get('location')).toBe('https://betterman.sh/concept/signals?distro=arch')
+  for (const path of ['/concept', '/concept/signals/x', '/concepts/signals']) expect(isConceptHtmlPath(path)).toBe(false)
+  // One cache entry per meaning, as for man pages: only a valid ?distro= survives.
+  const messy = await proxy(new NextRequest('https://betterman.sh/concept/signals?utm_source=x&distro=arch&distro=freebsd&pkg=y'))
+  expect(messy.status).toBe(308)
+  expect(messy.headers.get('location')).toBe('https://betterman.sh/concept/signals?distro=arch')
+  expect((await proxy(new NextRequest('https://betterman.sh/concept/signals?distro=arch'))).status).toBe(200)
 })
 
 it('keys a man page on the active release and forwards it to the renderer', async () => {

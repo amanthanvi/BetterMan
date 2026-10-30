@@ -22,6 +22,7 @@ describe('reservedPathSegments', () => {
         '_next',
         'api',
         'bookmarks',
+        'concept',
         'favicon.ico',
         'fonts',
         'history',
@@ -56,7 +57,10 @@ describe('reservedPathSegments', () => {
     touch('app/providers.tsx')
     touch('app/icon.png')
     touch('public/Logo.svg')
+    touch('pages/_app.tsx')
+    touch('pages/Guide/[slug].tsx')
+    touch('pages/[catch].tsx')
 
-    expect(reservedPathSegments(scratch)).toEqual(['_next', 'about', 'docs', 'icon', 'logo.svg'])
+    expect(reservedPathSegments(scratch)).toEqual(['_next', 'about', 'docs', 'guide', 'icon', 'logo.svg'])
   })
 })

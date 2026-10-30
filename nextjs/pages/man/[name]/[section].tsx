@@ -31,6 +31,9 @@ import { safeJsonLdStringify } from '../../../lib/seo'
  * and the active release: it never reads a cookie.
  */
 // `runtime` is here for Next's PagesPageConfig type, which does not list unstable_runtimeJS.
+// Keep unstable_runtimeJS false: ManPageDocument imports the bundled concept explainers
+// (lib/concepts.generated.json), which sit in this page's unused client chunk; hydrating
+// the page would make every reader download them.
 export const config = { runtime: 'nodejs', unstable_runtimeJS: false }
 
 type PageProps = {

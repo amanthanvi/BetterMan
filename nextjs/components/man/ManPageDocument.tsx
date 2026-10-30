@@ -1,6 +1,7 @@
 import type { PageDerivedResponse } from '../../../convex/_derivedEncoding'
 
 import type { SectionPage } from '../../lib/api'
+import { conceptsForPage } from '../../lib/concepts'
 import { DISTRO_LABEL, type Distro } from '../../lib/distro'
 import type { ManPage, ManPageBrief, ManPageContent, ManPageResponse, ManPageVariant } from '../../lib/docModel'
 import { extractExamples } from '../../lib/examples'
@@ -137,6 +138,7 @@ export function ManPageDocument({
               seeAlso={content.seeAlso}
               relatedItems={relatedItems}
               derived={derived}
+              concepts={conceptsForPage(page, content)}
               hasParseWarnings={page.hasParseWarnings === true}
             />
           </article>

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 
 import { search, withDistroFallback } from '../../lib/api'
+import { matchConcepts } from '../../lib/concepts'
 import { sectionLabel } from '../../components/man/RunningHead'
 import type { Distro } from '../../lib/distro'
 import { explicitDistro, getFirst, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
@@ -84,7 +85,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         ))}
       </nav>
 
-      <SearchResultsClient distro={distro} q={q} section={section} initial={initial} />
+      <SearchResultsClient distro={distro} q={q} section={section} initial={initial} concepts={q ? matchConcepts(q) : []} />
     </div>
   )
 }

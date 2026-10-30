@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { SearchResponse, SearchResult } from '../../lib/api'
+import type { ConceptLink } from '../../lib/concepts'
 import { withDistro, type Distro } from '../../lib/distro'
 import { useDistro } from '../../components/state/distro'
 import { SearchResultsBody } from '../../components/search/SearchResultsBody'
@@ -57,12 +58,15 @@ export function SearchResultsClient({
   q,
   section,
   initial,
+  concepts = [],
 }: {
   /** The distro the results came from, after any Debian fallback. */
   distro: Distro
   q: string
   section: string
   initial: SearchResponse | null
+  /** Explainers the query names, matched on the server. */
+  concepts?: ConceptLink[]
 }) {
   const { urlDistro } = useDistro()
   const [results, setResults] = useState<SearchResult[]>(() => initial?.results ?? [])
@@ -151,6 +155,7 @@ export function SearchResultsClient({
       suggestions={suggestions}
       top={initial?.top ?? null}
       urlDistro={urlDistro}
+      concepts={concepts}
       footer={
         <>
           <div className="mt-5 flex items-baseline justify-between gap-3">
