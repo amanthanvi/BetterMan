@@ -50,6 +50,7 @@ export default defineSchema({
     uploadedPackageBatchCount: v.optional(v.number()),
     pageCount: v.number(),
     indexablePageCount: v.optional(v.number()),
+    flagSearchReady: v.optional(v.boolean()),
     providerCount: v.optional(v.number()),
     aliasCount: v.optional(v.number()),
     licenseCount: v.optional(v.number()),
@@ -271,7 +272,6 @@ export default defineSchema({
     nameNorm: v.string(),
     section: v.string(),
     flag: v.string(),
-    popularityScore: v.optional(v.number()),
     anchorId: v.string(),
     // The option's flag text as written, for the result snippet.
     flags: v.string(),
@@ -280,8 +280,6 @@ export default defineSchema({
     excerpt: v.optional(v.string()),
   })
     .index("by_releaseId_and_flag_and_nameNorm", ["releaseId", "flag", "nameNorm"])
-    .index("by_releaseId_and_flag_and_popularityScore", ["releaseId", "flag", "popularityScore"])
-    .index("by_releaseId_and_section_and_flag_and_popularityScore", ["releaseId", "section", "flag", "popularityScore"])
     .index("by_pageId_and_flag", ["pageId", "flag"])
     .index("by_releaseId_and_section_and_flag_and_nameNorm", [
       "releaseId",
@@ -289,6 +287,16 @@ export default defineSchema({
       "flag",
       "nameNorm",
     ]),
+
+  // Bounded, precomputed verified-example candidates; no new index on the option table.
+  flagSearchCandidates: defineTable({
+    releaseId: v.id("datasetReleases"), flag: v.string(),
+    candidates: v.array(v.object({
+      pageId: v.id("manPages"), name: v.string(), section: v.string(), title: v.string(), description: v.string(),
+      popularityScore: v.number(), usage: v.array(v.object({ flag: v.string(), count: v.number() })),
+      flags: v.string(), anchorId: v.string(),
+    })),
+  }).index("by_releaseId_and_flag", ["releaseId", "flag"]),
 
   manPageSymbols: defineTable({
     ...symbolInput.fields,

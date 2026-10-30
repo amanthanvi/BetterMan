@@ -76,8 +76,8 @@ test('search: the top hit leads with one sourced example and its gloss, then the
   await expect(top).toContainText('from EXAMPLES')
   const flags = top.getByRole('list', { name: 'Key flags of tar(1)' })
   // -c (EXAMPLES) and --create (tldr) are one option: shown once.
-  await expect(flags.getByRole('link')).toHaveCount(1)
-  await expect(flags.getByRole('link')).toHaveAttribute('href', '/man/tar/1#opt-create')
+  await expect(flags.getByRole('link')).toHaveCount(4)
+  await expect(flags.locator('a[href="/man/tar/1#opt-create"]')).toHaveAttribute('href', '/man/tar/1#opt-create')
   await expect(flags).toContainText('Create a new archive.')
   // The example comes before the flags.
   const [example, flagList] = await Promise.all([top.getByText('tar -cf archive.tar').boundingBox(), flags.boundingBox()])

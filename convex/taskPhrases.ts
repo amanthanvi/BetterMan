@@ -1,3 +1,4 @@
+import { syncFlagCandidates } from "./_flagSearch";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -20,8 +21,8 @@ import { datasetStageValidator, distroValidator } from "./schema";
  * Before a release's backfill completes, worded queries match only the pages
  * whose rows exist; other search results are unaffected.
  */
-export const TASK_PHRASE_VERSION = 2;
-const BACKFILL_PAGES = 100;
+export const TASK_PHRASE_VERSION = 3;
+const BACKFILL_PAGES = 16;
 const SYNC_PAGES = 256;
 const MAX_BACKFILL_ATTEMPTS = 3;
 
@@ -107,7 +108,7 @@ export async function scheduleTaskPhraseBackfill(ctx: MutationCtx, release: Doc<
   const status = await ctx.db.query("taskPhraseBackfills").withIndex("by_releaseId", (q) => q.eq("releaseId", release._id)).unique();
   if (status?.completedVersion === TASK_PHRASE_VERSION && status.version === TASK_PHRASE_VERSION) return false;
   let failed = false;
-  if (status?.jobId) {
+  if (status?.jobId && status.version === TASK_PHRASE_VERSION) {
     const job = await ctx.db.system.get(status.jobId);
     if (job && (job.state.kind === "pending" || job.state.kind === "inProgress")) return true;
     failed = job?.state.kind === "failed" || job?.state.kind === "canceled";
@@ -121,6 +122,7 @@ export async function scheduleTaskPhraseBackfill(ctx: MutationCtx, release: Doc<
     cursor: sameVersion ? status?.cursor ?? null : null,
     scanned: sameVersion ? status?.scanned ?? 0 : 0, written: sameVersion ? status?.written ?? 0 : 0,
   };
+  await ctx.db.patch(release._id, { flagSearchReady: false });
   if (status) await ctx.db.patch(status._id, { ...progress, completedVersion: undefined });
   else await ctx.db.insert("taskPhraseBackfills", { releaseId: release._id, ...progress });
   return true;
@@ -133,15 +135,18 @@ export const backfillRelease = internalMutation({
     const release = await ctx.db.get(args.releaseId);
     const status = await ctx.db.query("taskPhraseBackfills").withIndex("by_releaseId", (q) => q.eq("releaseId", args.releaseId)).unique();
     if (!release || release.pruning || !status || status.version !== TASK_PHRASE_VERSION) return { done: false };
+    if (status.completedVersion === TASK_PHRASE_VERSION) return { done: true };
     const batch = await ctx.db.query("manPages")
       .withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", args.releaseId))
       .paginate({ cursor: status.cursor, numItems: BACKFILL_PAGES });
     let written = 0;
     for (const page of batch.page) {
+      await syncFlagCandidates(ctx, page);
       if (await syncTaskRow(ctx, page, await generatedFor(ctx, page.contentSha256))) written += 1;
     }
     const progress = { scanned: status.scanned + batch.page.length, written: status.written + written, updatedAt: Date.now() };
     if (batch.isDone) {
+      await ctx.db.patch(release._id, { flagSearchReady: true });
       await ctx.db.patch(status._id, { ...progress, cursor: null, completedVersion: TASK_PHRASE_VERSION, attempts: 0 });
       return { done: true };
     }

@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import { setTimeout as sleep } from 'node:timers/promises'
 
 const stage = process.env.BETTERMAN_DATASET_STAGE || 'prod'
+const unscored = process.env.BETTERMAN_E2E_UNSCORED === '1'
 const secret = process.env.CONVEX_INGEST_SECRET
 const rawUrl = process.env.CONVEX_HTTP_URL || process.env.CONVEX_SITE_URL || process.env.CONVEX_URL
 
@@ -169,7 +170,7 @@ function makePages(distro) {
       { flags: '-f, --file', argument: 'ARCHIVE', anchorId: 'opt-file', description: 'Use archive file.' },
     ],
     seeAlso: [{ name: 'gzip', section: '1', resolvedPageId: gzip.externalId }, { name: 'cpio', section: '1', resolvedPageId: null }],
-    popularityScore: 6000,
+    popularityScore: 5470,
     sourcePackage: 'tar',
     sourcePackageVersion: '1.35+dfsg-3',
   })
@@ -254,7 +255,7 @@ function makePages(distro) {
     name: 'foo::bar', section: '3pm', title: 'foo::bar(3pm)', description: 'Perl module route fixture', sourcePackage: 'perl',
     toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Perl module documentation.' }] }],
   })
-  const competitors = [['instmodsh', 5800], ['ptar', 5900], ['dpkg', 5950]].map(([name, popularityScore]) => page({
+  const competitors = [['instmodsh', 4900], ['ptar', 4900], ['dpkg', 5470]].map(([name, popularityScore]) => page({
     name, popularityScore, section: '1', title: `${name}(1)`, description: `${name} utility`,
     toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: `${name} utility` }] }], options: [{ flags: '-x, --extract', anchorId: 'extract', description: 'Extract files.' }],
   }))
@@ -327,7 +328,7 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
   }))
 
   // Retain one real legacy release shape to exercise rolling-deploy serving.
-  if (distro === 'macos') {
+  if (distro === 'macos' || unscored) {
     for (const page of pages) {
       delete page.indexable
       delete page.popularityScore
@@ -351,7 +352,7 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     ingestedAt: now,
     packageManifest: { packages: [] },
     pageCount: pages.length,
-    ...(distro === 'macos' ? {} : { indexablePageCount: pages.filter(p => p.indexable).length }),
+    ...(distro === 'macos' || unscored ? {} : { indexablePageCount: pages.filter(p => p.indexable).length }),
     providerCount: 5,
     packageBatches: [],
     aliasCount: 3,
@@ -365,11 +366,14 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     const tar = pages.find((p) => p.name === 'tar')
     await post('/ingest/generated', { records: [{
       contentSha256: tar.contentSha256,
-      page: { examples: [{ description: 'Create an archive from a folder', command: 'tar -cf archive.tar ./my-folder' }], flagUsage: [{ flag: '-c', count: 1 }] },
+      page: { examples: [
+        { description: 'Create an archive from a folder', command: 'tar -cf archive.tar ./my-folder' },
+        { description: 'Extract a gzipped archive', command: 'tar -xzf archive.tar.gz' },
+      ], flagUsage: unscored ? [] : [{ flag: '-c', count: 1 }, { flag: '-x', count: 1 }, { flag: '-z', count: 1 }, { flag: '-f', count: 2 }] },
       tldr: {
         commit: 'f4566462f5996e13a4f3523f21dc2a863aec53c1', path: 'common/tar.md', rejected: 0,
         examples: [{ description: 'Create an archive and write it to a file', command: 'tar --create --file path/to/target.tar path/to/file', placeholders: [[20, 38], [39, 51]] }],
-        flagUsage: [{ flag: '--create', count: 1 }],
+        flagUsage: unscored ? [] : [{ flag: '--create', count: 1 }, { flag: '--file', count: 1 }],
       },
       generated: {
         provider: 'opencode-go', model: 'deepseek-v4.1-flash', promptVersion: 'b6-v1', generatedAt: '2026-10-28',

@@ -4,7 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
-- Rank task and bare flag searches by popularity, recognize tarball task vocabulary, and attribute bare short-flag clusters to matching commands (#464).
+- Rank task searches by lexical evidence and popularity, rank flags and bare clusters by verified example usage, recognize tarball vocabulary, and keep production ranking checks advisory (#464).
 
 - Combine demand and provider indexability, retain release-keyed text responses, and omit canonicals that would point at noindex pages.
 

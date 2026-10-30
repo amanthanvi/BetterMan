@@ -414,31 +414,40 @@ Separate from the release ingest contract, behind the same ingest secret:
 - The deterministic parts could be built during ingestion, where the parsed
   pages are already in memory, instead of read back from Convex.
 
-## Task search ranking
+## Task and flag search ranking
 
-Task rows copy the page's B4 `popularityScore` at ingest/backfill, with missing
-scores treated as zero. Task backfill version 2 refreshes existing rows through
-the existing deploy entrypoint. Search still reads at most eight task rows, ranks
-all of them before keeping three. Among task matches with content-word evidence,
-popularity precedes lexical overlap; equal or missing scores retain the existing
-relevance order. Exact command-name ranking stays above task matches. This lets
-common commands beat niche commands whose generated phrasing shares another word,
-even when their log-scaled popularity scores differ only slightly.
+Task search adds `tar archive` alongside the original `tarball`/`tarballs` query
+word. This curated list applies only to task retrieval and evidence scoring.
+Phrase overlap uses complete tokens, including the task's command name as implicit
+context: tar's "extract files from an archive" therefore shares `extract`, `tar`
+and `archive` with "extract a tar archive". Lexical overlap comes first,
+`popularityScore` breaks ties, then command name and section. A popular dd cannot
+displace convert's more complete "convert an image to png" evidence. All eight
+retrieved task rows are ranked before three are retained; names, citations,
+flags and explain input keep their literal semantics.
 
-The curated query-only synonym list in `convex/queries.ts` maps `tarball` and
-`tarballs` to `tar archive`. These describe the same archive format; broader
-synonyms need a demonstrated query and a regression case. Expansion applies only
-to task retrieval and overlap, preserving the original query, command names,
-option spellings, stored phrase evidence and explain detection.
+Flag ranking uses B7's verified example/tldr usage before B4 popularity, then name
+and section. B4's rounded score is retained as a secondary prior; tied essential
+packages are distinguished by their actual verified usage, not creation order.
+Aliases share evidence, so verified `-x` also supports `--extract`.
 
-Option rows copy the same score on both upload paths. Bare flag lookups in scored
-releases use a descending popularity index before pagination; unscored releases
-keep their name-ordered lookup. New releases populate these fields automatically;
-no mutable backfill of sealed option rows is required. Bare short clusters use
-their first flag's ordered range, then verify the remaining flags on each same
-page. An argument-taking flag cannot consume later cluster letters. The candidate
-cap is `floor(24 / (clusterLength + 1))`, bounding option and page reads plus the
-two release reads to 26 documents (before the existing optional top-hit brief).
-This deliberately bounded attribution may miss a matching command outside the
-candidate range; a precomputed cluster index is the upgrade if real queries need
-more recall. Existing named-cluster behavior and budgets are unchanged.
+`flagSearchCandidates` stores at most 16 candidates for a flag, with up to 12
+verified spellings per page (the same spelling budget as the top-hit brief).
+B7 usage updates refresh these rows, including withdrawals. Task-backfill version
+3 also builds them for existing active releases in batches of 16 pages, and sets
+`datasetReleases.flagSearchReady` only when the full release scan completes.
+The existing deploy/activation entrypoints schedule this migration. Until it
+completes, scored and unscored releases both retain deterministic name-ordered
+option lookup. No option-row score backfill or new index on the large option
+table is needed; the only new index belongs to the initially empty sidecar table.
+
+Bare clusters filter the precomputed candidates for verified coverage of every
+cluster flag before applying the read cap, then check each real option on the
+same page. An argument-taking flag cannot consume later letters. Verified usage
+counts rank candidates, followed by popularity and deterministic name/section.
+Without complete verified coverage, a bounded name-ordered first-flag range is
+used. Direct attribution is bounded to 30 document reads before the optional
+brief; the saturated perf fixture measures that brief too. Recall remains bounded
+by the sidecar's 16 candidates and 12 spellings; broader coverage would need
+precomputed cluster keys. Existing named-cluster and ordinary search workloads
+retain their previous budgets.

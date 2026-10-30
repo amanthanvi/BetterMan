@@ -176,3 +176,26 @@ Man pages (`/man/<name>`, `/man/<name>/<section>`) send `CDN-Cache-Control: publ
 3. After a promotion, the next request misses (`x-vercel-cache: MISS`) and its footer names the new release. If it still hits the old entry, the CDN is keying on the original URL rather than the rewrite. Pages then refresh within the hour (`s-maxage`), and the rewrite key needs replacing with a cache tag and a purge on promotion.
 
 **Deploy order.** Man pages need the Convex functions that report the serving release (`reportRelease`). New Convex with old Next is safe. New Next with old Convex answers 500, because the old validator rejects the argument. `deploy.yml` always pushes Convex before Vercel and stops if the Convex deploy fails, so keep that order for any manual deploy too.
+
+## Search ranking rollout (#464)
+
+The production `convex:prod-check` used by deploy and post-promotion keeps its
+existing availability, typo, page/content and metadata goldens fatal. The five
+new task/flag ranking queries only report advisories when tar is outside the top
+three, including on unscored releases and during asynchronous backfills. Ranking
+quality cannot block the Vercel handoff after Convex has already deployed.
+
+For the local E2E seed, run `BETTERMAN_CHECK_RANKING=seed pnpm convex:prod-check`;
+that explicit mode requires tar first for all five cases and fails on query errors.
+Use `BETTERMAN_E2E_UNSCORED=1` with the seed script to verify the default production
+mode against a legacy release shape without popularity or verified flag usage.
+
+This revision removes #465's proposed indexes on `manPageOptionFlags`. Its sole
+new index is on a new, empty `flagSearchCandidates` table, so this rollout needs
+no `confirm_large_indexes` dispatch. Normal deployment schedules task-backfill
+version 3 through the existing entrypoint. That scan populates verified flag
+candidates and marks each release `flagSearchReady` only on completion; until then
+search uses deterministic fallback. B7 keeps the candidates current afterward.
+`pnpm convex:task-check` reports completion/failures through the existing durable
+per-release status. No production workflow or migration was executed by the
+implementation agent.
