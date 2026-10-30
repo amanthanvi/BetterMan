@@ -36,6 +36,7 @@ class AlpinePackage:
     sha256: str = ""
     data_sha256: str = ""
     data_offset: int = 0
+    pinned_sha256: str = ""
 
     def __post_init__(self):
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9+_.-]*", self.name):
@@ -51,6 +52,8 @@ class AlpinePackage:
             raise ValueError("Unsupported APK control checksum")
         if self.size <= 0 or (self.sha256 and not re.fullmatch(r"[a-f0-9]{64}", self.sha256)):
             raise ValueError("Invalid APK size/observed SHA256")
+        if self.pinned_sha256 and not re.fullmatch(r"[a-f0-9]{64}", self.pinned_sha256):
+            raise ValueError("Invalid reviewed APK SHA256")
 
     @property
     def cache_key(self):
@@ -71,6 +74,15 @@ def names(value):
 
 def catalog(root: Path, pins_path: Path):
     pins = json.loads(pins_path.read_text())
+    hashes = pins.get("packageSha256", {})
+    if not isinstance(hashes, dict) or any(
+        not isinstance(path, str)
+        or safe_path(path) != path
+        or not isinstance(digest, str)
+        or not re.fullmatch(r"[a-f0-9]{64}", digest)
+        for path, digest in hashes.items()
+    ):
+        raise ValueError("Invalid reviewed APK SHA256 pins")
     counts = popularity(pins)
     available = {}
     selected = []
@@ -115,6 +127,7 @@ def catalog(root: Path, pins_path: Path):
                 license=entry.get("L", ""),
                 source=entry.get("o") or name,
                 install_if=names(entry.get("i", "")),
+                pinned_sha256=hashes.get(f"{repo['name']}/x86_64/{name}-{version}.apk", ""),
             )
             available[name] = package
             if name.endswith("-doc") or name in {"man-pages", "man-pages-posix"}:
@@ -122,7 +135,31 @@ def catalog(root: Path, pins_path: Path):
     for name, version in pins.get("packageVersions", {}).items():
         if name not in available or available[name].version != version:
             raise ValueError("Pinned APK package version unavailable")
+    if set(hashes) - {p.filename for p in available.values()}:
+        raise ValueError("Reviewed APK SHA256 pins do not match the pinned catalog")
     return pins, sorted(selected, key=lambda p: p.name), available
+
+
+def require_sha256_pin(pins, package):
+    if "packageSha256" in pins and not package.pinned_sha256:
+        raise ValueError(f"Missing reviewed APK SHA256 pin: {package.filename}")
+
+
+def write_sha256_pins(workspace):
+    """Export all acquired archives for review; never rewrite the committed lock."""
+    hashes = {}
+    for name in sorted(workspace.acquired):
+        package = workspace.available[name]
+        require_sha256_pin(workspace.pins, package)
+        if not package.sha256 or not workspace.store.complete(package):
+            raise ValueError("Cannot export an unverified APK SHA256 pin")
+        hashes[package.filename] = package.sha256
+    document = {"releaseSha256": workspace.pins["releaseSha256"], "packageSha256": hashes}
+    path = workspace.root / "alpine-package-sha256.json"
+    temporary = path.with_suffix(".json.tmp")
+    temporary.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
+    temporary.replace(path)
+    return path
 
 
 def gzip_section(stream, limit):
@@ -152,15 +189,24 @@ def verify(archive, package):
         raise DownloadIntegrityError("apk_size")
     with archive.open("rb") as stream:
         signatures, _ = gzip_section(stream, 1024**2)
-        with tarfile.open(fileobj=io.BytesIO(signatures), mode="r:") as tar:
-            members = list(tar)
-            if not members or not all(m.name.startswith(".SIGN.") for m in members):
-                raise DownloadIntegrityError("apk_signature_section")
+        try:
+            with tarfile.open(fileobj=io.BytesIO(signatures), mode="r:") as tar:
+                members = list(tar)
+                if not members or not all(m.name.startswith(".SIGN.") for m in members):
+                    raise DownloadIntegrityError("apk_signature_section")
+        except (tarfile.TarError, EOFError) as error:
+            raise DownloadIntegrityError("apk_malformed_signature") from error
         control, checksum = gzip_section(stream, MAX_SOURCE_BYTES)
         if checksum != base64.b64decode(package.control_checksum[2:], validate=True):
             raise DownloadIntegrityError("apk_control_checksum")
-        with tarfile.open(fileobj=io.BytesIO(control), mode="r:") as tar:
-            info = tar.extractfile(".PKGINFO").read(MAX_SOURCE_BYTES + 1).decode("utf-8")
+        try:
+            with tarfile.open(fileobj=io.BytesIO(control), mode="r:") as tar:
+                member = tar.getmember(".PKGINFO")
+                if not member.isfile() or member.size > MAX_SOURCE_BYTES:
+                    raise DownloadIntegrityError("apk_pkginfo")
+                info = tar.extractfile(member).read(MAX_SOURCE_BYTES + 1).decode("utf-8")
+        except (tarfile.TarError, EOFError, KeyError, UnicodeDecodeError) as error:
+            raise DownloadIntegrityError("apk_malformed_control") from error
         fields = {}
         for line in info.splitlines():
             if line.startswith("#") or not line.strip():
@@ -189,6 +235,8 @@ def verify(archive, package):
             raise DownloadIntegrityError("apk_data_checksum")
         stream.seek(0)
         actual = hashlib.file_digest(stream, "sha256").hexdigest()
+        if package.pinned_sha256 and actual != package.pinned_sha256:
+            raise DownloadIntegrityError("apk_sha256")
     return {"sha256": actual, "data_sha256": expected, "data_offset": offset}
 
 

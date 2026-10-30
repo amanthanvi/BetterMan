@@ -92,6 +92,10 @@ def measure(root, distro, limit, curated=False, largest=False):
             stored=distro in {"fedora", "arch", "alpine"},
         ):
             pass
+        if distro == "alpine":
+            from ingestion.alpine_archives import write_sha256_pins
+
+            write_sha256_pins(workspace)
         rss_factor = 1 if sys.platform == "darwin" else 1024
         report = {
             "distro": distro,

@@ -527,6 +527,15 @@ jobs:
           BETTERMAN_JOB_STATUS: ${{ job.status }}
           BETTERMAN_STEPS: ${{ toJSON(steps) }}
         run: python3 scripts/dataset-workflow.py finish "${DISTRO}"
+      - name: Export Alpine whole-file SHA256 pins for owner review
+        if: ${{ always() && matrix.full_alpine }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: alpine-package-sha256
+          path: ${{ runner.temp }}/betterman-alpine/workspace/**/alpine-package-sha256.json
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Upload sanitized distro result
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

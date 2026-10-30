@@ -183,11 +183,16 @@ class Workspace:
             source_targets=self.pins.get("sourceTargets"),
         )
         if distro == "alpine":
+            from ingestion.alpine_archives import require_sha256_pin
+
             for name, checksum, actual, data, offset in self.store.db.execute(
                 "SELECT * FROM apk_hashes"
             ):
                 package = self.available.get(name)
                 if package and package.control_checksum == checksum:
+                    require_sha256_pin(self.pins, package)
+                    if package.pinned_sha256 and package.pinned_sha256 != actual:
+                        continue
                     self.available[name] = dataclasses.replace(
                         package, sha256=actual, data_sha256=data, data_offset=offset
                     )
@@ -233,6 +238,10 @@ class Workspace:
         self.missing: list[dict] = []
 
     def _acquire(self, package: Package):
+        if self.distro == "alpine":
+            from ingestion.alpine_archives import require_sha256_pin
+
+            require_sha256_pin(self.pins, package)
         archive_budget = (4 if self.distro == "arch" else 1) * 1024**3
         if package.size > archive_budget:
             raise ValueError("Package exceeds bounded archive budget")
