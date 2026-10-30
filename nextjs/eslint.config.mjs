@@ -27,5 +27,5 @@ export default defineConfig([
     rules: { '@next/next/no-location-assign-relative-destination': 'off' },
   },
   // Unmodified, hash-pinned upstream tracker; provenance and behavior have separate tests.
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'public/assets/site.js', 'public/_bm/**']),
+  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'public/_bm/**']),
 ])

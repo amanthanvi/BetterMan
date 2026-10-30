@@ -128,8 +128,8 @@ Source: [vercel-ops.md](../runbooks/vercel-ops.md#man-page-edge-caching-c4-406).
   | OpenSearch suggestions | Equals `/api/v1/suggest` |
 
   First identify the challenge source in Firewall events. Add no broad `/man/` HTML bypass. Then verify anonymously, with no challenge cookie: `/tar.txt`, `/tar.1.txt`, `/man/tar/1.txt`, `/opensearch.xml`, `/api/v1/suggest?q=ta&format=opensearch`. Add BetterMan as a search engine in real Chrome and Firefox and type `ta`. The post and Show HN claim `curl betterman.sh/tar.txt` works, so this must pass before posting. Observed on 2026-10-30: an anonymous `curl -I https://betterman.sh/tar.txt` returned `429` with `x-vercel-mitigated: challenge`, so the bypass was not effective yet.
-- [ ] **OWNER, optional: Plausible Stats API key for B4 traffic demand.** `pnpm analytics:counts` exports 30 days of aggregate pageviews and is a no-op without `PLAUSIBLE_API_KEY` ([analytics.md](../analytics.md#buildops-page-count-export-for-b4)). Create the key in Plausible, set it only in an operator environment (never `NEXT_PUBLIC_`), and run it after the first few days of launch traffic. Wiring it into the pipeline belongs to [#396 (B4)](https://github.com/amanthanvi/BetterMan/issues/396).
-- [ ] **OWNER:** confirm `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` and `NEXT_PUBLIC_SENTRY_DSN` are set in the production Vercel environment, and that the Plausible custom-event goals (`palette opened`, `pref changed`, `explain used`) exist ([analytics.md](../analytics.md#custom-events)).
+- [ ] **OWNER (lead):** enable **Web Analytics** in the BetterMan Vercel project before the next production deploy ([analytics.md](../analytics.md)).
+- [ ] **OWNER:** confirm `NEXT_PUBLIC_SENTRY_DSN` is set in the production Vercel environment.
 - [ ] **OWNER:** confirm the Convex plan and spend limit cover the full-Debian storage and read numbers from step 3.
 - [ ] **OWNER: posting.** Show HN, the submissions and any on-site post. Drafts are in this folder. Agents do not post, submit, email or create accounts.
 
@@ -178,7 +178,7 @@ Decide thresholds before posting. Suggested triggers: widespread 404 or 500 on p
 Open these dashboards before posting and keep them open. Suggested checks, hourly for the first 6 hours, then every 4–6 hours.
 
 - [ ] **Sentry** (**OWNER** account). Filter to `environment:production`. Watch new issues and the rate of any single issue. The browser reports the environment from `NEXT_PUBLIC_SENTRY_ENVIRONMENT` (see CHANGELOG). Event payloads strip `cmd`, `q` and `name` query params (`nextjs/lib/sentryScrub.ts`), so shell lines should not appear in reports. If one does, treat it as a privacy bug.
-- [ ] **Plausible** (**OWNER** account). Pageviews, top pages, sources (HN, Reddit, search), country. Custom events: `explain used`, `palette opened`, `pref changed`. Search text is never sent. Note which pages the traffic lands on and which return 404.
+- [ ] **Vercel Web Analytics** (**OWNER** project access; production only). Pageviews, top pages, sources (HN, Reddit, search), country. Custom events: `explain used`, `palette opened`, `pref changed`. Search text is never sent. C7 (#409) evidence restarts from this deploy. Note which pages the traffic lands on and which return 404.
 - [ ] **Convex usage** (**OWNER** dashboard). Function calls, database bandwidth and storage against plan limits. Pay attention to `queries:search` bytes per call ([abuse-scraping.md](../runbooks/abuse-scraping.md#search-index-cost)) and whether the edge cache is absorbing man-page reads.
 - [ ] **Vercel** (**OWNER** account). Firewall events for challenges and 429s, function invocations and errors, and the cache hit ratio for `/man/*`.
 - [ ] **Abuse and rate limits.** [abuse-scraping.md](../runbooks/abuse-scraping.md). Origin limits are 300 page reads and 60 searches per IP per minute (from that runbook). Tighten, or block abusive IPs at the edge, if a scraper appears.

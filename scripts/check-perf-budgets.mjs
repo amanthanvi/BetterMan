@@ -54,7 +54,7 @@ await mkdir(output, { recursive: true })
 const env = Object.fromEntries(['PATH', 'HOME', 'TMPDIR', 'SYSTEMROOT', 'CI'].filter(k => process.env[k]).map(k => [k, process.env[k]]))
 Object.assign(env, {
   NODE_ENV: 'production', NEXT_TELEMETRY_DISABLED: '1',
-  NEXT_PUBLIC_PLAUSIBLE_DOMAIN: '', NEXT_PUBLIC_SENTRY_DSN: '', SENTRY_DSN: '',
+  NEXT_PUBLIC_SENTRY_DSN: '', SENTRY_DSN: '',
 })
 let metrics = { calls: 0, documents: 0, storageReads: 0 }
 let manDataBytes = 0

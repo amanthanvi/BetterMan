@@ -282,3 +282,13 @@ one different document and one identical hash. The default disclosure must
 contain both links; the alternate must render its own content and noindex
 metadata. Their cold function/document/blob, HTML and client-byte metrics are
 budgeted separately. Existing metric policies and baselines are preserved.
+
+## Analytics migration
+
+Vercel Web Analytics uses platform same-origin intake, removing one BetterMan
+relay function invocation per pageview and per custom event (#421). It loads only
+on the Vercel production deployment; the perf harness, previews, CI and Docker
+emit no tracker. No byte or read budget is raised by this migration. The current
+main man-page baseline is five calls, 29 documents and one storage read (including
+the generated-brief/derived lookups described above); analytics changes no Convex
+reads. The earlier four-call / 26-document target is not the current baseline.

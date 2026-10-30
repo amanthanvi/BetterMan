@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.join(__dirname, '..'),
   env: {
+    // Vercel supplies intake paths at build time; retain them for both server renderers.
+    VERCEL_ENV: process.env.VERCEL_ENV ?? '',
+    VERCEL_OBSERVABILITY_CLIENT_CONFIG: process.env.VERCEL_OBSERVABILITY_CLIENT_CONFIG ?? '',
     BM_RESERVED_PATH_SEGMENTS: reservedPathSegments(__dirname).join('/'),
   },
   async headers() {
@@ -31,10 +34,6 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: '/assets/site.js',
-        headers: [{ key: 'Cache-Control', value: 'public, max-age=3600, s-maxage=86400' }],
-      },
-      {
         // Font file names carry no content hash, so cache long but not immutable.
         source: '/fonts/:path*',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=2592000' }],
@@ -49,7 +48,6 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
-        { source: '/assets/entry', destination: '/api/measurement/event' },
         {
           source: '/sitemap-:distro-:page.xml',
           destination: '/sitemaps-internal/:distro/:page',

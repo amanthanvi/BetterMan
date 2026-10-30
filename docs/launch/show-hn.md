@@ -60,7 +60,7 @@ It's MIT licensed: https://github.com/amanthanvi/BetterMan. I'll be around to an
 ## Anticipated questions (for the owner, not for posting)
 
 - *"Why not just `man`?"* Because you can't link to a flag, search by task, or compare distros in a terminal. `man` stays the better tool locally. Say so.
-- *"Does it send my commands to a model?"* No. Explain runs a parser on the server, with no model. Sentry events strip `cmd`, `q` and `name` (`nextjs/lib/sentryScrub.ts`). Plausible is first-party and cookieless and receives no search text ([analytics.md](../analytics.md)).
+- *"Does it send my commands to a model?"* No. Explain runs a parser on the server, with no model. Sentry events strip `cmd`, `q` and `name` (`nextjs/lib/sentryScrub.ts`). Vercel Web Analytics loads only in production, uses same-origin intake without cookies, and receives no search text ([analytics.md](../analytics.md)).
 - *"AI-generated content on a reference site?"* Lead with the labelling and the flag check. Do not claim the summaries are always right.
 - *"Cost and traffic?"* Convex Professional. Don't give numbers that aren't in the issue; take the real ones from the first 48 hours.
 - *"Scraping?"* Answer engines may crawl `/man/*`. Bytespider and CCBot are disallowed. See [abuse-scraping.md](../runbooks/abuse-scraping.md).
