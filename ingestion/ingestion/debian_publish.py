@@ -16,6 +16,7 @@ from ingestion.ingest_runner import (
     _ingest_worker_count,
     _iter_license_items,
     _LicenseSpool,
+    _log,
     _package_batch_digest,
     _page_batch_limits,
     _PageSpool,
@@ -71,11 +72,14 @@ def publish_workspace(
     import time
 
     workspace.timings = {}
+    started = time.monotonic()
     with (
         TemporaryDirectory(prefix="publish-", dir=workspace.root) as temporary,
         _PageSpool(Path(temporary) / "pages.sqlite3") as spool,
     ):
         providers, failures = parse_workspace(workspace, spool, workers=_ingest_worker_count())
+        workspace.timings["parseSeconds"] = time.monotonic() - started
+        _log("deb_parse_complete", seconds=workspace.timings["parseSeconds"], pages=len(spool))
         refs = list(spool.refs())
         canonical = [ref for ref in refs if ref.page_id not in providers]
         failed = len(failures) + len(workspace.missing)
@@ -133,6 +137,14 @@ def publish_workspace(
             licenses=licenses, distro="debian", dataset_release_id=release_id
         ):
             pass
+        workspace.timings["metadataSeconds"] = (
+            time.monotonic() - started - workspace.timings["parseSeconds"]
+        )
+        _log(
+            "deb_metadata_complete",
+            seconds=workspace.timings["metadataSeconds"],
+            licenses=len(licenses),
+        )
         require_job_budget("release creation")
         client.post(
             "/ingest/release",
@@ -188,6 +200,7 @@ def publish_workspace(
             workers=_upload_worker_count(),
         )
         workspace.timings["pageUploadSeconds"] = time.monotonic() - upload_started
+        alias_started = time.monotonic()
         for index in range(0, len(workspace.alias_providers), 100):
             require_job_budget("alias upload")
             client.post(
@@ -197,6 +210,7 @@ def publish_workspace(
                     "aliases": workspace.alias_providers[index : index + 100],
                 },
             )
+        workspace.timings["aliasUploadSeconds"] = time.monotonic() - alias_started
         license_started = time.monotonic()
         pending = []
         for notice in _iter_license_items(
@@ -224,4 +238,5 @@ def publish_workspace(
                 }
             )
         workspace.timings["activationSeconds"] = time.monotonic() - activation_started
+        _log("deb_publish_complete", **workspace.timings)
         return IngestResult(release_id, total, len(spool), failed, activate)

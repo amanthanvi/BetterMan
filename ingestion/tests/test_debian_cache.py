@@ -32,7 +32,9 @@ def test_acquisition_cleanup_preserves_original_errors(tmp_path, monkeypatch, fa
     def fail(*_args, **_kwargs):
         raise error
 
-    monkeypatch.setattr(pipeline, "download", fail if failure == "download" else lambda *_: 0)
+    monkeypatch.setattr(
+        pipeline, "download", fail if failure == "download" else lambda *_, **_kw: 0
+    )
     monkeypatch.setattr(pipeline, "extract", fail)
     with pytest.raises(RuntimeError) as caught:
         obj._acquire(package)
@@ -155,3 +157,49 @@ def test_extracted_quota_counts_resumed_files_and_parallel_writes(tmp_path):
     assert quota.used == 5
     with pytest.raises(RuntimeError, match="Existing extracted"):
         ExtractedQuota(tmp_path, 4)
+
+
+@pytest.mark.parametrize("status", [404, 410, 429, 503, "timeout"])
+def test_regular_mirror_falls_back_to_pinned_snapshot(tmp_path, monkeypatch, status):
+    calls, sleeps = [], []
+    data = b"pinned archive"
+
+    def fetch(req, **_kwargs):
+        calls.append(req.full_url)
+        if len(calls) == 1:
+            if status == "timeout":
+                raise TimeoutError()
+            raise HTTPError(req.full_url, status, "unavailable", {"Retry-After": "7"}, None)
+        return io.BytesIO(data)
+
+    monkeypatch.setattr(indexes, "urlopen", fetch)
+    monkeypatch.setattr(indexes.time, "sleep", sleeps.append)
+    monkeypatch.setattr(indexes.random, "uniform", lambda *_: 0)
+    monkeypatch.setattr(convex_client, "ingest_activation_deadline", lambda: None)
+    digest = hashlib.sha256(data).hexdigest()
+    assert indexes.download(
+        "https://deb.debian.org/debian/a.deb",
+        tmp_path / "a",
+        digest,
+        len(data),
+        fallback_url="https://snapshot.test/pinned/a.deb",
+    ) == len(data)
+    assert calls == ["https://deb.debian.org/debian/a.deb", "https://snapshot.test/pinned/a.deb"]
+    assert sum(sleeps) == (0 if status in {404, 410} else 5 if status == "timeout" else 7)
+
+
+def test_mirror_integrity_failure_never_falls_back_or_creates_receipt(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        indexes, "urlopen", lambda req, **_: calls.append(req.full_url) or io.BytesIO(b"bad")
+    )
+    with pytest.raises(ValueError, match="mismatch"):
+        indexes.download(
+            "https://deb.debian.org/debian/a.deb",
+            tmp_path / "a",
+            "0" * 64,
+            3,
+            fallback_url="https://snapshot.test/pinned/a.deb",
+        )
+    assert len(calls) == 1
+    assert not list(tmp_path.iterdir())

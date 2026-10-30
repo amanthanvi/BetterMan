@@ -23,7 +23,11 @@ from urllib.request import Request, urlopen
 PINS = Path(__file__).resolve().parents[1] / "data" / "debian-trixie.json"
 BINARY_PATH = re.compile(r"^(?:(?:usr/)?s?bin/[^/]+|usr/lib/llvm-[^/]+/bin/[^/]+)$")
 MAN_PATH = re.compile(
-    r"^(?:usr/share/man|usr/lib/jvm/[^/]+/man)/man[1-9][a-z0-9]*/([^/]+)\.([1-9][a-z0-9]*)(?:\.(?:gz|xz|bz2|zst))?$",
+    # These private English roots are registered under unchanged basenames by
+    # their postinst data. Retain the sources directly, without running helpers.
+    r"^(?:usr/share/man|usr/lib/jvm/[^/]+/man|usr/share/"
+    r"(?:postgresql/[0-9]+|firebird/[0-9]+\.[0-9]+|groovy|icedtea-web|librarian-puppet|scala-[0-9]+\.[0-9]+)/man)"
+    r"/man[1-9][a-z0-9]*/([^/]+)\.([1-9][a-z0-9]*)(?:\.(?:gz|xz|bz2|zst))?$",
     re.IGNORECASE,
 )
 
@@ -90,11 +94,17 @@ def _download_once(url: str, destination: Path, digest: str, size: int | None = 
         temporary.unlink(missing_ok=True)
 
 
-def download(url: str, destination: Path, digest: str, size: int | None = None) -> int:
+def download(
+    url: str, destination: Path, digest: str, size: int | None = None, *, fallback_url=None
+) -> int:
     for attempt in range(8):
         try:
             return _download_once(url, destination, digest, size)
         except HTTPError as exc:
+            if fallback_url and exc.code in {404, 410}:
+                exc.close()
+                url, fallback_url = fallback_url, None
+                continue
             if exc.code not in {429, 500, 502, 503, 504} or attempt == 7:
                 raise
             retry_after = exc.headers.get("Retry-After", "") if exc.headers else ""
@@ -103,6 +113,8 @@ def download(url: str, destination: Path, digest: str, size: int | None = None) 
             if attempt == 7:
                 raise
             retry_after = ""
+        if fallback_url:
+            url, fallback_url = fallback_url, None
         delay = min(180, 5 * 2**attempt) + random.uniform(0, 3)
         try:
             advertised = float(retry_after)

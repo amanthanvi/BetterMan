@@ -239,8 +239,12 @@ raw values are never printed.
 `data/debian-trixie.json` pins snapshot, suite/component/architecture and the
 Release SHA256. Verified Release SHA256/size entries bind Contents-all,
 Contents-amd64 and Packages.xz, which bind every archive filename/version/size/SHA256.
-English root manuals and the OpenJDK archive manual root are selected. The curated
-package pass also captures runtime postinst data when a command's manual lives
+English root manuals and verified private manual roots (OpenJDK, PostgreSQL,
+Firebird, Groovy, IcedTea-Web, librarian-puppet and Scala) are selected. These
+packages register their private manuals under unchanged basenames through
+alternatives. Retaining the actual sources restores their documented tools
+without executing sourced helpers or interpreting `dpkg -L`/`sed` pipelines.
+The curated package pass also captures runtime postinst data when a command's manual lives
 in another package (vim/vim-tiny and vim-common) or is absent (G++). These runtime
 packages must participate in elections even without owning a manual in Contents.
 Nothing is installed.
@@ -334,9 +338,16 @@ and partial files, replacements and concurrent writes. Reservations happen befor
 writes under one shared lock. `BETTERMAN_DEBIAN_EXTRACTED_MAX_BYTES` can lower
 this to at least 16 MiB, but cannot raise it past 4 GiB. Exhaustion stops acquisition
 with completed receipts retained. Free-space checks remain an additional guard.
-Every cache hit is rehashed and size-checked. There are at most two downloads per
-pipeline. Each file gets eight attempts with exponential backoff and jitter,
-up to minutes, honoring Retry-After on 429/503 and respecting the job deadline.
+Every cache hit is rehashed and size-checked. Restored archives are consumed
+before fresh downloads can evict them. Release, Contents and Packages still
+come only from the pinned snapshot. Archive payloads try `deb.debian.org` first,
+bound to the pinned Packages SHA256 and size; a missing archive (404/410) falls
+back immediately to the pinned snapshot. Transient transport/429/5xx failures
+switch to snapshot after the existing backoff, honoring Retry-After. A checksum
+or size mismatch fails immediately, including on the regular mirror. There
+are still at most two downloads per pipeline and eight total attempts per file
+with exponential backoff and jitter up to minutes, honoring Retry-After on
+429/503 and respecting the job deadline.
 A Retry-After over fifteen minutes stops with the checkpoint retained rather
 than retrying early. Integrity failures do not retry or publish bad bytes.
 
@@ -367,6 +378,22 @@ cannot be combined with upload and never creates a Convex client.
 `--audit-alternatives` extends the fixed sample with the competing providers
 listed in the evidence, elects routes, and audits renderable sources against the
 roff checks. It also performs no Convex writes and records every rejection.
+
+`--audit-command-pages` scans the complete verified Contents catalog, acquires
+all curated command owners plus supported private-root packages, replays
+parsing and the exact publish command gate, verifies provider copyrights, and
+writes `command-pages-audit.json`. It creates no Convex client. Every curated
+package is reported as present, excluded with its reason, or non-command.
+Use a dedicated workdir (the `--packages` value must match on workspace reuse):
+
+```bash
+pnpm ingest:debian-benchmark --workdir /absolute/path/to/audit --packages 1 --audit-command-pages
+```
+
+Acquisition progress separates elapsed time from summed download/extraction
+worker seconds and reports cache hits. It collects completed tasks first to
+keep both workers occupied; parser ordering is unchanged. Parse, metadata,
+pages, aliases, licenses and activation emit phase timings for runner audits.
 
 The workflow's `debian_download_only: true` dispatch runs that acquisition-only
 mode for 2,000 packages in a separate job with no production environment or Convex

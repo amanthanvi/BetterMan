@@ -14,7 +14,8 @@ import sys
 import threading
 import time
 import uuid
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, ThreadPoolExecutor, wait
+from itertools import islice
 from pathlib import Path
 
 from ingestion.convex_client import ingest_activation_deadline
@@ -177,17 +178,24 @@ class Workspace:
             self._inflight.add(f"{package.sha256}.deb")
         archive = self.cache / f"{package.sha256}.deb"
         try:
+            started = time.monotonic()
             size = download(
-                f"{self.pins['mirror']}/{package.filename}", archive, package.sha256, package.size
+                f"https://deb.debian.org/debian/{package.filename}",
+                archive,
+                package.sha256,
+                package.size,
+                fallback_url=f"{self.pins['mirror']}/{package.filename}",
             )
+            downloaded = time.monotonic()
             archive.touch()
             entries = extract(archive, package, self.root, quota=self.extracted_quota)
+            extracted = time.monotonic()
         finally:
             with self._disk_lock:
                 self._reserved -= package.size
                 self._inflight.discard(f"{package.sha256}.deb")
                 self._evict_archives()
-        return package, entries, size
+        return package, entries, size, downloaded - started, extracted - downloaded
 
     def _evict_archives(self):
         # Called under the disk lock. In-flight archives are excluded; complete
@@ -210,18 +218,52 @@ class Workspace:
                 if p.name not in self.acquired
             }.values()
         )
+        # Consume restored archives before fresh downloads can evict them.
+        pending.sort(key=lambda p: not (self.cache / f"{p.sha256}.deb").is_file())
+        started = time.monotonic()
+        download_seconds = extract_seconds = 0
+        cache_hits = 0
         with ThreadPoolExecutor(max_workers=workers) as executor:
-            for _pkg, future in _bounded_futures(executor, self._acquire, iter(pending), workers):
-                package, entries, size = future.result()
-                self.store.add(package, entries)
-                self.acquired.add(package.name)
-                self.downloaded += size
-                if len(self.acquired) % 100 == 0:
-                    log.info(
-                        json.dumps(
-                            {"event": "deb_extraction_progress", "packages": len(self.acquired)}
+            remaining = iter(pending)
+            futures = {executor.submit(self._acquire, p) for p in islice(remaining, workers)}
+            while futures:
+                done, futures = wait(futures, return_when=FIRST_COMPLETED)
+                for future in done:
+                    package, entries, size, fetched, extracted = future.result()
+                    download_seconds += fetched
+                    extract_seconds += extracted
+                    cache_hits += size == 0
+                    self.store.add(package, entries)
+                    self.acquired.add(package.name)
+                    self.downloaded += size
+                    if len(self.acquired) % 100 == 0:
+                        log.info(
+                            json.dumps(
+                                {
+                                    "event": "deb_extraction_progress",
+                                    "packages": len(self.acquired),
+                                    "downloadWorkerSeconds": round(download_seconds, 3),
+                                    "extractWorkerSeconds": round(extract_seconds, 3),
+                                    "elapsedSeconds": round(time.monotonic() - started, 3),
+                                    "archiveCacheHits": cache_hits,
+                                }
+                            )
                         )
-                    )
+                    if (next_package := next(remaining, None)) is not None:
+                        futures.add(executor.submit(self._acquire, next_package))
+
+        log.info(
+            json.dumps(
+                {
+                    "event": "deb_acquisition_complete",
+                    "packages": len(pending),
+                    "downloadWorkerSeconds": round(download_seconds, 3),
+                    "extractWorkerSeconds": round(extract_seconds, 3),
+                    "elapsedSeconds": round(time.monotonic() - started, 3),
+                    "archiveCacheHits": cache_hits,
+                }
+            )
+        )
 
     def resolve(self, package: str, path: str, **kwargs):
         for _ in range(32):

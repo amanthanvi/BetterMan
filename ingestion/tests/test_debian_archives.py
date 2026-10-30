@@ -167,6 +167,54 @@ def test_release_uses_sha256_not_md5_and_sampling_is_stable():
     assert pipeline.sample_packages(packages, 2)[0].name == "gawk"
 
 
+@pytest.mark.parametrize(
+    "root",
+    [
+        "usr/share/postgresql/17",
+        "usr/share/firebird/3.0",
+        "usr/share/groovy",
+        "usr/share/icedtea-web",
+        "usr/share/librarian-puppet",
+        "usr/share/scala-2.11",
+    ],
+)
+def test_private_alternatives_manuals_are_selected_and_extracted(tmp_path, root):
+    import tarfile
+
+    path = f"{root}/man/man1/psql.1.gz"
+    assert indexes.MAN_PATH.fullmatch(path)
+    assert not indexes.MAN_PATH.fullmatch(f"{root}/man/fr/man1/psql.1.gz")
+    tar_bytes = io.BytesIO()
+    with tarfile.open(fileobj=tar_bytes, mode="w") as tar:
+        for name in ["psql", "pg_dump", "createdb"]:
+            member = tarfile.TarInfo(path.replace("psql", name))
+            payload = f".TH {name.upper()} 1\n.SH NAME\n{name} - fixture\n".encode()
+            member.size = len(payload)
+            tar.addfile(member, io.BytesIO(payload))
+
+    def ar_member(name, data):
+        return (
+            f"{name:<16}{0:<12}{0:<6}{0:<6}{'100644':<8}{len(data):<10}`\n".encode()
+            + data
+            + (b"\n" if len(data) % 2 else b"")
+        )
+
+    archive = tmp_path / "postgresql.deb"
+    archive.write_bytes(
+        b"!<arch>\n"
+        + ar_member("debian-binary", b"2.0\n")
+        + ar_member("data.tar", tar_bytes.getvalue())
+    )
+    pkg = Package("postgresql-client-17", "17", "pool/main/p/pg.deb", "a" * 64, 1)
+    store = ArchiveStore(tmp_path)
+    try:
+        store.add(pkg, extract(archive, pkg, tmp_path))
+        assert {row[2] for row in store.manuals()} == {"psql", "pg_dump", "createdb"}
+        assert b"PSQL" in store.resolve(pkg.name, path)
+    finally:
+        store.db.close()
+
+
 def test_archive_publisher_uses_bounded_pipeline_and_declares_every_provider(
     archive_workspace, tmp_path, monkeypatch
 ):
@@ -545,13 +593,64 @@ def test_acquisition_deduplicates_manual_and_runtime_control_selections(
     obj = archive_workspace
     obj.acquired.clear()
     obj.downloaded = 0
+    obj.cache = obj.root
     seen = []
 
     def acquire(pkg):
         seen.append(pkg.name)
-        return pkg, [], 0
+        return pkg, [], 0, 0, 0
 
     monkeypatch.setattr(obj, "_acquire", acquire)
     pkg = obj.packages[0]
     obj.acquire([pkg, pkg], workers=2)
     assert seen == [pkg.name]
+
+    seen.clear()
+    obj.acquired.clear()
+    cached = obj.packages[-1]
+    (obj.cache / f"{cached.sha256}.deb").write_bytes(b"checked by download, not scheduling")
+    obj.acquire(obj.packages, workers=1)
+    assert seen[0] == cached.name
+
+
+def test_command_audit_replays_gate_and_reports_every_curated_entry(archive_workspace, monkeypatch):
+    from ingestion import package_set
+    from scripts.check_debian_archives import audit_command_pages
+
+    obj = archive_workspace
+    obj.pins = {"releaseSha256": "a" * 64}
+    obj.all_manual_packages = obj.packages
+    obj.curated_packages = []
+    monkeypatch.setattr(package_set, "FULL_PACKAGE_SET_DEBIAN", ["gawk", "gcc", "manpages"])
+    report = audit_command_pages(obj, workers=1)
+    assert [(row["package"], row["status"]) for row in report["commands"]] == [
+        ("gawk", "present"),
+        ("gcc", "excluded"),
+        ("manpages", "non-command"),
+    ]
+    assert "non-free" in report["commands"][1]["reason"]
+    assert not report["parseFailures"] and not report["unresolvedSources"]
+
+
+def test_acquisition_keeps_worker_busy_when_an_earlier_archive_is_slow(
+    archive_workspace, monkeypatch
+):
+    import threading
+
+    obj = archive_workspace
+    obj.acquired.clear()
+    obj.downloaded = 0
+    obj.cache = obj.root
+    third_started = threading.Event()
+    first, _second, third = obj.packages
+
+    def acquire(pkg):
+        if pkg == first:
+            assert third_started.wait(2), "a finished worker was idle behind the first download"
+        if pkg == third:
+            third_started.set()
+        return pkg, [], 0, 0, 0
+
+    monkeypatch.setattr(obj, "_acquire", acquire)
+    obj.acquire(obj.packages, workers=2)
+    assert obj.acquired == {p.name for p in obj.packages}

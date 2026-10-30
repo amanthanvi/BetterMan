@@ -257,6 +257,16 @@ promotions. Setting it alone does not opt into full ingestion. Non-empty
 repository values other than exactly `1` emit a workflow warning and remain off. Empty
 values are treated as unset without warning; warnings never echo supplied values.
 
+Archive payloads now try the regular Debian CDN before the pinned snapshot,
+with SHA256 and size still bound to the pinned Packages index. Metadata never
+uses the mutable mirror. Missing payloads fall back immediately; transient errors
+retain backoff/Retry-After, and integrity mismatches fail closed. Restored cached
+archives are consumed first. The checksum cache and extracted-file limits are
+unchanged. Before a full retry, the no-upload `--audit-command-pages` benchmark
+mode can check every curated command against the full catalog and acquired
+providers; see [the first-run recovery evidence](../roadmap/b1-debian-evidence.md#first-production-import-recovery).
+Do not enable `BETTERMAN_ALLOW_MISSING_COMMAND_PAGES` in the workflow.
+
 The verified archive cache is capped at 2 GiB and keyed only by pinned Release
 SHA256; there is no run-ID fan-out. GitHub keeps the first immutable cache entry
 for that Release/branch and evicts older keys through its repository-wide 10 GB

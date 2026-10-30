@@ -143,3 +143,9 @@ def test_full_contents_collision_audit_deduplicates_architectures_and_keeps_case
     assert result["realPageCollisions"][0]["spellings"] == ["_Exit", "_exit"]
     assert len(result["realPageCollisions"][0]["sources"]) == 2
     assert result["auditedAlternativeCollisionCount"] == 1
+
+
+def test_sourced_postgresql_helper_is_not_guessed_as_a_literal_registration():
+    # Its basename-preserving manual roots are imported directly from archives.
+    offers, skipped = parse_alternatives((ROOT / "postgresql.postinst").read_text())
+    assert not offers and not skipped

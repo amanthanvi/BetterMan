@@ -1,6 +1,10 @@
 # Debian archive pipeline evidence
 
-All measurements use public Debian archives and this worktree's loopback Convex.
+The recovery section below records the first production failure read-only and
+new local, no-upload measurements. The original B1 measurements that follow
+are historical (including the draft-PR and v5 status at the time).
+
+All original measurements use public Debian archives and this worktree's loopback Convex.
 No shared import, runner dispatch, repository-variable change, promotion, billing
 change or production access was performed. The download-only GitHub dispatch is
 prepared but was not executed. PR #436 remains draft, rebased onto main
@@ -15,6 +19,166 @@ parser/provider audits are recorded separately. Archive sample measurements are
 from correction head `196639a1aaad31a18eb80b0a8272dd9ed4fbae2a`; the v5 rebase's
 page-view measurements and integration checks are recorded separately below.
 The storage probe is not a combined v5 derived/symbol storage measurement.
+
+## First production import recovery
+
+Run [40957721036](https://github.com/amanthanvi/BetterMan/actions/runs/40957721036)
+ran main `614714a6` with contract v5. This correction rebased onto main
+`54b95eb7` (promotion CAS, contract v6). No workflow was dispatched, no shared
+Convex backend was contacted, and no production secret, variable, data or
+infrastructure changed. All new archive work below is local and no-upload.
+The [recovery artifact](b1-debian-recovery.json) records the full command audit,
+archive/script hashes, selections and measurements.
+
+### Why psql was missing
+
+The pinned Release is unchanged: snapshot `20261001T000000Z`, SHA256
+`ed56aac47e7911e65ee63aae8d67e29f20e023f840e49f8ed037043a33de138a`.
+Its complete Contents index records
+`usr/share/postgresql/17/man/man1/psql.1.gz` in `postgresql-client-17`.
+Packages records version `17.11-0+deb13u1`, archive SHA256
+`9d8558f8dd57c8e92e218a20698383575d53742ca3f9e7c2b7fe5f246d5216ae`.
+The `postgresql-client` 17+278 metapackage depends on that package, and the
+versioned package also `Provides: postgresql-client`.
+
+The captured postinst fixture derives VERSION from its package name, sources
+`/usr/share/postgresql-common/maintscripts-functions`, and calls
+`configure_client_version`. That verified helper belongs to
+`postgresql-client-common` 278 (archive SHA256
+`023e5b37cdeecedcd32b7ea0d799c9696310c4fc659b8123c494e1ad3ca9e726`).
+Its `_link_manpages` uses `dpkg -L` for client/server/contrib packages, enumerates
+versioned manuals, transforms the root with `sed`, and registers `psql.1.gz`
+plus the other manuals as alternatives slaves at priority 170. All of this was
+read as data; nothing was installed, sourced or executed.
+
+The shared MAN_PATH filter excluded this root at catalog selection, extraction,
+and source enumeration. The static alternatives reader also cannot interpret
+this sourced `dpkg`/`sed` helper. The fix retains the actual versioned English
+manuals directly, under their existing basenames, as for OpenJDK. This restores
+psql, pg_dump, pg_restore, createdb and the rest without inventing shell evaluation.
+The complete Contents private-root audit also found basename-preserving
+alternatives in Firebird 3/4, Groovy, IcedTea-Web, librarian-puppet and Scala;
+their verified postinst text establishes the additional narrow roots. All nine
+newly supported private-root packages were acquired and parsed locally. Other
+private documentation/example roots were not indiscriminately imported.
+
+The catalog grows from 17,314 to **17,323 packages / 18,443,518,580 archive bytes**.
+Extractor receipt version 4 invalidates old incomplete selections; this is a
+local checkpoint version, **not an ingest contract bump**. The publish gate
+already accepts a route supplied by a dependency/virtual provider. Regression
+coverage proves that behavior for PostgreSQL and MySQL; the gate was not relaxed.
+Its diagnostic owner hints now match the audited owners for psql, mysql, groff,
+vim and apache2. The operator escape hatch remains unchanged and absent from
+workflow configuration.
+
+### Complete curated package-set audit
+
+`--audit-command-pages` scans both complete, Release-verified Contents indexes,
+acquires every curated command's candidate owners and supported private roots,
+replays the real parser/aliases and exact publish gate, and verifies provider
+copyrights. The audit acquired 65 packages including dependencies and verified
+52 provider notices, with **zero parse failures and zero unresolved sources**.
+This is a full catalog/curated-command audit, not a full 17,323-archive replay.
+
+**28 commands present:** groff, bash, ls, mount, find, grep, sed, gawk, curl,
+wget, ssh_config, rsync, nc, tar, systemd, vim, less, git, make, nginx,
+apache2, openssl (1ssl), python3, perl, ip, ps, psql and mysql.
+
+**Every exclusion:** gcc(1) is in `gcc-14-doc` in non-free; gdb(1) is in
+`gdb-doc` in non-free. Both remain outside the selected main component and keep
+their existing explicit logged exclusions. **No required command is missing.**
+`manpages`, `manpages-dev` and `libssl-dev` remain non-command packages.
+The machine-readable report lists each command's index paths and selected owner;
+notably psql is owned by `postgresql-client-17`, mysql by `mariadb-client-core`,
+groff by `groff-base`, vim by `vim-common`, and apache2 by `apache2-bin`.
+
+```bash
+pnpm ingest:debian-benchmark --workdir ../.cache/debian/command-audit --packages 1 --audit-command-pages
+```
+
+The workdir argument is relative to `ingestion/`. Reusing a workspace requires
+the same `--packages` value; the audit replaces its in-memory sample selection
+with the required owners. It does not instantiate a Convex client.
+
+### Where the production time went
+
+The job started at **21:26:00 UTC on October 29**; first 100 packages were
+extracted at **21:27:22**. It reached 2,000 at **21:47:16**, 10,000 at
+**23:32:12**, and 17,300 at **00:58:20 on October 30**. The command gate failed
+at **01:19:46**, before the first release/upload request. The roughly **234
+minutes** therefore consist of about **212 minutes through acquisition** and
+**at most 21.4 more minutes** for the remaining packages, source preparation,
+alternatives and parsing. Upload, upload-time indexes, aliases, notices and
+activation never began. The 2,141,225,338-byte compressed archive cache saved
+successfully at 01:19:54.
+
+The old logs do not separate HTTP download, decompression/extraction, cache
+inventory and SQLite time. Calling all 212 minutes download time would be
+unsupported. The archive loop made a new HTTPS request to snapshot for each
+cache miss and waited on futures in submission order; one slow package could
+leave the other worker idle. New acquisition collects completed futures first,
+without changing parser ordering or allowing more than two running tasks.
+Progress/completion logs now report wall seconds, summed download worker
+seconds (including retries/cache validation), extraction worker seconds and
+cache hits. Parse and publish phase events identify the remaining work.
+
+Archive payloads now use the Debian CDN first, **only with the pinned Packages
+SHA256 and size**. Release, Contents and Packages still come from snapshot.
+404/410 falls back immediately; transient transport/429/5xx errors switch to
+snapshot after the original backoff and Retry-After. Integrity failures stop
+immediately. Eight total attempts, the absolute deadline, 1 GiB per archive,
+two concurrent workers, 2 GiB retained cache and 4 GiB extracted-file ceiling
+remain. Restored cache entries run first so earlier fresh downloads cannot
+evict them before use. The 18.44 GB corpus cannot fit in that cache; it remains
+an optimization, not full cross-runner recovery.
+
+### Local measurements and runner projection
+
+Local host: macOS arm64, Python 3.14.10, mandoc 1.14.6; two workers. A paired
+cold-file comparison used the same first 100 manual packages ordered by SHA256
+of package name, **82,200,524 verified bytes**:
+
+| Source | Acquisition plus extraction wall | Download worker seconds | Extraction worker seconds |
+| --- | ---: | ---: | ---: |
+| Pinned snapshot | 16.895 s | 30.301 s | 3.225 s |
+| Debian CDN | 4.979 s | 6.850 s | 3.086 s |
+
+This measured **3.39x** improvement is local, not a runner speed guarantee.
+It isolates request acquisition as the material difference for this sample;
+archive extraction work is almost identical. It does not attribute the entire
+production acquisition duration to network latency.
+
+A fresh-cache 2,000-package CDN replay (started before the completion-order
+queue fix) transferred **2,048,628,238 bytes**, including dependency acquisition.
+It measured **10.55 s indexes, 197.29 s acquisition, 105.61 s parsing, 5.16 s
+notice collection**. All **15,117 real pages / 8,853 aliases / 2,000 package
+notices** passed, with no parse failures, unresolved sources or missing notices.
+The selection differs from the original evidence by seven packages (including
+libssl-doc and its many aliases); the exact new selection is recorded. Parent
+peak RSS was 416.7 MB, largest child 184.0 MB, retained sources 57.5 MB and spool
+345.0 MB. These are local sample measurements, not a full-corpus disk/RSS peak.
+
+The CDN is the main runtime change; completion-order scheduling and early cache
+consumption add margin without raising concurrency or disk limits. More parallel
+downloads were not chosen because they increase mirror pressure and in-flight
+disk exposure. The saved cache helps but covers only a bounded subset. Splitting
+acquisition across new GitHub runners would repeatedly lose uncached extracted
+state; same-workspace checkpoints remain the fallback after interruption.
+
+For runner planning, provisionally budget **225 minutes to verified staging**:
+5 minutes setup/index/cache, 106 acquisition (only 2x the old measured pace,
+versus 3.39x in the paired local sample), 24 source preparation/parse, 45 for
+release declarations/pages/upload indexes/aliases/notices, and 45 for staged
+activation/hydration. This leaves **75 minutes against the 300-minute job**.
+These upload/cloud allowances are projections; this correction performed no
+cloud upload. Allow another 45 minutes when planning later derived completion:
+that gives **270 minutes including a derived allowance**, with 30 minutes spare.
+B7 is actually scheduled asynchronously by prod promotion, not by this held
+staging import, so this is an allowance, not a claim that the staging job waits
+for B7 or proves its completion. Mirror fallback/throttling and full-corpus cloud
+behavior can still exceed the estimate; the new phase logs make that visible.
+The full-Debian hold, CAS gates, persisted `acquisition: "deb-extraction"` checks,
+workflow budgets and contract v6 are unchanged.
 
 ## Defaults and approval boundary
 

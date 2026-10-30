@@ -57,6 +57,11 @@ def test_exclusions_do_not_disable_other_distros(distro, package) -> None:
         ("ubuntu", "python3", "python3(1)", "python3-minimal"),
         ("debian", "perl", "perl(1)", "perl-base"),
         ("debian", "python3", "python3(1)", "python3-minimal"),
+        ("debian", "postgresql-client", "psql(1)", "postgresql-client-17"),
+        ("debian", "default-mysql-client", "mysql(1)", "mariadb-client-core"),
+        ("debian", "groff", "groff(1)", "groff-base"),
+        ("debian", "vim", "vim(1)", "vim-common"),
+        ("debian", "apache2", "apache2(8)", "apache2-bin"),
         ("fedora", "coreutils", "ls(1)", "coreutils-common"),
         ("fedora", "util-linux", "mount(8)", "util-linux-core"),
         ("arch", "tar", "tar(1)", "tar"),
@@ -149,3 +154,20 @@ def test_sample_still_requires_tar_and_ignores_unsampled_commands() -> None:
         runner._require_command_pages(
             distro="arch", requested=["tar", "gcc"], pages=[], aliases=[], sample=True
         )
+
+
+@pytest.mark.parametrize(
+    "package,name,owner",
+    [
+        ("postgresql-client", "psql", "postgresql-client-17"),
+        ("default-mysql-client", "mysql", "mariadb-client-core"),
+    ],
+)
+def test_metapackage_commands_accept_real_or_virtual_provider(package, name, owner):
+    runner._require_command_pages(
+        distro="debian",
+        requested=[package],
+        pages=[SimpleNamespace(name=name, section="1", source_package=owner)],
+        aliases=[],
+        sample=False,
+    )

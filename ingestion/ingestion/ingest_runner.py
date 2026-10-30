@@ -920,10 +920,15 @@ _COMMAND_PAGE_EXCLUSIONS = {
 }
 _COMMAND_PAGE_OWNERS = {
     "debian": {
+        "groff": "groff-base",
         "util-linux": "mount",
+        "vim": "vim-common",
+        "apache2": "apache2-bin",
         "git": "git-man",
         "perl": "perl-base",
         "python3": "python3-minimal",
+        "postgresql-client": "postgresql-client-17",
+        "default-mysql-client": "mariadb-client-core",
     },
     "ubuntu": {
         "util-linux": "mount",

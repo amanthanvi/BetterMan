@@ -9,6 +9,102 @@ from pathlib import Path
 from ingestion.debian_pipeline import benchmark
 
 
+def audit_command_pages(workspace, *, workers=2):
+    """Full Contents audit plus a no-upload replay of every curated command owner."""
+    from tempfile import TemporaryDirectory
+
+    from ingestion.debian_indexes import MAN_PATH
+    from ingestion.debian_licenses import copyright_text
+    from ingestion.debian_pipeline import parse_workspace
+    from ingestion.ingest_runner import (
+        _COMMAND_PAGE_EXCLUSIONS,
+        _COMMAND_PAGE_OWNERS,
+        _COMMAND_PAGES,
+        _PageSpool,
+        _require_command_pages,
+    )
+    from ingestion.package_set import FULL_PACKAGE_SET_DEBIAN
+
+    expected = {p: _COMMAND_PAGES[p] for p in FULL_PACKAGE_SET_DEBIAN if p in _COMMAND_PAGES}
+    sources = {route: [] for route in expected.values()}
+    private_packages = set()
+    for path, pkg in workspace.owners.execute("SELECT path,pkg FROM owners ORDER BY path,pkg"):
+        match = MAN_PATH.fullmatch(path)
+        route = (match[1].lower(), match[2][:1]) if match else None
+        if route in sources:
+            sources[route].append({"package": pkg, "path": path})
+        if match and path.startswith("usr/share/") and not path.startswith("usr/share/man/"):
+            private_packages.add(pkg)
+    selected = set(FULL_PACKAGE_SET_DEBIAN) | set(_COMMAND_PAGE_OWNERS["debian"].values())
+    selected |= private_packages
+    selected.update(source["package"] for items in sources.values() for source in items)
+    workspace.packages = [
+        workspace.available[n] for n in sorted(selected) if n in workspace.available
+    ]
+    workspace.acquire()
+    with TemporaryDirectory(prefix="command-audit-", dir=workspace.root) as temporary:
+        with _PageSpool(Path(temporary) / "pages.sqlite3") as spool:
+            providers, failures = parse_workspace(workspace, spool, workers=workers)
+            canonical = [p for p in spool.refs() if p.page_id not in providers]
+            license_packages = {p.source_package for p in spool.refs() if p.source_package}
+            license_packages.update(a["sourcePackage"] for a in workspace.alias_providers)
+            for pkg in sorted(license_packages):
+                copyright_text(workspace, pkg)
+            present = {(p.name, p.section[:1]) for p in canonical} | {
+                (a.name, a.section[:1]) for a in workspace.aliases
+            }
+            report = []
+            for pkg in FULL_PACKAGE_SET_DEBIAN:
+                if pkg not in expected:
+                    report.append({"package": pkg, "status": "non-command"})
+                    continue
+                name, section = expected[pkg]
+                reason = _COMMAND_PAGE_EXCLUSIONS["debian"].get(pkg)
+                winner = next(
+                    (
+                        value
+                        for (n, s), value in workspace.route_winners.items()
+                        if n == name and s[:1] == section
+                    ),
+                    None,
+                )
+                report.append(
+                    {
+                        "package": pkg,
+                        "name": name,
+                        "section": section,
+                        "status": "excluded"
+                        if reason
+                        else "present"
+                        if (name, section) in present
+                        else "missing",
+                        "reason": reason,
+                        "catalogSources": sources[(name, section)],
+                        "resolvedOwner": winner[0] if winner else None,
+                        "resolvedPath": winner[1] if winner else None,
+                    }
+                )
+            # Exercise exactly the publish gate; never enable its escape hatch.
+            _require_command_pages(
+                distro="debian",
+                requested=FULL_PACKAGE_SET_DEBIAN,
+                pages=canonical,
+                aliases=workspace.aliases,
+                sample=False,
+            )
+    return {
+        "scope": "complete pinned Contents-all/amd64 and curated-owner archive parse; no upload",
+        "releaseSha256": workspace.pins["releaseSha256"],
+        "fullManualPackages": len(workspace.all_manual_packages),
+        "acquiredPackages": len(workspace.acquired),
+        "privateManualPackages": sorted(private_packages),
+        "verifiedLicenses": len(license_packages),
+        "commands": report,
+        "parseFailures": failures,
+        "unresolvedSources": workspace.missing,
+    }
+
+
 def audit_routes(admin):
     names = (
         "which cc c++ view ex nawk fakeroot telnet traceroute java mt lzma mailx "
@@ -208,6 +304,7 @@ def main():
     parser.add_argument("--packages", type=int, default=2000)
     parser.add_argument("--workers", type=int, default=2)
     parser.add_argument("--download-only", action="store_true")
+    parser.add_argument("--audit-command-pages", action="store_true")
     parser.add_argument("--audit-active-alternatives", action="store_true")
     parser.add_argument(
         "--audit-alternatives", action="store_true", help="No-upload provider and roff-guard audit"
@@ -218,6 +315,22 @@ def main():
         help="Upload only to this worktree's loopback deployment",
     )
     args = parser.parse_args()
+    if args.audit_command_pages:
+        if (
+            args.local_upload
+            or args.download_only
+            or args.audit_alternatives
+            or args.audit_active_alternatives
+        ):
+            parser.error("command-page audit cannot combine with other modes")
+        from ingestion.debian_pipeline import Workspace
+
+        report = audit_command_pages(
+            Workspace(args.workdir.resolve(), limit=args.packages), workers=args.workers
+        )
+        (args.workdir / "command-pages-audit.json").write_text(json.dumps(report, indent=2) + "\n")
+        print(json.dumps(report, indent=2))
+        return
     if args.audit_alternatives:
         if args.local_upload or args.download_only or args.audit_active_alternatives:
             parser.error("provider audit cannot combine with other modes")
