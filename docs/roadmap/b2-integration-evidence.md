@@ -79,7 +79,7 @@ install (no external node_modules links), passes the complete Next build and
 typecheck. Docker is not installed locally; this does not claim a full image build.
 Application, ingest, Convex and deploy-guard behavior is unchanged by the COPY.
 
-## Latest P1 follow-up
+## Previous P1 attempt (superseded)
 
 #470 now proves selectors from the release-cached default provider set before any
 provider lookup; alias answers include registered choices. Explicit HTML requests
@@ -96,3 +96,33 @@ remain 4 calls/26 docs/1 storage read. Alternate is 7/31/2 vs 4/11/1 (+3/+20/+1)
 for default proof and early limiting. Two perf runs reproduce this; unchanged
 performance budget fails only those three alternate metrics. The lead must review
 this bounded cold cost. No budget, tolerance or harness changes were made.
+
+## Light metadata proof (current)
+
+Lead rejected full-default proof at 7/31/2. #470 now uses a dedicated providersFor
+query returning packages and answering release only. Canonical proof reads the
+active pointer plus #463's cached list (two docs), no content or storage. Next's
+internal metadata cache keys only distro/name/section/release; mismatched answers
+are never stored. Only real providers enter release/pkg page caches. Unknown
+selectors trigger no page, related or typo reads and keep private HTML responses.
+The added HTML page limiter is removed; existing API/text limits remain.
+
+The approved cold target is met: standard and provider-default 4 calls/26 docs/1
+storage read; alternate 5/13/1. Only alternate call/doc baselines change to the
+lead's exact 5/13 targets; all other metrics/tolerances stay unchanged. #470 has
+the required perf-budget-change label and Budget explanation. Public API now has
+21 functions; providersFor accepts no stage. No ingest contract/schema/index
+change, and immutable-parent index preflight behavior is unchanged.
+
+Each local measurement applies open #477 c8dde155 with cherry-pick --no-commit to
+ignore T3 bare GET / probes, then reverses the patch and verifies original bytes.
+No #477 commit or harness edit is delivered. Full raw artifacts remain locally in
+.cache/b2/r5-*; Fedora evidence records query/cache regressions and measured cost.
+
+Rechecked final heads: Fedora 968 ingestion / 871 frontend / 3,283 Convex;
+Arch 990 / 871 / 3,285; Alpine 1,020 / 871 / 3,287. Each has 127 ops and 13
+workflow tests passing, plus lint/grammar/typecheck/public-API/codegen-no-drift/
+pip dry-run. Each family's perf:check passes at 5/13/1 alternate and 4/26/1
+standard/default with the temporary #477 workaround. Final combined production
+build and provider/man-query/short-URL E2E: 22 passed. Task-owned local servers
+were stopped after PID/PPID/start/executable verification; no CI watches.

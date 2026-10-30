@@ -178,7 +178,7 @@ with codegen no drift, pip dry-run and all guards. Production Next build and all
 17 man-query/short-URL E2E tests pass on the final stack. Prior native acquisition
 measurements and the 240/300-minute, under-6-GB staging projection are unchanged.
 
-## Latest P1 stack re-check
+## Previous P1 attempt (superseded)
 
 Restacked on #470's bounded default-first provider proof/early page limiter and
 immutable target-parent schema preflight. Implementation commits replayed
@@ -191,3 +191,23 @@ URL E2E is 22 passing tests. The measured alternate cold read cost is 7/31/2 vs
 those three alternate limits. See Fedora/integration evidence for the tradeoff
 and schema audits. Native Alpine samples and the 240/300-minute, <6 GB projection
 are unchanged; staging measurement, reviewed pins and owner sign-off remain.
+
+## Light metadata proof integration
+
+Restacked implementation commits unchanged onto #470's dedicated provider-list
+proof and removal of the extra HTML limiter. Metadata is cached by route/release
+only, with answering-release validation; unknown packages cause no page lookups
+or pkg entries. Alias/case behavior and private misses remain tested. The approved
+canonical-route alternate cost is 5 calls/13 docs/1 storage read, with clean
+standard/default routes unchanged at 4/26/1. #477's desktop-probe patch is used
+only uncommitted for local measurement, then removed. No new ingestion contract,
+schema/index, archive acquisition or pin refresh is introduced by this rework.
+The 240/300-minute, <6 GB staging projection is unchanged. Staging measurement,
+reviewed whole-file SHA256 pins and separate production sign-off remain with lead.
+
+Final validation: 1,020 ingestion / 871 frontend / 3,287 Convex / 127 ops / 13
+workflow tests pass, all lint/grammar/typecheck/public-API/pip/codegen-no-drift
+checks pass. Alpine perf:check passes at 5/13/1 alternate and 4/26/1 default/
+standard, with only the uncommitted local #477 workaround. Final production build
+and 22 provider/man-query/short-URL E2E tests pass. #477 patch reversed and exact
+original harness bytes verified; no generated-file drift remains.
