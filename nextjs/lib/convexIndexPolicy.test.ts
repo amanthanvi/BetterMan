@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { test } from 'node:test'
-import { requireIndexConfirmation, schemaIndexes } from './check-convex-indexes.mjs'
+import { test } from 'vitest'
+import { requireIndexConfirmation, schemaIndexes } from '../../scripts/check-convex-indexes.mjs'
 
 const table = 'defineTable({ value: v.string() }).index("by_releaseId", ["releaseId"])'
-const source = value => `export default defineSchema({ licenses: ${value} });`
+const source = (value: string) => `export default defineSchema({ licenses: ${value} });`
 const baseline = { schemaVersion: 1, tables: schemaIndexes(source(table)) }
 
 test('index additions and changes fail closed without an exact confirmation', () => {
@@ -35,8 +35,8 @@ test('ordinary fields and new empty tables do not backfill a listed legacy table
 })
 
 test('B2 avoids a new index on the existing licenses table', () => {
-  const schema = readFileSync(new URL('../convex/schema.ts', import.meta.url), 'utf8')
-  const policy = JSON.parse(readFileSync(new URL('./convex-index-policy.json', import.meta.url), 'utf8'))
+  const schema = readFileSync(new URL('../../convex/schema.ts', import.meta.url), 'utf8')
+  const policy = JSON.parse(readFileSync(new URL('../../scripts/convex-index-policy.json', import.meta.url), 'utf8'))
   assert.ok(policy.tables.licenses.length > 0)
   assert.ok(!schemaIndexes(schema).licenses.some(index => index.includes('by_storageId')))
 })

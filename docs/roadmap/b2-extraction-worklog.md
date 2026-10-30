@@ -30,3 +30,9 @@ Preserve prior cold/cached acquisition measurements and projections: Ubuntu
 Alpine reviewed pin map is required when present; lead commits full staging pins
 later. Original evidence and .cache/b2 artifacts remain; no subagents or CI watches.
 Task-local Convex ports 3432/3433; stop only freshly verified task-owned processes.
+
+CI-specific correction: ci_contracts intentionally installs no dependencies.
+Moved all four TypeScript parser regressions to the installed frontend suite;
+left deployment-stop tests in dependency-free ops. No guard/application behavior
+changed. Current totals: 865 frontend, 127 ops, 13 workflow tests. Validate ops
+with bare dependency imports disabled, then restack descendants and refresh Proof.

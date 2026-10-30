@@ -172,3 +172,8 @@ for baseline maintenance and future confirmed/staged index rollout.
 Final integration checks: **968 ingestion / 3,283 Convex / 861 frontend / 131 ops /
 13 dataset/deploy workflow tests** pass. Lint/grammar/typecheck/public API, isolated
 codegen with no drift, pip dry-run and the unconfirmed index preflight pass.
+
+CI compatibility: the TypeScript-syntax parser tests run in the installed frontend
+suite; ops/workflow tests remain dependency-free, matching ci_contracts. The four
+parser regressions are retained, not skipped. Latest totals are 865 frontend,
+127 ops and 13 dataset/deploy workflow tests.
