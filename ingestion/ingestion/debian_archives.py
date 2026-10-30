@@ -318,7 +318,7 @@ class ArchiveStore:
         owner, kind, target, file = entry
         if kind == "blocked":
             raise ValueError("Documentation link leaves archive documentation roots")
-        if kind == "link":
+        if kind in {"link", "generated-link"}:
             return self.resolve(owner, target, seen, details=details, follow_stubs=follow_stubs)
         data = source_bytes(Path(file))
         stub = is_so_stub(data)
@@ -348,7 +348,9 @@ class ArchiveStore:
         return (owner, path, data) if details else data
 
     def manuals(self):
-        for pkg, path in self.db.execute("SELECT pkg,path FROM entries ORDER BY pkg,path"):
+        for pkg, path in self.db.execute(
+            "SELECT pkg,path FROM entries WHERE kind != 'generated-link' ORDER BY pkg,path"
+        ):
             match = MAN_PATH.fullmatch(path)
             if match and manual_registered(pkg, path, self.registrations):
                 yield pkg, path, match.group(1).lower(), match.group(2).lower()

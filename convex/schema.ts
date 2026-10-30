@@ -23,7 +23,7 @@ export const datasetStageValidator = v.union(
   v.literal("prod"),
 );
 
-export const acquisitionValidator = v.union(v.literal("deb-extraction"), v.literal("ubuntu-deb-extraction"));
+export const acquisitionValidator = v.union(v.literal("deb-extraction"), v.literal("ubuntu-deb-extraction"), v.literal("fedora-rpm-extraction"));
 
 // Convex functions deploy before the frontend. Keep accepting the legacy field
 // so the previous frontend and historical rollbacks remain compatible; public
@@ -348,8 +348,10 @@ export default defineSchema({
     licenseId: v.string(),
     licenseName: v.string(),
     licenseText: v.string(),
+    storageId: v.optional(v.id("_storage")),
     sourceUrl: v.optional(v.string()),
-  }).index("by_releaseId_and_packageName", ["releaseId", "packageName"]),
+  }).index("by_releaseId_and_packageName", ["releaseId", "packageName"])
+    .index("by_storageId", ["storageId"]),
 
   // Operational progress and pins are separate from frequently-read release records.
   derivedBuilds: defineTable({

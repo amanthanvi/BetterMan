@@ -503,3 +503,30 @@ Use `--packages 200` without `--curated` for a deterministic package sample.
 The curated mode discovers competitors using the complete verified Contents
 and checks elected command owners, aliases and notices before reporting success.
 See [Ubuntu evidence and runner projections](../docs/roadmap/b2-ubuntu-evidence.md).
+
+## Full Fedora from archives (B2)
+
+`pnpm ingest:run --distro fedora --fedora-full` selects the pinned Fedora 44
+Everything x86_64/noarch RPM corpus through verified primary/filelists metadata.
+Python 3.14, mandoc and bsdtar (`libarchive-tools`) are required. Package scripts
+are data only; bounded header reading and B1's static alternatives election
+restore generated links without installation or script execution.
+
+Cron requires `BETTERMAN_FEDORA_FULL=1`; dispatch requires `fedora_full: true`.
+Independent production authorization is `fedora_full_promote: true` or
+`BETTERMAN_FEDORA_FULL_PROMOTE=1`. All default off. Persisted
+`fedora-rpm-extraction`, mandatory index tiers and CAS enforce the server hold.
+
+Notices above 512 KiB use complete storage JSON, including pruning/orphan cleanup;
+7 MiB encoded is the import ceiling. The same-origin API streams compressed JSON
+for browser reads and offers a storage redirect without gzip. Missing standalone
+notices stay explicitly declared absent; license expressions are provenance.
+
+```bash
+pnpm ingest:full-benchmark --distro fedora --workdir ../.cache/b2/fedora-audit --packages 50 --curated
+pnpm ingest:full-benchmark --distro fedora --workdir ../.cache/b2/fedora-sample --packages 200
+```
+
+[Evidence, exact selections, limits and projections](../docs/roadmap/b2-fedora-evidence.md).
+The lead dispatches staging measurement after merge; no implementation run
+changes shared data, enables variables or authorizes promotion.

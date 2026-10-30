@@ -6,7 +6,7 @@ import { ingestClientError } from "./_ingestErrors";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { packOptionSignature } from "./_derivedInputs";
 import { optionFlagRows } from "./_optionFlags";
-import { MANIFEST_CONTENT_TYPE } from "./_manifestStorage";
+import { LICENSE_CONTENT_TYPE, MANIFEST_CONTENT_TYPE } from "./_manifestStorage";
 import { INGEST_CONTRACT } from "./ingestContract";
 import { canonicalJson } from "./ingest";
 import { releaseAcquisition } from "./_releaseManifest";
@@ -215,8 +215,35 @@ http.route({
   path: "/ingest/licenses",
   method: "POST",
   handler: ingestAction(async (ctx, body) => {
-    const result = await ctx.runMutation(internal.ingest.insertLicenses, body as never);
-    return jsonResponse(result);
+    const input = body as { datasetReleaseId: string; licenses: Array<Record<string, unknown>> };
+    if (!input || !Array.isArray(input.licenses) || input.licenses.length > 100) throw new Error("INVALID_INGEST_PAYLOAD");
+    const created: Array<Id<"_storage">> = [];
+    let committed = false;
+    try {
+      const licenses = [];
+      for (const license of input.licenses) {
+        if (!license || typeof license !== "object" || "storageId" in license ||
+            typeof license.packageName !== "string" || typeof license.licenseId !== "string" ||
+            typeof license.licenseName !== "string" || typeof license.licenseText !== "string") throw new Error("INVALID_INGEST_PAYLOAD");
+        if (!license.licenseText.trim()) throw new Error("EMPTY_LICENSE_TEXT");
+        const bytes = new TextEncoder().encode(license.licenseText).length;
+        if (bytes > 7 * 1024 * 1024) throw new Error("INVALID_INGEST_PAYLOAD");
+        if (bytes <= 512 * 1024) { licenses.push(license); continue; }
+        const text = JSON.stringify({ package: license.packageName.trim().toLowerCase(),
+          licenseId: license.licenseId, licenseName: license.licenseName, text: license.licenseText });
+        const storageId = await ctx.storage.store(new Blob([text], { type: LICENSE_CONTENT_TYPE }));
+        created.push(storageId);
+        licenses.push({ ...license, licenseText: "", storageId });
+      }
+      const { unusedStorageIds = [], ...result } = await ctx.runMutation(internal.ingest.insertLicenses,
+        { ...input, licenses } as never);
+      committed = true;
+      await Promise.all(unusedStorageIds.map(id => ctx.storage.delete(id)));
+      return jsonResponse(result);
+    } catch (error) {
+      if (!committed) await Promise.all(created.map(id => ctx.storage.delete(id)));
+      throw error;
+    }
   }),
 });
 
@@ -225,7 +252,7 @@ http.route({
   method: "POST",
   handler: ingestAction(async (ctx, body) => {
     // Full-Debian production authorization belongs to the gated promote path.
-    const result = await ctx.runMutation(internal.ingest.activateRelease, { ...body as object, allowFullDebian: false, allowFullUbuntu: false } as never);
+    const result = await ctx.runMutation(internal.ingest.activateRelease, { ...body as object, allowFullDebian: false, allowFullUbuntu: false, allowFullFedora: false } as never);
     return jsonResponse(result, result.pending ? 409 : 200);
   }),
 });

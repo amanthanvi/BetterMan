@@ -23,6 +23,9 @@ from ingestion.util import sha256_hex
 
 
 def measure(root, distro, limit, curated=False):
+    notice_text = copyright_text
+    if distro == "fedora":
+        from ingestion.fedora_archives import copyright_text as notice_text
     started = time.monotonic()
     workspace = Workspace(root, limit=limit, distro=distro)
     if curated:
@@ -61,9 +64,14 @@ def measure(root, distro, limit, curated=False):
             {p.source_package for p in spool.refs()}
             | {a["sourcePackage"] for a in workspace.alias_providers}
         ):
-            notices[pkg] = copyright_text(workspace, pkg)
+            text = notice_text(workspace, pkg)
+            if text.strip():
+                notices[pkg] = text
         for _ in _iter_license_items(
-            licenses=notices, distro=distro, dataset_release_id="b2-local-audit"
+            licenses=notices,
+            distro=distro,
+            dataset_release_id="b2-local-audit",
+            stored=distro == "fedora",
         ):
             pass
         rss_factor = 1 if sys.platform == "darwin" else 1024
@@ -73,10 +81,15 @@ def measure(root, distro, limit, curated=False):
             if curated
             else "local, no-upload bounded sample",
             "pinsSha256": sha256_hex(
-                (Path(__file__).resolve().parents[1] / "data" / "ubuntu-noble.json").read_bytes()
+                (
+                    Path(__file__).resolve().parents[1]
+                    / "data"
+                    / {"ubuntu": "ubuntu-noble.json", "fedora": "fedora-44.json"}[distro]
+                ).read_bytes()
             ),
             "fullPackages": len(workspace.all_manual_packages),
             "fullArchiveBytes": sum(p.size for p in workspace.all_manual_packages),
+            "fullArchiveMaxBytes": max(p.size for p in workspace.all_manual_packages),
             "samplePackages": len(workspace.packages),
             "acquiredPackages": len(workspace.acquired),
             "downloadedBytes": workspace.downloaded,
@@ -94,8 +107,19 @@ def measure(root, distro, limit, curated=False):
             * rss_factor,
             "commandOwners": owners,
             "parseFailures": failures,
-            "unresolved": workspace.missing,
+            "unresolved": [m for m in workspace.missing if m["error"] != "Unsupported route name"],
+            "unsupportedRoutes": [
+                m for m in workspace.missing if m["error"] == "Unsupported route name"
+            ],
             "verifiedLicenses": len(notices),
+            "maxLicenseBytes": max((len(notices[p].encode()) for p in notices), default=0),
+            "packagesWithoutLicenseText": sorted(
+                (
+                    {p.source_package for p in spool.refs()}
+                    | {a["sourcePackage"] for a in workspace.alias_providers}
+                )
+                - set(notices)
+            ),
             "packages": [
                 {"name": p.name, "sha256": p.sha256, "bytes": p.size} for p in workspace.packages
             ],
@@ -108,7 +132,7 @@ def measure(root, distro, limit, curated=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--distro", choices=["ubuntu"], required=True)
+    parser.add_argument("--distro", choices=["ubuntu", "fedora"], required=True)
     parser.add_argument("--workdir", type=Path, required=True)
     parser.add_argument("--packages", type=int, default=50)
     parser.add_argument("--curated", action="store_true")

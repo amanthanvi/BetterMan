@@ -542,3 +542,31 @@ it.each([true, false, undefined])('keeps legacy JSON indexing and marks only exp
     }
   }
 })
+
+it('streams the complete large license as gzip without crossing the browser CSP', async () => {
+  const { fetchLicenseText } = await import('@/lib/api')
+  const { gunzipSync } = await import('node:zlib')
+  const license = { package: 'large', licenseId: 'pkg:large', licenseName: 'large', text: 'copyright notice\n'.repeat(280000) }
+  vi.mocked(fetchLicenseText).mockResolvedValue({ ...license, text: '', textUrl: 'https://storage.test/large' })
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(license))))
+  try {
+    const req = request('/api/v1/licenses/large?distro=fedora')
+    req.headers.set('accept-encoding', 'gzip, br')
+    const response = await GET(req, context(['v1', 'licenses', 'large']))
+    expect(response.headers.get('content-encoding')).toBe('gzip')
+    expect(response.headers.get('vary')).toBe('Accept-Encoding')
+    const bytes = new Uint8Array(await response.arrayBuffer())
+    expect(bytes.length).toBeLessThan(4 * 1024 * 1024)
+    expect(JSON.parse(gunzipSync(bytes).toString())).toEqual(license)
+  } finally { vi.unstubAllGlobals() }
+})
+
+it.each(['', 'gzip;q=0'])('offers a storage redirect when gzip is unavailable (%s)', async encoding => {
+  const { fetchLicenseText } = await import('@/lib/api')
+  vi.mocked(fetchLicenseText).mockResolvedValue({ package: 'large', licenseId: 'pkg:large', licenseName: 'large', text: '', textUrl: 'https://storage.test/large' })
+  const req = request('/api/v1/licenses/large?distro=fedora')
+  req.headers.set('accept-encoding', encoding)
+  const response = await GET(req, context(['v1', 'licenses', 'large']))
+  expect(response.status).toBe(307)
+  expect(response.headers.get('location')).toBe('https://storage.test/large')
+})

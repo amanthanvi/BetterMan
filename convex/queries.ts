@@ -1043,11 +1043,14 @@ export const getLicense = query({
       )
       .unique();
     if (!license) return null;
+    const textUrl = license.storageId ? await ctx.storage.getUrl(license.storageId) : null;
+    if (license.storageId && !textUrl) throw new Error("LICENSE_FILE_MISSING");
     return {
       package: pkg,
       licenseId: license.licenseId,
       licenseName: license.licenseName,
       text: license.licenseText,
+      ...(textUrl ? { textUrl } : {}),
     };
   },
 });

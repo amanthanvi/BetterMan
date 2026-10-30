@@ -1,0 +1,25 @@
+{
+  "acquisition": "fedora-rpm-extraction",
+  "mirror": "https://dl.fedoraproject.org/pub/fedora/linux/releases/44/Everything/x86_64/os",
+  "architecture": "x86_64",
+  "releaseSha256": "da3845427d188097f6fd71b417a039bdfb8efefc4f38ca44b5cbb94f95a18991",
+  "popcon": {
+    "url": "https://popcon.debian.org/by_inst",
+    "acquiredAt": "2026-10-29",
+    "sourceSha256": "60d469b43fbb00fed5a1e1c67d9136bb3b6590bec64dd47cc9321616f1cb8a91",
+    "file": "popcon-by-inst.tsv.gz",
+    "sha256": "8e2cc98280beacff1ac62b434380a00d5ebbc79800cf51845f1fc46d6db1750a",
+    "format": "package tab installed-count; normalized from rank/name/inst columns of by_inst"
+  },
+  "distro": "fedora",
+  "archiveSuffix": ".rpm",
+  "popularitySource": "Debian by_inst exact-name proxy; no Fedora installation counts",
+  "alternatives": "RPM scriptlets read as data with B1 static alternatives election; no execution",
+  "extractor": "rpm-payload-and-static-alternatives-v3",
+  "packageVersions": {
+    "rubygem-bundler": "0:4.0.3-32.fc44",
+    "rubygem-power_assert": "0:3.0.1-32.fc44",
+    "rubygem-rake": "0:13.3.1-32.fc44"
+  },
+  "fallbackMirror": "https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/44/Everything/x86_64/os"
+}

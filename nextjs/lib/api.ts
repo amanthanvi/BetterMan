@@ -82,7 +82,7 @@ export type LicensesResponse = {
   packages: LicensePackage[]
 }
 
-export type LicenseTextResponse = { package: string; licenseId: string; licenseName: string; text: string }
+export type LicenseTextResponse = { package: string; licenseId: string; licenseName: string; text: string; textUrl?: string | null }
 
 export class FastApiError extends Error {
   status: number

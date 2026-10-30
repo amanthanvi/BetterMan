@@ -339,10 +339,11 @@ def test_default_debian_keeps_curated_docker_path(monkeypatch):
 
 
 @pytest.mark.parametrize("extra", [[], ["--sample"], ["--no-activate"], ["--in-container"]])
-def test_ubuntu_full_cannot_target_prod(monkeypatch, extra):
+@pytest.mark.parametrize("distro", ["ubuntu", "fedora"])
+def test_full_family_cannot_target_prod(monkeypatch, extra, distro):
     monkeypatch.setenv("BETTERMAN_DATASET_STAGE", "prod")
     monkeypatch.setattr(cli, "_run_ingest", lambda **kw: pytest.fail("must fail before work"))
-    assert cli.main(["ingest", "--distro", "ubuntu", "--ubuntu-full", *extra]) == 2
+    assert cli.main(["ingest", "--distro", distro, f"--{distro}-full", *extra]) == 2
 
 
 def test_ubuntu_full_selects_native_archive_pipeline(monkeypatch):

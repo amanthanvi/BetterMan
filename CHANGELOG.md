@@ -10,7 +10,7 @@ All notable changes to BetterMan are documented here.
 - Ingestion: send Ubuntu promotion authorization only to backends advertising its acquisition capability, and reject unsupported explicit authorization (#394).
 
 - Ingestion: isolate B2's exact v8 contract from B4 v7 and translations v9 (#394).
-
+- Add opt-in full Fedora RPM extraction with independent staging and promotion holds (#394).
 - Add opt-in full Ubuntu archive extraction with independent staging and promotion holds (#394).
 
 - Combine demand and provider indexability, retain release-keyed text responses, and omit canonicals that would point at noindex pages.
