@@ -4,8 +4,10 @@ import {
   fetchManResolve,
   fetchManByNameAndSectionOrAlias,
   withDistroFallback,
+  servedRelease,
 } from '@/lib/api'
 import { canonicalWithDistro, normalizeDistro, withDistro } from '@/lib/distro'
+import { trustedRelease } from '@/lib/manRelease'
 import { renderManText } from '@/lib/manText'
 import { getPublicOrigin } from '@/lib/public-origin'
 import { isRateLimited } from '@/lib/rateLimit'
@@ -50,22 +52,28 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
   const urlDistro = rawDistro ? normalizeDistro(rawDistro) : null
   if (rawDistro && !urlDistro) return text('Invalid distro\n', 400)
   const requestedDistro = urlDistro ?? 'debian'
+  const release = trustedRelease(Object.fromEntries(request.headers))?.datasetReleaseId
+  // An unknown proxy key must never populate the unkeyed data cache.
+  const lookupRelease = release ?? `unknown:${crypto.randomUUID()}`
+  const cacheHeaders = (answered: string | null): HeadersInit =>
+    release && answered === release ? {} : { 'Cache-Control': 'private, no-store' }
   if (await isRateLimited(request.headers, 'page')) return text('Too many requests\n', 429)
 
   try {
     const { distro, data } = await withDistroFallback(requestedDistro, async (distro) =>
       section === undefined
-        ? await fetchManResolve({ distro, name: name.toLowerCase() })
-        : await fetchManByNameAndSectionOrAlias({ distro, name, section: section.toLowerCase(), ...(pkg ? { pkg } : {}) }),
+        ? await fetchManResolve({ distro, name: name.toLowerCase(), release: lookupRelease })
+        : await fetchManByNameAndSectionOrAlias({ distro, name, section: section.toLowerCase(), release: lookupRelease, ...(pkg ? { pkg } : {}) }),
     )
+    const headers = cacheHeaders(servedRelease(data))
     if (data.kind === 'ambiguous') {
       return text(`Multiple sections match ${name}. Choose a plain-text page:\n${data.options.map((option) => textHref(`${manPath(name, option.section)}.txt`)).join('\n')}\n`, 409)
     }
     if (data.kind === 'alias' || !('data' in data)) {
-      return text('', 308, { Location: textHref(`${manPath(data.name, data.section)}.txt`, 'pkg' in data ? packageName(data.pkg) : undefined) })
+      return text('', 308, { ...headers, Location: textHref(`${manPath(data.name, data.section)}.txt`, 'pkg' in data ? packageName(data.pkg) : undefined) })
     }
     const canonical = `${getPublicOrigin(request)}${canonicalWithDistro(manPath(data.data.page.name, data.data.page.section), distro)}`
-    return text(renderManText(data.data), 200, { Link: `<${canonical}>; rel="canonical"` })
+    return text(renderManText(data.data), 200, { ...headers, Link: `<${canonical}>; rel="canonical"` })
   } catch (err) {
     if (err instanceof FastApiError) {
       return text(err.status === 404 ? 'Page not found\n' : 'Page temporarily unavailable\n', err.status)

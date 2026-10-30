@@ -85,13 +85,15 @@ async function releaseWithin(distro: Parameters<typeof servingRelease>[0]): Prom
  * one is sent to the explicit URL, privately. Explicit URLs, and bare ones without
  * such a cookie, are rewritten to carry the active release, which keys the cache.
  */
-async function manProxy(request: NextRequest, cspEnabled: boolean): Promise<NextResponse> {
+async function manProxy(request: NextRequest, cspEnabled: boolean, text = false): Promise<NextResponse> {
   const url = request.nextUrl
   const explicit = normalizeDistro(url.searchParams.get('distro'))
   const preferred = normalizeDistro(request.cookies.get(DISTRO_COOKIE)?.value)
-  const csp = cspEnabled ? buildCsp([await manBootScriptHash()], { strictDynamic: false }) : null
+  const csp = cspEnabled ? text
+    ? buildCsp([`'nonce-${createNonce()}'`], { strictDynamic: true })
+    : buildCsp([await manBootScriptHash()], { strictDynamic: false }) : null
 
-  if (!explicit && preferred && preferred !== 'debian') {
+  if (!text && !explicit && preferred && preferred !== 'debian') {
     const target = url.clone()
     target.searchParams.delete(RELEASE_PARAM)
     target.searchParams.set('distro', preferred)
@@ -139,6 +141,10 @@ export async function proxy(request: NextRequest) {
   if (redirect) return setSecurityHeaders(redirect, null)
   const cspEnabled = process.env.CSP_ENABLED !== 'false'
   if (isManHtmlPath(request.nextUrl.pathname)) return await manProxy(request, cspEnabled)
+  const path = request.nextUrl.pathname
+  if (/^\/man\/[^/]+\/[^/]+\.txt$/.test(path) || (/^\/[^/]+\.txt$/.test(path) && path !== '/robots.txt')) {
+    return await manProxy(request, cspEnabled, true)
+  }
 
   if (!cspEnabled) return setSecurityHeaders(NextResponse.next(), null)
 
@@ -164,5 +170,6 @@ export const config = {
     // Man page prefetches get the release key too, so they are cacheable and a
     // client cannot reach the renderer past the proxy with its own release header.
     { source: '/man/:path*' },
+    { source: '/:name.txt' },
   ],
 }
