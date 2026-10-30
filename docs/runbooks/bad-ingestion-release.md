@@ -63,14 +63,36 @@ selectors. Once the owner authorizes the rollback, use the explicit promotion
 input without enabling a recurring repository switch:
 
 ```bash
-gh workflow run update-dataset -f ingest=false -f promote=true -f debian_full_promote=true
+gh workflow run update-dataset -f ingest=false -f promote=true -f debian_full_promote=true \
+  -f 'expected_release_ids={"debian":"<previous-full-debian-prod-id>"}'
 ```
 
-The promotion transaction verifies the staged release and supplies the required
-full-Debian authorization. Confirm the returned Debian prod ID matches the saved
+Replace the placeholder in `expected_release_ids` with the exact saved rollback
+ID. This dispatch input preserves the operator's choice while the workflow
+waits in the concurrency queue; omitting it only captures staging at job time.
+The partial map pins Debian; the other six distros still capture current
+verified staging unless you supply their inspected IDs too.
+
+The workflow checks contract v6, reads and verifies the staging ID through the
+authenticated promotion-source endpoint, fails the distro job if it differs
+from the supplied saved ID, and passes that saved ID as
+`expectedDatasetReleaseId: {"debian": "<saved-rollback-id>"}` with the required
+full-Debian authorization. The transaction checks the persisted acquisition
+identity, CAS expectation, seal, manifest and metadata. A concurrent staging
+change returns `409 STAGING_RELEASE_CONFLICT` and changes no pointers in that
+request; investigate and verify the intended ID before a new dispatch. Confirm
+the returned Debian prod ID matches the saved
 rollback ID, then smoke-test pages and search. On a lost response, check public
 `getInfo` before retrying. Keep the staging pointer unchanged until promotion
-finishes; manual activation is outside workflow concurrency protection.
+finishes; manual activation is outside workflow concurrency protection. A retry
+whose prod pointer already equals the expected ID acknowledges it without
+rewriting pointers or history, but still requires full-Debian authorization.
+The derived scheduler is called without force so failed derived work can resume
+while healthy completed work is deduplicated. An unready full-Debian source
+reports its readiness error before the hold check; wait for completed staging
+activation before retrying the pinned dispatch.
+`409 INGEST_CONTRACT_MISMATCH` requires matching workflow/Convex versions, never
+an unconditional retry. See [deploy recovery](multi-distro-ops.md#deploy-and-activation-recovery).
 
 **Follow-ups**
 

@@ -42,6 +42,31 @@ it("does not advertise the ingest contract when the secret is unset", async () =
   expect(response.status).toBe(503);
 });
 
+it.each([undefined, "5", "7"])("rejects promotion from a workflow with contract header %s before touching pointers", async (version) => {
+  vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
+  const t = convexTest(schema, modules);
+  const response = await t.fetch("/ingest/promote", {
+    method: "POST",
+    headers: { authorization: "Bearer test-secret", "content-type": "application/json", ...(version ? { "x-betterman-ingest-contract": version } : {}) },
+    body: JSON.stringify({ fromStage: "staging", toStage: "prod", distros: ["debian"], activatedAt: "now" }),
+  });
+  expect(response.status).toBe(409);
+  expect(await response.json()).toMatchObject({ error: { code: "INGEST_CONTRACT_MISMATCH" } });
+  expect(await t.run(ctx => ctx.db.query("activeReleases").take(10))).toEqual([]);
+  expect(await t.run(ctx => ctx.db.system.query("_scheduled_functions").take(10))).toEqual([]);
+});
+
+it("accepts the deployed promotion contract while keeping CAS optional for manual callers", async () => {
+  vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
+  const t = convexTest(schema, modules);
+  const response = await t.fetch("/ingest/promote", {
+    method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
+    body: JSON.stringify({ fromStage: "staging", toStage: "prod", distros: [], activatedAt: "now" }),
+  });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ promoted: [] });
+});
+
 it("combines package batches, symbols, signatures, optional arguments and providers in one v5 sealed release", async () => {
   vi.useFakeTimers();
   vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");

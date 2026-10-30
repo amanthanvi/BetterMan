@@ -22,6 +22,8 @@ from unittest.mock import call, patch
 spec = importlib.util.spec_from_file_location('workflow', 'scripts/dataset-workflow.py')
 w = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(w)
+sys.path.insert(0, str(Path('ingestion').resolve()))
+from ingestion.convex_client import ConvexIngestClient, REQUIRED_SCHEMA_VERSION, REQUIRED_FUNCTIONS, REQUIRED_DECLARATION_COUNTS
 
 class WorkflowTest(unittest.TestCase):
     def setUp(self):
@@ -36,6 +38,7 @@ class WorkflowTest(unittest.TestCase):
             'BETTERMAN_LINUX_ENABLED': 'true', 'BETTERMAN_LINUX_DISTRO': 'all',
             'BETTERMAN_BSD_ENABLED': 'true', 'BETTERMAN_BSD_DISTRO': 'all',
             'BETTERMAN_INGEST_SAMPLE': 'false', 'BETTERMAN_MATRIX_RESULT': 'success',
+            'BETTERMAN_EXPECTED_RELEASE_IDS_INPUT': '',
             'CONVEX_HTTP_URL': 'https://never-contact.invalid',
             'CONVEX_URL': 'https://public-never-contact.invalid',
             'CONVEX_INGEST_SECRET': 'test-secret-do-not-print',
@@ -48,6 +51,11 @@ class WorkflowTest(unittest.TestCase):
         self.no_network = patch.object(w.urllib.request, 'urlopen', side_effect=AssertionError('Network forbidden'))
         self.no_network.start()
         self.addCleanup(self.no_network.stop)
+        self.contract = patch.object(ConvexIngestClient, '_get_json', return_value={
+            'schemaVersion': REQUIRED_SCHEMA_VERSION, 'functions': list(REQUIRED_FUNCTIONS),
+            'declarationCounts': list(REQUIRED_DECLARATION_COUNTS), 'activatePending': True,
+        }).start()
+        self.source_ids = {}
 
     def plan(self, **env):
         os.environ.update(env)
@@ -69,6 +77,10 @@ class WorkflowTest(unittest.TestCase):
 
     def post_mock(self, handler):
         def open_request(request, **kwargs):
+            if request.full_url.endswith('/ingest/promotion-source'):
+                self.assertEqual(w.load(json.loads(request.data)['distro'])['stage'], 'verify staging source')
+                distro = json.loads(request.data)['distro']
+                return io.BytesIO(json.dumps({'distro': distro, 'datasetReleaseId': self.source_ids.get(distro, 'release-' + distro)}).encode())
             if request.full_url.endswith('/api/query'):
                 payload = json.loads(request.data)
                 self.assertEqual(payload['path'], 'queries:getInfo')
@@ -84,6 +96,9 @@ class WorkflowTest(unittest.TestCase):
         with self.post_mock(lambda *args, **kwargs: response) as post:
             result = w.promote(distro)
         self.assertEqual(json.loads(post.call_args.args[0].data)['distros'], [distro])
+        self.assertEqual(post.call_args.args[0].get_header('X-betterman-ingest-contract'), str(REQUIRED_SCHEMA_VERSION))
+        self.assertEqual(json.loads(post.call_args.args[0].data)['expectedDatasetReleaseId'], {distro: 'release-' + distro})
+        self.assertEqual(json.loads(post.call_args.args[0].data)['allowFullDebian'], w.full_promotion_enabled())
         self.assertEqual(w.load(distro)['previousProdReleaseId'], 'previous-' + distro)
         return result
 
@@ -128,11 +143,13 @@ class WorkflowTest(unittest.TestCase):
 
     def test_full_debian_promotion_hold_and_explicit_recovery(self):
         os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        self.source_ids['debian'] = 'full'
         for variable, manual, allowed in [('', 'false', False), ('true', 'false', False), ('1', 'false', True), ('', 'true', True)]:
             os.environ.update(BETTERMAN_DEBIAN_FULL_PROMOTE=variable, BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT=manual)
             def response(request, **kwargs):
                 payload = json.loads(request.data)
                 self.assertEqual(payload['allowFullDebian'], allowed)
+                self.assertEqual(payload['expectedDatasetReleaseId'], {'debian': 'full'})
                 body = {'promoted': [{'distro':'debian','datasetReleaseId':'full'}]} if allowed else {
                     'promoted': [], 'skipped': [{'distro':'debian','datasetReleaseId':'full','reason':'FULL_DEBIAN_PROMOTION_HELD'}]}
                 return io.BytesIO(json.dumps(body).encode())
@@ -177,6 +194,9 @@ class WorkflowTest(unittest.TestCase):
                     self.assertTrue(debian['full_debian'])
                     self.assertEqual(debian['promote'], allowed)
                     self.assertEqual(w.full_promotion_enabled(), allowed)
+                    if allowed:
+                        self.assertEqual(self.ingest('debian'), 0)
+                        self.assertEqual(self.promote('debian'), 0)
 
     def test_early_middle_and_all_failures(self):
         for failed in ({'debian'}, {'fedora'}, set(w.LINUX)):
@@ -297,14 +317,14 @@ class WorkflowTest(unittest.TestCase):
                 raise w.urllib.error.HTTPError('unused', status, 'Rejected', {}, io.BytesIO(b'rejected'))
             with self.post_mock(rejected) as http:
                 self.assertEqual(w.promote('arch'), 1)
-            self.assertEqual(http.call_count, 2) # One public snapshot, one promotion.
+            self.assertEqual(http.call_count, 3) # Verified source, public snapshot, promotion.
             self.sleep.assert_not_called()
         self.sleep.reset_mock()
         def unavailable(*args, **kwargs):
             raise w.urllib.error.HTTPError('unused', 503, 'Unavailable', {}, io.BytesIO(b'test-secret-do-not-print'))
         with self.post_mock(unavailable) as http:
             self.assertEqual(w.promote('arch'), 1)
-        self.assertEqual(http.call_count, 4) # Snapshot plus exactly three attempts.
+        self.assertEqual(http.call_count, 5) # Source, snapshot, exactly three attempts.
         self.assertEqual(self.sleep.call_args_list, [call(2), call(4)])
         self.assertNotIn('test-secret-do-not-print', w.load('arch')['error'])
         os.environ['BETTERMAN_MATRIX'] = json.dumps({'include': [{'distro': 'arch'}]})
@@ -314,10 +334,150 @@ class WorkflowTest(unittest.TestCase):
 
     def test_previous_prod_read_failure_prevents_promotion(self):
         os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
-        with patch.object(w.urllib.request, 'urlopen', return_value=io.BytesIO(b'{"status":"error"}')) as http:
+        with self.post_mock(lambda *args, **kwargs: self.fail('Must not promote')) as http:
+            # Preserve the staging read, but reject the public production read.
+            original = http.side_effect
+            http.side_effect = lambda request, **kwargs: io.BytesIO(b'{"status":"error"}') if request.full_url.endswith('/api/query') else original(request, **kwargs)
             self.assertEqual(w.promote('arch'), 1)
-        self.assertEqual(http.call_count, 1)
+        self.assertEqual(http.call_count, 2)
         self.assertEqual(w.load('arch')['stage'], 'read previous prod')
+
+    def test_every_promotion_path_pins_verified_release(self):
+        for event, ingest in [('schedule', 'true'), ('workflow_dispatch', 'true'), ('workflow_dispatch', 'false')]:
+            os.environ.update(BETTERMAN_WORKFLOW_EVENT=event, BETTERMAN_INGEST_ENABLED=ingest)
+            if ingest == 'true':
+                self.assertEqual(self.ingest('arch'), 0)
+            else:
+                # Promotion-only must replace stale local evidence with its verified source.
+                w.save('arch', {'distro': 'arch', 'releaseId': 'stale', 'stage': 'setup', 'result': 'pending', 'error': ''})
+            self.assertEqual(self.promote('arch'), 0)
+            self.assertEqual(w.load('arch')['releaseId'], 'release-arch')
+
+    def test_cas_conflict_does_not_retry_or_record_success(self):
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        def conflict(request, **kwargs):
+            self.assertEqual(json.loads(request.data)['expectedDatasetReleaseId'], {'arch': 'release-arch'})
+            raise w.urllib.error.HTTPError('unused', 409, 'Conflict', {}, io.BytesIO(b'{"error":{"code":"STAGING_RELEASE_CONFLICT"}}'))
+        with self.post_mock(conflict) as http:
+            self.assertEqual(w.promote('arch'), 1)
+        self.assertEqual(http.call_count, 3)
+        self.sleep.assert_not_called()
+        self.assertEqual(w.load('arch')['releaseId'], 'release-arch')
+        self.assertIn('STAGING_RELEASE_CONFLICT', w.load('arch')['error'])
+        self.assertFalse(Path('output').exists())
+
+    def test_backend_rollback_after_contract_read_rejects_cas_without_fallback(self):
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        def old_validator(request, **kwargs):
+            payload = json.loads(request.data)
+            self.assertEqual(payload['expectedDatasetReleaseId'], {'arch': 'release-arch'})
+            self.assertEqual(request.get_header('X-betterman-ingest-contract'), str(REQUIRED_SCHEMA_VERSION))
+            raise w.urllib.error.HTTPError('unused', 400, 'Bad Request', {}, io.BytesIO(b'{"error":{"code":"INVALID_INGEST_PAYLOAD","message":"ArgumentValidationError: unexpected expectedDatasetReleaseId"}}'))
+        with self.post_mock(old_validator) as http:
+            self.assertEqual(w.promote('arch'), 1)
+        self.assertEqual(http.call_count, 3)
+        self.sleep.assert_not_called()
+        self.assertIn('INVALID_INGEST_PAYLOAD', w.load('arch')['error'])
+        self.assertEqual(w.load('arch')['result'], 'failure')
+
+    def test_contract_skew_in_both_directions_blocks_all_promotion_paths(self):
+        for event, ingest in [('schedule', 'true'), ('workflow_dispatch', 'true'), ('workflow_dispatch', 'false')]:
+            for version in [REQUIRED_SCHEMA_VERSION - 1, REQUIRED_SCHEMA_VERSION + 1]:
+                os.environ.update(BETTERMAN_WORKFLOW_EVENT=event, BETTERMAN_INGEST_ENABLED=ingest)
+                if ingest == 'true':
+                    self.ingest('arch')
+                self.contract.return_value['schemaVersion'] = version
+                self.assertEqual(w.promote('arch'), 1)
+                self.assertEqual(w.load('arch')['stage'], 'promotion contract')
+                self.assertIn('schemaVersion', w.load('arch')['error'])
+                self.assertNotIn('test-secret', w.load('arch')['error'])
+
+    def test_missing_verified_id_fails_before_any_write(self):
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        for release_id in ['', None, 1, ' ']:
+            self.source_ids['arch'] = release_id
+            with self.post_mock(lambda *args, **kwargs: self.fail('Must not promote')) as http:
+                self.assertEqual(w.promote('arch'), 1)
+            self.assertEqual(http.call_count, 1)
+
+    def test_operator_pins_survive_queued_dispatch_and_never_fall_back(self):
+        os.environ.update(BETTERMAN_INGEST_ENABLED='false', BETTERMAN_EXPECTED_RELEASE_IDS_INPUT='{"debian":"inspected-full"}', BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT='true')
+        self.plan() # Dispatch plan is prepared before a manual activation.
+        self.source_ids['debian'] = 'replacement-full'
+        with self.post_mock(lambda *args, **kwargs: self.fail('Must not promote a replacement')) as http:
+            self.assertEqual(w.promote('debian'), 1)
+        self.assertEqual(http.call_count, 1)
+        self.assertIn('operator-pinned', w.load('debian')['error'])
+        self.assertEqual(w.load('debian')['result'], 'failure')
+        self.sleep.assert_not_called()
+        self.assertNotIn('release_ids=', Path('output').read_text())
+        self.source_ids['debian'] = 'inspected-full'
+        def response(request, **kwargs):
+            payload = json.loads(request.data)
+            self.assertEqual(payload['expectedDatasetReleaseId'], {'debian': 'inspected-full'})
+            self.assertTrue(payload['allowFullDebian'])
+            return io.BytesIO(b'{"promoted":[{"distro":"debian","datasetReleaseId":"inspected-full"}]}')
+        with self.post_mock(response):
+            self.assertEqual(w.promote('debian'), 0)
+        self.assertEqual(w.load('debian')['releaseId'], 'inspected-full')
+        # A partial map pins only listed distros; siblings keep capturing staging.
+        self.assertEqual(self.promote('arch'), 0)
+
+    def test_combined_dispatch_cannot_override_its_completed_ingest_id(self):
+        self.ingest('arch')
+        os.environ['BETTERMAN_EXPECTED_RELEASE_IDS_INPUT'] = '{"arch":"other"}'
+        self.assertEqual(w.promote('arch'), 1)
+        self.assertIn('operator-pinned', w.load('arch')['error'])
+
+    def test_expected_release_input_is_strict_bounded_and_never_executes(self):
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        valid = '2026-10-29T21:25:00Z+debian+614714a6+mandoc:1.14.6'
+        os.environ['BETTERMAN_EXPECTED_RELEASE_IDS_INPUT'] = json.dumps({'debian': valid})
+        self.assertEqual(w.expected_release_ids(), {'debian': valid})
+        for raw in ['[]', 'null', '1', '"debian"', '{', '{"debian":"one","debian":"two"}',
+                    '{"gentoo":"release"}', '{"debian":null}', '{"debian":1}', '{"debian":[]}',
+                    '{"debian":""}', '{"debian":" spaced "}', '{"debian":"has space"}',
+                    '{"debian":"$(touch injected)"}', json.dumps({'debian':chr(96)+'touch injected'+chr(96)}),
+                    '{"debian":"é"}', json.dumps({'debian':'x'*257}), ' '*4097,
+                    json.dumps({'debian':'é'*2049})]:
+            os.environ['BETTERMAN_EXPECTED_RELEASE_IDS_INPUT'] = raw
+            with self.assertRaisesRegex(ValueError, 'expected_release_ids'):
+                w.expected_release_ids()
+            with self.assertRaises(ValueError):
+                w.plan()
+            self.assertEqual(w.promote('debian'), 1)
+        self.assertFalse(Path('injected').exists())
+        os.environ.update(BETTERMAN_INGEST_ENABLED='true', BETTERMAN_EXPECTED_RELEASE_IDS_INPUT='{"debian":"valid"}', BETTERMAN_LINUX_DISTRO='arch', BETTERMAN_BSD_ENABLED='false')
+        with self.assertRaisesRegex(ValueError, 'not selected'):
+            w.plan()
+
+    def test_contract_transients_retry_but_schema_auth_and_client_errors_do_not(self):
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        payload = self.contract.return_value
+        self.contract.side_effect = [w.urllib.error.URLError('offline'), w.urllib.error.HTTPError('unused', 503, 'Unavailable', {}, io.BytesIO(b'blip')), payload]
+        self.assertEqual(self.promote('arch'), 0)
+        self.assertEqual(self.contract.call_count, 3)
+        self.assertEqual(self.sleep.call_args_list, [call(2), call(4)])
+        for failure in [TimeoutError('timeout'), http.client.IncompleteRead(b'', 10)]:
+            self.contract.reset_mock()
+            self.sleep.reset_mock()
+            self.contract.side_effect = [failure, failure, failure]
+            self.assertEqual(w.promote('arch'), 1)
+            self.assertEqual(self.contract.call_count, 3)
+            self.assertEqual(self.sleep.call_args_list, [call(2), call(4)])
+        for status in [400, 401, 404, 409, 429]:
+            self.contract.reset_mock()
+            self.sleep.reset_mock()
+            self.contract.side_effect = w.urllib.error.HTTPError('unused', status, 'Rejected', {}, io.BytesIO(b'rejected'))
+            self.assertEqual(w.promote('arch'), 1)
+            self.assertEqual(self.contract.call_count, 1)
+            self.sleep.assert_not_called()
+        self.contract.reset_mock()
+        self.contract.side_effect = None
+        self.contract.return_value = {**payload, 'schemaVersion': REQUIRED_SCHEMA_VERSION - 1}
+        self.assertEqual(w.promote('arch'), 1)
+        self.assertEqual(self.contract.call_count, 1)
+        self.sleep.assert_not_called()
 
 unittest.main(verbosity=2)
 `], { encoding: 'utf8' })
@@ -429,6 +589,10 @@ function assertWorkflowWiring(workflow) {
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_full.default, false)
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_download_only.default, false)
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_full_promote.default, false)
+  assert.equal(workflow.on.workflow_dispatch.inputs.expected_release_ids.type, 'string')
+  assert.equal(workflow.on.workflow_dispatch.inputs.expected_release_ids.default, '')
+  assert.equal(workflow.env.BETTERMAN_EXPECTED_RELEASE_IDS_INPUT, "${{ inputs.expected_release_ids || '' }}")
+  assert.ok(!Object.values(workflow.jobs).some(job => job.steps?.some(step => step.run?.includes('inputs.expected_release_ids'))), 'untrusted input must be passed only through env')
   const release = JSON.parse(readFileSync('ingestion/data/debian-trixie.json', 'utf8')).releaseSha256
   for (const job of [download, ingest]) {
     for (const cache of job.steps.filter(s => s.uses?.startsWith('actions/cache/'))) {
