@@ -4,6 +4,8 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Include the index-policy checker in the Next container build context so frontend type checking resolves its test import (#394).
+
 - Avoid persistent data-cache entries for unproven package selectors; retain query-private misses after the #469/#471 integration (#394).
 - Keep large-notice reverse references in a new empty table, avoiding a legacy license-table index backfill; require explicit confirmation for listed-table index changes before Convex deploy, independently of CLI schema evaluation (#394).
 

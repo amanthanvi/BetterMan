@@ -177,3 +177,8 @@ CI compatibility: the TypeScript-syntax parser tests run in the installed fronte
 suite; ops/workflow tests remain dependency-free, matching ci_contracts. The four
 parser regressions are retained, not skipped. Latest totals are 865 frontend,
 127 ops and 13 dataset/deploy workflow tests.
+
+Container integration: Next's builder now copies the guard module imported by the
+frontend parser test. A COPY-matched source context, with its own offline frozen
+dependency install, passes the full Next build/typecheck. Docker is not installed
+locally, so this is build-context verification rather than a full image build.
