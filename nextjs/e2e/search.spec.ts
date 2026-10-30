@@ -50,18 +50,18 @@ test('search: citations resolve the exact section without correction copy', asyn
 })
 
 test('search: a task in plain words finds the page by its task phrase and offers to explain the example', async ({ page }) => {
-  await page.goto('/search?q=how%20do%20I%20extract%20a%20tarball')
+  await page.goto('/search?q=how%20do%20I%20create%20a%20tarball')
   const first = page.getByRole('list', { name: 'Search results' }).getByRole('listitem').first()
   await expect(first.getByRole('link', { name: 'tar(1)', exact: true })).toBeVisible()
   await expect(first.getByText('task', { exact: true })).toBeVisible()
-  await expect(first.getByText('Task match: “extract a tar.gz file”')).toBeVisible()
+  await expect(first.getByText('Task match: “create a tar archive”')).toBeVisible()
   await expect(page.getByText('Did you mean:', { exact: false })).toHaveCount(0)
 
   const explain = first.getByRole('link', { name: 'Explain this line' })
-  await expect(explain).toHaveAttribute('href', '/explain?cmd=' + encodeURIComponent('tar -cf target.tar path/to/directory'))
+  await expect(explain).toHaveAttribute('href', '/explain?cmd=' + encodeURIComponent('tar -cf archive.tar ./my-folder'))
   await explain.click()
   await expect(page).toHaveURL(/\/explain\?cmd=tar/)
-  await expect(page.getByLabel('Command line to explain')).toHaveValue('tar -cf target.tar path/to/directory')
+  await expect(page.getByLabel('Command line to explain')).toHaveValue('tar -cf archive.tar ./my-folder')
   await expect(page.getByRole('list', { name: 'Definitions' }).getByRole('link', { name: 'tar(1) · -c' })).toHaveAttribute('href', '/man/tar/1#opt-create')
 })
 
@@ -70,15 +70,17 @@ test('search: the top hit leads with one sourced example and its gloss, then the
   const top = page.locator('[data-bm-top-hit]')
   await expect(top).toHaveCount(1)
   await expect(page.getByRole('list', { name: 'Search results' }).getByRole('listitem').first().locator('[data-bm-top-hit]')).toHaveCount(1)
-  await expect(top).toContainText('Create an archive from a directory')
-  await expect(top).toContainText('tar -cf target.tar path/to/directory')
-  await expect(top.getByRole('link', { name: 'tldr-pages' })).toHaveAttribute('href', /tldr-pages\/tldr\/blob\/[0-9a-f]{40}\/pages\/common\/tar\.md$/)
-  await expect(top.getByRole('link', { name: 'CC BY 4.0' })).toBeVisible()
+  // The seeded record's first example is the manual's own; its tldr example's attribution is unit-tested.
+  await expect(top).toContainText('Create an archive from a folder')
+  await expect(top).toContainText('tar -cf archive.tar ./my-folder')
+  await expect(top).toContainText('from EXAMPLES')
   const flags = top.getByRole('list', { name: 'Key flags of tar(1)' })
-  await expect(flags.getByRole('link', { name: '-c', exact: true })).toHaveAttribute('href', '/man/tar/1#opt-create')
+  // -c (EXAMPLES) and --create (tldr) are one option: shown once.
+  await expect(flags.getByRole('link')).toHaveCount(1)
+  await expect(flags.getByRole('link')).toHaveAttribute('href', '/man/tar/1#opt-create')
   await expect(flags).toContainText('Create a new archive.')
   // The example comes before the flags.
-  const [example, flagList] = await Promise.all([top.getByText('tar -cf target.tar').boundingBox(), flags.boundingBox()])
+  const [example, flagList] = await Promise.all([top.getByText('tar -cf archive.tar').boundingBox(), flags.boundingBox()])
   expect(example!.y).toBeLessThan(flagList!.y)
   await expect(top.getByRole('link', { name: 'Package tar' })).toHaveAttribute('href', '/pkg/tar')
 })
