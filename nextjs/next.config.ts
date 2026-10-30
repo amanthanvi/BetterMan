@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   env: {
     // Vercel supplies intake paths at build time; retain them for both server renderers.
     VERCEL_ENV: process.env.VERCEL_ENV ?? '',
-    VERCEL_OBSERVABILITY_CLIENT_CONFIG: process.env.VERCEL_OBSERVABILITY_CLIENT_CONFIG ?? '',
+    VERCEL_OBSERVABILITY_CLIENT_CONFIG: process.env.VERCEL_OBSERVABILITY_CLIENT_CONFIG || process.env.NEXT_PUBLIC_VERCEL_OBSERVABILITY_CLIENT_CONFIG || '',
     BM_RESERVED_PATH_SEGMENTS: reservedPathSegments(__dirname).join('/'),
   },
   async headers() {

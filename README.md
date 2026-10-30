@@ -58,7 +58,7 @@ BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev CONVEX_HTTP_URL="${CONVEX_SITE_URL
 
 Pushes to `main` that pass CI deploy to Vercel through `.github/workflows/deploy.yml`. The dataset is rebuilt monthly by `.github/workflows/update-docs.yml`, which ingests to a staging pointer in Convex and promotes it to production. Details live in `docs/ARCHITECTURE.md` and `docs/runbooks/`.
 
-Production-only [Vercel Web Analytics](docs/analytics.md) starts on the first deploy after the lead enables it in the Vercel project and Vercel supplies valid same-origin intake configuration.
+Production-only [Vercel Web Analytics](docs/analytics.md) loads on production builds with valid same-origin intake configuration supplied by Vercel.
 
 ## Contributing
 

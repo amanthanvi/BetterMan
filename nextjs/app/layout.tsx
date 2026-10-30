@@ -51,6 +51,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={lang} data-theme={theme} suppressHydrationWarning>
       <head>
+        <AnalyticsScripts nonce={nonce} />
         {/* The manual's roman, Latin range. Other ranges and the italic load when a page uses them. */}
         <link
           rel="preload"
@@ -79,7 +80,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         >
           {children}
         </Providers>
-        <AnalyticsScripts nonce={nonce} />
       </body>
     </html>
   )

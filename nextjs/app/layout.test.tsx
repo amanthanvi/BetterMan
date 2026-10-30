@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ReadingPrefsProvider, useReadingPrefs } from '../components/state/readingPrefs'
 import type { ReadingPreferences } from '../lib/readingPrefs'
+import { ANALYTICS_BOOT_SCRIPT } from '../lib/analyticsBoot'
 import RootLayout from './layout'
 
 const saved: ReadingPreferences = {
@@ -34,12 +35,13 @@ afterEach(() => vi.unstubAllEnvs())
 
 describe('RootLayout', () => {
 
-  it('loads only a deferred same-origin tracker with the request nonce', async () => {
+  it('renders only the fixed head bootstrap with configured data and the request nonce', async () => {
     vi.stubEnv('VERCEL_ENV', 'production')
     vi.stubEnv('VERCEL_OBSERVABILITY_CLIENT_CONFIG', JSON.stringify({ analytics: { scriptSrc: '/project-intake/script.js', eventEndpoint: '/project-intake/event', viewEndpoint: '/project-intake/view' } }))
     const html = renderToStaticMarkup(await RootLayout({ children: null }))
-    expect(html).toContain('<script defer="" src="/project-intake/script.js" data-event-endpoint="/project-intake/event" data-view-endpoint="/project-intake/view" nonce="test-nonce"></script>')
-    expect(html).toContain('<script nonce="test-nonce">window.va=')
+    expect(html.split('</head>')[0]).toContain(`<script nonce="test-nonce" data-script-src="/project-intake/script.js" data-event-endpoint="/project-intake/event" data-view-endpoint="/project-intake/view">${ANALYTICS_BOOT_SCRIPT}</script>`)
+    expect(html).not.toContain('src="/project-intake/script.js" nonce=')
+    expect(html).not.toContain('<script defer=')
   })
 
   it.each(['preview', 'development', ''])('omits analytics outside Vercel production (%s)', async (env) => {

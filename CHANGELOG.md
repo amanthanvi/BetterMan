@@ -4,7 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
-- Replace the paid browser analytics integration from #421 with production-only Vercel Web Analytics, sanitize URLs before intake, preserve typed custom events and strict CSP, and remove the event relay and optional traffic export. C7 (#409) evidence restarts at this deploy; B4 tiers use popcon alone.
+- Replace the paid browser analytics integration from #421 with production-only Vercel Web Analytics, sanitize absolute URLs before loading the tracker in a nonce/hash-authorized head bootstrap, preserve typed custom events and strict CSP, and remove the event relay and optional traffic export. C7 (#409) evidence restarts at this deploy; B4 tiers use popcon alone.
 - Operations (#388): Vercel Firewall bypass rules for anonymous GET/HEAD on plain-text manuals, `robots.txt`, the OpenSearch descriptor and suggestions are live; HTML stays challenged. The launch drafts now say `curl -L betterman.sh/tar.txt`, because the short URL redirects.
 - Concept explainers (B8, #400): BetterMan's own plain-English explainers over the manual's section 7 pages, at `/concept/<slug>`, plain server HTML in the man page shell (hash-only CSP, cached at the edge per deployment) and labelled as BetterMan's text, with the authoritative page (signal(7), glob(7), regex(7), …) linked first. Twenty drafts, chosen from the referenced-by data, live in `nextjs/content/concepts/` with their sources, corrected after a two-model panel review. A man page that references one ends with a quiet "Concepts:" footer line naming at most three, strongest first, and search shows matching explainers with the `concept` kind without displacing a command of the same name. Neither adds a Convex read. Only approved explainers render or reach `/sitemap-concepts.xml`; all twenty are approved after the panel's corrections and the owner's skim, and are listed there.
 - Man pages and their share images: URLs carry only an allowlist of query parameters (`distro`, `pkg`, `portability`, `flag`, `lang`). Any other parameter, a repeated one, an invalid value or another spelling redirects (308, `private, no-store`) to the URL it means, before it can render or fill the CDN; a flag or package the page does not have answers privately, on HTML and text URLs alike, and so does a request with a bare `_rsc`. Short URLs drop tracking parameters in their one redirect. Documented in `docs/runbooks/vercel-ops.md` (#408).
@@ -202,7 +202,7 @@ All notable changes to BetterMan are documented here.
 
 ## v0.4.0
 
-- Observability: Sentry + browser analytics.
+- Observability: Sentry + Plausible.
 - Proxy-trust hardening for rate limiting.
 - Ingestion reliability improvements and operational runbooks.
 - Better 404 suggestions and keyboard shortcuts polish.

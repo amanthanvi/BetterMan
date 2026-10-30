@@ -15,6 +15,7 @@ export default function ManDocument(props: Pick<DocumentProps, '__NEXT_DATA__'>)
   return (
     <Html lang={pageProps?.i18n?.lang ?? 'en'}>
       <Head>
+        <AnalyticsScripts />
         {head ? <ManHeadTags {...head} /> : null}
         <script dangerouslySetInnerHTML={{ __html: MAN_BOOT_SCRIPT }} />
         {/* The manual's roman, Latin range. Other ranges and the italic load when a page uses them. */}
@@ -28,7 +29,6 @@ export default function ManDocument(props: Pick<DocumentProps, '__NEXT_DATA__'>)
       <body>
         <Main />
         <NextScript />
-        <AnalyticsScripts />
       </body>
     </Html>
   )

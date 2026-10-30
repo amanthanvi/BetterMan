@@ -183,7 +183,6 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url)
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return
   // Cache only our immutable application scripts, never analytics at a deployment-specific path.
-  if (url.pathname === '/assets/site.js') return
   if (request.destination === 'script' && !isNextAsset(url) && !url.pathname.startsWith('/_bm/')) return
   if (isPrivate(url)) return
 
