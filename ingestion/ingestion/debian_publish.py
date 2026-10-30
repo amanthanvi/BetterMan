@@ -47,7 +47,7 @@ def ingest_debian(
     client = ConvexIngestClient(convex_url, ingest_secret)
     contract = client.require_deployed_contract()  # Before acquisition or any writes.
     if distro == "ubuntu" and "ubuntu-deb-extraction" not in contract.get("acquisitions", []):
-        raise RuntimeError("Deploy B2's v7 Ubuntu acquisition support before full ingestion")
+        raise RuntimeError("Deploy B2's v8 Ubuntu acquisition support before full ingestion")
     import os
 
     from ingestion.debian_indexes import PINS
