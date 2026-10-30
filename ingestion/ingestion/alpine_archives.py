@@ -141,8 +141,12 @@ def catalog(root: Path, pins_path: Path):
 
 
 def require_sha256_pin(pins, package):
-    if "packageSha256" in pins and not package.pinned_sha256:
-        raise ValueError(f"Missing reviewed APK SHA256 pin: {package.filename}")
+    if "packageSha256" in pins:
+        expected = pins["packageSha256"].get(package.filename)
+        if not expected:
+            raise ValueError(f"Missing reviewed APK SHA256 pin: {package.filename}")
+        if package.pinned_sha256 != expected:
+            raise ValueError("APK SHA256 does not match the reviewed lock")
 
 
 def write_sha256_pins(workspace):

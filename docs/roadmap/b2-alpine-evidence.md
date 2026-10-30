@@ -1,7 +1,8 @@
 # B2 Alpine archive extraction
 
 Alpine family of #394, stacked on Arch #473 / Fedora #470 / Ubuntu #467 /
-#445's pending ingest contract v7. Merge/deploy after #445's November 1 window.
+#445's pending ingest contract v7. B2 reserves exact v8 across all four
+families; translations follow as v9. Merge/deploy after #445's November 1 window.
 No workflow was dispatched or merged, and no shared data/configuration, secret
 or repository variable changed. The lead owns independent review and staging
 measurement; production promotion still requires owner sign-off.
@@ -121,11 +122,52 @@ Projected retained sources are under 1 GiB and spool roughly 2 GiB; with cache a
 in-flight APKs, plan for **under 6 GB incremental disk**. The lead's staging run
 must establish actual cloud timing, disk and storage spend before promotion.
 
-Validation: ingest lint, **987 ingestion tests**, **126 ops tests**, explicit
-**12 dataset/deploy workflow tests**, Convex typecheck/**3,286 tests**, isolated
+Validation: ingest lint, **1,020 ingestion tests**, **126 ops tests**, explicit
+**12 dataset/deploy workflow tests**, Convex typecheck/**3,287 tests**, isolated
 codegen on 3432/3433 with no generated drift, Python 3.14 pip package dry-run,
-frontend lint/grammar/**692 tests** and production `pnpm next:build`. Native integrity tests cover control/data
+frontend lint/grammar/**699 tests** and production `pnpm next:build`. Native integrity tests cover control/data
 corruption, truncation, bounded expansion, safe paths, fallback/cache replay and
 checkpoint proof restoration. Owner tests reject unrelated/stale-version doc
 companions. PR whitespace, mixed-config, budget, public-API and Proof guards run
 on the committed family diff. No full cloud import or production operation ran.
+
+## Independent-review fixes and pin rollout
+
+Malformed signature/control tar data (including missing or non-UTF-8 `.PKGINFO`)
+now raises `DownloadIntegrityError`, as do existing gzip/native checksum errors.
+Tests reproduce a correctly sized, gzip-valid but malformed tar response: a bad
+cache is replaced, and a bad CDN response reaches the second mirror. Partial files
+are removed. Fedora and Arch run their parsers only after whole-file SHA256 checks;
+Arch regressions cover malformed unverified responses at that boundary.
+
+The initial staging bootstrap retains the documented native Q1 SHA1/data SHA256
+chain. After **every acquisition has completed**, including notice dependencies,
+the publisher writes `alpine-package-sha256.json` under its checkpoint workdir.
+The workflow uploads it as the 14-day `alpine-package-sha256` artifact. The file
+binds `releaseSha256` to a `packageSha256` map of exact archive filenames and observed
+whole-file digests for the entire acquired set, not just published manual owners.
+No-upload benchmarks export the same proposal. The committed lock is not modified.
+
+After the first staging run, the lead reviews the native acquisition and index-set
+identity, then commits that complete map into `ingestion/data/alpine-v3.23.json`.
+Once the map exists, every selected, curated, include/runtime and license package
+must have a reviewed entry. Missing pins (including an empty map), unknown filenames
+and malformed digests fail closed. New downloads and cache hits must pass native
+integrity **and** the reviewed whole-file digest; restored receipts with a different
+observed SHA256 cannot satisfy acquisition. Pin refresh/removal is an explicit
+reviewed commit, never an automatic upgrade. This implementation intentionally
+leaves the first full acquired-set pin commit to the lead after staging.
+
+Tracing this export into the real staging publisher also found missing Alpine
+notice-reader/capability wiring. It now requires Alpine acquisition and stored-notice
+capabilities before acquisition, reads verified Alpine notices, enables complete
+stored text, and publishes filename/control/data-hash/origin provenance. A no-upload
+publisher regression preserves a 1.1 MiB notice exactly and checks the exported pin.
+
+A [cached 200-package replay](b2-alpine-review-measurements.json) restored all
+**223 acquired archives**, parsed **3,315 pages / 1,817 aliases** in **28.56 s**
+with zero failures/unresolved, and exported **223 whole-file SHA256 proposals**
+bound to the original index-set identity. It transferred **zero bytes**; this is
+checkpoint/export verification, not a new download-throughput measurement. The
+240/300-minute, under-6-GB full-run plan remains a staging projection. Local pin
+proposals stay ignored/uncommitted; they are not the lead's reviewed staging pins.

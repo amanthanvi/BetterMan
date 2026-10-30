@@ -737,6 +737,11 @@ function assertWorkflowWiring(workflow) {
     assert.equal(workflow.env[`BETTERMAN_${distro.toUpperCase()}_FULL`], '${{ vars.BETTERMAN_' + distro.toUpperCase() + '_FULL }}')
   }
   assert.ok(Object.keys(workflow.on.workflow_dispatch.inputs).length <= 25)
+  const alpinePins = ingest.steps.find(s => s.name === 'Export Alpine whole-file SHA256 pins for owner review')
+  assert.equal(alpinePins.if, '${{ always() && matrix.full_alpine }}')
+  assert.equal(alpinePins.with.name, 'alpine-package-sha256')
+  assert.equal(alpinePins.with.path, '${{ runner.temp }}/betterman-alpine/workspace/**/alpine-package-sha256.json')
+  assert.equal(alpinePins.with['retention-days'], 14)
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_full.default, false)
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_download_only.default, false)
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_full_promote.default, false)

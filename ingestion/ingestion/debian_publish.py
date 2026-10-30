@@ -185,9 +185,13 @@ def publish_workspace(
                         else {}
                     ),
                     **(
-                        {"filename": p.filename, "controlChecksum": p.control_checksum,
-                         "dataSha256": p.data_sha256}
-                        if distro == "alpine" else {}
+                        {
+                            "filename": p.filename,
+                            "controlChecksum": p.control_checksum,
+                            "dataSha256": p.data_sha256,
+                        }
+                        if distro == "alpine"
+                        else {}
                     ),
                 }
                 for p in published_packages

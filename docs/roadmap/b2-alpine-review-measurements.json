@@ -1,0 +1,13 @@
+{
+  "scope": "cached checkpoint replay; no network transfers or uploads; pin proposal stays uncommitted",
+  "distro": "alpine",
+  "acquiredPackages": 223,
+  "exportedPins": 223,
+  "releaseSha256": "c153b5cad0d1f5955db9a6ca8ca78848de86c4243f694a177427f9cd8e691f18",
+  "downloadedBytes": 0,
+  "parseSeconds": 28.560228457907215,
+  "pages": 3315,
+  "aliases": 1817,
+  "parseFailures": [],
+  "unresolved": []
+}

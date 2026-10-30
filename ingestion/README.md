@@ -560,7 +560,10 @@ pnpm ingest:full-benchmark --distro arch --workdir ../.cache/b2/arch-largest --p
 main/community APKINDEX/doc-subpackage corpus. Python 3.14 and host mandoc are
 required. The bundled index snapshots are SHA256-verified. APK v2's native Q1
 compressed-control SHA1 and `.PKGINFO` data SHA256 are verified before extraction;
-observed whole-archive SHA256 is recorded separately. No hook, trigger or packaged
+observed whole-archive SHA256 is recorded separately. Malformed signature/control
+tar, missing/invalid `.PKGINFO`, and decode errors become download integrity errors:
+corrupt caches are evicted and malformed CDN responses try the verified fallback.
+No hook, trigger or packaged
 executable runs. Doc owners require matching pinned origin/version and `docs`
 install-if metadata, not just a matching name suffix.
 
@@ -568,6 +571,23 @@ Cron requires `BETTERMAN_ALPINE_FULL=1`; dispatch requires `alpine_full: true`.
 Promotion independently requires `alpine_full_promote: true` or
 `BETTERMAN_ALPINE_FULL_PROMOTE=1`. All default off; persisted
 `alpine-apk-extraction`, index tiers and CAS enforce the server hold.
+
+After the first staging acquisition, download the `alpine-package-sha256` workflow
+artifact. Its `alpine-package-sha256.json` contains `releaseSha256` and a
+`packageSha256` map from exact repository/architecture/version filenames to observed
+whole-file SHA256s for **every acquired archive**, including runtime/include/notice
+dependencies. The publisher exports it after notice collection; no-upload rehearsals
+also write it under their workdir. It never rewrites the checked-in lock.
+
+The lead must verify its index-set `releaseSha256`, review the acquisition, then
+commit the complete `packageSha256` map into `ingestion/data/alpine-v3.23.json`.
+The map is intentionally absent for the initial staging bootstrap. **Once the
+field is present, pins are required**: missing selected, runtime or later-discovered
+packages fail closed. Both native integrity and whole-file SHA256 are checked on
+new downloads and cache hits. Restored extraction receipts cannot override a
+reviewed SHA256. An empty map does not re-enable bootstrap. Adding/updating/removing
+the map is a reviewed lock change; no runtime option silently refreshes it. These
+local samples do not substitute for the lead's first staging pin review.
 
 Alpine mirrors may remove pinned older APKs. Refresh and review index/version pins
 in a new commit when necessary; never silently fall forward to a new version.

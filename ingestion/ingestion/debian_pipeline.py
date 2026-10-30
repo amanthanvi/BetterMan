@@ -177,6 +177,11 @@ class Workspace:
             )
             if n in self.available and n not in selected_names
         ]
+        if distro == "alpine":
+            from ingestion.alpine_archives import require_sha256_pin
+
+            for package in self.packages + self.curated_packages:
+                require_sha256_pin(self.pins, package)
         self.store = ArchiveStore(
             self.root,
             registrations=self.registrations,
