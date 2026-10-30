@@ -1,11 +1,37 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 
 const workflow = readFileSync(new URL('../.github/workflows/deploy.yml', import.meta.url), 'utf8')
+
+test('Convex deploy precedes Vercel and promotion fences mismatched workflow contracts', () => {
+  assert.ok(workflow.indexOf('- name: Deploy current Convex functions') < workflow.indexOf('- name: Verify production Convex contract'))
+  const verify = workflow.indexOf('- name: Verify production Convex contract')
+  const build = workflow.indexOf('- name: Deploy and verify production')
+  assert.ok(verify > 0 && build > verify, 'production Convex must be verified before Vercel build')
+})
+
+test('the real deployment contract step fails closed before Vercel when verification rejects Convex', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'betterman-deploy-contract-'))
+  try {
+    mkdirSync(join(dir, 'tooling/node_modules'), { recursive: true })
+    writeFileSync(join(dir, 'node'), '#!/usr/bin/env bash\nexit 23\n')
+    chmodSync(join(dir, 'node'), 0o755)
+    const marker = join(dir, 'vercel-started')
+    assert.throws(() => execFileSync('bash', ['-c', `${stepScript('Verify production Convex contract')}\ntouch "${marker}"`], {
+      stdio: 'pipe',
+      env: { PATH: `${dir}:${process.env.PATH}`, GITHUB_WORKSPACE: dir, CONVEX_URL: 'https://never-contact.invalid' },
+    }), error => error.status === 23)
+    assert.equal(existsSync(marker), false, 'a failed Convex contract must stop before deployment')
+    const block = workflow.split('      - name: Verify production Convex contract\n')[1].split('\n      - name: ')[0]
+    assert.doesNotMatch(block, /continue-on-error|\|\|\s*true/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
 
 function convexDeployScript() {
   const step = workflow.split('      - name: Deploy current Convex functions\n')[1]?.split('\n      - name: ')[0]

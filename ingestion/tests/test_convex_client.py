@@ -245,7 +245,7 @@ def test_require_deployed_contract_accepts_a_matching_deployment(monkeypatch):
 
 
 def test_require_deployed_contract_accepts_extra_functions(monkeypatch):
-    body = _contract_body(functions=[*REQUIRED_FUNCTIONS, "ingest.promoteActiveReleases"])
+    body = _contract_body(functions=[*REQUIRED_FUNCTIONS, "ingest.futureFunction"])
     monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(return_value=BytesIO(body)))
     ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
 

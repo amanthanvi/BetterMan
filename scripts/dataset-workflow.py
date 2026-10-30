@@ -16,6 +16,34 @@ from pathlib import Path
 LINUX = ["debian", "ubuntu", "fedora", "arch", "alpine"]
 BSD = ["freebsd", "macos"]
 RESULTS = Path("dataset-results")
+MAX_EXPECTED_RELEASE_IDS_BYTES = 4096
+RELEASE_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:+-]{0,255}", re.ASCII)
+
+
+def expected_release_ids():
+    raw = os.environ.get("BETTERMAN_EXPECTED_RELEASE_IDS_INPUT", "")
+    if not raw:
+        return {}
+    if len(raw.encode("utf-8")) > MAX_EXPECTED_RELEASE_IDS_BYTES:
+        raise ValueError("expected_release_ids exceeds 4096 UTF-8 bytes")
+
+    def unique_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("expected_release_ids contains a duplicate distro")
+            result[key] = value
+        return result
+
+    try:
+        expected = json.loads(raw, object_pairs_hook=unique_pairs)
+    except ValueError:
+        raise ValueError("expected_release_ids must be a JSON object without duplicate keys") from None
+    if not isinstance(expected, dict) or any(key not in LINUX + BSD for key in expected):
+        raise ValueError("expected_release_ids must map known distros to release IDs")
+    if any(not isinstance(value, str) or not RELEASE_ID_PATTERN.fullmatch(value) for value in expected.values()):
+        raise ValueError("expected_release_ids IDs must be 1-256 ASCII letters, digits or . _ : + -, starting with a letter or digit")
+    return expected
 
 
 def clean(text):
@@ -108,6 +136,10 @@ def selection():
 
 def plan():
     matrix, ingest, promote = selection()
+    expected = expected_release_ids()
+    selected = {item["distro"] for item in matrix["include"] if item["promote"]}
+    if expected.keys() - selected:
+        raise ValueError("expected_release_ids includes a distro not selected for promotion")
     with open(os.environ["GITHUB_OUTPUT"], "a") as output:
         output.write(f"matrix={json.dumps(matrix)}\n")
         output.write(f"enabled={str(bool(matrix['include'])).lower()}\n")
@@ -169,16 +201,22 @@ def run(distro, stage, command):
     return code
 
 
-def request_json(request):
+def retry_request(operation):
     for attempt in range(3):
         try:
-            with urllib.request.urlopen(request, timeout=60) as response:
-                return json.load(response)
-        except urllib.error.HTTPError as error:
-            if not 500 <= error.code < 600 or attempt == 2:
+            return operation()
+        except (OSError, http.client.HTTPException, RuntimeError) as error:
+            # The shared contract client wraps transport failures. Inspect the
+            # cause, preserving its fail-closed result for schema/auth errors.
+            cause = error
+            while not isinstance(cause, (OSError, http.client.HTTPException)) and cause.__cause__:
+                cause = cause.__cause__
+            if isinstance(cause, urllib.error.HTTPError):
+                if not 500 <= cause.code < 600 or attempt == 2:
+                    raise
+                cause.close()
+            elif not isinstance(cause, (OSError, http.client.HTTPException)):
                 raise
-            error.close()
-        except (OSError, http.client.HTTPException):
             if attempt == 2:
                 raise
         delay = 2 ** (attempt + 1)
@@ -187,7 +225,19 @@ def request_json(request):
     raise RuntimeError("Request retry loop exhausted without a response")
 
 
+def request_json(request):
+    def read():
+        with urllib.request.urlopen(request, timeout=60) as response:
+            return json.load(response)
+    return retry_request(read)
+
+
 def promote(distro):
+    # The promotion-only runner has Python but no installed ingestion package.
+    # This client uses only the standard library; share its exact-version gate.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ingestion"))
+    from ingestion.convex_client import ConvexIngestClient
+
     record = load(distro)
     matrix, ingest, enabled = selection()
     selected = next((item for item in matrix["include"] if item["distro"] == distro), None)
@@ -196,7 +246,7 @@ def promote(distro):
         raise ValueError("Refusing to promote when promotion is disabled or this is a sample")
     if ingest and (record["result"] != "success" or record.get("stagingVerified") is not True):
         raise ValueError("Refusing to promote without this run's completed staging activation")
-    record.update(stage="read previous prod", result="pending", error="")
+    record.update(stage="promotion contract", result="pending", error="")
     save(distro, record)
     payload = {
         "fromStage": "staging",
@@ -205,16 +255,45 @@ def promote(distro):
         "activatedAt": datetime.datetime.now(datetime.UTC).isoformat(),
         "allowFullDebian": full_promotion_enabled(),
     }
-    request = urllib.request.Request(
-        f"{os.environ['CONVEX_HTTP_URL'].rstrip('/')}/ingest/promote",
-        data=json.dumps(payload).encode(),
-        headers={
-            "Authorization": f"Bearer {os.environ['CONVEX_INGEST_SECRET']}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
+
+    def ingest_request(path, body):
+        return urllib.request.Request(
+            f"{os.environ['CONVEX_HTTP_URL'].rstrip('/')}/ingest/{path}",
+            data=json.dumps(body).encode(),
+            headers={
+                "Authorization": f"Bearer {os.environ['CONVEX_INGEST_SECRET']}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+
     try:
+        pinned = expected_release_ids().get(distro)
+        client = ConvexIngestClient(
+            http_url=os.environ["CONVEX_HTTP_URL"],
+            ingest_secret=os.environ["CONVEX_INGEST_SECRET"],
+        )
+        contract = retry_request(client.require_deployed_contract)
+        record["stage"] = "verify staging source"
+        save(distro, record)
+        if not ingest:
+            source = request_json(ingest_request("promotion-source", {"distro": distro}))
+            if source["distro"] != distro:
+                raise ValueError("Unexpected staging source distro")
+            record["releaseId"] = source["datasetReleaseId"]
+            record["stagingVerified"] = True
+        expected = record.get("releaseId")
+        if not isinstance(expected, str) or not expected.strip():
+            raise ValueError("Missing verified staging release ID; refusing unconditional promotion")
+        if pinned is not None:
+            if expected != pinned:
+                raise ValueError("STAGING_RELEASE_CONFLICT: verified staging source differs from operator-pinned expected_release_ids; refusing promotion")
+            expected = pinned
+        payload["expectedDatasetReleaseId"] = {distro: expected}
+        request = ingest_request("promote", payload)
+        request.add_header("X-BetterMan-Ingest-Contract", str(contract["schemaVersion"]))
+        record["stage"] = "read previous prod"
+        save(distro, record)
         info = request_json(
             urllib.request.Request(
                 f"{os.environ['CONVEX_URL'].rstrip('/')}/api/query",
@@ -239,7 +318,7 @@ def promote(distro):
         skipped = result.get("skipped", [])
         if (not promoted and distro == "debian" and len(skipped) == 1
             and skipped[0].get("distro") == "debian"
-            and skipped[0].get("datasetReleaseId")
+            and skipped[0].get("datasetReleaseId") == expected
             and skipped[0].get("reason") == "FULL_DEBIAN_PROMOTION_HELD"):
             print("[dataset] Skipping held full-Debian staging release: authorize debian_full_promote or BETTERMAN_DEBIAN_FULL_PROMOTE=1", flush=True)
             record.update(stage="full Debian promotion held", result="success")
@@ -261,7 +340,7 @@ def promote(distro):
         record.update(stage="promoted", result="success", releaseId=release_id)
         with open(os.environ["GITHUB_OUTPUT"], "a") as output:
             output.write(f"release_ids={json.dumps({distro: release_id})}\n")
-    except (OSError, http.client.HTTPException, ValueError, KeyError, TypeError) as error:
+    except (OSError, http.client.HTTPException, RuntimeError, ValueError, KeyError, TypeError) as error:
         detail = str(error)
         if isinstance(error, urllib.error.HTTPError):
             try:

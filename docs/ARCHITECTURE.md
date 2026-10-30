@@ -35,9 +35,18 @@ A `.so` include stub is recorded as an alias rather than a page; its URL permane
 
 A release is one distro at one point in time. Before uploading, ingestion declares its page count, per-section totals, alias count, and license count with the package identities that require license text. Activation verifies these declarations against completed uploads before sealing, hydrating related metadata, and atomically changing the `staging` pointer. Promotion copies only manifest-verified, sealed, complete release pointers to `prod`. New rows cannot be appended after sealing, and pruning marks a release ineligible for activation before deleting any children. Superseded releases are removed by the manual `prune-releases` workflow, which keeps the newest verified inactive release per distro as a rollback target, never deletes active or recently created declared releases, and leaves unsealed drafts alone unless an operator opts in.
 
-Ingest contract v5 retains the v2 storage/batch protocol and v3/v4 extractor,
+Ingest contract v6 retains the v2 storage/batch protocol and v3/v4 extractor,
 signature, symbol and optional-argument fields, adding real and alias package
-providers. The generated layer advertises its own independent v2 contract.
+providers from v5, adding an authenticated fixed-staging promotion-source read
+and per-distro `expectedDatasetReleaseId` compare-and-swap. A mismatch aborts
+the entire promotion transaction with HTTP 409; an already-committed expected
+prod release is acknowledged without pointer/history writes and rechecks the
+deduplicating derived scheduler for failed work. Dispatches can pin inspected
+release IDs through concurrency-queue waits with `expected_release_ids`; a
+job-time source mismatch fails before promotion. Both paths retain the persisted
+full-Debian acquisition hold. Promotion requests carry the exact contract
+version header so old in-flight workflows fail before moving prod. The
+generated layer advertises its own independent v2 contract.
 Large package provenance is stored in Convex file storage via a
 `releaseManifests` row. The release document contains counts, digests and lifecycle
 state. Digest-bound package batches populate `licensePackages` in transactions of

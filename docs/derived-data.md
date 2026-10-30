@@ -252,16 +252,19 @@ content distribution, or billing latency. See the PR evidence for the final run.
 
 ## Deployment order
 
-The mirrored TS/Python ingest contract is **v3**: it retains contract v2's
-separate `ingest.insertLicensePackages` upload and adds option-extractor provenance.
+The current mirrored TS/Python ingest contract is **v6**. It retains contract
+v2's separate `ingest.insertLicensePackages` upload, v3 extractor provenance,
+v4 symbol/optional-argument fields and v5 provider declarations, adding verified
+staging-source reads and CAS promotion. The derived layer's version is separate
+from this shared ingest protocol.
 The shared release-child registry covers all eight derived child tables; scan
 jobs have a `by_releaseId` index. Durable pin checks run before marking a release
 pruning or deleting children, preserving resumable pruning, backfill-stop logic
 and all three orphan sweeps (content, manifest files and derived caches).
 
 Deploy integrated Convex schema/functions first, then the matching Next app. Only
-then run the matching ingestion client: its contract preflight rejects old v2
-backends before any writes. The next separately coordinated ingest extension
-uses v4. Hourly jobs bootstrap existing stored data and resume failures; fresh
+then run the matching ingestion client: its contract preflight rejects either
+older or newer protocol versions before any writes. Hourly jobs bootstrap
+existing stored data and resume failures; fresh
 upstream coverage still arrives with ingestion. Use the read-only status check
 to distinguish healthy completion from partial unavailable pages.
