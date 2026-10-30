@@ -47,9 +47,10 @@ as an array into Convex or read by Next.js.
 
 ## Storage, sitemap and representation contracts
 
-Ingest contract **v6** adds `indexable` and `popularityScore` to canonical page
+Ingest contract **v7** retains v6's CAS request, fixed promotion-source read
+and exact-version header fence, and adds `indexable` and `popularityScore` to canonical page
 payloads and `indexablePageCount` to release declarations. Python's
-`require_deployed_contract()` rejects v5, and older clients reject v6. The
+`require_deployed_contract()` rejects v6, and older clients reject v7. The
 cross-language alignment test and both mismatch directions remain covered.
 The small internal legacy mutation interface remains for queued jobs/fixtures;
 legacy releases have no computed tier and retain all-page indexing and sitemaps.
@@ -108,7 +109,7 @@ Full-Debian opt-in and its separate owner authorization remain required.
 
 1. **Merge only after the November 1, 2026 05:00 UTC monthly run completes.**
    That run uses today's code and promotes unscored curated releases as usual.
-   After #443 lands, rebase B4 to ingest v7 with both payloads before merging.
+   #443 is integrated in contract v7; its CAS pins and header fence remain intact.
    Once B4 is deployed, the lead runs an **all-distro staging-only ingest**
    (`ingest=true`, `promote=false`, not a sample), inspects each distro's declared
    `indexablePageCount`, then dispatches promotion with `ingest=false`,
@@ -218,28 +219,31 @@ A separate 115,000-page synthetic test yields 38,334 tier members with dense
 
 The lead's rollout correction preserves legacy indexability and moves the hard
 safety gate to full-Debian promotion. Revision checks and the final head are
-recorded in the PR. Validation passed: 3,248 Convex tests and typecheck;
+recorded in the PR. Validation passed: 3,263 Convex tests and typecheck;
 880 ingestion tests; 582 Next unit tests, lint, grammar
-and build; 136 E2E tests (scored and legacy serving); 121 ops tests; performance
+and build; 138 E2E tests (scored and legacy serving); 123 ops tests; performance
 budgets with 5 calls / 29 documents / 1 storage read. The local backend used
 isolated ports 3416/3417. No budgets, runner configuration or shared
 infrastructure were changed.
 
 ### Merge dependencies
 
-As checked for this revision, [#443](https://github.com/amanthanvi/BetterMan/pull/443)
-is still open. [#442](https://github.com/amanthanvi/BetterMan/pull/442) merged as
-3aa3587f and this revision rebases onto it, retaining both its generated-layer
-fixes and B4's selector changes. This branch temporarily advertises ingest v6
-against main's v5.
-**After #443 merges first, rebase and move B4 to ingest v7**, retaining its CAS
-request field and fixed promotion-source read unchanged alongside B4's fields.
-The prod-pointer tier checks must remain in both resulting promotion paths.
-Retain #442's generated-layer fixes in `cli.py`, `page.py`,
-`pipeline.py`, `provider.py` and the workflow's `refresh_page` input; do not take
-one side wholesale. Re-run contract alignment, promotion, generated and affected
-integration checks after resolving those overlaps. Do not merge B4 before that
-integration is complete.
+Rebased onto main 54b95eb7, including [#443](https://github.com/amanthanvi/BetterMan/pull/443)
+and #444's hydration signal. Contract **v7** carries both the complete B4 upload
+payload and #443's fixed-staging promotion-source read, `expectedDatasetReleaseId`
+CAS map, `expected_release_ids` dispatch behavior and exact-version promotion
+header fence. Version 6 promotion requests are rejected before pointer writes.
+The B4 tier-required workflow skip applies only after source verification and
+pinned-ID comparison reach the actual promote request: a mismatched operator
+pin stays `STAGING_RELEASE_CONFLICT`, with no request/skip output. Matching pins
+may get the clean replacement-required skip; the server refuses every pointer
+write, including owner-authorized ones.
+
+#442's generated-layer and `refresh_page` changes are retained. The open man-page
+stack #449–#451 moves the renderer to Pages Router; whichever stack lands second
+must retain the other's changes. Its renderer uses `indexable === false` for
+noindex, matching B4's payload. Do not wait for that stack or merge this PR as
+part of this task. The post-November-1-run merge gate remains in force.
 
 Implementation and tests cover scoring, raw-count thresholds, section suffixes,
 exact package proxies, traffic promotion, generated selection, sitemap filtering,

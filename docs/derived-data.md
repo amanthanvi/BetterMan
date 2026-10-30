@@ -252,10 +252,11 @@ content distribution, or billing latency. See the PR evidence for the final run.
 
 ## Deployment order
 
-The current mirrored TS/Python ingest contract is **v6**. It retains contract
+The current mirrored TS/Python ingest contract is **v7**. It retains contract
 v2's separate `ingest.insertLicensePackages` upload, v3 extractor provenance,
 v4 symbol/optional-argument fields and v5 provider declarations, adding verified
-staging-source reads and CAS promotion. The derived layer's version is separate
+staging-source reads and CAS promotion from v6, plus B4 page scores, tier flags
+and the release's declared indexable count. The derived layer's version is separate
 from this shared ingest protocol.
 The shared release-child registry covers all eight derived child tables; scan
 jobs have a `by_releaseId` index. Durable pin checks run before marking a release

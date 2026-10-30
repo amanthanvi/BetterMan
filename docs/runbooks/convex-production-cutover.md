@@ -113,7 +113,7 @@ PY
 curl -fsS \
   -H "Authorization: Bearer ${CONVEX_INGEST_SECRET}" \
   -H "Content-Type: application/json" \
-  -H "X-BetterMan-Ingest-Contract: 6" \
+  -H "X-BetterMan-Ingest-Contract: 7" \
   --data @promote.json \
   "${CONVEX_HTTP_URL%/}/ingest/promote"
 ```
@@ -188,9 +188,8 @@ check this in the prod-pointer transaction and return
 in-flight v5 full-Debian ingest can finish staging but needs a fresh scored
 replacement before promotion. A scored full-Debian release still needs the
 existing separate owner authorization. See the
-[B4 policy and dependency checklist](../roadmap/b4-index-by-demand.md); rebase B4
-to ingest v7 after #443, preserving its CAS request and fixed-source read, plus
-#442's generated-layer fixes. This runbook does not authorize promotion.
+[B4 policy and dependency checklist](../roadmap/b4-index-by-demand.md); B4 now uses ingest v7, preserving #443's CAS request, fixed-source read, header
+fence and dispatch pins, plus #442's generated-layer fixes. This runbook does not authorize promotion.
 
 ### B4 rollout order and tier inspection
 

@@ -157,20 +157,21 @@ In BetterMan, the Arch ingest path handles this automatically (see `ingestion/in
 ## Deploy and activation recovery
 
 Do not deploy Convex during an `update-docs` / `update-dataset` run. Wait for all
-isolated distro matrix legs to finish before deploying. Contract **v6** retains
-v5 uploads and adds verified-source reads and CAS promotion. Both ingestion and
+isolated distro matrix legs to finish before deploying. Contract **v7** retains
+v5 uploads, v6 verified-source reads and CAS promotion, adding B4 demand fields.
+Both ingestion and
 every promotion path call `require_deployed_contract()` and reject either an
 older or newer version before writes. Promotion additionally requires
-`X-BetterMan-Ingest-Contract: 6`: new Convex rejects old in-flight workflow calls
+`X-BetterMan-Ingest-Contract: 7`: new Convex rejects old in-flight workflow calls
 without the header as `409 INGEST_CONTRACT_MISMATCH`, before moving pointers.
 New workflow code against v5 fails its preflight; if Convex rolls back between
 preflight and POST, v5's validator rejects the unknown CAS field as an invalid
 payload before any mutation writes. There is no unconditional fallback.
 Vercel can lag the Convex deploy because this exchange goes directly to Convex.
 An old ingest already past its preflight may finish compatible uploads or
-staging activation, but cannot promote through the v6 HTTP fence. Do not deploy
+staging activation, but cannot promote through the v7 HTTP fence. Do not deploy
 during the live full-Debian run (including run `40957721036`); let it finish,
-deploy Convex v6, then use a fresh matching promotion-only dispatch if needed.
+deploy Convex v7, then use a fresh matching promotion-only dispatch if needed.
 Once the workflow and deployment
 have settled, use the matching client. If upload was incomplete, re-ingest under
 a new release ID; if upload and sealing completed, resume activation of that ID
@@ -299,7 +300,8 @@ new VMs only reuse retained cached archives, not an entire extracted full corpus
 The existing 300-minute Linux job deadline includes setup/download/parse/upload.
 Activation uses only the remaining budget, capped at 45 minutes, and can resume
 without another import. Never deploy Convex during a dataset run. Merge B7 v3,
-then B5 v4, then archive providers v5, then promotion CAS v6 with the combined
+then B5 v4, then archive providers v5, then promotion CAS v6 and demand indexing
+v7 with the combined
 contract, symbols, derived state, lease fence and all child tables. No switch, billing
 setting or shared dataset was changed for the local evidence.
 
@@ -316,9 +318,10 @@ check this in the prod-pointer transaction and return
 in-flight v5 full-Debian ingest can finish staging but needs a fresh scored
 replacement before promotion. A scored full-Debian release still needs the
 existing separate owner authorization. See the
-[B4 policy and dependency checklist](../roadmap/b4-index-by-demand.md); rebase B4
-to ingest v7 after #443, preserving its CAS request and fixed-source read, plus
-#442's generated-layer fixes. This runbook does not authorize promotion.
+[B4 policy and dependency checklist](../roadmap/b4-index-by-demand.md); B4 now
+uses ingest v7, preserving #443's CAS request, fixed-source read, header fence
+and dispatch pins, plus #442's generated-layer fixes. This runbook does not
+authorize promotion.
 
 ### B4 rollout order and tier inspection
 

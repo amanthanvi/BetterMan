@@ -160,24 +160,37 @@ class WorkflowTest(unittest.TestCase):
                 self.assertIn('Skipping held full-Debian', log.getvalue())
                 self.assertIn('skipped=true', Path('output').read_text())
 
-    def test_unscored_full_debian_is_skipped_without_dirtying_sibling_results(self):
+    def test_unscored_full_debian_skip_preserves_pinned_expectations_and_siblings(self):
         self.plan()
         self.ingest('ubuntu')
         sibling = w.load('ubuntu')
         os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
-        for allowed in ['false', 'true']:
-            os.environ['BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT'] = allowed
-            Path('output').write_text('')
-            def response(request, **kwargs):
-                raise w.urllib.error.HTTPError(request.full_url, 409, 'Conflict', {},
-                    io.BytesIO(json.dumps({'error': {'code': 'FULL_DEBIAN_TIER_REQUIRED'}}).encode()))
-            with self.post_mock(response), contextlib.redirect_stdout(io.StringIO()) as log:
-                self.assertEqual(w.promote('debian'), 0)
-            self.assertIn('scored full-Debian replacement required', log.getvalue())
-            self.assertEqual(w.load('debian')['result'], 'success')
-            self.assertEqual(w.load('debian')['error'], '')
-            self.assertEqual(Path('output').read_text(), 'skipped=true\n')
-            self.assertEqual(w.load('ubuntu'), sibling)
+        for pin in [None, 'release-debian', 'different']:
+            os.environ['BETTERMAN_EXPECTED_RELEASE_IDS_INPUT'] = json.dumps({'debian': pin}) if pin else ''
+            for allowed in ['false', 'true']:
+                os.environ['BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT'] = allowed
+                Path('output').write_text('')
+                requests = []
+                def response(request, **kwargs):
+                    requests.append(request)
+                    self.assertTrue(request.full_url.endswith('/ingest/promote'))
+                    self.assertEqual(json.loads(request.data)['expectedDatasetReleaseId'], {'debian': 'release-debian'})
+                    self.assertEqual(request.get_header('X-betterman-ingest-contract'), str(REQUIRED_SCHEMA_VERSION))
+                    raise w.urllib.error.HTTPError(request.full_url, 409, 'Conflict', {},
+                        io.BytesIO(json.dumps({'error': {'code': 'FULL_DEBIAN_TIER_REQUIRED'}}).encode()))
+                with self.post_mock(response), contextlib.redirect_stdout(io.StringIO()) as log:
+                    self.assertEqual(w.promote('debian'), 1 if pin == 'different' else 0)
+                if pin == 'different':
+                    self.assertEqual(requests, [])
+                    self.assertIn('STAGING_RELEASE_CONFLICT', w.load('debian')['error'])
+                    self.assertEqual(Path('output').read_text(), '')
+                else:
+                    self.assertEqual(len(requests), 1)
+                    self.assertIn('scored full-Debian replacement required', log.getvalue())
+                    self.assertEqual(w.load('debian')['result'], 'success')
+                    self.assertEqual(w.load('debian')['error'], '')
+                    self.assertEqual(Path('output').read_text(), 'skipped=true\n')
+                self.assertEqual(w.load('ubuntu'), sibling)
 
     def test_misspelled_gate_values_warn_and_stay_off(self):
         for name in ['BETTERMAN_DEBIAN_FULL', 'BETTERMAN_DEBIAN_FULL_PROMOTE']:

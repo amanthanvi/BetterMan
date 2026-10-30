@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import { afterEach, expect, it, vi } from "vitest";
+import { INGEST_CONTRACT } from "./ingestContract";
 import { internal } from "./_generated/api";
 import schema from "./schema";
 import debianManifest from "../ingestion/data/debian-trixie.json";
@@ -108,8 +109,8 @@ it("HTTP promotion cannot authorize an unscored full-Debian pointer", async () =
   });
   for (const allowFullDebian of [false, true]) {
     const response = await t.fetch("/ingest/promote", {
-      method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
-      body: JSON.stringify({ fromStage: "staging", toStage: "prod", distros: ["debian"], activatedAt: "now", allowFullDebian }),
+      method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
+      body: JSON.stringify({ fromStage: "staging", toStage: "prod", distros: ["debian"], activatedAt: "now", allowFullDebian, expectedDatasetReleaseId: { debian: "unscored-full" } }),
     });
     expect(response.status).toBe(409);
     expect(await response.json()).toMatchObject({ error: { code: "FULL_DEBIAN_TIER_REQUIRED" } });
