@@ -236,6 +236,15 @@ jobs:
           set -euo pipefail
 
           npx convex dev --once
+          # convex dev regenerated convex/_generated; the committed copy must match
+          # it. The AI guideline files under ai/ come from `convex ai-files` instead.
+          drift="$(git status --porcelain -- convex/_generated ':(exclude)convex/_generated/ai')"
+          if [[ -n "$drift" ]]; then
+            echo "::error::convex/_generated is out of date. Run pnpm convex:check and commit convex/_generated." >&2
+            echo "$drift" >&2
+            git diff --stat -- convex/_generated >&2
+            exit 1
+          fi
           npx convex env set CONVEX_INGEST_SECRET "$CONVEX_INGEST_SECRET"
           npx convex env set RATE_LIMIT_TAG_KEY "$RATE_LIMIT_TAG_KEY"
 
