@@ -37,7 +37,7 @@ function propsOf(result: object): object {
 beforeEach(() => {
   vi.clearAllMocks()
   lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data, related: [], servedRelease: '2026-10-28+debian' })
-  lookup.manMiss.mockImplementation(async (opts: object) => ({ ...opts, suggestions: [], distros: [], limited: false }))
+  lookup.manMiss.mockImplementation(async (opts: object) => ({ ...opts, suggestions: [], distros: [], limited: false, answeredByKey: true }))
 })
 
 it('carries its head to the document: canonical, share image, JSON-LD and the index tier', async () => {
@@ -115,7 +115,7 @@ describe('/man/<name>/<section>', () => {
     expect(html).toContain('No manual entry for ta in section 9')
     expect(html).not.toContain('data-bm-manual')
 
-    lookup.manMiss.mockImplementation(async (opts: object) => ({ ...opts, suggestions: [], distros: [], limited: true }))
+    lookup.manMiss.mockImplementation(async (opts: object) => ({ ...opts, suggestions: [], distros: [], limited: true, answeredByKey: true }))
     const limited = context({ name: 'ta', section: '9' })
     await pageProps(limited.ctx)
     expect(limited.res.headers['cache-control']).toBe('private, no-store')
@@ -154,6 +154,17 @@ describe('answers from another release than the proxy key', () => {
     expect(miss.res.statusCode).toBe(404)
     expect(miss.res.headers['cache-control']).toBe('private, no-store')
     expect(miss.res.headers['cdn-cache-control']).toBeUndefined()
+
+    // A miss whose suggestions or distros came from B is not shared either.
+    lookup.lookupManPage.mockResolvedValue({ kind: 'miss', servedRelease: '2026-10-28+debian' })
+    lookup.manMiss.mockImplementation(async (opts: object) => ({ ...opts, suggestions: [{ name: 'b-page', section: '1', description: '' }], distros: [], limited: false, answeredByKey: false }))
+    const crossed = context({ name: 'rcr-link', section: '1' })
+    await pageProps(crossed.ctx)
+    expect(crossed.res.headers['cache-control']).toBe('private, no-store')
+    const crossedName = context({ name: 'rcr-link' })
+    lookup.resolveManName.mockResolvedValue({ result: null, servedRelease: '2026-10-28+debian' })
+    await nameProps(crossedName.ctx)
+    expect(crossedName.res.headers['cache-control']).toBe('private, no-store')
 
     lookup.resolveManName.mockResolvedValue({ result: null, servedRelease: null })
     const unknown = context({ name: 'gizp' })

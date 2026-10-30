@@ -6,6 +6,7 @@ import {
   fetchRelated,
   suggest,
   withDistroFallback,
+  answeredBy,
   servedRelease,
   type ManAlias,
   type ManResolveResult,
@@ -57,7 +58,11 @@ export async function lookupManPage(opts: {
   release?: string
 }): Promise<ManPageLookup> {
   const { name, section, pkg, release } = opts
-  const relatedFor = (distro: Distro) => fetchRelated({ distro, name, section, ...(release ? { release } : {}) }).catch(() => ({ items: [] }))
+  const relatedFor = (distro: Distro): Promise<RelatedResponse> =>
+    fetchRelated({ distro, name, section, ...(release ? { release } : {}) }).catch((err: unknown) => ({
+      items: [],
+      ...(err instanceof FastApiError && err.datasetReleaseId ? { datasetReleaseId: err.datasetReleaseId } : {}),
+    }))
   // Related reads run beside the document, for the requested distro; a fallback to Debian reads them again.
   const related = relatedFor(opts.distro)
   const found = await orMissing(
@@ -67,8 +72,12 @@ export async function lookupManPage(opts: {
   )
   if (isMissing(found)) return { kind: 'miss', servedRelease: found.servedRelease }
   if (found.data.kind === 'alias') return { ...found.data, distro: found.distro, servedRelease: servedRelease(found.data) }
-  const relatedItems = (await (found.distro === opts.distro ? related : relatedFor(found.distro))).items
-  return { kind: 'page', distro: found.distro, data: found.data.data, related: relatedItems, servedRelease: servedRelease(found.data) }
+  const relatedResult = await (found.distro === opts.distro ? related : relatedFor(found.distro))
+  const pageRelease = servedRelease(found.data)
+  // The page is one answer only when its related links come from the same release; otherwise
+  // it names no single release, so the route does not share it under any key.
+  const consistent = pageRelease !== null && servedRelease(relatedResult) === pageRelease
+  return { kind: 'page', distro: found.distro, data: found.data.data, related: relatedResult.items, servedRelease: consistent ? pageRelease : null }
 }
 
 export type ResolvedManName = ({ distro: Distro; result: ManResolveResult } | { result: null }) & Served
@@ -95,6 +104,8 @@ export type ManMiss = {
   distros: Distro[]
   /** True when the typo reads were skipped for the search rate limit: the response must not be shared. */
   limited: boolean
+  /** False when a suggestion or distro read came from another release than the key's: do not share it. */
+  answeredByKey: boolean
 }
 
 /** What a miss offers: nearby names and the distros that have the page. */
@@ -107,7 +118,7 @@ export async function manMiss(opts: {
   release?: string
 }): Promise<ManMiss> {
   const { name, section, distro, urlDistro, release } = opts
-  const miss: ManMiss = { name, section, distro, urlDistro, suggestions: [], distros: [], limited: false }
+  const miss: ManMiss = { name, section, distro, urlDistro, suggestions: [], distros: [], limited: false, answeredByKey: true }
   if (!isManName(name)) return miss
   // The typo read costs up to 64 documents, so it shares the search limit.
   if (await isRateLimited(opts.headers, 'search')) return { ...miss, limited: true }
@@ -118,5 +129,7 @@ export async function manMiss(opts: {
     ).catch(() => null),
     fetchManDistros({ name: lower, section, ...(release ? { release } : {}) }).catch(() => null),
   ])
-  return { ...miss, suggestions: suggested?.data.suggestions ?? [], distros: available?.distros ?? [] }
+  // A failed read adds nothing to the page, so only a read that answered from another release counts against it.
+  const answeredByKey = (!suggested || answeredBy(suggested.data, release)) && (!available || answeredBy(available, release))
+  return { ...miss, suggestions: suggested?.data.suggestions ?? [], distros: available?.distros ?? [], answeredByKey }
 }

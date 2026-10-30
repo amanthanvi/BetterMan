@@ -329,6 +329,8 @@ export const getRelated = query({
     distro: distroValidator,
     name: v.string(),
     section: v.string(),
+    /** A missing page answers `{ items: [], found: false, datasetReleaseId }` instead of null. */
+    reportRelease: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const name = normalizeName(args.name);
@@ -342,7 +344,8 @@ export const getRelated = query({
       name,
       section,
     });
-    if (!page) return null;
+    // Older callers, still live during a deploy, read a missing page as null.
+    if (!page) return args.reportRelease ? { items: [], found: false, datasetReleaseId: release.datasetReleaseId } : null;
 
     const [seeAlso, xrefs] = await Promise.all([
       ctx.db
@@ -372,7 +375,8 @@ export const getRelated = query({
       MAX_RELATED,
     );
 
-    return { items };
+    // The release these links come from, so a caller caching them under an expected release can check.
+    return { items, datasetReleaseId: release.datasetReleaseId };
   },
 });
 
@@ -383,7 +387,7 @@ export const listManDistros = query({
     // Without a section, any section of the name counts.
     section: v.optional(v.string()),
   },
-  returns: v.object({ distros: v.array(distroValidator) }),
+  returns: v.object({ distros: v.array(distroValidator), datasetReleaseIds: v.array(v.string()) }),
   handler: async (ctx, args) => {
     const name = normalizeName(args.name);
     const section = args.section === undefined ? null : normalizeSection(args.section);
@@ -416,7 +420,8 @@ export const listManDistros = query({
     );
     const distros = found.filter((distro): distro is Distro => distro !== null);
     distros.sort((a, b) => DISTRO_ORDER[a] - DISTRO_ORDER[b]);
-    return { distros };
+    // Every active release read, so a caller can tell whether the release it expected was among them.
+    return { distros, datasetReleaseIds: active.map((item) => item.datasetReleaseId) };
   },
 });
 
@@ -837,6 +842,7 @@ export const suggest = query({
 
     return {
       query: name,
+      datasetReleaseId: release.datasetReleaseId,
       suggestions: hits.map((hit) => ({
         name: hit.name,
         section: hit.section,

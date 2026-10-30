@@ -84,7 +84,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   if (found.kind === 'miss') {
     const miss = await manMiss({ name, section, distro, urlDistro, headers: requestHeaders(req.headers), ...(releaseKey ? { release: releaseKey } : {}) })
     res.statusCode = 404
-    setManCache(res, miss.limited ? MAN_PRIVATE_CACHE : MAN_MISS_CACHE, { keyed })
+    setManCache(res, miss.limited ? MAN_PRIVATE_CACHE : MAN_MISS_CACHE, { keyed: keyed && miss.answeredByKey })
     return { props: { kind: 'miss', head: MISSING_MAN_HEAD, miss, release } }
   }
 

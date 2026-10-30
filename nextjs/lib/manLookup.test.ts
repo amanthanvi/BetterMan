@@ -16,6 +16,7 @@ vi.mock('./api', async (importOriginal) => {
     FastApiError: actual.FastApiError,
     withDistroFallback: actual.withDistroFallback,
     servedRelease: actual.servedRelease,
+    answeredBy: actual.answeredBy,
     fetchManByNameAndSectionOrAlias: mocks.fetchManByNameAndSectionOrAlias,
     fetchRelated: mocks.fetchRelated,
     fetchManResolve: mocks.fetchManResolve,
@@ -96,6 +97,7 @@ describe('manMiss', () => {
       suggestions: [{ name: 'gzip', section: '1', description: '' }],
       distros: ['ubuntu'],
       limited: false,
+      answeredByKey: true,
     })
     expect(mocks.suggest).toHaveBeenCalledWith({ distro: 'macos', name: 'systemctl', typos: true })
     expect(mocks.fetchManDistros).toHaveBeenCalledWith({ name: 'systemctl', section: '1' })

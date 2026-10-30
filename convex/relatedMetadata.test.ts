@@ -89,7 +89,11 @@ describe("related metadata backfill", () => {
     expect(links[1]).not.toHaveProperty("toTitle");
     expect(await t.query(api.queries.getRelated, { distro: "debian", name: "source", section: "1" })).toEqual({
       items: [{ name: "target", section: "1", title: "target(1)", description: "target description" }],
+      datasetReleaseId: "new",
     });
+    expect(await t.query(api.queries.getRelated, { distro: "debian", name: "absent", section: "1" })).toBeNull();
+    expect(await t.query(api.queries.getRelated, { distro: "debian", name: "absent", section: "1", reportRelease: true }))
+      .toEqual({ items: [], found: false, datasetReleaseId: "new" });
     expect(await t.mutation(internal.related.backfillRelease, { datasetReleaseId: "new" })).toMatchObject({ updated: 0, isDone: true });
     const completed = await t.run((ctx) => ctx.db.get(releaseId));
     expect(completed?.relatedMetadataCompletedVersion).toBe(completed?.relatedMetadataVersion);

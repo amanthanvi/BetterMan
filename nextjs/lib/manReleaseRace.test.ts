@@ -27,7 +27,9 @@ vi.mock('next/cache', () => ({
 vi.mock('./convexClient', () => ({ getConvexClient: () => ({ action: backend.action, query: backend.query }) }))
 vi.mock('./rateLimit', () => ({ isRateLimited: async () => false }))
 
-import { lookupManPage, resolveManName } from './manLookup'
+import { getFunctionName, type FunctionReference } from 'convex/server'
+
+import { lookupManPage, manMiss, resolveManName } from './manLookup'
 
 // What each release answers: in A, race-probe(1) is a page; in B it lives in section 9,
 // the alias points elsewhere and the page is gone.
@@ -38,6 +40,7 @@ function manByNameAndSection({ name }: { name: string }) {
       ? { kind: 'page', data: { page: { name, section: '1', datasetReleaseId: id }, content: { blocks: [] }, variants: [] } }
       : { kind: 'not_found', datasetReleaseId: id }
   }
+  if (name === 'race-related') return { kind: 'page', data: { page: { name, section: '1', datasetReleaseId: id }, content: { blocks: [] }, variants: [] } }
   if (name === 'race-alias') return { kind: 'alias', name: id === 'A' ? 'gzip' : 'bzip2', section: '1', datasetReleaseId: id }
   return { kind: 'not_found', datasetReleaseId: id }
 }
@@ -49,12 +52,27 @@ function resolveByName({ name }: { name: string }) {
     : { kind: 'not_found', datasetReleaseId: id }
 }
 
+// Secondary reads: related links, 404 suggestions and the distros that have a page.
+function secondary(fn: string, args: Record<string, unknown>) {
+  const id = backend.active
+  switch (fn) {
+    case 'queries:resolveManByName':
+      return resolveByName(args as { name: string })
+    case 'queries:getRelated':
+      return { items: [{ name: id === 'A' ? 'a-link' : 'b-link', section: '1', title: '', description: '' }], datasetReleaseId: id }
+    case 'queries:suggest':
+      return { query: args.name, suggestions: [{ name: id === 'A' ? 'a-page' : 'b-page', section: '1', description: '' }], datasetReleaseId: id }
+    case 'queries:listManDistros':
+      return { distros: id === 'A' ? ['debian'] : ['debian', 'ubuntu'], datasetReleaseIds: [id, 'ubuntu-release'] }
+    default:
+      throw new Error(`unexpected ${fn}`)
+  }
+}
+
 beforeEach(() => {
   backend.store.clear()
   backend.action.mockReset().mockImplementation(async (_ref: unknown, args: { name: string }) => manByNameAndSection(args))
-  backend.query.mockReset().mockImplementation(async (_ref: unknown, args: { name?: string }) =>
-    'name' in args && args.name !== undefined && !('section' in args) ? resolveByName({ name: args.name }) : { items: [] },
-  )
+  backend.query.mockReset().mockImplementation(async (ref: FunctionReference<'query'>, args: Record<string, unknown>) => secondary(getFunctionName(ref), args))
 })
 
 describe('a promotion and a rollback within the proxy TTL', () => {
@@ -88,5 +106,27 @@ describe('a promotion and a rollback within the proxy TTL', () => {
     expect(await lookupManPage({ name: 'old', section: '1', distro: 'debian', release: 'A' })).toMatchObject({ servedRelease: null })
     await lookupManPage({ name: 'old', section: '1', distro: 'debian', release: 'A' })
     expect(backend.action).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not share related links, suggestions or distros that B answered under A', async () => {
+    // A is active and the document is cached; the related entry has expired (it lives on its own TTL).
+    backend.active = 'A'
+    await lookupManPage({ name: 'race-related', section: '1', distro: 'debian', release: 'A' })
+    for (const key of [...backend.store.keys()]) if (key.includes('"related"')) backend.store.delete(key)
+
+    backend.active = 'B'
+    const page = await lookupManPage({ name: 'race-related', section: '1', distro: 'debian', release: 'A' })
+    // A's document with B's links is no single release's answer, so it is not shared.
+    expect(page).toMatchObject({ kind: 'page', related: [{ name: 'b-link' }], servedRelease: null })
+    const miss = await manMiss({ name: 'rcr-link', section: '1', distro: 'debian', urlDistro: null, headers: new Headers(), release: 'A' })
+    expect(miss).toMatchObject({ suggestions: [{ name: 'b-page' }], distros: ['debian', 'ubuntu'], answeredByKey: false })
+
+    backend.active = 'A'
+    expect(await lookupManPage({ name: 'race-related', section: '1', distro: 'debian', release: 'A' })).toMatchObject({ related: [{ name: 'a-link' }], servedRelease: 'A' })
+    expect(await manMiss({ name: 'rcr-link', section: '1', distro: 'debian', urlDistro: null, headers: new Headers(), release: 'A' })).toMatchObject({
+      suggestions: [{ name: 'a-page' }],
+      distros: ['debian'],
+      answeredByKey: true,
+    })
   })
 })

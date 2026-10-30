@@ -57,7 +57,7 @@ export type SectionResponse = {
 
 export type Suggestion = { name: string; section: string; description: string }
 
-export type SuggestResponse = { query: string; suggestions: Suggestion[] }
+export type SuggestResponse = { query: string; suggestions: Suggestion[]; datasetReleaseId?: string }
 
 /** `distro` is where the suggestions came from: Debian when the requested distro has no active release. */
 export type SuggestApiResponse = SuggestResponse & { distro: Distro }
@@ -132,12 +132,24 @@ export function servedRelease(value: unknown): string | null {
   return typeof served === 'string' && served ? served : null
 }
 
+/**
+ * Whether `release` answered this result: the release it names, or, for a read
+ * across distros (`datasetReleaseIds`), one of the releases it read. Without a
+ * key there is nothing to check.
+ */
+export function answeredBy(value: unknown, release: string | null | undefined): boolean {
+  if (!release) return true
+  const many = (value as { datasetReleaseIds?: unknown } | null)?.datasetReleaseIds
+  if (Array.isArray(many)) return many.includes(release)
+  return servedRelease(value) === release
+}
+
 // A result read under one release key must come from that release: during a
 // promotion an instance can still key on the old one, and storing the new
 // answer under it (a page, an alias, a miss, a name's sections) would serve it
 // again after a rollback. An outcome that names no release is not stored either.
 function cacheableManPage<T>(value: T, release: string | null = null): T {
-  if (release && servedRelease(value) !== release) throw new UncacheableManPage(value)
+  if (!answeredBy(value, release)) throw new UncacheableManPage(value)
   if (new TextEncoder().encode(JSON.stringify(value)).length > 1_900_000) throw new UncacheableManPage(value)
   return value
 }
@@ -247,21 +259,25 @@ const cachedManMetaByNameAndSection = unstable_cache(
 
 const cachedRelated = unstable_cache(
   async (distro: Distro, name: string, section: string, _release: string | null) =>
-    await convex().query(api.queries.getRelated, { distro, name, section }),
+    cacheableManPage(await convex().query(api.queries.getRelated, { distro, name, section, reportRelease: true }), _release),
   ['betterman', 'convex', 'related', 'v2'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 const cachedManDistros = unstable_cache(
-  async (name: string, section: string | null, _release: string | null) =>
-    await convex().query(api.queries.listManDistros, section === null ? { name } : { name, section }),
+  async (name: string, section: string | null, _release: string | null) => {
+    const result = await convex().query(api.queries.listManDistros, section === null ? { name } : { name, section })
+    // It reads every distro's active release; under a key, the key's release must be among them.
+    if (_release && !answeredBy(result, _release)) throw new UncacheableManPage(result)
+    return result
+  },
   ['betterman', 'convex', 'man-distros'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 const cachedSuggest = unstable_cache(
   async (distro: Distro, name: string, typos: boolean, _release: string | null) =>
-    await convex().query(api.queries.suggest, typos ? { distro, name, typos } : { distro, name }),
+    cacheableManPage(await convex().query(api.queries.suggest, typos ? { distro, name, typos } : { distro, name }), _release),
   ['betterman', 'convex', 'suggest'],
   { revalidate: SEARCH_REVALIDATE_SECONDS },
 )
@@ -448,15 +464,15 @@ export async function fetchManByNameAndSectionOrAlias(opts: {
   return result
 }
 
-export type RelatedResponse = { items: SectionPage[] }
+export type RelatedResponse = { items: SectionPage[]; datasetReleaseId?: string }
 
 export type ManPageMetaResponse = { page: ManPage }
 
-export type ManDistrosResponse = { distros: Distro[] }
+export type ManDistrosResponse = { distros: Distro[]; datasetReleaseIds?: string[] }
 
 /** Without a section, a distro counts when it has the name in any section. */
 export async function fetchManDistros(opts: { name: string; section: string | null; release?: string }): Promise<ManDistrosResponse> {
-  return await cachedManDistros(opts.name, opts.section, opts.release ?? null)
+  return await mapConvexError(() => cachedManDistros(opts.name, opts.section, opts.release ?? null))
 }
 
 export async function fetchRelated(opts: {
@@ -466,7 +482,7 @@ export async function fetchRelated(opts: {
   release?: string
 }): Promise<RelatedResponse> {
   const result = await mapConvexError(() => cachedRelated(opts.distro, opts.name, opts.section, opts.release ?? null))
-  if (!result) throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+  if (!result || ('found' in result && result.found === false)) throw pageNotFound(servedRelease(result))
   return result as RelatedResponse
 }
 

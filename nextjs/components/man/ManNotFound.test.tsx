@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import type { ManMiss } from '../../lib/manLookup'
 import { ManNotFound, manMiss } from './ManNotFound'
 
-const miss: ManMiss = { name: 'ta', section: null, distro: 'debian', urlDistro: null, suggestions: [], distros: [], limited: false }
+const miss: ManMiss = { name: 'ta', section: null, distro: 'debian', urlDistro: null, suggestions: [], distros: [], limited: false, answeredByKey: true }
 
 describe('manMiss', () => {
   it('says what man-db says', () => {
