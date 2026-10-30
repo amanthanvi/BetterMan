@@ -230,3 +230,12 @@ Convex typecheck, public API, isolated codegen with no generated drift, and Pyth
 3.14 pip dry-run pass. Combined provider/man-query/short-URL production E2E:
 22 passed. Performance has the three alternate-only read-budget failures above.
 No dispatch, merge, shared/production write or new independent review was run.
+
+The actual CLI was also probed with each unmerged tip's literal parent. Main,
+#445 and all three translation tips pass. #465's literal parent
+`c52fcc08` already contains `flagSearchCandidates`, so that diagnostic correctly
+requires confirmation for its later index change. That parent has not deployed:
+the main-to-#465 schema audit above is the relevant squash-merge projection and
+passes because the whole table is new. No comparison override was added to the
+deployment CLI. The production default/alternate performance repeat reproduced
+4/26/1 and 7/31/2 exactly.
