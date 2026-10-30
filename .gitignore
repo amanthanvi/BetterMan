@@ -38,3 +38,4 @@ venv/
 .cache/b2/
 .cache/ubuntu/
 .cache/fedora/
+.cache/arch/

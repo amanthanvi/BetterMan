@@ -329,7 +329,7 @@ export const createRelease = internalMutation({
   handler: async (ctx, args) => {
     if (args.indexablePageCount !== undefined && (!validManifestCount(args.indexablePageCount) || args.indexablePageCount > args.pageCount)) throw new Error("INVALID_INDEX_POLICY");
     const acquisition = args.packageManifest !== undefined ? releaseAcquisition(args.packageManifest) : args.acquisition;
-    if ((acquisition === "ubuntu-deb-extraction" && args.distro !== "ubuntu") || (acquisition === "fedora-rpm-extraction" && args.distro !== "fedora")) throw new Error("INVALID_RELEASE_MANIFEST");
+    if ((acquisition === "ubuntu-deb-extraction" && args.distro !== "ubuntu") || (acquisition === "fedora-rpm-extraction" && args.distro !== "fedora") || (acquisition === "arch-pkg-extraction" && args.distro !== "arch")) throw new Error("INVALID_RELEASE_MANIFEST");
     if (args.acquisition !== undefined && acquisition !== args.acquisition) throw new Error("INVALID_RELEASE_MANIFEST");
     const packages = args.licensePackages ?? [];
     if (args.providerCount !== undefined && (!validManifestCount(args.providerCount) || args.packageBatches === undefined)) throw new Error("INVALID_RELEASE_MANIFEST");
@@ -846,6 +846,7 @@ export const activateRelease = internalMutation({
     allowFullDebian: v.optional(v.boolean()),
     allowFullUbuntu: v.optional(v.boolean()),
     allowFullFedora: v.optional(v.boolean()),
+    allowFullArch: v.optional(v.boolean()),
   },
   returns: v.object({
     stage: datasetStageValidator,
@@ -960,6 +961,7 @@ export const promoteActiveReleases = internalMutation({
     allowFullDebian: v.optional(v.boolean()),
     allowFullUbuntu: v.optional(v.boolean()),
     allowFullFedora: v.optional(v.boolean()),
+    allowFullArch: v.optional(v.boolean()),
     expectedDatasetReleaseId: v.optional(expectedReleaseIdsValidator),
   },
   returns: v.object({

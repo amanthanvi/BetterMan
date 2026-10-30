@@ -58,6 +58,16 @@ on:
         type: boolean
         required: false
         default: false
+      arch_full:
+        description: Explicitly authorize full Arch package extraction to staging
+        type: boolean
+        required: false
+        default: false
+      arch_full_promote:
+        description: Explicitly authorize promotion of a held full Arch staging release
+        type: boolean
+        required: false
+        default: false
       fedora_full:
         description: Explicitly authorize full Fedora RPM extraction to staging
         type: boolean
@@ -108,6 +118,10 @@ permissions:
 # workflow_dispatch choices above aligned with its LINUX and BSD lists.
 
 env:
+  BETTERMAN_ARCH_FULL: ${{ vars.BETTERMAN_ARCH_FULL }}
+  BETTERMAN_ARCH_FULL_INPUT: ${{ inputs.arch_full && 'true' || 'false' }}
+  BETTERMAN_ARCH_FULL_PROMOTE: ${{ vars.BETTERMAN_ARCH_FULL_PROMOTE }}
+  BETTERMAN_ARCH_FULL_PROMOTE_INPUT: ${{ inputs.arch_full_promote && 'true' || 'false' }}
   BETTERMAN_FEDORA_FULL: ${{ vars.BETTERMAN_FEDORA_FULL }}
   BETTERMAN_FEDORA_FULL_INPUT: ${{ inputs.fedora_full && 'true' || 'false' }}
   BETTERMAN_FEDORA_FULL_PROMOTE: ${{ vars.BETTERMAN_FEDORA_FULL_PROMOTE }}
@@ -338,6 +352,11 @@ jobs:
         if: ${{ needs.plan.outputs.ingest == 'true' && matrix.full_debian }}
         run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends mandoc
 
+      - name: Install Arch archive renderer
+        id: arch_renderer
+        if: ${{ needs.plan.outputs.ingest == 'true' && matrix.full_arch }}
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends mandoc
+
       - name: Install Fedora archive readers
         id: fedora_renderer
         if: ${{ needs.plan.outputs.ingest == 'true' && matrix.full_fedora }}
@@ -359,6 +378,9 @@ jobs:
           BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
           BETTERMAN_INGEST_GIT_SHA: ${{ github.sha }}
           BETTERMAN_DEBIAN_FULL_SELECTED: ${{ matrix.full_debian }}
+          BETTERMAN_ARCH_FULL_SELECTED: ${{ matrix.full_arch }}
+          BETTERMAN_ARCH_WORKDIR: ${{ runner.temp }}/betterman-arch/workspace
+          BETTERMAN_ARCH_CACHE_DIR: ${{ runner.temp }}/betterman-arch/archives
           BETTERMAN_FEDORA_FULL_SELECTED: ${{ matrix.full_fedora }}
           BETTERMAN_FEDORA_WORKDIR: ${{ runner.temp }}/betterman-fedora/workspace
           BETTERMAN_FEDORA_CACHE_DIR: ${{ runner.temp }}/betterman-fedora/archives
@@ -376,6 +398,9 @@ jobs:
           fi
           if [[ "${BETTERMAN_DEBIAN_FULL_SELECTED}" == "true" ]]; then
             ingest_args+=(--debian-full)
+          fi
+          if [[ "${BETTERMAN_ARCH_FULL_SELECTED}" == "true" ]]; then
+            ingest_args+=(--arch-full)
           fi
           if [[ "${BETTERMAN_FEDORA_FULL_SELECTED}" == "true" ]]; then
             ingest_args+=(--fedora-full)

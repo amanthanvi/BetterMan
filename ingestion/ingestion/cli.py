@@ -49,6 +49,9 @@ def _build_parser() -> argparse.ArgumentParser:
     ingest.add_argument(
         "--fedora-full", action="store_true", help="Opt in to full Fedora RPM extraction"
     )
+    ingest.add_argument(
+        "--arch-full", action="store_true", help="Opt in to full Arch package extraction"
+    )
     ingest.add_argument("--in-container", action="store_true", help=argparse.SUPPRESS)
 
     activation = sub.add_parser(
@@ -94,9 +97,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "ingest":
-        full = args.debian_full or args.ubuntu_full or args.fedora_full
+        full = args.debian_full or args.ubuntu_full or args.fedora_full or args.arch_full
         if args.debian_full and args.distro != "debian":
             parser.error("--debian-full requires --distro debian")
+        if args.arch_full and args.distro != "arch":
+            parser.error("--arch-full requires --distro arch")
         if args.fedora_full and args.distro != "fedora":
             parser.error("--fedora-full requires --distro fedora")
         if args.ubuntu_full and args.distro != "ubuntu":
@@ -110,7 +115,7 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         activate = bool(args.activate) if args.activate is not None else (not args.sample)
         if (
-            args.distro in {"debian", "ubuntu", "fedora"}
+            args.distro in {"debian", "ubuntu", "fedora", "arch"}
             and full
             and not args.sample
             and not args.in_container

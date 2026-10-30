@@ -7,16 +7,21 @@ export const MAX_MANIFEST_SECTIONS = 256;
 export function releaseAcquisition(manifest: unknown): Doc<"datasetReleases">["acquisition"] {
   const acquisition = manifest && typeof manifest === "object" && "acquisition" in manifest
     ? manifest.acquisition : undefined;
-  if (acquisition !== undefined && acquisition !== "deb-extraction" && acquisition !== "ubuntu-deb-extraction" && acquisition !== "fedora-rpm-extraction") throw new Error("INVALID_RELEASE_MANIFEST");
+  if (acquisition !== undefined && acquisition !== "deb-extraction" && acquisition !== "ubuntu-deb-extraction" && acquisition !== "fedora-rpm-extraction" && acquisition !== "arch-pkg-extraction") throw new Error("INVALID_RELEASE_MANIFEST");
   return acquisition;
 }
 
-export function fullArchivePromotionReason(release: Doc<"datasetReleases">, stage: "prod" | "staging", authorization: { allowFullUbuntu?: boolean; allowFullFedora?: boolean }): string | undefined {
+export function fullArchivePromotionReason(release: Doc<"datasetReleases">, stage: "prod" | "staging", authorization: { allowFullUbuntu?: boolean; allowFullFedora?: boolean; allowFullArch?: boolean }): string | undefined {
   if (stage !== "prod") return;
-  const distro = release.acquisition === "ubuntu-deb-extraction" ? "UBUNTU" : release.acquisition === "fedora-rpm-extraction" ? "FEDORA" : undefined;
-  if (!distro) return;
+  let distro: string;
+  let allowed: boolean | undefined;
+  switch (release.acquisition) {
+    case "ubuntu-deb-extraction": distro = "UBUNTU"; allowed = authorization.allowFullUbuntu; break;
+    case "fedora-rpm-extraction": distro = "FEDORA"; allowed = authorization.allowFullFedora; break;
+    case "arch-pkg-extraction": distro = "ARCH"; allowed = authorization.allowFullArch; break;
+    default: return;
+  }
   if (release.indexablePageCount === undefined) return `FULL_${distro}_TIER_REQUIRED`;
-  const allowed = distro === "UBUNTU" ? authorization.allowFullUbuntu : authorization.allowFullFedora;
   if (allowed !== true) return `FULL_${distro}_PROMOTION_HELD`;
 }
 

@@ -228,9 +228,10 @@ def source_bytes(path: Path) -> bytes:
 
 
 class ArchiveStore:
-    def __init__(self, root: Path, *, registrations=None):
+    def __init__(self, root: Path, *, registrations=None, source_targets=None):
         self.root = root
         self.registrations = registrations
+        self.source_targets = source_targets or {}
         self.db = sqlite3.connect(root / "archives.sqlite3")
         self.db.execute("PRAGMA cache_size=-8192")
         self.db.executescript("""
@@ -332,7 +333,10 @@ class ArchiveStore:
                 resolved = posixpath.join(posixpath.dirname(path), target)
             resolved = safe_path(posixpath.normpath(resolved))
             if not MAN_PATH.fullmatch(resolved):
-                raise ValueError("Roff include escapes manual root")
+                repair = self.source_targets.get(resolved)
+                if not repair or not MAN_PATH.fullmatch(repair[1]):
+                    raise ValueError("Roff include escapes manual root")
+                return self.resolve(repair[0], repair[1], set(seen), details=with_details)
             return self.resolve(owner, resolved, set(seen), details=with_details)
 
         if stub:

@@ -530,3 +530,26 @@ pnpm ingest:full-benchmark --distro fedora --workdir ../.cache/b2/fedora-sample 
 [Evidence, exact selections, limits and projections](../docs/roadmap/b2-fedora-evidence.md).
 The lead dispatches staging measurement after merge; no implementation run
 changes shared data, enables variables or authorizes promotion.
+
+## Full Arch from archives (B2)
+
+`pnpm ingest:run --distro arch --arch-full` reads pinned 2026-10-01 core/extra/
+multilib files databases and SHA256-verifies the exact package archives. Python
+3.14 and host mandoc are required. `.INSTALL` scripts never execute. The existing
+provider, alias/include, notice, owner and publisher paths are reused.
+
+Four large toolchain/documentation bundles need more than 1 GiB. Arch caps each
+archive at 4 GiB and acquires oversized archives serially after normal packages;
+the retained archive cache stays at 2 GiB. Other families retain their own limits.
+
+Cron opt-in is `BETTERMAN_ARCH_FULL=1`; manual opt-in is `arch_full: true`.
+Promotion independently requires `arch_full_promote: true` or
+`BETTERMAN_ARCH_FULL_PROMOTE=1`. All default off; persisted `arch-pkg-extraction`,
+index tiers and CAS enforce the server hold. The lead measures staging after merge.
+
+```bash
+pnpm ingest:full-benchmark --distro arch --workdir ../.cache/b2/arch-audit --packages 50 --curated
+pnpm ingest:full-benchmark --distro arch --workdir ../.cache/b2/arch-largest --packages 1 --largest
+```
+
+[Arch evidence, exact selections and projections](../docs/roadmap/b2-arch-evidence.md).

@@ -106,12 +106,18 @@ class Workspace:
 
     def __init__(self, root: Path, *, limit: int | None = None, distro="debian"):
         self.distro = distro
-        if distro not in {"debian", "ubuntu", "fedora"}:
+        if distro not in {"debian", "ubuntu", "fedora", "arch"}:
             raise ValueError("Unsupported deb archive distro")
         pins_path = (
             PINS
             if distro == "debian"
-            else PINS.with_name({"ubuntu": "ubuntu-noble.json", "fedora": "fedora-44.json"}[distro])
+            else PINS.with_name(
+                {
+                    "ubuntu": "ubuntu-noble.json",
+                    "fedora": "fedora-44.json",
+                    "arch": "arch-20261001.json",
+                }[distro]
+            )
         )
         self.root = root.resolve()
         self.root.mkdir(parents=True, exist_ok=True)
@@ -120,10 +126,13 @@ class Workspace:
         if marker.exists() and marker.read_text() != fingerprint:
             raise ValueError("Workspace belongs to different archive pins")
         marker.write_text(fingerprint)
-        if distro == "fedora":
-            from ingestion.fedora_archives import catalog as rpm_catalog
+        if distro in {"fedora", "arch"}:
+            if distro == "fedora":
+                from ingestion.fedora_archives import catalog as archive_catalog
+            else:
+                from ingestion.arch_archives import catalog as archive_catalog
 
-            self.pins, self.all_manual_packages, self.available = rpm_catalog(
+            self.pins, self.all_manual_packages, self.available = archive_catalog(
                 self.root / "indexes", pins_path
             )
             self.registrations = {"packages": {}}
@@ -165,7 +174,11 @@ class Workspace:
             )
             if n in self.available and n not in selected_names
         ]
-        self.store = ArchiveStore(self.root, registrations=self.registrations)
+        self.store = ArchiveStore(
+            self.root,
+            registrations=self.registrations,
+            source_targets=self.pins.get("sourceTargets"),
+        )
         self.owners = sqlite3.connect(self.root / "indexes" / "owners.sqlite3")
         self.acquired = {p.name for p in self.available.values() if self.store.complete(p)}
         # Never resolve through stale/incomplete extraction records. Keep the
@@ -206,13 +219,14 @@ class Workspace:
         self.missing: list[dict] = []
 
     def _acquire(self, package: Package):
-        if package.size > 1024 * 1024 * 1024:
-            raise ValueError("Package exceeds 1 GiB archive budget")
+        archive_budget = (4 if self.distro == "arch" else 1) * 1024**3
+        if package.size > archive_budget:
+            raise ValueError("Package exceeds bounded archive budget")
         require_job_budget("acquisition")
         cdn = debian_cdn_enabled() if self.distro == "debian" else True
         cdn_base = self.pins.get("cdn", "https://deb.debian.org/debian")
-        if self.distro == "fedora":
-            cdn = False
+        if self.distro not in {"debian", "ubuntu"}:
+            cdn = bool(self.pins.get("cdn"))
         suffix = self.pins.get("archiveSuffix", ".deb")
         snapshot_url = f"{self.pins['mirror']}/{package.filename}"
         fallbacks = []
@@ -246,6 +260,8 @@ class Workspace:
             extractor = extract
             if self.distro == "fedora":
                 from ingestion.fedora_archives import extract as extractor
+            elif self.distro == "arch":
+                from ingestion.arch_archives import extract as extractor
             entries = extractor(
                 archive,
                 package,
@@ -287,6 +303,10 @@ class Workspace:
                 if p.name not in self.acquired
             }.values()
         )
+        if workers > 1 and any(p.size > 1024**3 for p in pending):
+            self.acquire([p for p in pending if p.size <= 1024**3], workers=workers)
+            self.acquire([p for p in pending if p.size > 1024**3], workers=1)
+            return
         # Consume restored archives before fresh downloads can evict them.
         suffix = self.pins.get("archiveSuffix", ".deb")
         pending.sort(key=lambda p: not (self.cache / f"{p.sha256}{suffix}").is_file())

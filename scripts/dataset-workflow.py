@@ -14,7 +14,7 @@ import urllib.request
 from pathlib import Path
 
 LINUX = ["debian", "ubuntu", "fedora", "arch", "alpine"]
-FULL_DISTROS = ["debian", "ubuntu", "fedora"]
+FULL_DISTROS = ["debian", "ubuntu", "fedora", "arch"]
 BSD = ["freebsd", "macos"]
 RESULTS = Path("dataset-results")
 MAX_EXPECTED_RELEASE_IDS_BYTES = 4096
@@ -274,7 +274,7 @@ def promote(distro):
             ingest_secret=os.environ["CONVEX_INGEST_SECRET"],
         )
         contract = retry_request(client.require_deployed_contract)
-        for family, identity in {"ubuntu": "ubuntu-deb-extraction", "fedora": "fedora-rpm-extraction"}.items():
+        for family, identity in {"ubuntu": "ubuntu-deb-extraction", "fedora": "fedora-rpm-extraction", "arch": "arch-pkg-extraction"}.items():
             allowed = full_promotion_enabled(family)
             if identity in contract.get("acquisitions", []):
                 payload["allowFull" + family.capitalize()] = allowed
