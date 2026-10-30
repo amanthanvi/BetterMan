@@ -87,6 +87,8 @@ This is a full catalog/curated-command audit, not a full 17,323-archive replay.
 wget, ssh_config, rsync, nc, tar, systemd, vim, less, git, make, nginx,
 apache2, openssl (1ssl), python3, perl, ip, ps, psql and mysql.
 
+The nc owner and historical `nc_openbsd` entries in `b1-debian-measurements.json` are superseded by [b1-debian-nc-owner.md](b1-debian-nc-owner.md); JSON retains the original measurements without comment fields.
+
 **Every exclusion:** gcc(1) is in `gcc-14-doc` in non-free; gdb(1) is in
 `gdb-doc` in non-free. Both remain outside the selected main component and keep
 their existing explicit logged exclusions. **No required command is missing.**
