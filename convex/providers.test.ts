@@ -80,6 +80,22 @@ it("preserves every provider, seals only complete uploads, and isolates canonica
     .toMatchObject({ kind: "page", data: { page: { sourcePackage: "alternate", description: "case-A", indexable: false }, providers: { sameAsDefault: false } } });
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "identical" }))
     .toMatchObject({ kind: "page", data: { page: { indexable: false }, providers: { sameAsDefault: true } } });
+  for (const indexed of [undefined, false, true]) {
+    await t.run(async ctx => {
+      const canonical = (await ctx.db.query("manPages").take(1))[0];
+      await ctx.db.patch(canonical.releaseId, { indexablePageCount: indexed === undefined ? undefined : Number(indexed) });
+      await ctx.db.patch(canonical._id, { indexable: indexed ?? false });
+    });
+    for (const pkg of ["popular", "alternate", "identical"]) {
+      expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg }))
+        .toMatchObject({ kind: "page", data: { page: { indexable: pkg === "popular" && indexed !== false } } });
+    }
+  }
+  await t.run(async ctx => {
+    const canonical = (await ctx.db.query("manPages").take(1))[0];
+    await ctx.db.patch(canonical.releaseId, { indexablePageCount: undefined });
+    await ctx.db.patch(canonical._id, { indexable: undefined });
+  });
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "absent" })).toBeNull();
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "absent", reportRelease: true }))
     .toEqual({ kind: "not_found", datasetReleaseId: expect.any(String) });

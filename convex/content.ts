@@ -588,7 +588,7 @@ export const getManByNameAndSectionReadModel = internalQuery({
       if (!blob) return notFound;
       // B7 summaries are keyed to the canonical route/signature, not this
       // provider. B6 briefs are content-hash keyed and can safely follow it.
-      return { kind: "page" as const, data: { release, page: { ...provider, indexable: false }, variants: [],
+      return { kind: "page" as const, data: { release, page: { ...provider, providerOnly: true }, variants: [],
         derived: null, brief: briefFromRecord(generated),
         providers: await providerChoices(ctx, release, name, section, page, provider.contentSha256, candidates),
         content: blob.storageId ? { storageId: blob.storageId, fields: null }

@@ -90,7 +90,7 @@ function pageHead(data: ManPageResponse, servedDistro: Distro, pkg: string | nul
   return {
     title,
     description,
-    canonical: `${origin}${canonical}`,
+    canonical: isIndexable(page) ? `${origin}${canonical}` : null,
     ogImage: share.image,
     ...(option ? { share: { title: share.title, description: share.description } } : {}),
     jsonLd: { id: `bm-jsonld:${page.id}`, json },
@@ -162,6 +162,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   const origin = getPublicOrigin({ headers: requestHeaders(req.headers) })
   const { page } = found.data
   setManCache(res, offList ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })
+  if (!isIndexable(page)) res.setHeader('X-Robots-Tag', 'noindex')
   return {
     props: {
       kind: 'page',

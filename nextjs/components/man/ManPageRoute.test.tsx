@@ -159,7 +159,8 @@ it.each([undefined, true, false])('renders robots from the existing page tier (%
   const { head } = propsOf(result) as { head: ManHeadData }
   const html = renderToStaticMarkup(<ManHeadTags {...head} />)
   expect(html.includes('<meta name="robots" content="noindex"/>')).toBe(indexable === false)
-  expect(html).toContain('<link rel="canonical" href="http://localhost:3000/man/tar/1"/>')
+  expect(res.headers['x-robots-tag']).toBe(indexable === false ? 'noindex' : undefined)
+  expect(html.includes('<link rel="canonical" href="http://localhost:3000/man/tar/1"/>')).toBe(indexable !== false)
   expect(lookup.lookupManPage).toHaveBeenCalledTimes(1)
   expect(lookup.manMiss).not.toHaveBeenCalled()
   expect(res.headers['cdn-cache-control']).toBe('public, s-maxage=3600, stale-while-revalidate=86400')
@@ -287,6 +288,7 @@ describe('/man/<name>', () => {
     const result = await nameProps(context({ name: 'library' }).ctx)
     const { head } = propsOf(result) as { head: ManHeadData }
     expect(renderToStaticMarkup(<ManHeadTags {...head} />).includes('<meta name="robots" content="noindex"/>')).toBe(indexable === false)
+    expect(head.canonical === null).toBe(indexable === false)
     expect(lookup.resolveManName).toHaveBeenCalledTimes(1)
     expect(lookup.lookupManPage).not.toHaveBeenCalled()
   })
@@ -322,13 +324,13 @@ describe('/man/<name>', () => {
 })
 
 
-it('renders package choices and canonicalizes distinct providers without discarding the index tier', async () => {
+it('renders package choices without canonical declarations for noindex pages', async () => {
   const providers = { packages: ['alternate', 'tar'], defaultPackage: 'tar', policy: 'debian' }
   for (const [pkg, expected] of [['alternate', '?distro=ubuntu&pkg=alternate'], ['tar', '?distro=ubuntu']]) {
     lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'ubuntu', data: { ...data, providers, page: { ...page, sourcePackage: pkg, indexable: false } }, related: [], servedRelease: release.datasetReleaseId })
     const { ctx, res } = context({ name: 'tar', section: '1' }, { distro: 'ubuntu', pkg })
     const result = await pageProps(ctx)
-    expect(propsOf(result)).toMatchObject({ head: { canonical: `http://localhost:3000/man/tar/1${expected}`, noindex: true } })
+    expect(propsOf(result)).toMatchObject({ head: { canonical: null, noindex: true, ogImage: { url: `http://localhost:3000/man/tar/1/og${expected}` } } })
     expect(res.headers['cdn-cache-control']).toContain('public')
     const html = renderToStaticMarkup(ManPageRoute(propsOf(result) as Parameters<typeof ManPageRoute>[0]))
     expect(html).toContain('Provided by')

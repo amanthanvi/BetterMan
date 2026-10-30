@@ -168,7 +168,7 @@ it('selects an explicit package provider and preserves it through short-route re
   vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'page', data: { ...manual, page: { ...manual.page, indexable: false }, providers: { packages: ['tar', 'alternate'], defaultPackage: 'tar', policy: 'curated', sameAsDefault: false } } })
   const res = await GET(req('?pkg=alternate'), ctx())
   expect(res.status).toBe(200)
-  expect(res.headers.get('link')).toBe('<https://betterman.sh/man/tar/1?pkg=alternate>; rel="canonical"')
+  expect(res.headers.get('link')).toBeNull()
   expect(res.headers.get('x-robots-tag')).toBe('noindex')
   expect(fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'tar', section: '1', pkg: 'alternate', release: 'test' })
   const redirect = await GET(req('?pkg=alternate'), ctx(['tar']))
@@ -185,14 +185,14 @@ it('does not share a response when the proxy release is absent or does not match
 })
 
 
-it('keeps alternate canonical and robots headers on a release-mismatched private answer', async () => {
+it('keeps alternate robots and omits a noindex canonical on a release-mismatched private answer', async () => {
   vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'page', data: {
     ...manual, page: { ...manual.page, datasetReleaseId: 'other', sourcePackage: 'alternate', indexable: false },
     providers: { packages: ['tar', 'alternate'], defaultPackage: 'tar', policy: 'curated', sameAsDefault: false },
   } })
   const res = await GET(req('?pkg=alternate'), ctx())
   expect(res.headers.get('cache-control')).toBe('private, no-store')
-  expect(res.headers.get('link')).toBe('<https://betterman.sh/man/tar/1?pkg=alternate>; rel="canonical"')
+  expect(res.headers.get('link')).toBeNull()
   expect(res.headers.get('x-robots-tag')).toBe('noindex')
 })
 
@@ -240,7 +240,7 @@ it.each([true, false, undefined])('carries tier robots on text GET and HEAD: %s'
   for (const method of [GET, HEAD]) {
     const res = await method(req(), ctx())
     expect(res.status).toBe(200)
-    expect(res.headers.get('x-robots-tag')).toBe(indexable !== false ? 'index, follow' : 'noindex, follow')
-    expect(res.headers.get('link')).toBe('<https://betterman.sh/man/tar/1>; rel="canonical"')
+    expect(res.headers.get('x-robots-tag')).toBe(indexable === false ? 'noindex' : null)
+    expect(res.headers.get('link')).toBe(indexable === false ? null : '<https://betterman.sh/man/tar/1>; rel="canonical"')
   }
 })

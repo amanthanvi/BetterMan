@@ -75,12 +75,6 @@ function cachedJson(value: unknown, seconds = PUBLIC_CACHE_SECONDS, init?: Respo
   })
 }
 
-function cachedManJson(value: { page: { indexable?: boolean } }): Response {
-  return cachedJson(value, PUBLIC_CACHE_SECONDS, {
-    headers: value.page.indexable === false ? { 'X-Robots-Tag': 'noindex, follow' } : {},
-  })
-}
-
 function aliasRedirect(req: Request, distro: string, name: string, section: string, pkg?: string): Response {
   const url = new URL(req.url)
   url.searchParams.delete('pkg')

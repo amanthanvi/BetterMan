@@ -538,7 +538,7 @@ it.each([true, false, undefined])('keeps legacy JSON indexing and marks only exp
     for (const path of [['v1', 'man', 'tail', '3'], ['v1', 'man', 'tail', '3', 'meta']]) {
       const res = await handler(request(`/api/${path.join('/')}`), context(path))
       expect(res.status).toBe(200)
-      expect(res.headers.get('x-robots-tag')).toBe(indexable === false ? 'noindex, follow' : null)
+      expect(res.headers.get('x-robots-tag')).toBe(indexable === false ? 'noindex' : null)
     }
   }
 })

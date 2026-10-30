@@ -56,19 +56,27 @@ The small internal legacy mutation interface remains for queued jobs/fixtures;
 legacy releases have no computed tier and retain all-page indexing and sitemaps.
 
 `manPages` stores the two scalar fields alongside the metadata already read by
-HTML, JSON and text. `page.indexable` and `page.popularityScore` are plain data
-consumed by C4's server-HTML renderer. The metadata query also exposes
-`indexable`. Canonical HTML emits `robots: noindex` only for the long tail and
-omits robots meta for indexable or unscored pages. The section picker uses an
-aggregate flag computed from the same name-resolution page read: it is noindex
-only when the release is scored and none of the listed sections are indexable.
-No extra reads are needed. Text GET/HEAD
-sets `X-Robots-Tag` and an HTML canonical Link; OG follows the tier; JSON APIs
-carry `noindex, follow` only for explicitly nonindexable page payloads. Legacy
-JSON retains main's headers. Package-qualified alternate providers in scored
-releases remain noindex and canonicalize to the unqualified route. Unscored
-releases retain indexability for HTML, text, JSON and OG, including older cached
-payloads without the new signal.
+HTML, JSON and text. The page serializer combines the demand tier with B10's
+provider identity: a canonical page qualifies when the release is unscored or
+its stored tier flag is true; a provider-only row never qualifies, including
+identical-content alternates. The internal provider marker is not public data.
+The response carries one `page.indexable` flag and `page.popularityScore`.
+The metadata query exposes the same decision; all formats use `isIndexable`.
+
+HTML emits meta robots and `X-Robots-Tag: noindex` for a nonindexable page.
+Text GET/HEAD, JSON (including metadata) and OG emit `X-Robots-Tag: noindex`
+from the same selected row. Indexable and legacy canonical pages retain main's
+headers. Noindex pages omit HTML canonical links and text canonical Link headers,
+so no canonical declaration targets a noindex page. Indexable pages and share
+image URLs retain B10's `manCanonicalPath` selection rules. The page-data cache
+moves to **v7**, discarding both old B4 and B10 response shapes.
+
+The section picker uses an aggregate flag computed from the same name-resolution
+page read: it is noindex only when the release is scored and none of the listed
+sections are indexable. It also omits its canonical when noindex. No extra reads
+are needed. Unscored canonical pages retain indexability, including cached
+payloads without a signal; B10's provider exclusion applies to unscored releases
+as well.
 
 Ingestion assigns dense positive `sitemapPage` numbers to the tier, at most
 10,000 URLs/file, and **zero** to the long tail. The existing
@@ -192,12 +200,13 @@ outcome reports the release that answered; a mismatch stays **private, no-store*
 The proxy refreshes the serving release within its **60-second** TTL. The tier
 travels on the existing page payload, so these checks require no additional reads.
 Only `indexable === false` emits `<meta name="robots" content="noindex">`;
-unscored pages emit no robots meta and existing man 404s remain noindex.
+unscored canonical pages emit no robots meta and existing man 404s remain noindex.
 
-Metadata and alternate representation caches can retain a prior robots signal
-for **one hour**; `.txt` release isolation is tracked separately in #452 and is
-unchanged here. OG responses have a one-day fresh cache plus seven-day
-stale window, so their robots signal can lag by **about eight days**. Sitemap
+The text route retains #462's trusted proxy release, authenticated unknown-release
+marker/null key, and private/no-store mismatches. Its promotion/rollback regression
+is run separately on the dedicated local backend. Metadata and JSON caches can
+retain a prior robots signal for **one hour**. OG responses have a one-day fresh
+cache plus seven-day stale window, so their robots signal can lag by **about eight days**. Sitemap
 and representation caches can refresh at different times after a release switch.
 The lead accepts this lag; this PR does not add invalidation or change cache TTLs.
 
@@ -216,8 +225,8 @@ popcon pin and **no Plausible input**, this run measured:
 | Corpus | Indexable | Total | Interpretation |
 | --- | ---: | ---: | --- |
 | Curated Debian explicit-package Contents fixture | 4,003 | 4,003 | All qualify; includes aliases, excludes dependency packages |
-| Full Debian English Contents routes | 57,688 | 142,608 | 40.45% of normalized routes, aliases included |
-| Projected 115,000 canonical-page release | about 46,520 | 115,000 | Route-fraction projection, not a canonical-page measurement |
+| Full Debian English Contents routes | 57,935 | 142,930 | 40.53% of normalized routes, aliases included |
+| Projected 115,000 canonical-page release | about 46,614 | 115,000 | Route-fraction projection, not a canonical-page measurement |
 
 The curated fixture uses `FULL_PACKAGE_SET_DEBIAN`'s explicit binary names.
 It is not the live ~4,700-page release: dependencies and extracted aliases differ.
@@ -233,18 +242,21 @@ A separate 115,000-page synthetic test yields 38,334 tier members with dense
 
 The lead's rollout correction preserves legacy indexability and moves the hard
 safety gate to full-Debian promotion. Revision checks and the final head are
-recorded in the PR. After the review fixes and #450/#451 rebase, validation passed:
-3,267 Convex tests and typecheck; 645 Next unit tests, lint, grammar and build;
-145 E2E tests (including scored/legacy serving, man 404s and sitemaps);
-123 ops tests. Earlier v7 validation also passed 880 ingestion tests; these review fixes change no
-ingest fields.
-Performance budgets passed, measuring 4 calls / 26 documents / 1 storage read
-for the man page. The local backend used isolated ports 3416/3417. No budgets, runner configuration or shared
-infrastructure were changed.
+recorded in the PR. On main d7bca515, validation passed: 3,277 Convex tests
+and typecheck; 945 ingestion tests and lint; 689 Next unit tests, lint, grammar
+and production build; 172 browser tests plus the separately executed text
+promotion/rollback test; 126 ops tests; and an isolated Python 3.14 pip dry-run.
+The text race is skipped only in the ordinary suite because it changes local
+release pointers, then run by itself with the dedicated local backend.
+Convex codegen is regenerated and checked against the committed generated files.
+Performance passed at 4 calls / 26 documents / 1 storage read for both the
+original manual and provider default, and 4 / 11 / 1 for the alternate. No budgets,
+runner configuration or shared infrastructure are changed. The local backend
+uses isolated ports 3416/3417.
 
 ### Merge dependencies
 
-Rebased onto main 7dbf8861, including [#443](https://github.com/amanthanvi/BetterMan/pull/443),
+Rebased onto main d7bca515, including [#443](https://github.com/amanthanvi/BetterMan/pull/443),
 #444's hydration signal, #449's plain server HTML man renderer and #450's
 In brief/options changes, plus #451's composer/previews/tables. Contract **v7**
 carries both the complete B4 upload
@@ -266,7 +278,8 @@ supported during deployment skew.
 Pages Router `ManHeadTags`/`isIndexable` hook and preserves its release-key checks
 for pages, aliases, misses and name resolution. No deleted App Router man page
 is restored. #450 and #451 are retained with their fixtures; robots and cache
-isolation remain intact.
+isolation remain intact. The B1 ingestion/packaging fixes, Next.js 16.4.3,
+#457 generated-code guard, #462 text isolation and #463 provider switch are retained.
 Do not merge this PR as part of this task. The post-November-1-run merge gate
 remains in force.
 

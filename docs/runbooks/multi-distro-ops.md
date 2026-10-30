@@ -356,7 +356,10 @@ a mismatched operator pin remains a failure.
 
 Man HTML/page data now retain #449's release keys and private/no-store mismatch
 checks, with the proxy's 60-second release TTL. The tier adds no page-path reads.
-Accepted cache limit: metadata/alternate robots can lag a release switch by one hour,
+Accepted cache limit: metadata/JSON robots can lag a release switch by one hour,
 and OG robots by about eight days (one day fresh plus seven days stale).
 Sitemaps may switch before those signals; no invalidation change is included.
-The `.txt` path is unchanged; its release isolation is tracked separately in #452.
+The `.txt` path retains #462's release keys, authenticated unknown marker/null
+key and private mismatch responses. B10 provider alternates remain noindex even
+on unscored releases. Noindex HTML/text omit canonical declarations; canonical
+paths and share images retain `manCanonicalPath`.

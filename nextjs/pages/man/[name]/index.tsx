@@ -11,6 +11,7 @@ import { MAN_MISS_CACHE, MAN_PAGE_CACHE, MAN_PRIVATE_CACHE, setManCache } from '
 import { manMiss, resolveManName, type ManMiss } from '../../../lib/manLookup'
 import { hasBareRsc, isManQuery } from '../../../lib/manQuery'
 import { RELEASE_PARAM, trustedRelease, type ReleaseInfo } from '../../../lib/manRelease'
+import { isIndexable } from '../../../lib/manRobots'
 import { packageName } from '../../../lib/packageName'
 import { getPublicOrigin } from '../../../lib/public-origin'
 
@@ -61,6 +62,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   }
 
   setManCache(res, unproven ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })
+  if (!isIndexable(result)) res.setHeader('X-Robots-Tag', 'noindex')
   return {
     props: {
       kind: 'picker',
@@ -68,10 +70,10 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
       head: {
         title: `${name} — Choose section — BetterMan`,
         description: `Multiple man page sections match “${name}”. Choose a section to continue.`,
-        canonical: `${getPublicOrigin({ headers: requestHeaders(req.headers) })}${canonicalWithDistro(`/man/${encodeURIComponent(name)}`, resolved.distro)}`,
+        canonical: isIndexable(result) ? `${getPublicOrigin({ headers: requestHeaders(req.headers) })}${canonicalWithDistro(`/man/${encodeURIComponent(name)}`, resolved.distro)}` : null,
         ogImage: null,
         jsonLd: null,
-        noindex: result.indexable === false,
+        noindex: !isIndexable(result),
       },
       name,
       options: result.options,
