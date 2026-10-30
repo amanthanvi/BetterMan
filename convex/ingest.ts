@@ -987,7 +987,10 @@ export const promoteActiveReleases = internalMutation({
       if (!release) throw new Error("RELEASE_NOT_FOUND");
       // Check persisted acquisition identity in the pointer transaction; a
       // preflight read or mirror URL would not enforce the release's hold.
-      if (fullDebianTierMissing(release, args.toStage)) throw new Error("FULL_DEBIAN_TIER_REQUIRED");
+      if (fullDebianTierMissing(release, args.toStage)) {
+        skipped.push({ distro, datasetReleaseId: candidate.datasetReleaseId, reason: "FULL_DEBIAN_TIER_REQUIRED" });
+        continue;
+      }
       if (fullDebianPromotionHeld(release, args.toStage, args.allowFullDebian)) {
         skipped.push({ distro, datasetReleaseId: candidate.datasetReleaseId, reason: "FULL_DEBIAN_PROMOTION_HELD" });
         continue;

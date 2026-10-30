@@ -514,7 +514,7 @@ export const getManByNameReadModel = internalQuery({
   handler: async (ctx, args) => {
     const name = normalizeName(args.name);
     const release = await requireActiveRelease(ctx, args);
-    const result = await resolvePageByName(ctx, { releaseId: release._id, name });
+    const result = await resolvePageByName(ctx, { release, name });
     if (result.kind !== "page") return result;
 
     const data = await pageReadModel(ctx, { stage: args.stage, release, page: result.page });

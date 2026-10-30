@@ -118,6 +118,14 @@ curl -fsS \
   "${CONVEX_HTTP_URL%/}/ingest/promote"
 ```
 
+Inspect both `promoted` and `skipped` in the HTTP 200 response. An unscored
+full-Debian staging release is skipped with `FULL_DEBIAN_TIER_REQUIRED` (even
+with owner authorization), while other eligible distros promote. Debian's prod
+pointer stays unchanged; stage a scored replacement before retrying it. Scored
+full Debian without owner authorization is skipped with
+`FULL_DEBIAN_PROMOTION_HELD`. A mismatched expected release ID still returns
+`409 STAGING_RELEASE_CONFLICT` and rolls back all pointer writes in the request.
+
 Or use the workflow:
 
 ```bash
@@ -181,10 +189,12 @@ Unscored prod releases keep main's behavior: all pages remain indexable and all
 existing sitemap URLs remain listed. Only scored releases filter the long tail.
 No seven-distro re-ingestion is required merely to deploy B4.
 
-A release with persisted `acquisition: "deb-extraction"` and no
+A Debian release with persisted `acquisition: "deb-extraction"` and no
 `indexablePageCount` cannot enter prod. Both direct activation and stage promotion
-check this in the prod-pointer transaction and return
-`FULL_DEBIAN_TIER_REQUIRED` (HTTP 409), even with `allowFullDebian: true`. The
+check this in the prod-pointer transaction, even with `allowFullDebian: true`.
+Direct activation returns `FULL_DEBIAN_TIER_REQUIRED` (HTTP 409); stage
+promotion returns HTTP 200 with that reason in its per-distro `skipped` array
+and can promote other eligible distros. No Debian pointer is written. The
 in-flight v5 full-Debian ingest can finish staging but needs a fresh scored
 replacement before promotion. A scored full-Debian release still needs the
 existing separate owner authorization. See the
@@ -216,7 +226,9 @@ declaration is not currently retained as a result artifact.
 
 A promote-only job that encounters `FULL_DEBIAN_TIER_REQUIRED` records a clean
 skip with "scored full-Debian replacement required"; sibling distro records are
-unaffected. The server still refuses the pointer write.
+unaffected. The server still refuses the Debian pointer write. The workflow validates the
+skipped distro/release ID against its verified source before recording success;
+a mismatched operator pin remains a failure.
 
 Man HTML/page data retain #449's release keys and private/no-store mismatch
 checks, with the proxy's 60-second release TTL; the tier adds no page-path reads.

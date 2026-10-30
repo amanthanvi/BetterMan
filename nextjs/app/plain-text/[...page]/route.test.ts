@@ -93,7 +93,7 @@ it('falls back only for an unavailable release and uses its canonical distro', a
 })
 
 it('offers explicit text URLs for ambiguous names', async () => {
-  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'ambiguous', options: [{ section: '3', title: 'printf(3)', description: 'format' }], datasetReleaseId: 'r1' })
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'ambiguous', indexable: true, options: [{ section: '3', title: 'printf(3)', description: 'format' }], datasetReleaseId: 'r1' })
   const res = await GET(req('?distro=ubuntu'), ctx(['printf']))
   expect(res.status).toBe(409)
   expect(await res.text()).toContain('/man/printf/3.txt?distro=ubuntu')
@@ -108,7 +108,7 @@ it('keeps only the request distro in redirects and choices, Debian included, aft
   const explicitDebian = await GET(req('?distro=debian'), ctx(['TAR']))
   expect(explicitDebian.headers.get('location')).toBe('/man/tar/1.txt?distro=debian')
 
-  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'ambiguous', options: [{ section: '3', title: 'printf(3)', description: 'format' }], datasetReleaseId: 'r1' })
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'ambiguous', indexable: true, options: [{ section: '3', title: 'printf(3)', description: 'format' }], datasetReleaseId: 'r1' })
   expect(await (await GET(req(), ctx(['printf']))).text()).toContain('/man/printf/3.txt\n')
 })
 

@@ -67,7 +67,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
         canonical: `${getPublicOrigin({ headers: requestHeaders(req.headers) })}${canonicalWithDistro(`/man/${encodeURIComponent(name)}`, resolved.distro)}`,
         ogImage: null,
         jsonLd: null,
-        noindex: false,
+        noindex: result.indexable === false,
       },
       name,
       options: result.options,

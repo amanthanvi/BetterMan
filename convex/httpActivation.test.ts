@@ -112,8 +112,8 @@ it("HTTP promotion cannot authorize an unscored full-Debian pointer", async () =
       method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
       body: JSON.stringify({ fromStage: "staging", toStage: "prod", distros: ["debian"], activatedAt: "now", allowFullDebian, expectedDatasetReleaseId: { debian: "unscored-full" } }),
     });
-    expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: { code: "FULL_DEBIAN_TIER_REQUIRED" } });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ promoted: [], skipped: [{ distro: "debian", datasetReleaseId: "unscored-full", reason: "FULL_DEBIAN_TIER_REQUIRED" }] });
   }
   expect(await t.run(ctx => ctx.db.query("activeReleases").withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "prod")).take(1))).toEqual([]);
 });

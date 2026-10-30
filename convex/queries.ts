@@ -202,6 +202,7 @@ export const resolveManByName = query({
     }),
     v.object({
       kind: v.literal("ambiguous"),
+      indexable: v.boolean(),
       options: v.array(v.object({ section: v.string(), title: v.string(), description: v.string() })),
       datasetReleaseId: v.string(),
     }),
@@ -213,7 +214,7 @@ export const resolveManByName = query({
       stage: PUBLIC_DATASET_STAGE,
       distro: args.distro,
     });
-    const result = await resolvePageByName(ctx, { releaseId: release._id, name: normalizeName(args.name) });
+    const result = await resolvePageByName(ctx, { release, name: normalizeName(args.name) });
     // The release this answer comes from, so a caller caching it under an expected release can check.
     const { datasetReleaseId } = release;
     if (result.kind !== "page") return { ...result, datasetReleaseId };

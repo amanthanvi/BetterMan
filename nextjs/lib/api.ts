@@ -251,7 +251,7 @@ const cachedManByName = unstable_cache(
 const cachedResolveManByName = unstable_cache(
   async (distro: Distro, name: string, _release: string | null) =>
     cacheableManPage(await convex().query(api.queries.resolveManByName, { distro, name }), _release),
-  ['betterman', 'convex', 'resolve-man-by-name'],
+  ['betterman', 'convex', 'resolve-man-by-name', 'b4-v1'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
