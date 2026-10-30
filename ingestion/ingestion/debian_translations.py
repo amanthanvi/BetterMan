@@ -170,11 +170,13 @@ class TranslationWorkspace(Workspace):
         self.locales = tuple(dict.fromkeys(locales))
         self.localized_roots = frozenset(TRANSLATION_ROOTS[locale] for locale in self.locales)
         super().__init__(root, limit=limit)
-        # English curated/alternative packages are not part of a translation.
-        self.curated_packages = []
 
     def _catalog(self):
         return translation_catalog(self.root / "indexes", self.localized_roots)
+
+    def _curated(self):
+        # English curated/alternative packages are not part of a translation.
+        return []
 
     def _sample(self, packages, limit):
         if limit is None:

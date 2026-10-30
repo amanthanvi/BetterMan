@@ -125,17 +125,7 @@ class Workspace:
                 json.dumps({"limit": limit, "packages": [p.name for p in self.packages]})
             )
         self.available = available_packages(self.root / "indexes", popularity(self.pins))
-        # Retain the original curated pass, including runtime packages such as
-        # vim-tiny whose manual slaves live in vim-common. Their postinst data
-        # supplies alternatives; they are never installed.
-        selected_names = {p.name for p in self.packages}
-        self.curated_packages = [
-            self.available[n]
-            # G++ and vim-tiny have alternatives but no manual-owned archive
-            # paths. Their control scripts still participate in a full election.
-            for n in sorted(set(FULL_PACKAGE_SET_DEBIAN) | {"g++", "vim-tiny"})
-            if n in self.available and n not in selected_names
-        ]
+        self.curated_packages = self._curated()
         self.store = ArchiveStore(self.root)
         self.owners = sqlite3.connect(self.root / "indexes" / "owners.sqlite3")
         self.acquired = {p.name for p in self.available.values() if self.store.complete(p)}
@@ -177,6 +167,19 @@ class Workspace:
 
     def _sample(self, packages, limit):
         return sample_packages(packages, limit)
+
+    def _curated(self):
+        # Retain the original curated pass, including runtime packages such as
+        # vim-tiny whose manual slaves live in vim-common. Their postinst data
+        # supplies alternatives; they are never installed.
+        selected_names = {p.name for p in self.packages}
+        return [
+            self.available[n]
+            # G++ and vim-tiny have alternatives but no manual-owned archive
+            # paths. Their control scripts still participate in a full election.
+            for n in sorted(set(FULL_PACKAGE_SET_DEBIAN) | {"g++", "vim-tiny"})
+            if n in self.available and n not in selected_names
+        ]
 
     def _acquire(self, package: Package):
         if package.size > 1024 * 1024 * 1024:
