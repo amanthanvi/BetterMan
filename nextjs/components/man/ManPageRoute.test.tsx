@@ -66,11 +66,33 @@ it('shares one option for ?flag= under the page canonical, and ignores a flag th
     ogImage: { url: 'http://localhost:3000/man/tar/1/og?flag=--extract', alt: '-x, --extract in tar(1)' },
     share: { title: 'tar --extract · tar(1) — BetterMan', description: 'Extract files from an archive.' },
   })
+  const cached = context({ name: 'tar', section: '1' }, { flag: '--extract' })
+  await pageProps(cached.ctx)
+  expect(cached.res.headers['cdn-cache-control']).toBe('public, s-maxage=3600, stale-while-revalidate=86400')
+
+  // A flag this release's page does not define is dropped by a private redirect, keeping the rest.
   for (const flag of ['-q', 'extract', '--extract=X']) {
-    const plain = propsOf(await pageProps(context({ name: 'tar', section: '1' }, { flag }).ctx)) as { head: Record<string, unknown> }
-    expect(plain.head).toMatchObject({ ogImage: { url: 'http://localhost:3000/man/tar/1/og' } })
-    expect(plain.head).not.toHaveProperty('share')
+    const { ctx, res } = context({ name: 'tar', section: '1' }, { flag, distro: 'ubuntu', pkg: 'tar', portability: 'text', lang: 'de' })
+    expect(await pageProps(ctx)).toEqual({ redirect: { destination: '/man/tar/1?distro=ubuntu&pkg=tar&portability=text&lang=de', permanent: false } })
+    expect(res.headers['cache-control']).toBe('private, no-store')
+    expect(res.headers['cdn-cache-control']).toBeUndefined()
   }
+})
+
+it('keeps every answer to an unproven package or flag out of the CDN', async () => {
+  lookup.lookupManPage.mockResolvedValue({ kind: 'miss', servedRelease: '2026-10-28+debian' })
+  for (const query of [{ pkg: 'made-up' }, { flag: '-x' }, {}] as Record<string, string>[]) {
+    const { ctx, res } = context({ name: 'tar', section: '1' }, query)
+    await pageProps(ctx)
+    expect(res.statusCode).toBe(404)
+    if (Object.keys(query).length) expect(res.headers['cache-control'], JSON.stringify(query)).toBe('private, no-store')
+    else expect(res.headers['cdn-cache-control']).toBe('public, s-maxage=600, stale-while-revalidate=3600')
+  }
+
+  lookup.lookupManPage.mockResolvedValue({ kind: 'alias', name: 'gzip', section: '1', servedRelease: '2026-10-28+debian' })
+  const alias = context({ name: 'gunzip', section: '1' }, { pkg: 'made-up' })
+  await pageProps(alias.ctx)
+  expect(alias.res.headers['cache-control']).toBe('private, no-store')
 })
 
 it('prints the running head and foot: name, section label, edition, system and release day', async () => {
@@ -207,7 +229,17 @@ describe('/man/<name>', () => {
     expect(html).toContain('href="/man/printf/3"')
   })
 
-  it('answers a missing name with a 404', async () => {
+  it('keeps a requested package private until the page it leads to proves it', async () => {
+    lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' }, servedRelease: '2026-10-28+debian' })
+    const withPkg = context({ name: 'tar' }, { pkg: 'made-up' })
+    await expect(nameProps(withPkg.ctx)).resolves.toEqual({ redirect: { destination: '/man/tar/1?pkg=made-up', permanent: false } })
+    expect(withPkg.res.headers['cache-control']).toBe('private, no-store')
+    const bare = context({ name: 'tar' })
+    await nameProps(bare.ctx)
+    expect(bare.res.headers['cdn-cache-control']).toBe('public, s-maxage=3600, stale-while-revalidate=86400')
+  })
+
+    it('answers a missing name with a 404', async () => {
     lookup.resolveManName.mockResolvedValue({ result: null, servedRelease: '2026-10-28+debian' })
     const { ctx, res } = context({ name: 'gizp' })
     await nameProps(ctx)

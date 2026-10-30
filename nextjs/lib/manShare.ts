@@ -8,7 +8,8 @@ import type { OptionItem } from './docModel'
  * makes the page's share image `/man/tar/1/og?flag=-x`, the card for that one
  * option. `flag` is a single key as the options index stores it (`-x`,
  * `--extract`, `--sort` for `--sort=WORD`), matched case-sensitively; a flag
- * the page does not define leaves the page card. The page's canonical URL
+ * the page does not define is dropped by a private redirect, so each real
+ * option is the only cached variant (lib/manQuery.ts). The page's canonical URL
  * never carries `flag`.
  */
 export const SHARE_FLAG_PARAM = 'flag'

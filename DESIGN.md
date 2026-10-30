@@ -174,8 +174,10 @@ A man page prints as the manual (`@page` and `@media print` in `globals.css`):
   mono over its definition, and `og:title` / `og:description` for that option. The
   document title and canonical URL stay the page's. `flag` is one key as the
   options index stores it (`-x`, `--extract`, `--sort` for `--sort=WORD`),
-  case-sensitive; a flag the page does not define keeps the page card, and the
-  image route answers 404 for it (`lib/manShare.ts`).
+  case-sensitive. A flag the page does not define is dropped by a private 307 to
+  the URL without it, and the image route answers 404 for it (`lib/manShare.ts`).
+  Man URLs carry only an allowlist of query parameters (`lib/manQuery.ts`,
+  `docs/runbooks/vercel-ops.md`).
 - **Text on cards is plain text**: controls and direction overrides are stripped
   and every string is a text node. The cards use the manual's own words. Only a
   page without a NAME line may show BetterMan's generated summary instead, with

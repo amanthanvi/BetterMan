@@ -33,7 +33,10 @@ test('plain text: distro, missing pages, ambiguous names, and aliases', async ({
     expect(res.status(), path).toBe(404)
     expect(res.headers()['content-type']).toContain('text/plain')
   }
-  expect((await request.get('/tar.txt?distro=invalid')).status()).toBe(400)
+  // An invalid distro is dropped by the query allowlist before the export answers.
+  const invalid = await request.get('/tar.txt?distro=invalid', { maxRedirects: 0 })
+  expect(invalid.status()).toBe(308)
+  expect(invalid.headers()['location']).toBe('/tar.txt')
   const ambiguous = await request.get('/printf.txt')
   expect(ambiguous.status()).toBe(409)
   expect(await ambiguous.text()).toContain('/man/printf/3.txt')

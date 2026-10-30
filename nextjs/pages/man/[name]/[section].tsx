@@ -95,16 +95,19 @@ function pageHead(data: ManPageResponse, servedDistro: Distro, pkg: string | nul
   }
 }
 
-/** This page's URL with the other portability mode, keeping its own `?distro=` and `?pkg=`. */
-function portabilityToggle(name: string, section: string, query: Record<string, string | string[] | undefined>, mode: 'glyph' | 'text'): string {
-  const params = new URLSearchParams()
-  for (const key of ['distro', 'pkg']) {
+/** This page's URL with only `keep` of its parameters, spelled as lib/manQuery.ts expects. */
+function manPageUrl(name: string, section: string, query: Record<string, string | string[] | undefined>, keep: string[], extra = ''): string {
+  const pairs = keep.flatMap((key) => {
     const value = firstQuery(query[key])
-    if (value) params.set(key, value)
-  }
-  if (mode === 'glyph') params.set('portability', 'text')
-  const search = params.toString()
-  return `/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}${search ? `?${search}` : ''}#options-index`
+    return value ? [`${key}=${encodeURIComponent(value)}`] : []
+  })
+  if (extra) pairs.push(extra)
+  return `/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}${pairs.length ? `?${pairs.join('&')}` : ''}`
+}
+
+/** This page's URL with the other portability mode, keeping its own `?distro=`, `?pkg=` and `?lang=`. */
+function portabilityToggle(name: string, section: string, query: Record<string, string | string[] | undefined>, mode: 'glyph' | 'text'): string {
+  return `${manPageUrl(name, section, query, ['distro', 'pkg', 'lang'], mode === 'glyph' ? 'portability=text' : '')}#options-index`
 }
 
 export const getServerSideProps: GetServerSideProps<Props> = async ({ params, query, req, res }) => {
@@ -123,11 +126,15 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   // proxy's TTL after a promotion (or a rollback) the two can differ, for misses and
   // aliases as well as pages.
   const keyed = Boolean(releaseKey) && found.servedRelease === releaseKey
+  // `?pkg=` and `?flag=` are well formed by now (proxy.ts, lib/manQuery.ts), but only a
+  // page that has the package and the option makes them a variant worth sharing: any
+  // other answer to them is private, so made-up values never fill the CDN.
+  const unproven = Boolean(firstQuery(query.pkg) || firstQuery(query.flag))
 
   if (found.kind === 'miss') {
     const miss = await manMiss({ name, section, distro, urlDistro, headers: requestHeaders(req.headers), ...(releaseKey ? { release: releaseKey } : {}) })
     res.statusCode = 404
-    setManCache(res, miss.limited ? MAN_PRIVATE_CACHE : MAN_MISS_CACHE, { keyed: keyed && miss.answeredByKey })
+    setManCache(res, miss.limited || unproven ? MAN_PRIVATE_CACHE : MAN_MISS_CACHE, { keyed: keyed && miss.answeredByKey })
     return { props: { kind: 'miss', head: MISSING_MAN_HEAD, miss, release } }
   }
 
@@ -135,10 +142,16 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
     let destination = withDistro(`/man/${encodeURIComponent(found.name)}/${encodeURIComponent(found.section)}`, urlDistro)
     const targetPkg = packageName(found.pkg)
     if (targetPkg) destination += `${destination.includes('?') ? '&' : '?'}pkg=${encodeURIComponent(targetPkg)}`
-    setManCache(res, MAN_PAGE_CACHE, { keyed })
+    setManCache(res, unproven ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })
     // Browsers cache a 308, so only an explicit `?distro=` gets one; a bare URL
     // resolved the alias on Debian's current release, which can change.
     return { redirect: { destination, permanent: Boolean(urlDistro) } }
+  }
+
+  // A flag this page does not define is dropped, privately: it depends on the release.
+  if (firstQuery(query.flag) && !(flag && manOption(found.data.content.options, flag))) {
+    setManCache(res, MAN_PRIVATE_CACHE, { keyed })
+    return { redirect: { destination: manPageUrl(name, section, query, ['distro', 'pkg', 'portability', 'lang']), permanent: false } }
   }
 
   const origin = getPublicOrigin({ headers: requestHeaders(req.headers) })

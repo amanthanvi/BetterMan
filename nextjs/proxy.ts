@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { DISTRO_COOKIE, normalizeDistro } from './lib/distro'
 import { manBootScriptHash } from './lib/manBoot'
+import { normalizeManQuery } from './lib/manQuery'
 import { encodeReleaseHeader, RELEASE_HEADER, RELEASE_PARAM, RELEASE_TOKEN_HEADER, releaseToken, servingRelease, UNKNOWN_RELEASE, type ReleaseInfo } from './lib/manRelease'
 
 function createNonce(): string {
@@ -92,6 +93,20 @@ async function manProxy(request: NextRequest, cspEnabled: boolean, text = false)
   const csp = cspEnabled ? text
     ? buildCsp([`'nonce-${createNonce()}'`], { strictDynamic: true })
     : buildCsp([await manBootScriptHash()], { strictDynamic: false }) : null
+
+  // One cache entry per meaning: anything outside the man page query allowlist
+  // (lib/manQuery.ts) is redirected away before it can render or key the CDN.
+  // A client (RSC) fetch is Next's to answer, and never renders the page. Next has
+  // already dropped `_rsc` and decoded unreserved escapes (`%2D` is `-`) by now, so
+  // the release-keyed rewrite below is built from the canonical query either way.
+  const canonical = request.headers.has('rsc') ? null : normalizeManQuery(url.pathname, url.search)
+  if (canonical !== null) {
+    const target = url.clone()
+    target.search = canonical
+    const response = NextResponse.redirect(target, 308)
+    response.headers.set('Cache-Control', 'private, no-store')
+    return setSecurityHeaders(response, csp)
+  }
 
   if (!text && !explicit && preferred && preferred !== 'debian') {
     const target = url.clone()

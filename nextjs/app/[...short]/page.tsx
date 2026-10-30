@@ -3,6 +3,7 @@ import { notFound, permanentRedirect, redirect } from 'next/navigation'
 import { search, withDistroFallback } from '../../lib/api'
 import { withDistro } from '../../lib/distro'
 import { explicitDistro, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
+import { normalizeManQuery } from '../../lib/manQuery'
 import { shareFlag, withShareFlag } from '../../lib/manShare'
 import { manPath, parseShortUrl, type ShortUrl } from '../../lib/shortUrl'
 
@@ -29,6 +30,13 @@ function queryString(sp: SearchParams): string {
   }
   const qs = params.toString()
   return qs ? `?${qs}` : ''
+}
+
+// Only what the man page reads travels on (lib/manQuery.ts), so `?utm_source=` and
+// the like are dropped here rather than by a second redirect.
+function manQueryString(path: string, sp: SearchParams): string {
+  const qs = queryString(sp)
+  return normalizeManQuery(path, qs) ?? qs
 }
 
 // The option index, as search reads it for `tar -x`, maps a flag to its row.
@@ -71,9 +79,9 @@ export default async function ShortUrlPage({
 
   switch (target.kind) {
     case 'name':
-      return permanentRedirect(`${manPath(target.name)}${queryString(sp)}`)
+      return permanentRedirect(`${manPath(target.name)}${manQueryString(manPath(target.name), sp)}`)
     case 'page':
-      return permanentRedirect(`${manPath(target.name, target.section)}${queryString(sp)}`)
+      return permanentRedirect(`${manPath(target.name, target.section)}${manQueryString(manPath(target.name, target.section), sp)}`)
     case 'option':
       // 307: the anchor depends on the release and the reader's distro.
       return redirect(await optionHref(target, sp))

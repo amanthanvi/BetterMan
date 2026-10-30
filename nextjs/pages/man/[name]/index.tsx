@@ -42,7 +42,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   if (!resolved.result) {
     const miss = await manMiss({ name, section: null, distro, urlDistro, headers: requestHeaders(req.headers), ...(releaseKey ? { release: releaseKey } : {}) })
     res.statusCode = 404
-    setManCache(res, miss.limited ? MAN_PRIVATE_CACHE : MAN_MISS_CACHE, { keyed: keyed && miss.answeredByKey })
+    setManCache(res, miss.limited || selectedPackage ? MAN_PRIVATE_CACHE : MAN_MISS_CACHE, { keyed: keyed && miss.answeredByKey })
     return { props: { kind: 'miss', head: MISSING_MAN_HEAD, miss, release } }
   }
 
@@ -52,11 +52,12 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
     let destination = withDistro(`/man/${encodeURIComponent(result.name)}/${encodeURIComponent(result.section)}`, urlDistro)
     const pkg = result.kind === 'alias' ? packageName(result.pkg) : selectedPackage
     if (pkg) destination += `${destination.includes('?') ? '&' : '?'}pkg=${encodeURIComponent(pkg)}`
-    setManCache(res, MAN_PAGE_CACHE, { keyed })
+    // A requested package is proven only by the page it leads to, so its answer stays private.
+    setManCache(res, selectedPackage ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })
     return { redirect: { destination, permanent: false } }
   }
 
-  setManCache(res, MAN_PAGE_CACHE, { keyed })
+  setManCache(res, selectedPackage ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })
   return {
     props: {
       kind: 'picker',
