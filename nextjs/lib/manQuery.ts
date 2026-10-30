@@ -68,3 +68,18 @@ export function normalizeManQuery(pathname: string, search: string): string | nu
   const canonical = kept.length ? `?${kept.join('&')}` : ''
   return canonical === search ? null : canonical
 }
+
+/**
+ * True when a renderer's parsed query holds only allowed parameters, once each, with
+ * valid values. The proxy redirects anything else; a renderer reached any other way
+ * answers privately rather than trust that. `own` names the route's path parameters
+ * and the proxy's release key, which Next merges into the query.
+ */
+export function isManQuery(pathname: string, query: Record<string, string | string[] | undefined>, own: readonly string[]): boolean {
+  const allowed = manQueryParams(pathname) ?? []
+  return Object.entries(query).every(([key, value]) => {
+    if (own.includes(key)) return true
+    if (typeof value !== 'string' || !(allowed as readonly string[]).includes(key)) return false
+    return MAN_QUERY[key as ManQueryParam](value)
+  })
+}

@@ -8,7 +8,8 @@ import {
 } from '@/lib/api'
 import { normalizeDistro, withDistro } from '@/lib/distro'
 import { manCanonicalPath } from '@/lib/manCanonical'
-import { trustedProxyRelease } from '@/lib/manRelease'
+import { isManQuery } from '@/lib/manQuery'
+import { RELEASE_PARAM, trustedProxyRelease } from '@/lib/manRelease'
 import { isIndexable } from '@/lib/manRobots'
 import { renderManText } from '@/lib/manText'
 import { getPublicOrigin } from '@/lib/public-origin'
@@ -58,8 +59,15 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
   const release = proxyRelease?.datasetReleaseId
   // A request that bypasses the proxy cannot use a shared data-cache key.
   const lookupRelease = proxyRelease === undefined ? `unknown:${crypto.randomUUID()}` : release
+  // Anything the proxy would have redirected (lib/manQuery.ts) is answered privately.
+  const query: Record<string, string | string[]> = {}
+  for (const key of new Set(new URL(request.url).searchParams.keys())) {
+    const values = new URL(request.url).searchParams.getAll(key)
+    query[key] = values.length === 1 ? values[0]! : values
+  }
+  const canonicalQuery = isManQuery('/man/_/_.txt', query, [RELEASE_PARAM])
   const cacheHeaders = (answered: string | null): HeadersInit =>
-    release && answered === release ? {} : { 'Cache-Control': 'private, no-store' }
+    release && answered === release && canonicalQuery ? {} : { 'Cache-Control': 'private, no-store' }
   if (await isRateLimited(request.headers, 'page')) return text('Too many requests\n', 429)
 
   try {

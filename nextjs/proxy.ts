@@ -95,11 +95,11 @@ async function manProxy(request: NextRequest, cspEnabled: boolean, text = false)
     : buildCsp([await manBootScriptHash()], { strictDynamic: false }) : null
 
   // One cache entry per meaning: anything outside the man page query allowlist
-  // (lib/manQuery.ts) is redirected away before it can render or key the CDN.
-  // A client (RSC) fetch is Next's to answer, and never renders the page. Next has
-  // already dropped `_rsc` and decoded unreserved escapes (`%2D` is `-`) by now, so
-  // the release-keyed rewrite below is built from the canonical query either way.
-  const canonical = request.headers.has('rsc') ? null : normalizeManQuery(url.pathname, url.search)
+  // (lib/manQuery.ts) is redirected away before it can render or key the CDN,
+  // whatever the request's headers. Next has already dropped a client fetch's
+  // `_rsc` and decoded unreserved escapes (`%2D` is `-`) by now, so a real client
+  // fetch passes, and the release-keyed rewrite is built from the canonical query.
+  const canonical = normalizeManQuery(url.pathname, url.search)
   if (canonical !== null) {
     const target = url.clone()
     target.search = canonical

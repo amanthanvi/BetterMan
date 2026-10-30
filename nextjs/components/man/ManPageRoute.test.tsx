@@ -79,6 +79,22 @@ it('shares one option for ?flag= under the page canonical, and ignores a flag th
   }
 })
 
+it('answers privately a query the proxy would have redirected, should one reach the renderer', async () => {
+  for (const query of [{ zz: '1' }, { distro: ['ubuntu', 'fedora'] }, { portability: 'glyph' }, { lang: 'en' }] as Record<string, string | string[]>[]) {
+    const { ctx, res } = context({ name: 'tar', section: '1' }, query as Record<string, string>)
+    await pageProps(ctx)
+    expect(res.headers['cache-control'], JSON.stringify(query)).toBe('private, no-store')
+  }
+  const own = context({ name: 'tar', section: '1' }, { name: 'tar', section: '1', __bm_release: '2026-10-28+debian', portability: 'text' })
+  await pageProps(own.ctx)
+  expect(own.res.headers['cdn-cache-control']).toBe('public, s-maxage=3600, stale-while-revalidate=86400')
+
+  lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' }, servedRelease: '2026-10-28+debian' })
+  const picker = context({ name: 'tar' }, { utm_source: 'hn' })
+  await nameProps(picker.ctx)
+  expect(picker.res.headers['cache-control']).toBe('private, no-store')
+})
+
 it('keeps every answer to an unproven package or flag out of the CDN', async () => {
   lookup.lookupManPage.mockResolvedValue({ kind: 'miss', servedRelease: '2026-10-28+debian' })
   for (const query of [{ pkg: 'made-up' }, { flag: '-x' }, {}] as Record<string, string>[]) {

@@ -198,8 +198,14 @@ describe('man page query allowlist', () => {
     expect([...target.searchParams.keys()].sort()).toEqual([...expected.keys(), '__bm_release'].sort())
   })
 
-  it('leaves a client (RSC) fetch to Next', async () => {
-    const response = await proxy(new NextRequest('https://betterman.sh/man/tar/1?zz=1', { headers: { rsc: '1', 'next-router-prefetch': '1' } }))
+  it.each(['/man/tar/1?zz=1', '/man/tar/1.txt?zz=1'])('normalizes %s whatever the headers: a client (RSC) header is no way around it', async (path) => {
+    const response = await proxy(new NextRequest(`https://betterman.sh${path}`, { headers: { rsc: '1', 'next-router-prefetch': '1' } }))
+    expect(response.status).toBe(308)
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
+  })
+
+  it('passes a real client fetch, whose `_rsc` Next has already removed', async () => {
+    const response = await proxy(new NextRequest('https://betterman.sh/man/tar/1?distro=ubuntu', { headers: { rsc: '1' } }))
     expect(response.status).toBe(200)
   })
 })

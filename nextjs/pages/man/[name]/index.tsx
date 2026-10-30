@@ -9,7 +9,8 @@ import type { AmbiguousPageResponse } from '../../../lib/docModel'
 import { canonicalWithDistro, normalizeDistro, withDistro, type Distro } from '../../../lib/distro'
 import { MAN_MISS_CACHE, MAN_PAGE_CACHE, MAN_PRIVATE_CACHE, setManCache } from '../../../lib/manCache'
 import { manMiss, resolveManName, type ManMiss } from '../../../lib/manLookup'
-import { trustedRelease, type ReleaseInfo } from '../../../lib/manRelease'
+import { isManQuery } from '../../../lib/manQuery'
+import { RELEASE_PARAM, trustedRelease, type ReleaseInfo } from '../../../lib/manRelease'
 import { packageName } from '../../../lib/packageName'
 import { getPublicOrigin } from '../../../lib/public-origin'
 
@@ -34,6 +35,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   const urlDistro = normalizeDistro(firstQuery(query.distro))
   const distro = urlDistro ?? 'debian'
   const selectedPackage = packageName(firstQuery(query.pkg))
+  // Anything the proxy would have redirected (lib/manQuery.ts) is answered privately.
+  const unproven = Boolean(firstQuery(query.pkg)) || !isManQuery('/man/_', query, ['name', RELEASE_PARAM])
   const release = trustedRelease(req.headers)
   const releaseKey = release?.datasetReleaseId
   const resolved = await resolveManName(name, distro, releaseKey)
@@ -42,7 +45,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   if (!resolved.result) {
     const miss = await manMiss({ name, section: null, distro, urlDistro, headers: requestHeaders(req.headers), ...(releaseKey ? { release: releaseKey } : {}) })
     res.statusCode = 404
-    setManCache(res, miss.limited || selectedPackage ? MAN_PRIVATE_CACHE : MAN_MISS_CACHE, { keyed: keyed && miss.answeredByKey })
+    setManCache(res, miss.limited || unproven ? MAN_PRIVATE_CACHE : MAN_MISS_CACHE, { keyed: keyed && miss.answeredByKey })
     return { props: { kind: 'miss', head: MISSING_MAN_HEAD, miss, release } }
   }
 
@@ -53,11 +56,11 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
     const pkg = result.kind === 'alias' ? packageName(result.pkg) : selectedPackage
     if (pkg) destination += `${destination.includes('?') ? '&' : '?'}pkg=${encodeURIComponent(pkg)}`
     // A requested package is proven only by the page it leads to, so its answer stays private.
-    setManCache(res, selectedPackage ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })
+    setManCache(res, unproven ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })
     return { redirect: { destination, permanent: false } }
   }
 
-  setManCache(res, selectedPackage ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })
+  setManCache(res, unproven ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })
   return {
     props: {
       kind: 'picker',

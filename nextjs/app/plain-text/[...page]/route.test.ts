@@ -195,3 +195,13 @@ it('keeps alternate canonical and robots headers on a release-mismatched private
   expect(res.headers.get('link')).toBe('<https://betterman.sh/man/tar/1?pkg=alternate>; rel="canonical"')
   expect(res.headers.get('x-robots-tag')).toBe('noindex')
 })
+
+it.each(['?zz=1', '?distro=ubuntu&distro=fedora', '?pkg=Bad_Name'])('answers a query the proxy would have redirected (%s) privately', async (query) => {
+  const res = await GET(req(query), ctx())
+  expect(res.headers.get('cache-control')).toBe('private, no-store')
+})
+
+it('keeps the shared cache for the release key and allowed parameters', async () => {
+  const res = await GET(req('?distro=ubuntu&__bm_release=test'), ctx())
+  expect(res.headers.get('cache-control')).toBe('public, max-age=60, s-maxage=3600, stale-while-revalidate=3600')
+})
