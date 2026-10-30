@@ -320,6 +320,20 @@ def test_publish_declares_a_staging_translation_with_documented_versions(tmp_pat
     assert result.published
 
 
+def test_translated_sitemap_pages_hold_1000_pages_each():
+    from types import SimpleNamespace
+
+    pages = [SimpleNamespace(page_id=f"id{i}", name=f"p{i:05}", section="1") for i in range(2101)]
+    assigned = l10n.translation_sitemap_pages(reversed(pages))
+    assert [assigned["id0"], assigned["id999"], assigned["id1000"], assigned["id2100"]] == [
+        1,
+        1,
+        2,
+        3,
+    ]
+    assert max(assigned.values()) == 3 and len(assigned) == 2101
+
+
 def test_ingest_refuses_prod_before_the_contract_or_any_network(monkeypatch):
     monkeypatch.setattr(l10n, "ConvexIngestClient", lambda *_: pytest.fail("no client for prod"))
     with pytest.raises(ValueError, match="staging"):
