@@ -57,8 +57,9 @@ legacy releases have no computed tier and retain all-page indexing and sitemaps.
 
 `manPages` stores the two scalar fields alongside the metadata already read by
 HTML, JSON and text. `page.indexable` and `page.popularityScore` are plain data
-for C4's server-HTML implementation to retain. The metadata query also exposes
-`indexable`. Canonical HTML sets `robots: index|noindex, follow`; text GET/HEAD
+consumed by C4's server-HTML renderer. The metadata query also exposes
+`indexable`. Canonical HTML emits `robots: noindex` only for the long tail and
+omits robots meta for indexable or unscored pages; text GET/HEAD
 sets `X-Robots-Tag` and an HTML canonical Link; OG follows the tier; JSON APIs
 carry `noindex, follow` only for explicitly nonindexable page payloads. Legacy
 JSON retains main's headers. Package-qualified alternate providers in scored
@@ -86,7 +87,7 @@ No per-page arrays live on the release. **No new tables or indexes** were added;
 `confirm_large_indexes` and release-child registration are unnecessary. Existing
 prune/orphan registry coverage still applies. The man-page path adds **zero
 calls, document reads or storage reads**; performance validation must retain
-its existing 5 calls / 29 documents / 1 storage read budget.
+the Pages Router path's existing 4 calls / 26 documents / 1 storage read budget.
 
 Generated contract **v3** adds nullable section selection and persisted demand
 signals. By default generation paginates all sections. Scored releases select
@@ -181,8 +182,16 @@ unavailable; this PR does not add a new endpoint or grant credentials.
 
 ### Accepted robots cache lag
 
-Page and metadata caches are not keyed by release and can retain a prior robots
-signal for **one hour**. OG responses have a one-day fresh cache plus seven-day
+After #449, man HTML and its page-data cache are keyed by release. Every lookup
+outcome reports the release that answered; a mismatch stays **private, no-store**.
+The proxy refreshes the serving release within its **60-second** TTL. The tier
+travels on the existing page payload, so these checks require no additional reads.
+Only `indexable === false` emits `<meta name="robots" content="noindex">`;
+unscored pages emit no robots meta and existing man 404s remain noindex.
+
+Metadata and alternate representation caches can retain a prior robots signal
+for **one hour**; `.txt` release isolation is tracked separately in #452 and is
+unchanged here. OG responses have a one-day fresh cache plus seven-day
 stale window, so their robots signal can lag by **about eight days**. Sitemap
 and representation caches can refresh at different times after a release switch.
 The lead accepts this lag; this PR does not add invalidation or change cache TTLs.
@@ -219,17 +228,21 @@ A separate 115,000-page synthetic test yields 38,334 tier members with dense
 
 The lead's rollout correction preserves legacy indexability and moves the hard
 safety gate to full-Debian promotion. Revision checks and the final head are
-recorded in the PR. Validation passed: 3,263 Convex tests and typecheck;
-880 ingestion tests; 582 Next unit tests, lint, grammar
-and build; 138 E2E tests (scored and legacy serving); 123 ops tests; performance
-budgets with 5 calls / 29 documents / 1 storage read. The local backend used
+recorded in the PR. After the Pages Router port, validation passed: 3,263 Convex
+tests and typecheck; 615 Next unit tests, lint, grammar and build; 139 E2E tests
+(including scored/legacy serving, man 404s and sitemaps); 123 ops tests. Earlier
+v7 validation also passed 880 ingestion tests; the port changes no ingest fields.
+Performance budgets passed, measuring 4 calls / 26 documents / 1 storage read
+for the man page.
+The local backend used
 isolated ports 3416/3417. No budgets, runner configuration or shared
 infrastructure were changed.
 
 ### Merge dependencies
 
-Rebased onto main 54b95eb7, including [#443](https://github.com/amanthanvi/BetterMan/pull/443)
-and #444's hydration signal. Contract **v7** carries both the complete B4 upload
+Rebased onto main b8b7b1ac, including [#443](https://github.com/amanthanvi/BetterMan/pull/443),
+#444's hydration signal and #449's plain server HTML man renderer. Contract
+**v7** carries both the complete B4 upload
 payload and #443's fixed-staging promotion-source read, `expectedDatasetReleaseId`
 CAS map, `expected_release_ids` dispatch behavior and exact-version promotion
 header fence. Version 6 promotion requests are rejected before pointer writes.
@@ -239,11 +252,12 @@ pin stays `STAGING_RELEASE_CONFLICT`, with no request/skip output. Matching pins
 may get the clean replacement-required skip; the server refuses every pointer
 write, including owner-authorized ones.
 
-#442's generated-layer and `refresh_page` changes are retained. The open man-page
-stack #449–#451 moves the renderer to Pages Router; whichever stack lands second
-must retain the other's changes. Its renderer uses `indexable === false` for
-noindex, matching B4's payload. Do not wait for that stack or merge this PR as
-part of this task. The post-November-1-run merge gate remains in force.
+#442's generated-layer and `refresh_page` changes are retained. B4 uses #449's
+Pages Router `ManHeadTags`/`isIndexable` hook and preserves its release-key checks
+for pages, aliases, misses and name resolution. No deleted App Router man page
+is restored. Later #450–#451 changes must retain this signal and cache isolation.
+Do not merge this PR as part of this task. The post-November-1-run merge gate
+remains in force.
 
 Implementation and tests cover scoring, raw-count thresholds, section suffixes,
 exact package proxies, traffic promotion, generated selection, sitemap filtering,

@@ -350,6 +350,9 @@ A promote-only job that encounters `FULL_DEBIAN_TIER_REQUIRED` records a clean
 skip with "scored full-Debian replacement required"; sibling distro records are
 unaffected. The server still refuses the pointer write.
 
-Accepted cache limit: page/meta robots can lag a release switch by one hour,
+Man HTML/page data now retain #449's release keys and private/no-store mismatch
+checks, with the proxy's 60-second release TTL. The tier adds no page-path reads.
+Accepted cache limit: metadata/alternate robots can lag a release switch by one hour,
 and OG robots by about eight days (one day fresh plus seven days stale).
 Sitemaps may switch before those signals; no invalidation change is included.
+The `.txt` path is unchanged; its release isolation is tracked separately in #452.
