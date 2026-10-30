@@ -118,7 +118,7 @@ Source: [vercel-ops.md](../runbooks/vercel-ops.md#man-page-edge-caching-c4-406).
 
 ## 5. Owner-only setup
 
-- [ ] **OWNER: Vercel Firewall bypass rules for non-browser access (#388).** Four custom **Bypass** rules, each also **Method is any of GET, HEAD**, placed after abusive-IP blocks and before challenge rules ([abuse-scraping.md](../runbooks/abuse-scraping.md#non-browser-reads-and-vercel-challenges-388)):
+- [x] **Vercel Firewall bypass rules for non-browser access (#388).** Applied 2026-10-30 through the Vercel API with the owner's approval, after the `Cost guard: API rate limit` rule so `/api/v1/suggest` keeps it. Four custom **Bypass** rules, each also **Method is any of GET, HEAD**, placed after abusive-IP blocks and before challenge rules ([abuse-scraping.md](../runbooks/abuse-scraping.md#non-browser-reads-and-vercel-challenges-388)):
 
   | Rule | Request Path |
   | --- | --- |
@@ -127,8 +127,8 @@ Source: [vercel-ops.md](../runbooks/vercel-ops.md#man-page-edge-caching-c4-406).
   | OpenSearch descriptor | Equals `/opensearch.xml` |
   | OpenSearch suggestions | Equals `/api/v1/suggest` |
 
-  First identify the challenge source in Firewall events. Add no broad `/man/` HTML bypass. Then verify anonymously, with no challenge cookie: `/tar.txt`, `/tar.1.txt`, `/man/tar/1.txt`, `/opensearch.xml`, `/api/v1/suggest?q=ta&format=opensearch`. Add BetterMan as a search engine in real Chrome and Firefox and type `ta`. The post and Show HN claim `curl betterman.sh/tar.txt` works, so this must pass before posting. Observed on 2026-10-30: an anonymous `curl -I https://betterman.sh/tar.txt` returned `429` with `x-vercel-mitigated: challenge`, so the bypass was not effective yet.
-- [ ] **OWNER (lead):** enable **Web Analytics** in the BetterMan Vercel project before the next production deploy ([analytics.md](../analytics.md)).
+  First identify the challenge source in Firewall events. Add no broad `/man/` HTML bypass. Then verify anonymously, with no challenge cookie: `/tar.txt`, `/tar.1.txt`, `/man/tar/1.txt`, `/opensearch.xml`, `/api/v1/suggest?q=ta&format=opensearch`. Add BetterMan as a search engine in real Chrome and Firefox and type `ta`. The post and Show HN claim `curl betterman.sh/tar.txt` works, so this must pass before posting. The challenge came from the managed **Bot Protection** ruleset (action: challenge). Before the rules, an anonymous `curl -I https://betterman.sh/tar.txt` returned `429` with `x-vercel-mitigated: challenge`. After them, anonymous GET/HEAD on all five URLs answer with no challenge: `/tar.txt` 308 to `/man/tar/1.txt`, the rest 200 with `nosniff`, and a missing page gives 404. HTML (`/man/tar/1`), sitemaps and POST stay challenged. Still to do on launch day: add BetterMan as a search engine in real Chrome and Firefox and type `ta`.
+- [x] **OWNER:** enable **Web Analytics** in the BetterMan Vercel project (done 2026-10-30; the API confirms it is enabled). Collection starts with the first production deploy after enablement ([analytics.md](../analytics.md)).
 - [ ] **OWNER:** confirm `NEXT_PUBLIC_SENTRY_DSN` is set in the production Vercel environment.
 - [ ] **OWNER:** confirm the Convex plan and spend limit cover the full-Debian storage and read numbers from step 3.
 - [ ] **OWNER: posting.** Show HN, the submissions and any on-site post. Drafts are in this folder. Agents do not post, submit, email or create accounts.
@@ -138,7 +138,7 @@ Source: [vercel-ops.md](../runbooks/vercel-ops.md#man-page-edge-caching-c4-406).
 The drafts make factual claims. Re-verify each on production on launch day, and delete or soften any that fails.
 
 - [ ] Page counts and the distro list match `/api/v1/info` for each distro.
-- [ ] `curl -fsS https://betterman.sh/tar.txt | head` returns plain text (after the Firewall rules).
+- [ ] `curl -fsSL https://betterman.sh/tar.txt | head` returns plain text.
 - [ ] A man page shows its "In brief" block, and every generated item carries its "generated" mark with model and date. tldr-pages examples are labelled and linked, and `/licenses` credits tldr-pages.
 - [ ] Portability markers appear on a flag that differs between distros (for example in `/explain?cmd=…`).
 - [ ] Page weight and cost claims match a fresh `pnpm perf:check`, not an old number.
