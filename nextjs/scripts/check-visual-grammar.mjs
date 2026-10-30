@@ -10,7 +10,10 @@
  *     and the red is never a fill except the contents marker;
  *  5. three voices: one web font, BM Text, self-hosted from /fonts/bm-text/,
  *     no arbitrary families, and a typed value is always mono;
- *  6. focus stays visible: no outline-none.
+ *  6. focus stays visible: no outline-none;
+ *  7. BetterMan's own copy is typeset: curly quotes and apostrophes, real
+ *     dashes and ellipses in JSX text and in title, aria-label, placeholder
+ *     and alt strings. Upstream manual text never passes through here.
  * Utilities are matched with their variants, `!` markers, opacity modifiers
  * and arbitrary values (`border-2`, `bg-accent/50`, `bg-[color:var(--color-accent)]`).
  */
@@ -137,6 +140,17 @@ function fillToken(utility) {
   return /--color-([\w-]+)/.exec(value)?.[1] ?? null
 }
 
+// Straight quotes, a straight apostrophe between letters, three dots, and a hyphen or two set as a dash.
+const UNTYPESET = /"|[A-Za-z]'[A-Za-z]|\.\.\.| --? /
+
+/** The copy a line shows: JSX text between tags, and the strings of attributes a reader hears or sees. */
+function copyOn(line) {
+  // Text counts only after a tag on the same line, so `a > b - 1 && c < d` is not copy.
+  const copy = [...line.matchAll(/<\/?[A-Za-z][^<>]*>([^<>{}=]*[A-Za-z][^<>{}=]*)(?=<)/g)].map((m) => m[1])
+  for (const m of line.matchAll(/\b(?:title|aria-label|placeholder|alt)="([^"]*)"/g)) copy.push(m[1])
+  return copy
+}
+
 function arbitraryProperty(utility) {
   const match = /^\[([\w-]+):(.*)\]$/.exec(utility)
   return match ? { property: match[1], value: match[2] } : null
@@ -185,6 +199,9 @@ export function checkSource(file, text) {
     // A programmatic focus target (tabIndex -1, like <main>) is not a control.
     if (has((u) => u === 'outline-none' || u === 'outline-hidden' || u === 'outline-0') && !line.includes('tabIndex={-1}')) {
       fail('outline-none hides focus; fields use .bm-field', where)
+    }
+    if (copyOn(line).some((copy) => UNTYPESET.test(copy))) {
+      fail('BetterMan copy uses “curly quotes”, ’ apostrophes, – and — dashes, and …', where)
     }
   })
 

@@ -2,47 +2,88 @@ import { isIndexable } from '@/lib/manRobots'
 import { packageName } from '@/lib/packageName'
 import { notFound } from 'next/navigation'
 
-import { ogCard } from '../../../../../lib/og/card'
-import { FastApiError, fetchManMetaByNameAndSection, withDistroFallback } from '../../../../../lib/api'
+import { ogCard, type OgCardInput } from '../../../../../lib/og/card'
+import { FastApiError, fetchManByNameAndSectionOrAlias, fetchManMetaByNameAndSection, withDistroFallback } from '../../../../../lib/api'
 import { sectionLabel } from '../../../../../components/man/RunningHead'
-import { normalizeDistro } from '../../../../../lib/distro'
+import { DISTRO_LABEL, normalizeDistro, type Distro } from '../../../../../lib/distro'
+import type { ManPage } from '../../../../../lib/docModel'
+import { manOption, SHARE_FLAG_PARAM, shareFlag } from '../../../../../lib/manShare'
 import { isValidManImageParams } from '../../../../../lib/og/input'
 import { isRateLimited } from '../../../../../lib/rateLimit'
+import { servingRelease } from '../../../../../lib/manRelease'
+import { parseReleaseId, releaseDay } from '../../../../../lib/release'
 import { decodeManParam } from '../../../../../lib/shortUrl'
 import { nonHtmlSecurityHeaders } from '../../../../../lib/securityHeaders'
 
+type CardData = { page: ManPage; option?: OgCardInput['option']; generated?: OgCardInput['generated'] }
+
+/** The whole page, for a flag's option or a generated summary; an alias has neither. */
+async function fullPage(distro: Distro, name: string, section: string, pkg: string | null) {
+  const found = await fetchManByNameAndSectionOrAlias({ distro, name, section, ...(pkg ? { pkg } : {}) })
+  if (found.kind !== 'page') notFound()
+  return found.data
+}
+
+async function cardData(distro: Distro, name: string, section: string, pkg: string | null, flag: string | null): Promise<CardData> {
+  if (flag) {
+    const data = await fullPage(distro, name, section, pkg)
+    const option = manOption(data.content.options, flag)
+    if (!option) notFound()
+    return { page: data.page, option: { flags: option.flags, argument: option.argument, description: option.description } }
+  }
+  const { page } = await fetchManMetaByNameAndSection({ distro, name, section, ...(pkg ? { pkg } : {}) })
+  if (page.description) return { page }
+  // Without a NAME line the card may carry BetterMan's generated summary, labelled.
+  const { brief } = await fullPage(distro, name, section, pkg)
+  if (!brief?.summary || !brief.generated) return { page }
+  return { page, generated: { text: brief.summary, label: `generated · ${brief.generated.model}, ${brief.generated.generatedAt}` } }
+}
+
+/** The day the page's release was built, from its id; an id without one (legacy, test) takes the active release's date when it is that release. */
+async function releaseDate(page: ManPage, distro: Distro): Promise<string | undefined> {
+  const builtAt = parseReleaseId(page.datasetReleaseId).builtAt
+  if (builtAt) return releaseDay(builtAt)
+  const active = await servingRelease(distro).catch(() => null)
+  return active?.datasetReleaseId === page.datasetReleaseId ? releaseDay(active.lastUpdated) : undefined
+}
+
 /*
  * A route handler rather than opengraph-image.tsx: metadata image routes only
- * receive params, and the share image has to follow ?distro= like the page.
+ * receive params, and the share image has to follow ?distro= and ?pkg= like the
+ * page, and ?flag= for one option's card (lib/manShare.ts).
  */
 export async function GET(request: Request, ctx: { params: Promise<{ name: string; section: string }> }) {
   const { name: rawName, section: rawSection } = await ctx.params
   const name = decodeManParam(rawName)
   const section = decodeManParam(rawSection)
-  if (!isValidManImageParams(name, section)) notFound()
+  const params = new URL(request.url).searchParams
+  const rawFlag = params.get(SHARE_FLAG_PARAM)
+  const flag = shareFlag(rawFlag)
+  if (!isValidManImageParams(name, section) || (rawFlag !== null && !flag)) notFound()
   if (await isRateLimited(request.headers, 'page')) {
     return new Response(null, { status: 429, headers: { ...nonHtmlSecurityHeaders(), 'Cache-Control': 'private, no-store' } })
   }
 
-  const requestedDistro = normalizeDistro(new URL(request.url).searchParams.get('distro')) ?? 'debian'
-  const { data } = await (async () => {
+  const requestedDistro = normalizeDistro(params.get('distro')) ?? 'debian'
+  const pkg = packageName(params.get('pkg')) ?? null
+  const { distro, data } = await (async () => {
     try {
-      return await withDistroFallback(requestedDistro, (distro) =>
-        fetchManMetaByNameAndSection({ distro, name, section, ...(packageName(new URL(request.url).searchParams.get('pkg')) ? { pkg: packageName(new URL(request.url).searchParams.get('pkg'))! } : {}) }),
-      )
+      return await withDistroFallback(requestedDistro, (distro) => cardData(distro, name, section, pkg, flag))
     } catch (err) {
       if (err instanceof FastApiError && err.status === 404) notFound()
       throw err
     }
   })()
 
-  const title = `${data.page.name}(${data.page.section})`
-
   const response = await ogCard({
-    head: title.toUpperCase(),
+    name: data.page.name,
+    section: data.page.section,
     label: sectionLabel(section),
-    name: title,
-    description: data.page.description || data.page.title,
+    description: data.option ? undefined : data.page.description || (data.generated ? undefined : data.page.title),
+    ...(data.option ? { option: data.option } : {}),
+    ...(data.generated ? { generated: data.generated } : {}),
+    distro: DISTRO_LABEL[distro],
+    date: await releaseDate(data.page, distro),
   })
   // Cards change only with a dataset release. A day fresh, then served stale
   // while the CDN refreshes, bounds how long an old card outlives a release.

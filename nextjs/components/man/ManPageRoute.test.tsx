@@ -46,7 +46,7 @@ it('carries its head to the document: canonical, share image, JSON-LD and the in
   const tail = await pageProps(context({ name: 'tar', section: '1' }).ctx)
   expect(propsOf(result)).toMatchObject({
     head: {
-      title: 'tar(1) - BetterMan',
+      title: 'tar(1) — BetterMan',
       canonical: 'http://localhost:3000/man/tar/1',
       ogImage: { url: 'http://localhost:3000/man/tar/1/og' },
       noindex: false,
@@ -54,6 +54,28 @@ it('carries its head to the document: canonical, share image, JSON-LD and the in
   })
   expect(propsOf(tail)).toMatchObject({ head: { noindex: true } })
   expect(JSON.parse((propsOf(result) as { head: { jsonLd: { json: string } } }).head.jsonLd.json)).toMatchObject({ '@type': 'TechArticle' })
+})
+
+it('shares one option for ?flag= under the page canonical, and ignores a flag the page does not define', async () => {
+  const options = [{ anchorId: 'opt-x', flags: '-x, --extract', description: 'Extract files from an archive.' }]
+  lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data: { ...data, content: { ...data.content, options } }, related: [], servedRelease: '2026-10-28+debian' })
+  const shared = propsOf(await pageProps(context({ name: 'tar', section: '1' }, { flag: '--extract' }).ctx)) as { head: Record<string, unknown> }
+  expect(shared.head).toMatchObject({
+    title: 'tar(1) — BetterMan',
+    canonical: 'http://localhost:3000/man/tar/1',
+    ogImage: { url: 'http://localhost:3000/man/tar/1/og?flag=--extract', alt: '-x, --extract in tar(1)' },
+    share: { title: 'tar --extract · tar(1) — BetterMan', description: 'Extract files from an archive.' },
+  })
+  for (const flag of ['-q', 'extract', '--extract=X']) {
+    const plain = propsOf(await pageProps(context({ name: 'tar', section: '1' }, { flag }).ctx)) as { head: Record<string, unknown> }
+    expect(plain.head).toMatchObject({ ogImage: { url: 'http://localhost:3000/man/tar/1/og' } })
+    expect(plain.head).not.toHaveProperty('share')
+  }
+})
+
+it('prints the running head and foot: name, section label, edition, system and release day', async () => {
+  const result = propsOf(await pageProps(context({ name: 'tar', section: '1' }).ctx)) as { head: Record<string, unknown> }
+  expect(result.head.print).toEqual({ head: ['TAR(1)', 'User Commands', 'TAR(1)'], foot: ['tar 1.35', 'Debian · Oct 28, 2026'] })
 })
 
 it('turns off the Next runtime, so the page is plain HTML', () => {

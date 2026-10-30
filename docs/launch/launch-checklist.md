@@ -142,7 +142,7 @@ The drafts make factual claims. Re-verify each on production on launch day, and 
 - [ ] A man page shows its "In brief" block, and every generated item carries its "generated" mark with model and date. tldr-pages examples are labelled and linked, and `/licenses` credits tldr-pages.
 - [ ] Portability markers appear on a flag that differs between distros (for example in `/explain?cmd=…`).
 - [ ] Page weight and cost claims match a fresh `pnpm perf:check`, not an old number.
-- [ ] No claim about languages, concept explainers, share cards or a CLI. None of these ship yet (B3 #395, B8 #400, C6 #408; roadmap: no CLI).
+- [ ] No claim about languages, concept explainers or a CLI. None of these ship yet (B3 #395, B8 #400; roadmap: no CLI). Share cards, per-flag cards and the print stylesheet ship with C6 (#408).
 - [ ] **Indexing.** The roadmap's index-by-demand policy (long tail `noindex`) is B4 ([#396](https://github.com/amanthanvi/BetterMan/issues/396)), open when this was drafted. Until a release carries the `indexable` flag, `nextjs/lib/manRobots.ts` indexes every page, so about 115,000 pages would be indexable. Check a long-tail page's `robots` meta and `/sitemap-debian.xml` on production, then decide: **OWNER**, ship B4 first, or launch with the open policy and accept the thin-page risk in [betterman-2.md](../roadmap/betterman-2.md). Write `{{INDEXING_POLICY}}` in `show-hn.md` to match.
 - [ ] The cold-cache path survives launch traffic: request a page with a name not requested before and confirm it renders.
 

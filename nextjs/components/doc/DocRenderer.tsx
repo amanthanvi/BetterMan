@@ -212,7 +212,7 @@ function renderInlines(inlines: InlineNode[], ctx: RenderCtx, urlDistro: Distro 
       case 'link':
         if (inline.linkType === 'external') {
           return (
-            <ExternalLink key={idx} href={inline.href}>
+            <ExternalLink key={idx} href={inline.href} printUrl={!showsHref(inline.inlines, inline.href)}>
               {renderInlines(inline.inlines, ctx, urlDistro, false)}
             </ExternalLink>
           )
@@ -234,9 +234,20 @@ function renderInlines(inlines: InlineNode[], ctx: RenderCtx, urlDistro: Distro 
   })
 }
 
-function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
+function linkText(nodes: InlineNode[]): string {
+  return nodes.map((node) => ('text' in node ? node.text : linkText(node.inlines))).join('')
+}
+
+/** True when the link's text already spells its address (`https://…/` as `…`), so print need not repeat it. */
+function showsHref(inlines: InlineNode[], href: string): boolean {
+  const bare = (url: string) => url.trim().replace(/^(?:https?:\/\/|mailto:)/i, '').replace(/\/$/, '').toLowerCase()
+  return bare(linkText(inlines)) === bare(href)
+}
+
+/* `data-bm-print-url`: print sets the address after a link whose text does not show it. */
+function ExternalLink({ href, printUrl = false, children }: { href: string; printUrl?: boolean; children: ReactNode }) {
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="bm-ext [overflow-wrap:anywhere]">
+    <a href={href} target="_blank" rel="noopener noreferrer" className="bm-ext [overflow-wrap:anywhere]" data-bm-print-url={printUrl || undefined}>
       {children}
       <span className="sr-only"> (opens in new tab)</span>
     </a>

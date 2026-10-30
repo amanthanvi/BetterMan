@@ -3,6 +3,7 @@ import { notFound, permanentRedirect, redirect } from 'next/navigation'
 import { search, withDistroFallback } from '../../lib/api'
 import { withDistro } from '../../lib/distro'
 import { explicitDistro, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
+import { shareFlag, withShareFlag } from '../../lib/manShare'
 import { manPath, parseShortUrl, type ShortUrl } from '../../lib/shortUrl'
 
 function reservedSegments(): Set<string> {
@@ -31,6 +32,7 @@ function queryString(sp: SearchParams): string {
 }
 
 // The option index, as search reads it for `tar -x`, maps a flag to its row.
+// `?flag=` gives the landing page that option's share card (lib/manShare.ts).
 // Without a match, or when the search fails, the reader still lands on the
 // page (or its section picker), which settles its own status.
 async function optionHref(target: Extract<ShortUrl, { kind: 'option' }>, sp: SearchParams): Promise<string> {
@@ -49,8 +51,10 @@ async function optionHref(target: Extract<ShortUrl, { kind: 'option' }>, sp: Sea
   const hit = found.data.results.find(
     (result) => result.match === 'option' && result.anchorId && result.name.toLowerCase() === target.name,
   )
-  if (hit) return `${withDistro(manPath(target.name, hit.section), urlDistro)}#${hit.anchorId}`
-  return pageHref
+  if (!hit) return pageHref
+  const page = withDistro(manPath(target.name, hit.section), urlDistro)
+  const flag = shareFlag(target.flag)
+  return `${flag ? withShareFlag(page, flag) : page}#${hit.anchorId}`
 }
 
 export default async function ShortUrlPage({

@@ -33,7 +33,7 @@ BetterMan 2 aims, in order, to be the default lookup, a daily-driver tool, and a
 
 The owner signed off on the BetterMan 2 direction (`docs/roadmap/betterman-2.md`); `DESIGN.md` records the system.
 
-- **Name and mark:** BetterMan, with the wordmark set the way the manual sets a command, **betterman**(1). The `>_` glyph is retired from the interface (the app icons and share cards follow in C6); the typesetting is the identity.
+- **Name and mark:** BetterMan, with the wordmark set the way the manual sets a command, **betterman**(1). The `>_` glyph is retired: the app icons are a BM Text “b” over the one red rule, and share cards are set like a page of the manual (C6). The typesetting is the identity.
 - **The print manual:** the finest edition of the Unix manual, typeset for the screen. Running heads and foot, true small caps, old-style figures, hanging section numbers, hairlines and square corners.
 - **Three voices:** the upstream manual in the serif BM Text; everything BetterMan adds in system sans, on a quiet tint when it sits in the page; anything you type in system mono.
 - **One red,** for selection, focus and warnings, never decoration.

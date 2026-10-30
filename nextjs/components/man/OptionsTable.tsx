@@ -103,7 +103,7 @@ export function OptionsTable({
                   in command
                 </span>
                 {newInByAnchor.has(opt.anchorId) ? (
-                  <span className="ml-2 whitespace-nowrap text-xs text-ink-3" title="Not in this page's previous release">
+                  <span className="ml-2 whitespace-nowrap text-xs text-ink-3" title="Not in this page’s previous release">
                     new{newInByAnchor.get(opt.anchorId)!.packageVersion ? ` in ${newInByAnchor.get(opt.anchorId)!.packageVersion}` : ''}
                   </span>
                 ) : null}
