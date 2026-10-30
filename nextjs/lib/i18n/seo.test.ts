@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { translationFixHref } from './fix'
 import { hreflangAlternates, isLocalizedUi, localizedSeo } from './seo'
@@ -43,11 +43,24 @@ describe('translationFixHref', () => {
 })
 
 describe('requestLangFromHeaders', () => {
-  const headers = (value: string | null) => ({ get: (name: string) => (name === 'x-bm-lang' ? value : null) })
+  const headers = (lang: string | null, token: string | null = 'build-secret') => ({
+    get: (name: string) => (name === 'x-bm-lang' ? lang : name === 'x-bm-release-token' ? token : null),
+  })
+  beforeEach(() => vi.stubEnv('BM_RELEASE_TOKEN', 'build-secret'))
+  afterEach(() => vi.unstubAllEnvs())
+
   it('reads only a public language from the proxy’s header', () => {
     expect(requestLangFromHeaders(headers('de'), ['en', 'de'])).toBe('de')
     expect(requestLangFromHeaders(headers('ru'), ['en', 'de'])).toBe('en')
     expect(requestLangFromHeaders(headers('nonsense'), ['en', 'de'])).toBe('en')
     expect(requestLangFromHeaders(headers(null), ['en', 'de'])).toBe('en')
+  })
+
+  // The proxy matcher skips prefetches, so a client can send this header to a route the proxy never saw.
+  it('ignores the header on a request the proxy did not handle', () => {
+    expect(requestLangFromHeaders(headers('de', null), ['en', 'de'])).toBe('en')
+    expect(requestLangFromHeaders(headers('de', 'guess'), ['en', 'de'])).toBe('en')
+    vi.stubEnv('BM_RELEASE_TOKEN', '')
+    expect(requestLangFromHeaders(headers('de', ''), ['en', 'de'])).toBe('en')
   })
 })

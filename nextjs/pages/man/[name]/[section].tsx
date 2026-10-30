@@ -61,7 +61,7 @@ function printParts(page: ManPageResponse['page'], servedDistro: Distro, release
   const title = `${page.name.toUpperCase()}(${page.section})`
   const edition = page.sourcePackage ? `${page.sourcePackage}${page.sourcePackageVersion ? ` ${page.sourcePackageVersion}` : ''}` : ''
   const day = releaseDay(parseReleaseId(page.datasetReleaseId).builtAt ?? (release?.datasetReleaseId === page.datasetReleaseId ? release.lastUpdated : null))
-  return { head: [title, sectionLabel(page.section, t), title], foot: [edition, [DISTRO_LABEL[servedDistro], day].filter(Boolean).join(' · ')] }
+  return { head: [title, sectionLabel(page.section, t, servedDistro), title], foot: [edition, [DISTRO_LABEL[servedDistro], day].filter(Boolean).join(' · ')] }
 }
 
 function pageHead(data: ManPageResponse, servedDistro: Distro, pkg: string | null, origin: string, flag: string | null, release: ReleaseInfo | null, t: ServerT, localized: boolean): ManHeadData {

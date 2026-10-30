@@ -11,7 +11,7 @@ import { localizedSeo } from '../../lib/i18n/seo'
 import { getI18n } from '../../lib/i18n/server'
 import { explicitDistro, explicitLang, getFirst, resolveRequestDistro, resolveRequestLang, type SearchParams } from '../../lib/requestContext'
 import { sectionsLabel } from '../../lib/sectionsLabel'
-import { ManSectionLabel, sectionLabel } from '../../components/man/RunningHead'
+import { bsdSectionLabel, ManSectionLabel, sectionLabel } from '../../components/man/RunningHead'
 import { SearchResultsBody } from '../../components/search/SearchResultsBody'
 import { Kbd } from '../../components/ui/Kbd'
 import { LinkPendingHint } from '../../components/ui/LinkPendingHint'
@@ -35,12 +35,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const sp = await searchParams
   const requestedDistro = await resolveRequestDistro(sp)
   const { t, lang } = await getI18n(resolveRequestLang(sp))
-  // English keeps the dataset's own section names; another language names the sections as man does in that language.
-  const nameOf = (s: { section: string; label: string }) => (lang === 'en' ? s.label : sectionLabel(s.section, t))
   const urlLang = explicitLang(sp)
   const q = getFirst(sp.q)?.trim().slice(0, 120) ?? ''
 
-  const { data } = await withDistroFallback(requestedDistro, async (activeDistro) =>
+  const { distro, data } = await withDistroFallback(requestedDistro, async (activeDistro) =>
     Promise.all([
       fetchInfo(activeDistro),
       listSections(activeDistro),
@@ -49,6 +47,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   )
   const urlDistro = explicitDistro(sp)
   const [info, sections, results] = data
+  // English keeps the dataset's own section names; another language names the sections as man does in that language. BSD systems name 4 and 7 their own way.
+  const nameOf = (s: { section: string; label: string }) => bsdSectionLabel(s.section, distro, t) ?? (lang === 'en' ? s.label : sectionLabel(s.section, t))
   const visible = sections.filter((s) => /^\d+$/.test(s.section)).slice(0, 9)
   const allResults = withDistro(`/search?q=${encodeURIComponent(q)}`, urlDistro, urlLang)
   const placeholders = EXAMPLE_QUERIES.map((example) => t('Try {example}', { example }))

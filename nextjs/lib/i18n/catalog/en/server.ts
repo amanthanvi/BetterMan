@@ -231,6 +231,28 @@ export const server = [
   // Translator note: {link} is a link whose text is 'Report a problem' (a noun phrase or infinitive that starts the sentence); the rest must follow it grammatically.
   '{link} with this page on GitHub.',
   'Report a problem',
+  'Concepts',
+  'Concepts:',
+  'Concept',
+  'The manual’s page',
+  'The manual’s pages',
+  'The manual is the authority; this page is a plain-English way in.',
+  'Explainer',
+  // Translator note: {by} is a model name, {date} a long date, and {review} is one of the three clauses that follow (it continues this sentence after the semicolon).
+  'BetterMan’s own explainer, not text from the manual. Generated · {by}, {date}; {review}',
+  'checked against the pages it cites by a model panel and read by the maintainer.',
+  'checked against the pages it cites by a model panel; not yet read by the maintainer.',
+  'not yet reviewed.',
+  'Sources',
+  'Related pages',
+  // Translator note: {sections} lists the manual sections that were read, such as "DESCRIPTION, OPTIONS"; these names are upstream text and stay as they are.
+  'Read: {sections}',
+  // Translator note: {link} is a link whose text is "Report a problem" (a noun phrase or infinitive that starts the sentence); the rest must follow it grammatically.
+  '{link} with this explainer on GitHub.',
+  // Translator note: BSD manuals (FreeBSD, macOS) title section 4 "Kernel Interfaces" (device drivers and kernel interfaces) rather than "Special Files".
+  'Kernel Interfaces',
+  // Translator note: BSD manuals title section 7 "Miscellaneous Information" rather than "Miscellany".
+  'Miscellaneous Information',
 ] as const
 
 export type ServerKey = (typeof server)[number]

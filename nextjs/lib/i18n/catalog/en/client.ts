@@ -102,6 +102,9 @@ const own = [
   // Translator note: keep the English word 'Digest' so that reports quote the label; {digest} is an opaque identifier.
   'Digest: {digest}',
   'Retry',
+  'BetterMan explainer',
+  // Translator note: {pages} is a comma-separated list of man page citations such as tar(1); the phrase follows "BetterMan explainer · ".
+  'on {pages}',
 ] as const
 
 export const client = [...common, ...own] as const

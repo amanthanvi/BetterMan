@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { CATALOG_META, previewLangs, publicLangs } from './gate'
 import { LANGS, LANG_NAMES, normalizeLang, resolveLang, setLang, translatedLang, withLang } from './locales'
+import { holdBack, releaseHeld } from './testing'
 
 describe('the language contract', () => {
   it('lists English first, then the six first languages', () => {
@@ -18,27 +19,39 @@ describe('the language contract', () => {
 })
 
 describe('the review gate', () => {
-  it('ships every translation as needs-review, so only English renders publicly', () => {
+  it('ships every translation reviewed, with who reviewed it and when, so all six render publicly', () => {
     for (const [lang, meta] of Object.entries(CATALOG_META)) {
       expect(meta.lang).toBe(lang)
-      expect(meta.status).toBe('needs-review')
-      expect(meta.reviewedOn).toBeNull()
-      expect(meta.reviewedBy).toEqual([])
+      expect(meta.status).toBe('reviewed')
+      expect(meta.reviewedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(meta.reviewedBy.join('; ')).toContain('GPT-6.1 Sol')
+      expect(meta.reviewedBy.join('; ')).toContain('Grok 4.7')
+      expect(meta.reviewedBy.join('; ')).toContain('independent review')
     }
-    expect(publicLangs('')).toEqual(['en'])
-    expect(publicLangs(undefined)).toEqual(['en'])
-    expect(resolveLang('de', publicLangs(''))).toBeNull()
+    expect(publicLangs('')).toEqual(['en', 'de', 'fr', 'es', 'pt-BR', 'ja', 'ru'])
+    expect(publicLangs(undefined)).toEqual(publicLangs(''))
+    expect(resolveLang('ru', publicLangs(''))).toBe('ru')
   })
 
-  it('lets a deployment preview a language that is not reviewed yet, and nothing else', () => {
-    expect(previewLangs('de, PT-br,xx')).toEqual(['de', 'pt-BR'])
-    expect(previewLangs('all')).toEqual(['de', 'fr', 'es', 'pt-BR', 'ja', 'ru'])
-    expect(previewLangs('en')).toEqual([])
-    expect(publicLangs('de,ja')).toEqual(['en', 'de', 'ja'])
-    expect(resolveLang('ja', publicLangs('de,ja'))).toBe('ja')
-    expect(resolveLang('ru', publicLangs('de,ja'))).toBeNull()
-    // English is always public and an explicit `?lang=en` is how a reader asks for it.
-    expect(resolveLang('en', publicLangs(''))).toBe('en')
+  describe('while a language waits for review', () => {
+    beforeEach(() => holdBack('de', 'fr', 'es', 'pt-BR', 'ja', 'ru'))
+    afterEach(releaseHeld)
+
+    it('renders only English', () => {
+      expect(publicLangs('')).toEqual(['en'])
+      expect(resolveLang('de', publicLangs(''))).toBeNull()
+    })
+
+    it('lets a deployment preview a language that is not reviewed yet, and nothing else', () => {
+      expect(previewLangs('de, PT-br,xx')).toEqual(['de', 'pt-BR'])
+      expect(previewLangs('all')).toEqual(['de', 'fr', 'es', 'pt-BR', 'ja', 'ru'])
+      expect(previewLangs('en')).toEqual([])
+      expect(publicLangs('de,ja')).toEqual(['en', 'de', 'ja'])
+      expect(resolveLang('ja', publicLangs('de,ja'))).toBe('ja')
+      expect(resolveLang('ru', publicLangs('de,ja'))).toBeNull()
+      // English is always public and an explicit `?lang=en` is how a reader asks for it.
+      expect(resolveLang('en', publicLangs(''))).toBe('en')
+    })
   })
 })
 

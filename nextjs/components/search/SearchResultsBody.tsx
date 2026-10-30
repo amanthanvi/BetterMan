@@ -75,11 +75,11 @@ export function SearchResultsBody({
     return (
       <div className="mt-10">
         <h2 className="mb-3 font-serif text-xl">
-          Results for <q>{q}</q>
+          {tRich(t, 'Results for {query}', { query: <q>{q}</q> })}
         </h2>
-        <ol aria-label="Search results" className="border-b border-rule">
+        <ol aria-label={t('Search results')} className="border-b border-rule">
           {conceptRows.map((concept) => (
-            <ConceptRow key={concept.slug} concept={concept} urlDistro={urlDistro} />
+            <ConceptRow key={concept.slug} concept={concept} urlDistro={urlDistro} t={t} />
           ))}
         </ol>
       </div>

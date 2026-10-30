@@ -11,6 +11,7 @@ vi.mock('./lib/manRelease', async (importOriginal) => ({
 }))
 
 import { MAN_BOOT_SCRIPT } from './lib/manBoot'
+import { holdBack, releaseHeld } from './lib/i18n/testing'
 
 process.env.BM_RELEASE_TOKEN = 'test-release-token'
 import { config, isConceptHtmlPath, isManHtmlPath, proxy } from './proxy'
@@ -22,7 +23,10 @@ beforeEach(() => {
   release.servingRelease.mockReset()
   release.servingRelease.mockImplementation(async (distro: string) => releaseFor(distro))
 })
-afterEach(() => vi.unstubAllEnvs())
+afterEach(() => {
+  vi.unstubAllEnvs()
+  releaseHeld()
+})
 
 it('keeps production CSP self-only for analytics and issues a fresh nonce per request', async () => {
   vi.stubEnv('NODE_ENV', 'production')
@@ -294,9 +298,12 @@ it('renders an explicit language, including English, without a redirect and with
 })
 
 it('ignores a remembered language that is not public yet, so nothing renders or redirects for it', async () => {
+  holdBack('de', 'ru')
   vi.stubEnv('BM_I18N_PREVIEW', 'de')
   const gated = await proxy(new NextRequest('https://betterman.sh/man/tar/1', withCookie('bm-lang=ru')))
   expect(gated.status).toBe(200)
+  const previewed = await proxy(new NextRequest('https://betterman.sh/man/tar/1', withCookie('bm-lang=de')))
+  expect(previewed.status).toBe(307)
   vi.stubEnv('BM_I18N_PREVIEW', '')
   const none = await proxy(new NextRequest('https://betterman.sh/man/tar/1', withCookie('bm-lang=de')))
   expect(none.status).toBe(200)
@@ -341,6 +348,7 @@ it.each([
 })
 
 it('hands the renderer the URL’s language, and drops one a client sent', async () => {
+  holdBack('ru')
   vi.stubEnv('BM_I18N_PREVIEW', 'de')
   const header = (url: string, extra: Record<string, string> = {}) =>
     proxy(new NextRequest(`https://betterman.sh${url}`, { headers: extra })).then((response) => response.headers.get('x-middleware-request-x-bm-lang'))
@@ -351,6 +359,20 @@ it('hands the renderer the URL’s language, and drops one a client sent', async
   expect(await header('/search?lang=ru')).toBeNull()
   expect(await header('/search', { 'x-bm-lang': 'de' })).toBeNull()
   expect(await header('/search?lang=de', { 'x-bm-lang': 'ru' })).toBe('de')
+})
+
+it('sets the build’s secret beside the language, and drops one a client sent', async () => {
+  vi.stubEnv('BM_I18N_PREVIEW', 'de')
+  const token = (url: string, extra: Record<string, string> = {}) =>
+    proxy(new NextRequest(`https://betterman.sh${url}`, { headers: extra })).then((response) => response.headers.get('x-middleware-request-x-bm-release-token'))
+  expect(await token('/search?lang=de')).toBe('test-release-token')
+  expect(await token('/search')).toBeNull()
+  expect(await token('/search', { 'x-bm-release-token': 'test-release-token' })).toBeNull()
+})
+
+it('does not run for a prefetch, so the renderer must not trust the language header there', () => {
+  const [app] = (config.matcher as { source: string; missing?: { key: string }[] }[]).filter((entry) => !entry.source.startsWith('/man') && !entry.source.startsWith('/concept') && !entry.source.startsWith('/:name'))
+  expect(app.missing?.map((header) => header.key)).toEqual(['next-router-prefetch', 'purpose'])
 })
 
 // The switch is two plain links the proxy answers (lib/i18n/switch.ts): no script, no storage.
@@ -388,6 +410,7 @@ it('returns to the page the reader came from when the link names none, and only 
 })
 
 it('sets no cookie for a language that is not public or not a language', async () => {
+  holdBack('ru')
   vi.stubEnv('BM_I18N_PREVIEW', 'de')
   for (const code of ['ru', 'xx', '%E0%A4%A']) {
     const response = await link(`/-/lang/${code}?to=%2F`)
@@ -406,4 +429,20 @@ it('opens the prefilled translation-fix issue for the page, and never for Englis
   expect(issue.searchParams.get('page')).toBe('/man/tar/1?lang=de')
   const english = await link('/-/fix/en?to=%2F')
   expect(new URL(english.headers.get('location')!).host).toBe('betterman.sh')
+})
+
+it('sends a man page’s other-case language to the canonical code, not to English', async () => {
+  for (const [from, to] of [['DE', 'de'], ['pt-br', 'pt-BR']]) {
+    const response = await proxy(new NextRequest(`https://betterman.sh/man/tar/1?lang=${from}`))
+    expect(response.status).toBe(308)
+    expect(response.headers.get('location')).toBe(`https://betterman.sh/man/tar/1?lang=${to}`)
+  }
+})
+
+it('marks the language cookie Secure over HTTPS, and leaves plain-http localhost able to keep it', async () => {
+  const cookie = async (url: string, headers: Record<string, string> = {}) =>
+    (await proxy(new NextRequest(url, { headers: { host: new URL(url).host, ...headers } }))).headers.get('set-cookie') ?? ''
+  expect(await cookie('https://betterman.sh/-/lang/de?to=%2F')).toMatch(/bm-lang=de;.*Secure/i)
+  expect(await cookie('http://betterman.sh/-/lang/de?to=%2F', { 'x-forwarded-proto': 'https' })).toMatch(/Secure/i)
+  expect(await cookie('http://localhost:3000/-/lang/de?to=%2F')).not.toMatch(/Secure/i)
 })

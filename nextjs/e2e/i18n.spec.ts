@@ -3,11 +3,16 @@ import { expect, test, type Page } from '@playwright/test'
 import { expectNoCriticalOrSeriousViolations } from './a11y'
 import { waitForInteractiveShell } from './shortcuts'
 
-// UI localization (docs/i18n.md). The server under test shows the languages named in
-// BM_I18N_PREVIEW before review (CI sets all but Russian); every other language is gated.
-const previewed = new Set((process.env.BM_I18N_PREVIEW ?? '').split(',').map((lang) => lang.trim()).filter(Boolean))
-const GATED = 'ru'
-const shown = (lang: string) => previewed.has(lang)
+// UI localization (docs/i18n.md). All six languages are reviewed, so the server under test renders them with
+// no BM_I18N_PREVIEW; the review gate itself is covered by the unit tests, which can hold a catalog back.
+const SIX = [
+  ['de', 'Deutsch'],
+  ['fr', 'Français'],
+  ['es', 'Español'],
+  ['pt-BR', 'Português (Brasil)'],
+  ['ja', '日本語'],
+  ['ru', 'Русский'],
+] as const
 
 const lang = (page: Page) => page.locator('html').getAttribute('lang')
 
@@ -21,31 +26,33 @@ test.describe('English is the default', () => {
     }
   })
 
-  test('an unreviewed language does not render: the parameter is ignored, the switch omits it, a remembered choice does not redirect', async ({ page, request }) => {
-    await page.goto(`/man/tar/1?lang=${GATED}`)
-    expect(await lang(page)).toBe('en')
-    await expect(page.getByText('Skip to content')).toBeAttached()
-    await expect(page.locator('script#bm-i18n')).toHaveCount(0)
-    await expect(page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(0)
-    await expect(page.locator('[data-bm-lang-nav] [lang="ru"]')).toHaveCount(0)
+})
 
-    const response = await request.get('/man/tar/1', { headers: { cookie: `bm-lang=${GATED}` }, maxRedirects: 0 })
-    expect(response.status()).toBe(200)
-    const home = await request.get('/', { headers: { cookie: `bm-lang=${GATED}`, accept: 'text/html' }, maxRedirects: 0 })
-    expect(home.status()).toBe(200)
+test.describe('every reviewed language is public', () => {
+  test('every reviewed language renders publicly and the switch lists all six', async ({ page }) => {
+    for (const [code] of SIX) {
+      await page.goto(`/man/tar/1?lang=${code}`)
+      expect(await lang(page), code).toBe(code)
+      await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
+    }
+    await page.goto('/man/tar/1')
+    for (const [code, name] of SIX) await expect(page.locator(`[data-bm-lang-nav] [lang="${code}"]`)).toHaveText(name)
   })
 
-  test('the gate holds for languages the build ships but has not reviewed', async ({ page }) => {
-    for (const unreviewed of ['de', 'fr', 'es', 'pt-BR', 'ja', 'ru'].filter((code) => !shown(code))) {
-      await page.goto(`/?lang=${unreviewed}`)
-      expect(await lang(page), unreviewed).toBe('en')
-    }
+  test('Russian renders: the shell, the footer fix link and the home page', async ({ page }) => {
+    await page.goto('/man/tar/1?lang=ru')
+    await waitForInteractiveShell(page)
+    expect(await lang(page)).toBe('ru')
+    await expect(page.getByText('Перейти к содержимому')).toBeAttached()
+    await expect(page.getByRole('banner', { name: 'Шапка сайта' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Предложить исправление перевода' })).toBeVisible()
+    await page.goto('/?lang=ru')
+    await expect(page.getByRole('search', { name: 'Поиск по страницам руководства' })).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ru')
   })
 })
 
-test.describe('a language that may render', () => {
-  test.skip(!shown('de'), 'needs BM_I18N_PREVIEW to include de')
-
+test.describe('a language that renders', () => {
   test('man page: translated chrome, the script’s strings, noindex and the English canonical', async ({ page }) => {
     await page.goto('/man/tar/1?lang=de')
     await waitForInteractiveShell(page)
@@ -119,8 +126,6 @@ test.describe('a language that may render', () => {
 })
 
 test.describe('remembering a language', () => {
-  test.skip(!shown('de'), 'needs BM_I18N_PREVIEW to include de')
-
   test('the footer switch remembers the choice, and a bare man page URL then goes to ?lang= privately', async ({ page, request, context }) => {
     await page.goto('/man/tar/1?distro=debian')
     await page.getByRole('navigation', { name: 'Language' }).getByRole('link', { name: 'Deutsch' }).click()
@@ -184,9 +189,7 @@ test.describe('remembering a language', () => {
 })
 
 test.describe('a fix for a translation', () => {
-  test.skip(!shown('de'), 'needs BM_I18N_PREVIEW to include de')
-
-  test('every localized page links a prefilled issue with the language and the page', async ({ page, request, baseURL }) => {
+  test('every localized page links a prefilled issue with the language and the page', async ({ page }) => {
     await page.goto('/man/tar/1?lang=de')
     const manIssue = new URL((await page.getByRole('link', { name: 'Korrektur für diese Übersetzung vorschlagen' }).getAttribute('href'))!)
     expect(manIssue.pathname).toBe('/amanthanvi/BetterMan/issues/new')
@@ -196,21 +199,25 @@ test.describe('a fix for a translation', () => {
     // App Router pages link the proxy, which opens the same issue for the page the reader came from.
     await page.goto('/search?q=tar&lang=de')
     await expect(page.getByRole('link', { name: 'Korrektur für diese Übersetzung vorschlagen' })).toHaveAttribute('href', '/-/fix/de')
-    const fix = await request.get('/-/fix/de', { headers: { referer: `${baseURL}/search?q=tar&lang=de` }, maxRedirects: 0 })
-    expect(fix.status()).toBe(307)
-    const appIssue = new URL(fix.headers()['location'])
+    // Click the real link: the new tab's Referer is the page it was opened from, which is what the issue reports.
+    await page.context().route('https://github.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: 'issue form' }))
+    const [popup] = await Promise.all([
+      page.context().waitForEvent('page'),
+      page.getByRole('link', { name: 'Korrektur für diese Übersetzung vorschlagen' }).click(),
+    ])
+    await popup.waitForURL(/github\.com\/amanthanvi\/BetterMan\/issues\/new/)
+    const appIssue = new URL(popup.url())
     expect(appIssue.searchParams.get('locale')).toBe('de')
     expect(appIssue.searchParams.get('page')).toBe('/search?q=tar&lang=de')
+    await popup.close()
     await page.goto('/man/tar/1')
     await expect(page.getByText('Suggest a fix for this translation')).toHaveCount(0)
   })
 })
 
 test.describe('accessibility', () => {
-  test.skip(!shown('de'), 'needs BM_I18N_PREVIEW to include de')
-
   test('localized pages have no serious violations', async ({ page }) => {
-    for (const url of ['/man/tar/1?lang=de', '/?lang=de', '/search?q=tar&lang=de']) {
+    for (const url of ['/man/tar/1?lang=de', '/?lang=de', '/search?q=tar&lang=de', '/man/tar/1?lang=ru', '/?lang=ru']) {
       await page.goto(url)
       await waitForInteractiveShell(page)
       await expectNoCriticalOrSeriousViolations(page)

@@ -1,11 +1,12 @@
 import type { GetServerSideProps } from 'next'
 
 import { ConceptArticle, ConceptNotFound } from '../../components/concept/ConceptArticle'
-import { MISSING_MAN_HEAD, type ManHeadData } from '../../components/man/ManHead'
+import { missingManHead, type ManHeadData } from '../../components/man/ManHead'
 import { firstQuery, ManScript, requestHeaders } from '../../components/man/ManPageFrame'
 import { ManShell } from '../../components/man/ManShell'
 import { conceptHref, conceptReportHref, getConcept, publishedConcepts, type Concept } from '../../lib/concepts'
 import { normalizeDistro, type Distro } from '../../lib/distro'
+import { englishI18n, manT } from '../../lib/i18n/page'
 import { setManCache } from '../../lib/manCache'
 import { hasBareRsc, isManQuery } from '../../lib/manQuery'
 import { getPublicOrigin } from '../../lib/public-origin'
@@ -40,7 +41,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   if (!concept) {
     res.statusCode = 404
     setManCache(res, offList ? PRIVATE : CONCEPT_MISS_CACHE, { keyed: true })
-    return { props: { kind: 'miss', head: MISSING_MAN_HEAD, urlDistro } }
+    return { props: { kind: 'miss', head: missingManHead(manT(englishI18n())), urlDistro } }
   }
   const draft = concept.status !== 'approved'
   setManCache(res, draft || offList ? PRIVATE : CONCEPT_CACHE, { keyed: true })
@@ -66,21 +67,21 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
 }
 
 export default function ConceptRoute(props: Props) {
+  // English only (docs/i18n.md): the query allowlist keeps `['distro']` here, so `?lang=` 308s to the
+  // bare URL; the proxy never sends a remembered language here, and the links into and out of this
+  // page carry no `?lang=`. No release: this is not a man page, so no "pages · updated" line.
+  const i18n = englishI18n()
+  const t = manT(i18n)
   return (
     <>
-      {/* English only for now (lead decision on B9, #475): the query allowlist keeps
-          ['distro'] here, so `?lang=` 308s to the bare URL. If this lands before #475,
-          its agent passes ManShell English i18n props and leaves the language links off
-          (or inert) on this shell, and keeps /concept out of the bm-lang cookie redirect,
-          so nothing loops. No release: this is not a man page, so no "pages · updated" line. */}
-      <ManShell urlDistro={props.urlDistro} release={null}>
+      <ManShell urlDistro={props.urlDistro} release={null} i18n={i18n} t={t}>
         {props.kind === 'page' ? (
-          <ConceptArticle concept={props.concept} urlDistro={props.urlDistro} published={props.published} reportHref={props.reportHref} />
+          <ConceptArticle concept={props.concept} urlDistro={props.urlDistro} published={props.published} reportHref={props.reportHref} t={t} />
         ) : (
-          <ConceptNotFound urlDistro={props.urlDistro} />
+          <ConceptNotFound urlDistro={props.urlDistro} t={t} />
         )}
       </ManShell>
-      <ManScript />
+      <ManScript i18n={i18n} />
     </>
   )
 }

@@ -42,7 +42,8 @@ describe('every translation is complete and keeps what the code fills in', () =>
         const meta = CATALOG_META[lang]
         expect(meta.lang).toBe(lang)
         expect(meta.translatedBy).toBeTruthy()
-        expect(['needs-review', 'reviewed']).toContain(meta.status)
+        expect(meta.status).toBe('reviewed')
+        expect(meta.reviewedBy.length).toBeGreaterThan(0)
       })
     })
   }

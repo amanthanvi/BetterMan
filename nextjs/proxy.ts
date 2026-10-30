@@ -243,7 +243,9 @@ function languageLink(request: NextRequest): NextResponse | null {
   } else {
     place(lang ? pathInLang(to, lang) : to)
     response = NextResponse.redirect(target, 307)
-    if (lang) response.cookies.set(LANG_COOKIE, lang, { path: '/', maxAge: 31536000, sameSite: 'lax' })
+    // Secure wherever the site is served over HTTPS; plain-http localhost (dev, tests) could not keep it in every browser.
+    const https = request.nextUrl.protocol === 'https:' || request.headers.get('x-forwarded-proto') === 'https'
+    if (lang) response.cookies.set(LANG_COOKIE, lang, { path: '/', maxAge: 31536000, sameSite: 'lax', secure: https })
   }
   response.headers.set('Cache-Control', 'private, no-store')
   return response
@@ -279,8 +281,13 @@ export async function proxy(request: NextRequest) {
   // The language the renderer shows, from the URL alone; whatever a client sent in this header is dropped.
   const pageHeaders = new Headers(request.headers)
   pageHeaders.delete(LANG_HEADER)
+  pageHeaders.delete(RELEASE_TOKEN_HEADER)
   const urlLang = resolvePublicLang(request.nextUrl.searchParams.get(LANG_PARAM))
-  if (urlLang) pageHeaders.set(LANG_HEADER, urlLang)
+  if (urlLang) {
+    pageHeaders.set(LANG_HEADER, urlLang)
+    // Proves to the renderer that this proxy, not the client, set the language (prefetches skip the proxy).
+    pageHeaders.set(RELEASE_TOKEN_HEADER, releaseToken())
+  }
 
   if (!cspEnabled) return setSecurityHeaders(NextResponse.next({ request: { headers: pageHeaders } }), null)
 

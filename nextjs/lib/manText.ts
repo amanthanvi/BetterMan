@@ -1,4 +1,5 @@
 import { sectionLabel } from '../components/man/RunningHead'
+import type { Distro } from './distro'
 import { tEnglish } from './i18n/english'
 import type { BlockNode, InlineNode, ManPageResponse } from './docModel'
 
@@ -30,7 +31,7 @@ function blocksText(blocks: BlockNode[]): string {
 }
 
 /** Render the faithful document, filling extracted sections only when absent from its blocks. */
-export function renderManText({ page, content }: ManPageResponse): string {
+export function renderManText({ page, content }: ManPageResponse, distro?: Distro): string {
   const title = `${page.name.toUpperCase()}(${page.section})`
   const headings = new Set(content.blocks.filter((block) => block.type === 'heading').map((block) => block.text.trim().toUpperCase()))
   const sections: string[] = []
@@ -41,6 +42,6 @@ export function renderManText({ page, content }: ManPageResponse): string {
   }
   sections.push(blocksText(content.blocks))
   // Terminals must never interpret corpus text as C0/C1 control sequences.
-  return `${title}        ${sectionLabel(page.section, tEnglish)}        ${title}\n\n${sections.filter(Boolean).join('\n\n')}\n`
+  return `${title}        ${sectionLabel(page.section, tEnglish, distro)}        ${title}\n\n${sections.filter(Boolean).join('\n\n')}\n`
     .replace(/\p{Cc}/gu, (character) => character === '\n' || character === '\t' ? character : '')
 }

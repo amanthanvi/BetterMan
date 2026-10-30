@@ -88,8 +88,10 @@ const own: Record<Exclude<ClientKey, CommonKey>, string> = {
 
   'Something went wrong': 'Une erreur est survenue',
   'The page failed to render.': 'La page n’a pas pu s’afficher.',
-  'Digest: {digest}': 'Digest: {digest}',
+  'Digest: {digest}': 'Digest : {digest}',
   'Retry': 'Réessayer',
+  'BetterMan explainer': 'Explication BetterMan',
+  'on {pages}': 'sur {pages}',
 }
 
 export const client: Record<ClientKey, string> = { ...common, ...own }

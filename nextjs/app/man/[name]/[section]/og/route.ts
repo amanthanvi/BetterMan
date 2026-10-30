@@ -87,7 +87,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ name: strin
   const response = await ogCard({
     name: data.page.name,
     section: data.page.section,
-    label: sectionLabel(section, tEnglish),
+    label: sectionLabel(section, tEnglish, distro),
     description: data.option ? undefined : data.page.description || (data.generated ? undefined : data.page.title),
     ...(data.option ? { option: data.option } : {}),
     ...(data.generated ? { generated: data.generated } : {}),

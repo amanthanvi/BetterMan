@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import { notFound, permanentRedirect } from 'next/navigation'
 
 import { SectionFilter } from '../../../components/browse/SectionFilter'
-import { RunningHead, sectionLabel } from '../../../components/man/RunningHead'
+import { bsdSectionLabel, RunningHead, sectionLabel } from '../../../components/man/RunningHead'
 import { LinkPendingHint } from '../../../components/ui/LinkPendingHint'
 import { FastApiError, listSection, withDistroFallback } from '../../../lib/api'
 import { DISTRO_LABEL, withDistro, type Distro } from '../../../lib/distro'
@@ -144,7 +144,7 @@ export default async function SectionPage({
   const canRestart = data.results.length === 0 && (data.offset > 0 || cursor !== undefined || before !== undefined || from !== undefined)
   const onPage = new Set(groups.map((group) => group.key))
   // English keeps the dataset's own section name; another language names it as man does there.
-  const sectionName = lang === 'en' ? data.label : sectionLabel(data.section, t)
+  const sectionName = lang === 'en' ? (bsdSectionLabel(data.section, distro, t) ?? data.label) : sectionLabel(data.section, t, distro)
   const firstName = data.results[0]?.name
   const lastName = data.results.at(-1)?.name
 
@@ -178,7 +178,7 @@ export default async function SectionPage({
                 aria-current={n === data.section ? 'page' : undefined}
                 className={`whitespace-nowrap no-underline ${n === data.section ? 'font-semibold text-ink' : 'text-ink-2 hover:text-accent'}`}
               >
-                <span className="font-serif text-[0.875rem] text-ink-3 oldstyle-nums">{n}</span> {sectionLabel(n, t)}
+                <span className="font-serif text-[0.875rem] text-ink-3 oldstyle-nums">{n}</span> {sectionLabel(n, t, distro)}
               </Link>
             </span>
           ))}

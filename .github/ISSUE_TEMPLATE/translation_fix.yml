@@ -21,9 +21,9 @@ body:
   - type: input
     id: key
     attributes:
-      label: String key
-      description: The catalog key (for example `shell.skip`), if you know it. Otherwise quote the text below and we will find it.
-      placeholder: shell.skip
+      label: English text of the string
+      description: The English text of the message (for example `Skip to content`), if you know it. Otherwise quote the text below and we will find it.
+      placeholder: Skip to content
     validations:
       required: false
 

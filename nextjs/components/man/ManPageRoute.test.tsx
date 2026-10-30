@@ -7,6 +7,7 @@ vi.mock('../../lib/manLookup', () => lookup)
 
 import ManNameRoute, { getServerSideProps as nameProps } from '../../pages/man/[name]/index'
 import ManPageRoute, { config, getServerSideProps as pageProps } from '../../pages/man/[name]/[section]'
+import { holdBack, releaseHeld } from '../../lib/i18n/testing'
 import { encodeReleaseHeader } from '../../lib/manRelease'
 
 process.env.BM_RELEASE_TOKEN = 'test-release-token'
@@ -34,7 +35,10 @@ function propsOf(result: object): object {
   return result.props as object
 }
 
-afterEach(() => vi.unstubAllEnvs())
+afterEach(() => {
+  vi.unstubAllEnvs()
+  releaseHeld()
+})
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -359,9 +363,9 @@ describe('UI language (docs/i18n.md)', () => {
     expect(html).toContain('Zum Inhalt springen')
     expect(html).toContain('href="/?distro=ubuntu&amp;lang=de"')
     expect(html).toContain('<nav aria-label="Sprache" data-bm-lang-nav="true"')
-    expect(html).toContain('hrefLang="en"')
-    // The switch remembers the choice through the proxy and returns to this page.
-    expect(html).toContain('href="/-/lang/en?to=%2Fman%2Ftar%2F1%3Fdistro%3Dubuntu"')
+    // The switch remembers the choice through the proxy, which returns to the page by its Referer (the HTML stays small and the same for every URL).
+    expect(html).toContain('href="/-/lang/en"')
+    expect(html).not.toContain('to=%2F')
     expect(html).not.toContain('localStorage')
     expect(html).toContain('Korrektur für diese Übersetzung vorschlagen')
     expect(html).toContain('locale=de')
@@ -385,7 +389,19 @@ describe('UI language (docs/i18n.md)', () => {
     expect(explicit.head.noindex).toBe(false)
   })
 
+  it('shows the switch with all six languages in production, where nothing is previewed', async () => {
+    vi.stubEnv('BM_I18N_PREVIEW', '')
+    const html = render(propsOf(await pageProps(context({ name: 'tar', section: '1' }).ctx)))
+    expect(html).toContain('data-bm-lang-nav')
+    for (const name of ['Deutsch', 'Français', 'Español', 'Português (Brasil)', '日本語', 'Русский']) expect(html).toContain(name)
+    const russian = propsOf(await pageProps(context({ name: 'tar', section: '1' }, { lang: 'ru' }).ctx)) as { head: { noindex: boolean }; i18n: { lang: string } }
+    expect(russian.i18n.lang).toBe('ru')
+    // Localized pages stay out of the index, with the English canonical, until translated manuals ship (B3).
+    expect(russian.head.noindex).toBe(true)
+  })
+
   it('does not render a language that is not reviewed: the page is English and the parameter is ignored', async () => {
+    holdBack('de', 'fr', 'es', 'pt-BR', 'ja', 'ru')
     vi.stubEnv('BM_I18N_PREVIEW', '')
     const result = propsOf(await pageProps(context({ name: 'tar', section: '1' }, { lang: 'de' }).ctx)) as { head: { noindex: boolean }; i18n: { lang: string; urlLang: string | null } }
     expect(result.i18n).toMatchObject({ lang: 'en', urlLang: null })

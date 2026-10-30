@@ -35,10 +35,19 @@ export async function manI18n(query: string | string[] | undefined, current: str
     lang,
     urlLang,
     publicLangs: [...available],
-    langHrefs: Object.fromEntries(available.map((next) => [next, langSwitchHref(next, current)])),
+    // No `?to=`: the switch returns to the page by its Referer, which keeps every man page's HTML (cached per URL) small.
+    langHrefs: Object.fromEntries(available.map((next) => [next, langSwitchHref(next)])),
     messages: { ...catalog.client, ...catalog.server },
     fixHref: lang === DEFAULT_LANG ? null : translationFixHref({ lang, page: current }),
   }
+}
+
+/**
+ * English with no other language public, for a plain-HTML page that has no translation (the concept
+ * explainers): the shell shows no language links, and its other links carry no `?lang=`.
+ */
+export function englishI18n(): ManI18n {
+  return { lang: DEFAULT_LANG, urlLang: null, publicLangs: [DEFAULT_LANG], langHrefs: {}, messages: {}, fixHref: null }
 }
 
 /** The renderer's translator, from the props `manI18n` returned. */

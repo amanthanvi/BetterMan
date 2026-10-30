@@ -19,7 +19,7 @@ export function LangLinks({
 }) {
   if (langs.length < 2) return null
   return (
-    <nav aria-label={label} data-bm-lang-nav className="flex flex-wrap items-baseline gap-x-3">
+    <nav aria-label={label} data-bm-lang-nav className="flex flex-wrap items-baseline gap-x-3 [&>a]:underline">
       <span aria-hidden="true">{label}</span>
       {langs.map((lang) =>
         lang === current ? (
@@ -27,7 +27,7 @@ export function LangLinks({
             {LANG_NAMES[lang]}
           </span>
         ) : (
-          <a key={lang} href={hrefs[lang]} lang={lang} hrefLang={lang} className="underline" rel="nofollow">
+          <a key={lang} href={hrefs[lang]} lang={lang} rel="nofollow">
             {LANG_NAMES[lang]}
           </a>
         ),

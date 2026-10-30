@@ -89,7 +89,7 @@ export function ManPageDocument({
   return (
     <div data-bm-manual data-bm-page-name={page.name} data-bm-page-section={page.section} data-bm-page-description={page.description || page.title}>
       {/* Under 400px the title already carries name(section); the head would only crowd it. */}
-      <RunningHead title={title} label={sectionLabel(page.section, t)} className="max-[25rem]:hidden" />
+      <RunningHead title={title} label={sectionLabel(page.section, t, servedDistro)} className="max-[25rem]:hidden" />
 
       <div data-bm-layout className={`mt-9 ${hasToc ? `lg:grid lg:items-start lg:gap-16 ${SIDEBAR_OPEN_COLUMNS}` : ''}`}>
         {hasToc ? (

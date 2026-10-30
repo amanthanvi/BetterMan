@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 
+import type { Distro } from '../../lib/distro'
 import type { ServerT } from '../../lib/i18n/server'
 
 const SECTION_KEYS = {
@@ -14,10 +15,17 @@ const SECTION_KEYS = {
   '9': 'Kernel Routines',
 } as const
 
-/* Keyed on the leading digit so extended sections (1ssl, 3p) resolve too. */
-export function sectionLabel(section: string, t: ServerT): string {
+/** The BSD manuals name two sections differently: 4 is "Kernel Interfaces" and 7 "Miscellaneous Information". */
+export function bsdSectionLabel(section: string, distro: Distro | null | undefined, t: ServerT): string | null {
+  if (distro !== 'freebsd' && distro !== 'macos') return null
+  const digit = section.trim().charAt(0)
+  return digit === '4' ? t('Kernel Interfaces') : digit === '7' ? t('Miscellaneous Information') : null
+}
+
+/* Keyed on the leading digit so extended sections (1ssl, 3p) resolve too. `distro` is the system the page is from. */
+export function sectionLabel(section: string, t: ServerT, distro?: Distro | null): string {
   const digit = section.trim().charAt(0) as keyof typeof SECTION_KEYS
-  return t(SECTION_KEYS[digit] ?? 'Manual')
+  return bsdSectionLabel(section, distro, t) ?? t(SECTION_KEYS[digit] ?? 'Manual')
 }
 
 /**

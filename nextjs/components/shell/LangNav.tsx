@@ -10,7 +10,9 @@ export function LangNav({ t, lang, langs }: { t: ServerT; lang: Lang; langs: rea
     <>
       <LangLinks label={t('Language')} langs={langs} current={lang} hrefs={Object.fromEntries(langs.map((code) => [code, langSwitchHref(code)]))} />
       {lang === 'en' ? null : (
-        <a href={fixLinkHref(lang)} className="underline" target="_blank" rel="noopener noreferrer nofollow">
+        // No `noreferrer`: the proxy reads the page from the same-origin Referer at click time. A `?to=` rendered
+        // here would go stale, because this layout is not rendered again when the reader navigates in the app.
+        <a href={fixLinkHref(lang)} className="underline" target="_blank" rel="noopener nofollow">
           {t('Suggest a fix for this translation')}
         </a>
       )}

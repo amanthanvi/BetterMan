@@ -51,7 +51,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   )
   const urlDistro = explicitDistro(sp)
   // The nine manual sections, without a per-view listing read; an empty one simply finds nothing.
-  const sectionPills = SECTIONS.map((n) => ({ section: n, label: sectionLabel(n, t) }))
+  const sectionPills = SECTIONS.map((n) => ({ section: n, label: sectionLabel(n, t, distro) }))
 
   const sectionLinkClass = (active: boolean) =>
     active ? 'font-semibold text-ink no-underline' : 'text-ink-2 no-underline hover:text-accent'

@@ -130,8 +130,8 @@ export function ManPageFooterSections({
       <div className="mt-8 space-y-1 text-xs text-ink-3 print:hidden">
         {/* A quiet line, outside the manual's text: BetterMan's explainers for concepts this page relies on. */}
         {concepts.length ? (
-          <nav aria-label="Concepts" data-bm-concepts className="text-sm text-ink-2">
-            Concepts:{' '}
+          <nav aria-label={t('Concepts')} data-bm-concepts className="text-sm text-ink-2">
+            {t('Concepts:')}{' '}
             {concepts.map((concept, index) => (
               <Fragment key={concept.slug}>
                 {index ? <span aria-hidden="true"> · </span> : null}
