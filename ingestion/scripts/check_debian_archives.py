@@ -20,6 +20,8 @@ def audit_command_pages(workspace, *, workers=2):
         _COMMAND_PAGE_EXCLUSIONS,
         _COMMAND_PAGE_OWNERS,
         _COMMAND_PAGES,
+        _iter_license_items,
+        _LicenseSpool,
         _PageSpool,
         _require_command_pages,
     )
@@ -48,8 +50,15 @@ def audit_command_pages(workspace, *, workers=2):
             canonical = [p for p in spool.refs() if p.page_id not in providers]
             license_packages = {p.source_package for p in spool.refs() if p.source_package}
             license_packages.update(a["sourcePackage"] for a in workspace.alias_providers)
+            licenses = _LicenseSpool(spool.connection)
             for pkg in sorted(license_packages):
-                copyright_text(workspace, pkg)
+                licenses[pkg] = copyright_text(workspace, pkg)
+            for _item in _iter_license_items(
+                licenses=licenses,
+                distro="debian",
+                dataset_release_id=f"audit-{workspace.pins['releaseSha256']}",
+            ):
+                pass
             present = {(p.name, p.section[:1]) for p in canonical} | {
                 (a.name, a.section[:1]) for a in workspace.aliases
             }

@@ -146,6 +146,7 @@ def publish_workspace(
             licenses=len(licenses),
         )
         require_job_budget("release creation")
+        declaration_started = time.monotonic()
         client.post(
             "/ingest/release",
             {
@@ -182,6 +183,8 @@ def publish_workspace(
             )
         sitemap = _build_sitemap_page_map(pages=canonical)
         sitemap.update({page_id: 1 for page_id in providers})
+        workspace.timings["declarationSeconds"] = time.monotonic() - declaration_started
+        _log("deb_declarations_complete", seconds=workspace.timings["declarationSeconds"])
 
         def payloads():
             for payload in _resolved_page_payloads(spool, canonical, sitemap):
@@ -200,6 +203,7 @@ def publish_workspace(
             workers=_upload_worker_count(),
         )
         workspace.timings["pageUploadSeconds"] = time.monotonic() - upload_started
+        _log("deb_pages_uploaded", seconds=workspace.timings["pageUploadSeconds"])
         alias_started = time.monotonic()
         for index in range(0, len(workspace.alias_providers), 100):
             require_job_budget("alias upload")
@@ -211,6 +215,7 @@ def publish_workspace(
                 },
             )
         workspace.timings["aliasUploadSeconds"] = time.monotonic() - alias_started
+        _log("deb_aliases_uploaded", seconds=workspace.timings["aliasUploadSeconds"])
         license_started = time.monotonic()
         pending = []
         for notice in _iter_license_items(
@@ -228,6 +233,7 @@ def publish_workspace(
         if pending:
             client.post("/ingest/licenses", {"datasetReleaseId": release_id, "licenses": pending})
         workspace.timings["licenseUploadSeconds"] = time.monotonic() - license_started
+        _log("deb_licenses_uploaded", seconds=workspace.timings["licenseUploadSeconds"])
         activation_started = time.monotonic()
         if activate:
             client.activate_release(

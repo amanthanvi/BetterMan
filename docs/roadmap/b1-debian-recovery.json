@@ -4388,5 +4388,31 @@
       "sightviewer",
       "mediainfo-gui"
     ]
+  },
+  "paired2000FinalScheduler": {
+    "scope": "same 2000 selected packages plus 7 curated runtime packages, fresh workspaces and empty archive caches, sequential source runs, two workers; no upload",
+    "snapshot": {
+      "packages": 2000,
+      "downloadedBytes": 1854889050,
+      "cachedPackages": 0,
+      "seconds": 507.3893637500005,
+      "acquireSeconds": 498.793,
+      "downloadWorkerSeconds": 907.021,
+      "extractWorkerSeconds": 74.177,
+      "acquiredPackages": 2007,
+      "archiveCacheHits": 0
+    },
+    "cdn": {
+      "packages": 2000,
+      "downloadedBytes": 1854889050,
+      "cachedPackages": 0,
+      "seconds": 135.78400524996687,
+      "acquireSeconds": 127.55,
+      "downloadWorkerSeconds": 166.465,
+      "extractWorkerSeconds": 72.994,
+      "acquiredPackages": 2007,
+      "archiveCacheHits": 0
+    },
+    "selectionSha256": "c303858e5373adc82471695e2dd741b535882ccfd2d0fb7a9e595bf046a86203"
   }
 }

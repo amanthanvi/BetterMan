@@ -24,7 +24,8 @@ The storage probe is not a combined v5 derived/symbol storage measurement.
 
 Run [40957721036](https://github.com/amanthanvi/BetterMan/actions/runs/40957721036)
 ran main `614714a6` with contract v5. This correction rebased onto main
-`54b95eb7` (promotion CAS, contract v6). No workflow was dispatched, no shared
+`54b95eb7` (promotion CAS, contract v6), then onto `b8b7b1ac` after C4 #449
+landed. No workflow was dispatched, no shared
 Convex backend was contacted, and no production secret, variable, data or
 infrastructure changed. All new archive work below is local and no-upload.
 The [recovery artifact](b1-debian-recovery.json) records the full command audit,
@@ -77,7 +78,8 @@ workflow configuration.
 acquires every curated command's candidate owners and supported private roots,
 replays the real parser/aliases and exact publish gate, and verifies provider
 copyrights. The audit acquired 65 packages including dependencies and verified
-52 provider notices, with **zero parse failures and zero unresolved sources**.
+52 provider notices through the publish encoding/size check, with **zero parse
+failures and zero unresolved sources**.
 This is a full catalog/curated-command audit, not a full 17,323-archive replay.
 
 **28 commands present:** groff, bash, ls, mount, find, grep, sed, gawk, curl,
@@ -158,6 +160,22 @@ libssl-doc and its many aliases); the exact new selection is recorded. Parent
 peak RSS was 416.7 MB, largest child 184.0 MB, retained sources 57.5 MB and spool
 345.0 MB. These are local sample measurements, not a full-corpus disk/RSS peak.
 
+The final-scheduler paired 2,000-package acquisition-only comparison used
+identical selections plus seven curated runtime packages, fresh workspaces,
+empty archive caches, two workers, and **1,854,889,050 verified bytes** each.
+Runs were sequential to keep total public-mirror concurrency at two:
+
+| Source | Acquisition wall | Download worker seconds | Extraction worker seconds |
+| --- | ---: | ---: | ---: |
+| Pinned snapshot | 498.793 s | 907.021 s | 74.177 s |
+| Debian CDN | 127.550 s | 166.465 s | 72.994 s |
+
+Both completed all **2,007 archives with zero cache hits**. This measured
+**3.91x** acquisition improvement with almost unchanged extraction work. The
+2,000-package full parse replay above fetched additional dependencies during
+source/notice resolution, explaining its larger byte total. These are local
+measurements, not production or GitHub runner measurements.
+
 The CDN is the main runtime change; completion-order scheduling and early cache
 consumption add margin without raising concurrency or disk limits. More parallel
 downloads were not chosen because they increase mirror pressure and in-flight
@@ -167,7 +185,7 @@ state; same-workspace checkpoints remain the fallback after interruption.
 
 For runner planning, provisionally budget **225 minutes to verified staging**:
 5 minutes setup/index/cache, 106 acquisition (only 2x the old measured pace,
-versus 3.39x in the paired local sample), 24 source preparation/parse, 45 for
+versus 3.91x in the final paired 2,000-package sample), 24 source preparation/parse, 45 for
 release declarations/pages/upload indexes/aliases/notices, and 45 for staged
 activation/hydration. This leaves **75 minutes against the 300-minute job**.
 These upload/cloud allowances are projections; this correction performed no
