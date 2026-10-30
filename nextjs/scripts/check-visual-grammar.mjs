@@ -19,7 +19,7 @@ import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const TARGETS = ['app', 'components']
+const TARGETS = ['app', 'components', 'pages', 'man-client']
 const SOURCE = /\.(tsx|ts)$/
 const TEST = /\.(test|spec)\.(tsx|ts)$/
 
@@ -29,15 +29,20 @@ export const OVERLAY_FILES = new Set([
   'components/ui/Drawer.tsx',
   'components/ui/Kbd.tsx',
   'components/palette/CommandPalette.tsx',
-  'components/man/ManPageFindBar.tsx',
   'components/shell/AppShell.tsx', // skip link
+  'components/man/ManShell.tsx', // skip link
+  // The man page script's overlays: the chassis, palette, find bar and keyboard keys.
+  'man-client/overlay.ts',
+  'man-client/palette.ts',
+  'man-client/find.ts',
+  'man-client/dom.ts',
 ])
 
 // BetterMan's own voice: In brief, examples, the addendum. Tinted, never boxed.
 export const ADDED_FILES = new Set(['components/man/ManPageExamples.tsx', 'components/man/ManPageFooterSections.tsx'])
 
 // The only red fill: the 2px contents marker beside the active heading.
-export const ACCENT_FILL_FILES = new Set(['components/toc/Toc.tsx'])
+export const ACCENT_FILL_FILES = new Set(['components/toc/Toc.tsx', 'man-client/toc.ts'])
 
 const RETIRED_TOKENS = ['fg', 'muted', 'faint', 'edge', 'edge-strong', 'code-bg', 'surface', 'accent-subtle', 'accent-edge', 'accent-hover', 'accent-contrast', 'bg']
 const RETIRED = new RegExp(`^(text|bg|border(-[trblxy])?|decoration|outline|ring|fill|stroke|divide|from|to|via|placeholder|caret|accent)-(${RETIRED_TOKENS.join('|')})$`)

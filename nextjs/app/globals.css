@@ -184,52 +184,57 @@
     margin: 0;
     min-height: 100dvh;
     font: 400 1rem/1.55 var(--font-sans);
+  }
 
+  /* Reading preferences: App Router pages carry the attributes on <body> from the
+     cookie; cached man pages carry them on <html>, set by the boot script before
+     first paint. The defaults sit on :root so either element can override them. */
+  :root {
     --bm-reading-font-size: 1.125rem;
     --bm-reading-line-height: 1.62;
     --bm-reading-font-family: var(--font-serif);
     --bm-reading-column-width: var(--container-text);
   }
 
-  body[data-bm-font-size="small"] {
+  [data-bm-font-size="small"] {
     --bm-reading-font-size: 1rem;
   }
 
-  body[data-bm-font-size="large"] {
+  [data-bm-font-size="large"] {
     --bm-reading-font-size: 1.25rem;
   }
 
-  body[data-bm-font-size="xlarge"] {
+  [data-bm-font-size="xlarge"] {
     --bm-reading-font-size: 1.375rem;
   }
 
-  body[data-bm-font-family="sans"] {
+  [data-bm-font-family="sans"] {
     --bm-reading-font-family: var(--font-sans);
   }
 
-  body[data-bm-font-family="mono"] {
+  [data-bm-font-family="mono"] {
     --bm-reading-font-family: var(--font-mono);
   }
 
-  body[data-bm-line-height="compact"] {
+  [data-bm-line-height="compact"] {
     --bm-reading-line-height: 1.48;
   }
 
-  body[data-bm-line-height="relaxed"] {
+  [data-bm-line-height="relaxed"] {
     --bm-reading-line-height: 1.78;
   }
 
-  body[data-bm-column-width="narrow"] {
+  [data-bm-column-width="narrow"] {
     --bm-reading-column-width: 36rem;
   }
 
-  body[data-bm-column-width="wide"] {
+  [data-bm-column-width="wide"] {
     --bm-reading-column-width: 54rem;
   }
 
   @media (max-width: 47.99rem) {
-    body:not([data-bm-font-size]),
-    body[data-bm-font-size="medium"] {
+    :root:not([data-bm-font-size]),
+    [data-bm-font-size="medium"] {
       --bm-reading-font-size: 1.0625rem;
     }
   }
@@ -780,22 +785,22 @@
   }
 
   /* The code-theme preference sets code on its own plate in the other scheme. */
-  body[data-bm-code-theme="light"] .bm-code,
-  body[data-bm-code-theme="dark"] .bm-code {
+  [data-bm-code-theme="light"] .bm-code,
+  [data-bm-code-theme="dark"] .bm-code {
     background: var(--color-paper);
     color: var(--color-ink);
   }
 
-  body[data-bm-code-theme="light"] .bm-code {
+  [data-bm-code-theme="light"] .bm-code {
     color-scheme: light;
   }
 
-  body[data-bm-code-theme="dark"] .bm-code {
+  [data-bm-code-theme="dark"] .bm-code {
     color-scheme: dark;
   }
 
-  body[data-bm-code-theme="light"] .bm-code > pre,
-  body[data-bm-code-theme="dark"] .bm-code > pre {
+  [data-bm-code-theme="light"] .bm-code > pre,
+  [data-bm-code-theme="dark"] .bm-code > pre {
     padding: 0.75rem 2.25rem 0.75rem 1rem;
   }
 

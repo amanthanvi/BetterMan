@@ -129,13 +129,18 @@ test('man: reading preferences drawer applies settings', async ({ page }) => {
   await expect(dialog.getByRole('button', { name: 'Close reading preferences' })).toBeFocused()
 
   await dialog.getByRole('radiogroup', { name: 'Font size' }).getByRole('radio', { name: 'L', exact: true }).click()
-  await expect(page.locator('body')).toHaveAttribute('data-bm-font-size', 'large')
+  await expect(page.locator('html')).toHaveAttribute('data-bm-font-size', 'large')
 
-  // The server HTML must carry the choice, so a post-hydration effect cannot
-  // mask a missing first-paint attribute.
+  // The man page HTML is cached for every reader, so it cannot carry the choice;
+  // the hashed boot script in <head> applies it before first paint. With the man
+  // page script blocked, only the boot script can have set it.
+  await page.route('**/_bm/**', (route) => route.abort())
   const response = await page.reload()
   expect(response?.status()).toBe(200)
-  expect(await response!.text()).toContain('data-bm-font-size="large"')
+  expect(await response!.text()).not.toContain('data-bm-font-size="large"')
+  await expect(page.locator('html')).toHaveAttribute('data-bm-font-size', 'large')
+  await page.unroute('**/_bm/**')
+  await page.reload()
   await waitForInteractiveShell(page)
   await page.getByRole('button', { name: 'Reading preferences' }).click()
   await expect(dialog.getByRole('radiogroup', { name: 'Font size' }).getByRole('radio', { name: 'L', exact: true })).toBeChecked()
@@ -335,8 +340,8 @@ function topOf(page: Page, id: string) {
 async function gotoPinnedDeepLink(page: Page) {
   await page.goto('/man/bash/1#bugs')
   await expect(page.locator('#notes-code-5')).toBeAttached()
-  await page.waitForFunction(() => Object.keys(document.getElementById('bugs')!).some((key) => key.startsWith('__reactFiber')))
-  // The pin starts on the frame after hydration effects run.
+  await expect(page.locator('html')).toHaveAttribute('data-bm-hydrated', 'true')
+  // The pin starts on the frame after the man page script attaches.
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
   await expect.poll(() => topOf(page, 'bugs')).toBe(128)
 }

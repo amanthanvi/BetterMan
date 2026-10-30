@@ -104,6 +104,7 @@ describe('public API timing and metadata', () => {
     )
 
     expect(response.status).toBe(200)
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff')
     await expect(response.json()).resolves.toMatchObject({ page: { name: 'bash', section: '1' } })
     expect(apiMocks.fetchManMetaByNameAndSection).toHaveBeenCalledWith({
       distro: 'debian',

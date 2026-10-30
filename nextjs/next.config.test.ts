@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import nextConfig from './next.config'
+import { nextConfig } from './next.config'
 
 it('rewrites the fixed first-party tracker paths before page matching', async () => {
   const rewrites = await nextConfig.rewrites!()

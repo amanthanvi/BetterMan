@@ -1,72 +1,97 @@
-import type { Metadata } from 'next'
-import { headers } from 'next/headers'
-import { cache } from 'react'
-
 import {
   FastApiError,
   fetchManByNameAndSectionOrAlias,
   fetchManDistros,
-  fetchManMetaByNameAndSection,
   fetchManResolve,
+  fetchRelated,
   suggest,
   withDistroFallback,
+  answeredBy,
+  servedRelease,
   type ManAlias,
   type ManResolveResult,
+  type RelatedResponse,
   type Suggestion,
 } from './api'
 import type { Distro } from './distro'
-import type { ManPage } from './docModel'
+import type { ManPageResponse } from './docModel'
 import { isRateLimited } from './rateLimit'
-import { explicitDistro, resolveRequestDistro, type SearchParams } from './requestContext'
 import { isManName } from './shortUrl'
 
-export type LocatedManPage = { distro: Distro; data: { kind: 'page'; page: ManPage } | ManAlias }
-export type ResolvedManName = { distro: Distro; result: ManResolveResult }
+/**
+ * Lookups for the man page renderer (pages/man). They read no cookies and no
+ * request state beyond their arguments, so a response depends only on its URL
+ * and the active release, and the CDN can cache it.
+ */
 
-/** What generateMetadata answers for a miss, before the page calls notFound(). Next adds noindex to every 404. */
-export const MISSING_MAN_METADATA: Metadata = { title: 'Not found — BetterMan' }
+/**
+ * Every outcome names the release that answered it (`servedRelease`), so a
+ * route can share it under the proxy's release key only when the two agree.
+ */
+type Served = { servedRelease: string | null }
+export type ManPageLookup =
+  | ({ kind: 'page'; distro: Distro; data: ManPageResponse; related: RelatedResponse['items'] } & Served)
+  | ({ distro: Distro } & ManAlias & Served)
+  | ({ kind: 'miss' } & Served)
 
-async function orMissing<T>(lookup: Promise<T>): Promise<T | null> {
+type Missing = { missing: true; servedRelease: string | null }
+
+async function orMissing<T>(lookup: Promise<T>): Promise<T | Missing> {
   try {
     return await lookup
   } catch (err) {
-    if (err instanceof FastApiError && err.status === 404) return null
+    if (err instanceof FastApiError && err.status === 404) return { missing: true, servedRelease: err.datasetReleaseId ?? null }
     throw err
   }
 }
 
-// These settle the status code before anything streams, and return null for a
-// miss instead of calling notFound(): thrown from generateMetadata, notFound()
-// answers an empty error shell. cache() shares one lookup per request between
-// generateMetadata, the page and the not-found boundary.
+function isMissing(value: unknown): value is Missing {
+  return Boolean(value && typeof value === 'object' && (value as Missing).missing === true)
+}
 
-/** Page metadata proves a page exists; a `.so` stub, which has none, loads its alias target. */
-export const locateManPage = cache(
-  async (name: string, section: string, requestedDistro: Distro, pkg?: string): Promise<LocatedManPage | null> =>
-    await orMissing(
-      withDistroFallback(requestedDistro, async (distro): Promise<LocatedManPage['data']> => {
-        const opts = { distro, name, section, ...(pkg ? { pkg } : {}) }
-        if (pkg || name !== name.toLowerCase()) {
-          const provider = await fetchManByNameAndSectionOrAlias(opts)
-          return provider.kind === 'alias' ? provider : { kind: 'page', page: provider.data.page }
-        }
-        try {
-          return { kind: 'page', page: (await fetchManMetaByNameAndSection(opts)).page }
-        } catch (err) {
-          if (!(err instanceof FastApiError) || err.code !== 'PAGE_NOT_FOUND') throw err
-        }
-        const result = await fetchManByNameAndSectionOrAlias(opts)
-        return result.kind === 'alias' ? result : { kind: 'page', page: result.data.page }
-      }),
+/** A page, the alias target when the URL is a `.so` stub, or a miss. */
+export async function lookupManPage(opts: {
+  name: string
+  section: string
+  distro: Distro
+  pkg?: string
+  release?: string
+}): Promise<ManPageLookup> {
+  const { name, section, pkg, release } = opts
+  const relatedFor = (distro: Distro): Promise<RelatedResponse> =>
+    fetchRelated({ distro, name, section, ...(release ? { release } : {}) }).catch((err: unknown) => ({
+      items: [],
+      ...(err instanceof FastApiError && err.datasetReleaseId ? { datasetReleaseId: err.datasetReleaseId } : {}),
+    }))
+  // Related reads run beside the document, for the requested distro; a fallback to Debian reads them again.
+  const related = relatedFor(opts.distro)
+  const found = await orMissing(
+    withDistroFallback(opts.distro, (distro) =>
+      fetchManByNameAndSectionOrAlias({ distro, name, section, ...(pkg ? { pkg } : {}), ...(release ? { release } : {}) }),
     ),
-)
-
-export const resolveManName = cache(async (name: string, requestedDistro: Distro): Promise<ResolvedManName | null> => {
-  const resolved = await orMissing(
-    withDistroFallback(requestedDistro, (distro) => fetchManResolve({ distro, name: name.toLowerCase() })),
   )
-  return resolved && { distro: resolved.distro, result: resolved.data }
-})
+  if (isMissing(found)) return { kind: 'miss', servedRelease: found.servedRelease }
+  if (found.data.kind === 'alias') return { ...found.data, distro: found.distro, servedRelease: servedRelease(found.data) }
+  const relatedResult = await (found.distro === opts.distro ? related : relatedFor(found.distro))
+  const pageRelease = servedRelease(found.data)
+  // The page is one answer only when its related links come from the same release; otherwise
+  // it names no single release, so the route does not share it under any key.
+  const consistent = pageRelease !== null && servedRelease(relatedResult) === pageRelease
+  return { kind: 'page', distro: found.distro, data: found.data.data, related: relatedResult.items, servedRelease: consistent ? pageRelease : null }
+}
+
+export type ResolvedManName = ({ distro: Distro; result: ManResolveResult } | { result: null }) & Served
+
+/** A name's only section, alias target or section picker; `result: null` for a miss. */
+export async function resolveManName(name: string, distro: Distro, release?: string): Promise<ResolvedManName> {
+  const resolved = await orMissing(
+    withDistroFallback(distro, (activeDistro) =>
+      fetchManResolve({ distro: activeDistro, name: name.toLowerCase(), ...(release ? { release } : {}) }),
+    ),
+  )
+  if (isMissing(resolved)) return { result: null, servedRelease: resolved.servedRelease }
+  return { distro: resolved.distro, result: resolved.data, servedRelease: servedRelease(resolved.data) }
+}
 
 export type ManMiss = {
   name: string
@@ -77,45 +102,34 @@ export type ManMiss = {
   suggestions: Suggestion[]
   /** Distros that have the page, or the name in any section. */
   distros: Distro[]
+  /** True when the typo reads were skipped for the search rate limit: the response must not be shared. */
+  limited: boolean
+  /** False when a suggestion or distro read came from another release than the key's: do not share it. */
+  answeredByKey: boolean
 }
 
-/**
- * The man page this request missed, or null when it exists. The `/man/[name]`
- * not-found boundary renders on every request, as the client router's
- * fallback, without params, so this reads the path the proxy forwards and
- * reuses the page's cached lookup: a page view costs no extra read.
- */
-export async function requestedManMiss(): Promise<ManMiss | null> {
-  const requestHeaders = await headers()
-  const path = requestHeaders.get('x-bm-path')
-  if (!path) return null
-  const url = new URL(path, 'https://path.invalid')
-  const [root, rawName, rawSection, ...rest] = url.pathname.split('/').slice(1)
-  if (root !== 'man' || !rawName || rest.length) return null
-
-  let name: string
-  let section: string | null
-  try {
-    name = decodeURIComponent(rawName)
-    section = rawSection === undefined ? null : decodeURIComponent(rawSection)
-  } catch {
-    return null
-  }
-
-  const sp: SearchParams = { distro: url.searchParams.get('distro') ?? undefined }
-  const distro = await resolveRequestDistro(sp)
-  const found = section === null ? await resolveManName(name, distro) : await locateManPage(name, section, distro)
-  if (found) return null
-
-  const miss: ManMiss = { name, section, distro, urlDistro: explicitDistro(sp), suggestions: [], distros: [] }
+/** What a miss offers: nearby names and the distros that have the page. */
+export async function manMiss(opts: {
+  name: string
+  section: string | null
+  distro: Distro
+  urlDistro: Distro | null
+  headers: Headers
+  release?: string
+}): Promise<ManMiss> {
+  const { name, section, distro, urlDistro, release } = opts
+  const miss: ManMiss = { name, section, distro, urlDistro, suggestions: [], distros: [], limited: false, answeredByKey: true }
+  if (!isManName(name)) return miss
   // The typo read costs up to 64 documents, so it shares the search limit.
-  if (!isManName(name) || (await isRateLimited(requestHeaders, 'search'))) return miss
+  if (await isRateLimited(opts.headers, 'search')) return { ...miss, limited: true }
   const lower = name.toLowerCase()
   const [suggested, available] = await Promise.all([
-    withDistroFallback(distro, (activeDistro) => suggest({ distro: activeDistro, name: lower, typos: true })).catch(
-      () => null,
-    ),
-    fetchManDistros({ name: lower, section }).catch(() => null),
+    withDistroFallback(distro, (activeDistro) =>
+      suggest({ distro: activeDistro, name: lower, typos: true, ...(release ? { release } : {}) }),
+    ).catch(() => null),
+    fetchManDistros({ name: lower, section, ...(release ? { release } : {}) }).catch(() => null),
   ])
-  return { ...miss, suggestions: suggested?.data.suggestions ?? [], distros: available?.distros ?? [] }
+  // A failed read adds nothing to the page, so only a read that answered from another release counts against it.
+  const answeredByKey = (!suggested || answeredBy(suggested.data, release)) && (!available || answeredBy(available, release))
+  return { ...miss, suggestions: suggested?.data.suggestions ?? [], distros: available?.distros ?? [], answeredByKey }
 }

@@ -102,14 +102,14 @@ describe("listManDistros", () => {
       await page(ctx, await activeRelease(ctx, "fedora", "staging"), "fedora", "systemctl");
     });
     expect(await t.query(api.queries.listManDistros, { name: " SystemCTL ", section: "1" })).toEqual({
-      distros: ["debian", "ubuntu"],
+      distros: ["debian", "ubuntu"], datasetReleaseIds: expect.arrayContaining([expect.any(String)]),
     });
-    expect(await t.query(api.queries.listManDistros, { name: "missing", section: "1" })).toEqual({ distros: [] });
+    expect(await t.query(api.queries.listManDistros, { name: "missing", section: "1" })).toMatchObject({ distros: [] });
     // A bare name counts any section of the page or its aliases.
-    expect(await t.query(api.queries.listManDistros, { name: "systemctl" })).toEqual({
+    expect(await t.query(api.queries.listManDistros, { name: "systemctl" })).toMatchObject({
       distros: ["debian", "ubuntu", "macos"],
     });
-    expect(await t.query(api.queries.listManDistros, { name: "missing" })).toEqual({ distros: [] });
+    expect(await t.query(api.queries.listManDistros, { name: "missing" })).toMatchObject({ distros: [] });
   });
 
   it("does not accept a caller-chosen stage", async () => {

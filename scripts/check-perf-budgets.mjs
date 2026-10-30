@@ -144,10 +144,11 @@ async function sample(url, name, { cost = false, cpuRate = 4, fontDelayMs = 0, c
     }, 1200), { once: true })
   })
   try {
-    const infoReady = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/info', { timeout: 30_000 })
+    // App Router pages fetch dataset info for their footer; plain-HTML man pages render it from the proxy's release.
+    const infoReady = name === 'man' ? null : page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/info', { timeout: 30_000 })
     const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 })
     assert.equal(response.status(), 200, `${name} navigation failed`)
-    await (await infoReady).finished()
+    if (infoReady) await (await infoReady).finished()
     await page.getByRole('heading', { level: 1 }).waitFor()
     if (name === 'man') await page.locator('article').getByText('bash manual paragraph 160.', { exact: false }).waitFor({ state: 'attached' })
     if (name === 'search') assert.equal(await page.getByRole('link', { name: /^tar\d+\(1\)$/ }).count(), 20, 'Expected a full search result page')
@@ -271,9 +272,12 @@ try {
     const chunks = [...new Set([pageView, ...samples].flatMap(s => s.scripts))].sort()
     let jsBytes = 0, jsGzipBytes = 0
     for (const chunk of chunks) {
-      assert.ok(chunk.startsWith('/_next/static/') && chunk.endsWith('.js'), `Non-build script: ${chunk}`)
-      const file = resolve(root, 'nextjs/.next', chunk.slice('/_next/'.length))
-      assert.ok(relative(resolve(root, 'nextjs/.next/static'), file).split('/').every(p => p !== '..'))
+      // Next's chunks, or the man page script that next.config.ts builds into public/_bm.
+      const manScript = /^\/_bm\/man\.[0-9a-f]{16}\.js$/.test(chunk)
+      assert.ok(manScript || (chunk.startsWith('/_next/static/') && chunk.endsWith('.js')), `Non-build script: ${chunk}`)
+      const base = manScript ? resolve(root, 'nextjs/public/_bm') : resolve(root, 'nextjs/.next/static')
+      const file = manScript ? resolve(base, chunk.slice('/_bm/'.length)) : resolve(root, 'nextjs/.next', chunk.slice('/_next/'.length))
+      assert.ok(relative(base, file).split('/').every(p => p !== '..'))
       const data = await readFile(file)
       jsBytes += data.length
       jsGzipBytes += gzipSync(data, { level: 9 }).length

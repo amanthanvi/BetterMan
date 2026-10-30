@@ -1,3 +1,6 @@
 .vercel
 test-results/
 playwright-report/
+
+# Built man page script (scripts/build-man-client.mjs)
+/public/_bm/

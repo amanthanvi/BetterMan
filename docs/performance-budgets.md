@@ -61,6 +61,11 @@ delayed-font controls and five correctly failing client-only controls.
   `/search?q=tar`, and `/section/1`. Shared, hydration and dynamically loaded
   scripts count. Next 16 has no first-load JS table; built chunks are the source
   of truth. Background Link prefetch and service workers are excluded.
+  Man pages are plain HTML (C4, #406): their scripts are the man page bundle,
+  `/_bm/man.<hash>.js`, which `next.config.ts` builds into `nextjs/public/_bm`,
+  and the harness counts it from there. They fetch no `/api/v1/info`: the footer
+  comes from the release the proxy reads, and that proxy query counts as one of
+  the page view's Convex calls.
 - **HTML:** decoded UTF-8 bytes of the complete streamed browser navigation
   response, including RSC payloads. Assertions verify fixture content, a full
   search result page and the long document, rather than accepting error pages.

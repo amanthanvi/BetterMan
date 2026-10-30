@@ -28,13 +28,54 @@ test('seo: robots.txt + sitemaps exist', async ({ page }) => {
   expect(sitemapDebPage).toContain('/man/tar/1')
 })
 
-test('seo: man pages emit JSON-LD with CSP nonce', async ({ page }) => {
+test('seo: man pages emit JSON-LD as a data block, with no nonce to vary the cached HTML', async ({ page }) => {
   await page.goto('/man/tar/1')
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
 
-  const jsonLd = page.locator('head script[type="application/ld+json"][nonce]')
+  const jsonLd = page.locator('head script[type="application/ld+json"]')
   await expect(jsonLd).toHaveCount(1)
+  await expect(jsonLd).not.toHaveAttribute('nonce')
   expect((await jsonLd.textContent()) ?? '').toContain('"@type":"TechArticle"')
+})
+
+test('csp: man pages run under a hash-only policy, other pages keep their nonce, and no page reports a violation', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __cspViolations: string[] }
+    w.__cspViolations = []
+    document.addEventListener('securitypolicyviolation', (e) => w.__cspViolations.push(`${e.violatedDirective} ${e.blockedURI}`))
+  })
+  const consoleCsp: string[] = []
+  page.on('console', (msg) => {
+    if (/Content Security Policy/i.test(msg.text())) consoleCsp.push(msg.text())
+  })
+
+  for (const path of ['/man/tar/1', '/man/ta/9', '/man/printf']) {
+    const response = await page.goto(path)
+    const csp = response!.headers()['content-security-policy'] ?? ''
+    expect(csp, path).toMatch(/script-src 'self' 'sha256-[A-Za-z0-9+/=]+';/)
+    expect(csp, path).not.toMatch(/nonce|strict-dynamic|script-src[^;]*unsafe-inline/)
+    await expect(page.locator('html')).toHaveAttribute('data-bm-hydrated', 'true')
+    const html = await response!.text()
+    // One executable inline script (the boot script), and no Next runtime.
+    const inline = [...html.matchAll(/<script(?![^>]*\bsrc=)(?![^>]*application\/ld\+json)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]!)
+    expect(inline, path).toHaveLength(1)
+    const digest = await page.evaluate(async (text) => {
+      const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))
+      return btoa(String.fromCharCode(...bytes))
+    }, inline[0]!)
+    expect(csp, path).toContain(`'sha256-${digest}'`)
+    expect(html, path).not.toMatch(/<script[^>]*src="\/_next\//)
+    expect(html, path).not.toContain('__NEXT_DATA__')
+    expect(await page.evaluate(() => (window as unknown as { __cspViolations: string[] }).__cspViolations), path).toEqual([])
+  }
+
+  for (const path of ['/', '/search?q=tar']) {
+    const response = await page.goto(path)
+    expect(response!.headers()['content-security-policy'], path).toMatch(/'nonce-[^']+' 'strict-dynamic'/)
+    await expect(page.getByRole('button', { name: 'Cycle theme' })).toBeVisible()
+    expect(await page.evaluate(() => (window as unknown as { __cspViolations: string[] }).__cspViolations), path).toEqual([])
+  }
+  expect(consoleCsp).toEqual([])
 })
 
 test('seo: man page share image follows the served distro', async ({ page }) => {

@@ -45,7 +45,7 @@ describe("resolveManByName", () => {
       await alias(ctx, releaseId, "printf", "3");
     });
     expect(await t.query(api.queries.resolveManByName, { distro: "debian", name: " PRINTF " })).toEqual({
-      kind: "page", name: "printf", section: "1", title: "printf(1)", description: "printf 1 description",
+      kind: "page", name: "printf", section: "1", title: "printf(1)", description: "printf 1 description", datasetReleaseId: expect.any(String),
     });
   });
 
@@ -59,7 +59,10 @@ describe("resolveManByName", () => {
     });
     for (const name of ["printf", "alternate", "missing"]) {
       const args = { distro: "debian" as const, name };
-      expect(await t.query(api.queries.resolveManByName, args)).toEqual(await t.action(api.content.getManByName, args));
+      // The resolver also names the release it read; otherwise it answers as getManByName does.
+      const { datasetReleaseId, ...resolved } = await t.query(api.queries.resolveManByName, args)
+      expect(datasetReleaseId).toEqual(expect.any(String))
+      expect(resolved).toEqual(await t.action(api.content.getManByName, args));
     }
     expect(await t.query(api.queries.resolveManByName, { distro: "debian", name: "printf" })).toMatchObject({
       kind: "ambiguous", options: [{ section: "1" }, { section: "3" }],
@@ -72,7 +75,7 @@ describe("resolveManByName", () => {
       await activeRelease(ctx, "prod");
       await page(ctx, await activeRelease(ctx, "staging"), "staging-only", "1");
     });
-    expect(await t.query(api.queries.resolveManByName, { distro: "debian", name: "staging-only" })).toEqual({ kind: "not_found" });
+    expect(await t.query(api.queries.resolveManByName, { distro: "debian", name: "staging-only" })).toEqual({ kind: "not_found", datasetReleaseId: expect.any(String) });
     const withStage = { distro: "debian" as const, name: "staging-only", stage: "staging" };
     await expect(t.query(api.queries.resolveManByName, withStage)).rejects.toThrow();
   });

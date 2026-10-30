@@ -57,7 +57,7 @@ export type SectionResponse = {
 
 export type Suggestion = { name: string; section: string; description: string }
 
-export type SuggestResponse = { query: string; suggestions: Suggestion[] }
+export type SuggestResponse = { query: string; suggestions: Suggestion[]; datasetReleaseId?: string }
 
 /** `distro` is where the suggestions came from: Debian when the requested distro has no active release. */
 export type SuggestApiResponse = SuggestResponse & { distro: Distro }
@@ -80,6 +80,8 @@ export class FastApiError extends Error {
   status: number
   code: string
   bodyText?: string
+  /** For a miss: the release that answered it, when Convex says (see servedRelease). */
+  datasetReleaseId?: string
 
   constructor(status: number, code: string, message: string, bodyText?: string) {
     super(message)
@@ -120,7 +122,34 @@ function isMissingActiveReleaseError(err: unknown): boolean {
 class UncacheableManPage extends Error {
   constructor(readonly value: unknown) { super('Man page exceeds the shared data-cache entry limit') }
 }
-function cacheableManPage<T>(value: T): T {
+/**
+ * The release a lookup outcome came from: every man page lookup names it, the
+ * page in its metadata, and aliases, misses and name resolutions alongside.
+ */
+export function servedRelease(value: unknown): string | null {
+  const v = value as { datasetReleaseId?: unknown; data?: { page?: { datasetReleaseId?: unknown } } } | null
+  const served = v?.datasetReleaseId ?? v?.data?.page?.datasetReleaseId
+  return typeof served === 'string' && served ? served : null
+}
+
+/**
+ * Whether `release` answered this result: the release it names, or, for a read
+ * across distros (`datasetReleaseIds`), one of the releases it read. Without a
+ * key there is nothing to check.
+ */
+export function answeredBy(value: unknown, release: string | null | undefined): boolean {
+  if (!release) return true
+  const many = (value as { datasetReleaseIds?: unknown } | null)?.datasetReleaseIds
+  if (Array.isArray(many)) return many.includes(release)
+  return servedRelease(value) === release
+}
+
+// A result read under one release key must come from that release: during a
+// promotion an instance can still key on the old one, and storing the new
+// answer under it (a page, an alias, a miss, a name's sections) would serve it
+// again after a rollback. An outcome that names no release is not stored either.
+function cacheableManPage<T>(value: T, release: string | null = null): T {
+  if (!answeredBy(value, release)) throw new UncacheableManPage(value)
   if (new TextEncoder().encode(JSON.stringify(value)).length > 1_900_000) throw new UncacheableManPage(value)
   return value
 }
@@ -205,16 +234,18 @@ const cachedManByName = unstable_cache(
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
+// `release` is the active release the proxy saw (see lib/manRelease.ts). Convex
+// ignores it; it only keys the data cache, so a promotion misses every old entry.
 const cachedResolveManByName = unstable_cache(
-  async (distro: Distro, name: string) =>
-    await convex().query(api.queries.resolveManByName, { distro, name }),
+  async (distro: Distro, name: string, _release: string | null) =>
+    cacheableManPage(await convex().query(api.queries.resolveManByName, { distro, name }), _release),
   ['betterman', 'convex', 'resolve-man-by-name'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 const cachedManByNameAndSection = unstable_cache(
-  async (distro: Distro, name: string, section: string, pkg: string | null) =>
-    cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section, ...(pkg ? { pkg } : {}) })),
+  async (distro: Distro, name: string, section: string, pkg: string | null, _release: string | null) =>
+    cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section, ...(pkg ? { pkg } : {}), reportRelease: true }), _release),
   ['betterman', 'convex', 'man-by-name-and-section', 'v4'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
@@ -227,22 +258,26 @@ const cachedManMetaByNameAndSection = unstable_cache(
 )
 
 const cachedRelated = unstable_cache(
-  async (distro: Distro, name: string, section: string) =>
-    await convex().query(api.queries.getRelated, { distro, name, section }),
+  async (distro: Distro, name: string, section: string, _release: string | null) =>
+    cacheableManPage(await convex().query(api.queries.getRelated, { distro, name, section, reportRelease: true }), _release),
   ['betterman', 'convex', 'related', 'v2'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 const cachedManDistros = unstable_cache(
-  async (name: string, section: string | null) =>
-    await convex().query(api.queries.listManDistros, section === null ? { name } : { name, section }),
+  async (name: string, section: string | null, _release: string | null) => {
+    const result = await convex().query(api.queries.listManDistros, section === null ? { name } : { name, section })
+    // It reads every distro's active release; under a key, the key's release must be among them.
+    if (_release && !answeredBy(result, _release)) throw new UncacheableManPage(result)
+    return result
+  },
   ['betterman', 'convex', 'man-distros'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 const cachedSuggest = unstable_cache(
-  async (distro: Distro, name: string, typos: boolean) =>
-    await convex().query(api.queries.suggest, typos ? { distro, name, typos } : { distro, name }),
+  async (distro: Distro, name: string, typos: boolean, _release: string | null) =>
+    cacheableManPage(await convex().query(api.queries.suggest, typos ? { distro, name, typos } : { distro, name }), _release),
   ['betterman', 'convex', 'suggest'],
   { revalidate: SEARCH_REVALIDATE_SECONDS },
 )
@@ -354,7 +389,7 @@ export async function listSection(opts: {
   return result
 }
 
-export type ManAlias = { kind: 'alias'; name: string; section: string; pkg?: string }
+export type ManAlias = { kind: 'alias'; name: string; section: string; pkg?: string; datasetReleaseId?: string }
 
 export type ManByNameResult =
   | { kind: 'page'; data: ManPageResponse }
@@ -367,7 +402,18 @@ type ConvexManByNameResult =
   | { kind: 'ambiguous'; options: AmbiguousPageResponse['options'] }
   | ManAlias
 
-type ConvexManByNameAndSectionResult = { kind: 'page'; data: ManPageResponse } | ManAlias | null
+type ConvexManByNameAndSectionResult =
+  | { kind: 'page'; data: ManPageResponse }
+  | ManAlias
+  | { kind: 'not_found'; datasetReleaseId?: string }
+  // Before the release-naming Convex deploy, a miss was null.
+  | null
+
+function pageNotFound(datasetReleaseId: string | null): FastApiError {
+  const err = apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+  if (datasetReleaseId) err.datasetReleaseId = datasetReleaseId
+  return err
+}
 
 export async function fetchManByName(opts: {
   distro: Distro
@@ -395,9 +441,9 @@ export async function fetchManByName(opts: {
 export type ManResolveResult = Exclude<FunctionReturnType<typeof api.queries.resolveManByName>, { kind: 'not_found' }>
 
 /** Resolves a name-only URL from page metadata, without loading the document. */
-export async function fetchManResolve(opts: { distro: Distro; name: string }): Promise<ManResolveResult> {
-  const result = await mapConvexError(() => cachedResolveManByName(opts.distro, opts.name))
-  if (result.kind === 'not_found') throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+export async function fetchManResolve(opts: { distro: Distro; name: string; release?: string }): Promise<ManResolveResult> {
+  const result = await mapConvexError(() => cachedResolveManByName(opts.distro, opts.name, opts.release ?? null))
+  if (result.kind === 'not_found') throw pageNotFound(servedRelease(result))
   return result
 }
 
@@ -409,32 +455,34 @@ export async function fetchManByNameAndSectionOrAlias(opts: {
   name: string
   section: string
   pkg?: string
+  release?: string
 }): Promise<ManByNameAndSectionResult> {
   const result = (await mapConvexError(() =>
-    cachedManByNameAndSection(opts.distro, opts.name, opts.section, packageName(opts.pkg) ?? null),
+    cachedManByNameAndSection(opts.distro, opts.name, opts.section, packageName(opts.pkg) ?? null, opts.release ?? null),
   )) as ConvexManByNameAndSectionResult
-  if (!result) throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+  if (!result || result.kind === 'not_found') throw pageNotFound(servedRelease(result))
   return result
 }
 
-export type RelatedResponse = { items: SectionPage[] }
+export type RelatedResponse = { items: SectionPage[]; datasetReleaseId?: string }
 
 export type ManPageMetaResponse = { page: ManPage }
 
-export type ManDistrosResponse = { distros: Distro[] }
+export type ManDistrosResponse = { distros: Distro[]; datasetReleaseIds?: string[] }
 
 /** Without a section, a distro counts when it has the name in any section. */
-export async function fetchManDistros(opts: { name: string; section: string | null }): Promise<ManDistrosResponse> {
-  return await cachedManDistros(opts.name, opts.section)
+export async function fetchManDistros(opts: { name: string; section: string | null; release?: string }): Promise<ManDistrosResponse> {
+  return await mapConvexError(() => cachedManDistros(opts.name, opts.section, opts.release ?? null))
 }
 
 export async function fetchRelated(opts: {
   distro: Distro
   name: string
   section: string
+  release?: string
 }): Promise<RelatedResponse> {
-  const result = await mapConvexError(() => cachedRelated(opts.distro, opts.name, opts.section))
-  if (!result) throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+  const result = await mapConvexError(() => cachedRelated(opts.distro, opts.name, opts.section, opts.release ?? null))
+  if (!result || ('found' in result && result.found === false)) throw pageNotFound(servedRelease(result))
   return result as RelatedResponse
 }
 
@@ -457,8 +505,8 @@ export async function fetchManMetaByNameAndSection(opts: {
 }
 
 /** `typos` adds bounded spelling corrections when no name has the prefix. */
-export async function suggest(opts: { distro: Distro; name: string; typos?: boolean }): Promise<SuggestResponse> {
-  return await mapConvexError(() => cachedSuggest(opts.distro, opts.name, opts.typos === true))
+export async function suggest(opts: { distro: Distro; name: string; typos?: boolean; release?: string }): Promise<SuggestResponse> {
+  return await mapConvexError(() => cachedSuggest(opts.distro, opts.name, opts.typos === true, opts.release ?? null))
 }
 
 export async function fetchLicenses(opts: { distro: Distro }): Promise<LicensesResponse> {

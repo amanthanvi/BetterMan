@@ -63,12 +63,13 @@ export function DistroProvider({
   initialCookieDistro?: Distro
 }) {
   const router = useRouter()
-  const pathname = usePathname()
+  // Nullable only because a pages/ route exists; App Router pages always have both.
+  const pathname = usePathname() ?? '/'
   const searchParams = useSearchParams()
   const [isNavigating, startNavigation] = useTransition()
 
-  const search = searchParams.toString()
-  const urlDistro = normalizeDistro(searchParams.get('distro'))
+  const search = searchParams?.toString() ?? ''
+  const urlDistro = normalizeDistro(searchParams?.get('distro'))
 
   // `?distro=` overrides what this URL shows; only setDistro changes the stored default.
   const [preferred, setPreferred] = useState<Distro>(() => initialCookieDistro ?? 'debian')

@@ -4,8 +4,9 @@ import { join } from 'node:path'
 import { ImageResponse } from 'next/og'
 
 import { truncateOgText } from './input'
+import { OG_SIZE } from './size'
 
-export const OG_SIZE = { width: 1200, height: 630 }
+export { OG_SIZE }
 
 /* Paper and ink from globals.css. Light scheme only: share cards render once. */
 const PAPER = '#faf8f5'

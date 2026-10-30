@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { BlockNode, TocItem } from '../../lib/docModel'
-import { stripHeaderSections } from './ManPageView'
+import { stripHeaderSections } from './manBody'
 
 const h = (id: string, text: string, level = 2): BlockNode => ({ type: 'heading', id, text, level })
 const p = (text: string): BlockNode => ({ type: 'paragraph', inlines: [{ type: 'text', text }] })

@@ -166,3 +166,13 @@ Also verify in a real browser:
 - Smoke failure: use `vercel curl` against the immutable deployment URL before changing the production alias.
 - Alias mismatch: inspect both the immutable deployment and both custom domains; the script attempts automatic rollback and must not declare success until their deployment IDs match.
 - Runtime errors: inspect Vercel runtime logs/errors and correlate the deployment ID before rolling back.
+
+## Man page edge caching (C4, #406)
+
+Man pages (`/man/<name>`, `/man/<name>/<section>`) send `CDN-Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400` (misses `s-maxage=600`) and `Cache-Control: public, max-age=0, must-revalidate`. The proxy (`nextjs/proxy.ts`) rewrites each one to `…?__bm_release=<active release id>`, so a promotion changes the cache key within a minute. No project setting is needed for this: Vercel's CDN honours `CDN-Cache-Control` from functions. Verify it on the first preview deployment that carries the change, and after the first promotion:
+
+1. `curl -sI https://<preview>/man/tar/1` twice: the second response shows `x-vercel-cache: HIT`, and the CSP's `script-src` has a `sha256-` source and no nonce.
+2. `curl -sI -H 'Cookie: bm-distro=ubuntu' https://<preview>/man/tar/1` answers `307` to `/man/tar/1?distro=ubuntu` with `cache-control: private, no-store`, even right after step 1's HIT (the proxy runs before the CDN).
+3. After a promotion, the next request misses (`x-vercel-cache: MISS`) and its footer names the new release. If it still hits the old entry, the CDN is keying on the original URL rather than the rewrite. Pages then refresh within the hour (`s-maxage`), and the rewrite key needs replacing with a cache tag and a purge on promotion.
+
+**Deploy order.** Man pages need the Convex functions that report the serving release (`reportRelease`). New Convex with old Next is safe. New Next with old Convex answers 500, because the old validator rejects the argument. `deploy.yml` always pushes Convex before Vercel and stops if the Convex deploy fails, so keep that order for any manual deploy too.

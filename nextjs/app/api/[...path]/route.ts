@@ -59,6 +59,8 @@ function attachServerTiming(response: Response, metrics: ServerTimingMetric[]): 
 function json(value: unknown, init?: ResponseInit): Response {
   const headers = new Headers(init?.headers)
   if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json; charset=utf-8')
+  // Man pages allow same-origin scripts; a JSON body must never be sniffed into one.
+  headers.set('X-Content-Type-Options', 'nosniff')
   return new Response(JSON.stringify(value), { ...init, headers })
 }
 
