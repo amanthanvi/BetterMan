@@ -830,6 +830,163 @@
   .hljs-meta {
     color: var(--color-ink-2);
   }
+
+  /* Explain: the numbered token grid. Tokens wrap; the rule under each says its kind:
+     a heavy rule for commands, solid for flags, dashed for arguments, dotted for shell syntax. */
+  .bm-tks {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 1.25rem 1.6rem;
+  }
+
+  .bm-tk,
+  .bm-tk-a {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .bm-tk-a {
+    text-decoration: none;
+  }
+
+  .bm-tk-n {
+    margin-bottom: 0.3rem;
+    font: 400 0.8125rem/1 var(--font-serif);
+    font-variant-numeric: oldstyle-nums;
+    color: var(--color-ink-3);
+  }
+
+  .bm-tk-t {
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--color-ink-2);
+    font: 500 1.5rem/1.2 var(--font-mono);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .bm-tk:is([data-kind="command"], [data-kind="subcommand"]) .bm-tk-t {
+    border-bottom: 3px solid var(--color-ink);
+    font-weight: 600;
+  }
+
+  .bm-tk:is([data-kind="argument"], [data-kind="optionArgument"], [data-kind="redirectTarget"], [data-kind="glob"], [data-kind="expansion"], [data-kind="unknown"]) .bm-tk-t {
+    border-bottom-style: dashed;
+    border-bottom-color: var(--color-ink-3);
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  .bm-tk:is([data-kind="operator"], [data-kind="redirect"], [data-kind="assignment"], [data-kind="comment"], [data-kind="endOfOptions"]) .bm-tk-t {
+    border-bottom-style: dotted;
+    border-bottom-color: var(--color-ink-3);
+  }
+
+  .bm-tk-split {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.6rem;
+    margin-top: 0.3rem;
+  }
+
+  .bm-tk-f {
+    font: 400 0.9375rem/1.5 var(--font-mono);
+    color: var(--color-ink-2);
+    text-decoration-color: var(--color-rule-2);
+    text-underline-offset: 3px;
+  }
+
+  .bm-tk-l {
+    margin-top: 0.3rem;
+    font: 400 0.9375rem/1.1 var(--font-serif);
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.06em;
+    color: var(--color-ink-3);
+  }
+
+  .bm-tk-a:hover .bm-tk-t,
+  .bm-tk-a[aria-current] .bm-tk-t {
+    border-bottom-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .bm-tk-f:hover,
+  .bm-tk-f[aria-current] {
+    color: var(--color-accent);
+    text-decoration-color: var(--color-accent);
+  }
+
+  .bm-tk:has([aria-current]) .bm-tk-l {
+    color: var(--color-ink);
+  }
+
+  .bm-xn {
+    position: relative;
+    scroll-margin-top: 4.5rem;
+  }
+
+  .bm-xn:target {
+    background: var(--color-wash);
+  }
+
+  .bm-xn-n {
+    font: 400 1rem/1.3 var(--font-serif);
+    font-variant-numeric: oldstyle-nums;
+    color: var(--color-ink-3);
+  }
+
+  .bm-xn .bm-xn-n {
+    position: absolute;
+    top: 1.05rem;
+    left: 0;
+    width: 1.75rem;
+    text-align: right;
+    font-size: 1.25rem;
+  }
+
+  /* The command field wraps to its content where the browser can size it. */
+  .bm-xinput {
+    field-sizing: content;
+    min-height: 2.25rem;
+  }
+
+  /* A warning is the one place a note carries the red: a 2px rule at its edge. */
+  .bm-safety {
+    box-shadow: inset 2px 0 0 var(--color-accent);
+  }
+
+  @media (max-width: 47.99rem) {
+    .bm-tks {
+      gap: 0.9rem 1.1rem;
+    }
+
+    .bm-tk-t {
+      font-size: 1.0625rem;
+    }
+
+    .bm-tk-l {
+      font-size: 0.84rem;
+    }
+
+    .bm-xn .bm-xn-n {
+      width: 1.5rem;
+      font-size: 1.0625rem;
+    }
+
+    /* On a phone the open definition is fixed under the site header, so it is in
+       view at once however long the grid, and stays while the grid and notes scroll. */
+    .bm-xcard {
+      position: fixed;
+      top: 4rem;
+      right: 1.25rem;
+      left: 1.25rem;
+      z-index: 20;
+      max-height: 45vh;
+      overflow-y: auto;
+    }
+  }
 }
 
 @media print {

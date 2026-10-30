@@ -38,10 +38,15 @@ export const OVERLAY_FILES = new Set([
   'man-client/dom.ts',
   'man-client/composer.ts',
   'man-client/previews.ts',
+  'components/explain/DefinitionCard.tsx', // pins over the token grid on phones
 ])
 
 // BetterMan's own voice: In brief, examples, the addendum. Tinted, never boxed.
-export const ADDED_FILES = new Set(['components/man/ManPageBrief.tsx', 'components/man/ManPageFooterSections.tsx'])
+export const ADDED_FILES = new Set([
+  'components/man/ManPageBrief.tsx',
+  'components/man/ManPageFooterSections.tsx',
+  'components/explain/ExplainVoice.tsx', // the reading and the safety note
+])
 
 // The only red fill: the 2px contents marker beside the active heading.
 export const ACCENT_FILL_FILES = new Set(['components/toc/Toc.tsx', 'man-client/toc.ts'])

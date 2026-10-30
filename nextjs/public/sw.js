@@ -80,10 +80,29 @@ self.addEventListener('activate', (event) => {
           [API_CACHE, MAX_API_ENTRIES],
         ].map(async ([name, maxEntries]) => trimCache(await caches.open(name), maxEntries)),
       ).catch(() => {})
+      // Entries an older worker stored before private URLs were excluded.
+      await Promise.all([HTML_CACHE, API_CACHE].map(async (name) => {
+        const cache = await caches.open(name)
+        for (const request of await cache.keys()) {
+          const url = new URL(typeof request === 'string' ? request : request.url, self.location.origin)
+          if (isPrivate(url)) await cache.delete(request)
+        }
+      })).catch(() => {})
       await self.clients.claim()
     })(),
   )
 })
+
+// A pasted command line or search can hold anything: explain pages and any
+// URL carrying typed text (lib/sentryScrub.ts PRIVATE_QUERY_PARAMS, on pages
+// and the API) never go into Cache Storage, whatever their HTTP status.
+// Offline search is the trade-off.
+const PRIVATE_QUERY_PARAMS = ['cmd', 'q', 'name']
+
+function isPrivate(url) {
+  return isSameOrigin(url) && (url.pathname === '/explain' || url.pathname === '/api/v1/explain' ||
+    PRIVATE_QUERY_PARAMS.some((name) => url.searchParams.has(name)))
+}
 
 function isSameOrigin(url) {
   return url.origin === self.location.origin
@@ -165,6 +184,7 @@ self.addEventListener('fetch', (event) => {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return
   // The upstream tracker has no content hash; let its HTTP TTL refresh it.
   if (url.pathname === '/assets/site.js') return
+  if (isPrivate(url)) return
 
   if (request.mode === 'navigate') {
     event.respondWith(networkFirst(event, HTML_CACHE, MAX_HTML_ENTRIES))

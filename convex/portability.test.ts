@@ -37,3 +37,30 @@ it("reads only a bounded per-distro detail page, with separate missing-page code
   await expect(t.query(api.portability.getDetails, arbitraryStage)).rejects.toThrow();
   expect(await t.query(api.portability.getDetails, { distro: "debian", name: "missing", section: "1" })).toBeNull();
 });
+
+it("returns three-system cells for requested anchors from the summary alone", async () => {
+  vi.useFakeTimers();
+  const t = convexTest(schema, modules);
+  await t.run(async (ctx) => {
+    const releaseId = await ctx.db.insert("datasetReleases", { datasetReleaseId: "debian-test", distro: "debian", locale: "en", imageRef: "test", imageDigest: "test", ingestedAt: "2026-10-28T00:00:00Z", pageCount: 2, sealed: true, manifestVerified: true });
+    await ctx.db.insert("activeReleases", { stage: "prod", distro: "debian", locale: "en", releaseId, datasetReleaseId: "debian-test", activatedAt: "now" });
+    for (const [name, count] of [["tar", 300], ["cp", 2]] as const) {
+      const options = Array.from({ length: count }, (_, i) => ({ anchorId: `f${i}`, flags: `--flag-${i}` }));
+      const pageId = await ctx.db.insert("manPages", { releaseId, datasetReleaseId: "debian-test", externalId: name, distro: "debian", locale: "en", name, section: "1", sitemapPage: 0, title: name, description: name, sourcePath: name, contentSha256: name, hasParseWarnings: false });
+      await ctx.db.insert("manPageContents", { pageId, docJson: "{}", optionsJson: JSON.stringify(options) });
+      await persistOptionSignature(ctx, pageId, options, 1);
+    }
+  });
+  await t.mutation(internal.derived.rebuildActive, {});
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  const tar = (await t.query(api.portability.getCells, { distro: "debian", name: "tar", section: "1", anchors: ["f0", "f0", "f299"] }))!;
+  expect(tar.cells.f0).toMatch(/^a[a-z]{2}$/);
+  // Beyond the summary's loaded rows: unknown, never the portable convention.
+  expect(tar.cells.f299).toBe("lll");
+  expect(tar.systems).toHaveLength(3);
+  // A complete summary omits an anchor it does not hold rather than guessing.
+  const cp = (await t.query(api.portability.getCells, { distro: "debian", name: "cp", section: "1", anchors: ["f1", "nope"] }))!;
+  expect(Object.keys(cp.cells)).toEqual(["f1"]);
+  expect(await t.query(api.portability.getCells, { distro: "debian", name: "missing", section: "1", anchors: ["f0"] })).toBeNull();
+  await expect(t.query(api.portability.getCells, { distro: "debian", name: "tar", section: "1", anchors: Array.from({ length: 65 }, (_, i) => `a${i}`) })).rejects.toThrow("TOO_MANY_PORTABILITY_ANCHORS");
+});

@@ -39,8 +39,8 @@ export function PortabilityGlyph({ portability }: { portability: Portability }) 
   )
 }
 
-/** Shown once per page, above the first glyph. */
-export function PortabilityLegend() {
+/** Shown once per page, above the first glyph. `everyFlag` where every flag carries cells (explain). */
+export function PortabilityLegend({ everyFlag = false }: { everyFlag?: boolean }) {
   return (
     <p className="text-xs text-ink-3">
       <span className="bm-pg mr-1.5" aria-hidden="true">
@@ -49,8 +49,8 @@ export function PortabilityLegend() {
         <i data-v="no" />
       </span>
       GNU/Linux · FreeBSD · macOS. A hollow cell means that system lacks the flag; a half-filled cell means it
-      behaves differently there. Unmarked flags exist on all three. The cells show availability, not identical
-      behavior.
+      behaves differently there.{everyFlag ? '' : ' Unmarked flags exist on all three.'} The cells show availability,
+      not identical behavior.
     </p>
   )
 }

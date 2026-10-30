@@ -9,11 +9,13 @@ const cells: Record<string, [string, string]> = {
   u: ['?', 'no active dataset'], e: ['?', 'option data unavailable'], t: ['?', 'option data incomplete'],
 }
 const names = ['GNU/Linux', 'FreeBSD', 'macOS']
-export function PortabilityGlyph({ codes, systems }: {
+/** `always` draws fully available rows too: explain shows the cells on every flag. */
+export function PortabilityGlyph({ codes, systems, always = false }: {
   codes: string
   systems: PageDerivedResponse['portability']['systems']
+  always?: boolean
 }) {
-  if (codes === 'aaa') return null
+  if (codes === 'aaa' && !always) return null
   const meanings = [...codes].map((code) => cells[code] ?? cells.e)
   const label = meanings.map((cell, i) => `${names[i]}${systems[i]?.distro ? ` (${systems[i].distro})` : ''}: ${cell[1]}`).join('; ')
   return <span className="bm-pg ml-2" role="img" aria-label={label} title={label}>
