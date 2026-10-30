@@ -20,7 +20,8 @@ it('renders package/version/pages and preserves the distro and cursor on next pa
   expect(html).toContain('/man/XOpenDisplay/3?distro=freebsd')
   // The citation appears once, as the link; the description follows it.
   expect(html).toContain('connect to X server')
-  expect(html.split('XOpenDisplay(3)')).toHaveLength(2)
+  expect(html.split('<b class="font-semibold">XOpenDisplay</b>(3)')).toHaveLength(2)
+  expect(html).not.toContain('XOpenDisplay(3)')
   expect(html).toContain('/pkg/libX11?distro=freebsd&amp;cursor=next%2Bcursor')
 })
 it('returns 404 for an unknown package and keeps a valid empty cursor page readable', async () => {

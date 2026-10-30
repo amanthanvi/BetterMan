@@ -228,6 +228,8 @@ export const listSection = query({
     offset: v.optional(v.number()),
     cursor: v.optional(v.string()),
     before: v.optional(v.string()),
+    // A–Z: start at the first name >= this prefix (C5 section browse).
+    from: v.optional(v.string()),
   },
   returns: v.union(v.null(), v.object({
     section: v.string(),
@@ -248,7 +250,10 @@ export const listSection = query({
     if (args.cursor !== undefined && args.before !== undefined) {
       throw new Error("Use either cursor or before, not both");
     }
-    const hasCursor = args.cursor !== undefined || args.before !== undefined;
+    if (args.from !== undefined && (args.cursor !== undefined || args.before !== undefined)) {
+      throw new Error("Use one of cursor, before or from");
+    }
+    const hasCursor = args.cursor !== undefined || args.before !== undefined || args.from !== undefined;
     const offset = boundedInt(args.offset ?? 0, 0, Number.MAX_SAFE_INTEGER);
     if (!hasCursor && offset > MAX_LEGACY_SECTION_SCAN) {
       throw new Error("Deep section pagination requires cursor or before");
@@ -273,6 +278,7 @@ export const listSection = query({
         const range = q.eq("releaseId", release._id).eq("section", section);
         if (args.cursor !== undefined) return range.gt("name", args.cursor);
         if (args.before !== undefined) return range.lt("name", args.before);
+        if (args.from !== undefined) return range.gte("name", args.from);
         return range;
       })
       .order(args.before !== undefined ? "desc" : "asc")
@@ -303,7 +309,18 @@ export const listSection = query({
       }
     }
     const nextCursor = hasNext && visible.length > 0 ? visible[visible.length - 1].name : null;
-    const prevCursor = hasPrevious && visible.length > 0 ? visible[0].name : null;
+    let prevCursor = hasPrevious && visible.length > 0 ? visible[0].name : null;
+    // A seek past the section's last name (a letter after it, or a stale forward
+    // cursor) finds nothing; one backward probe offers the last page instead.
+    const seek = args.from ?? (args.cursor !== undefined ? `${args.cursor}\u0000` : undefined);
+    if (visible.length === 0 && seek !== undefined) {
+      const before = await ctx.db
+        .query("manPages")
+        .withIndex("by_releaseId_and_section_and_name", (q) => q.eq("releaseId", release._id).eq("section", section).lt("name", seek))
+        .order("desc")
+        .take(1);
+      if (before.length) prevCursor = seek;
+    }
 
     return {
       section,

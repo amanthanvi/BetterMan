@@ -224,6 +224,7 @@ const cachedSection = unstable_cache(
     offset: number,
     cursor: string | null,
     before: string | null,
+    from: string | null,
   ) =>
     await convex().query(api.queries.listSection, {
       distro,
@@ -232,8 +233,9 @@ const cachedSection = unstable_cache(
       offset,
       ...(cursor === null ? {} : { cursor }),
       ...(before === null ? {} : { before }),
+      ...(from === null ? {} : { from }),
     }),
-  ['betterman', 'convex', 'section', 'v2'],
+  ['betterman', 'convex', 'section', 'v3'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -387,6 +389,8 @@ export async function listSection(opts: {
   offset?: number
   cursor?: string
   before?: string
+  /** A–Z: the first page whose name is at or after this prefix. */
+  from?: string
 }): Promise<SectionResponse> {
   const result = await mapConvexError(() =>
     cachedSection(
@@ -396,6 +400,7 @@ export async function listSection(opts: {
       opts.offset ?? 0,
       opts.cursor ?? null,
       opts.before ?? null,
+      opts.from ?? null,
     ),
   )
   if (!result) throw apiError(404, 'SECTION_NOT_FOUND', 'Section not found')
