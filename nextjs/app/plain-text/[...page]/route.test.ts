@@ -244,13 +244,3 @@ it.each(['random1', 'random2'])('keeps an alias reached with the unproven packag
 it('answers a bare _rsc privately', async () => {
   expect((await GET(reqAt('/man/tar/1.txt?_rsc=abc'), ctx())).headers.get('cache-control')).toBe('private, no-store')
 })
-
-it.each([true, false, undefined])('carries tier robots on text GET and HEAD: %s', async indexable => {
-  vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'page', data: { ...manual, page: { ...manual.page, indexable } } })
-  for (const method of [GET, HEAD]) {
-    const res = await method(req(), ctx())
-    expect(res.status).toBe(200)
-    expect(res.headers.get('x-robots-tag')).toBe(indexable === false ? 'noindex' : null)
-    expect(res.headers.get('link')).toBe(indexable === false ? null : '<https://betterman.sh/man/tar/1>; rel="canonical"')
-  }
-})

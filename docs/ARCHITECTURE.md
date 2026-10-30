@@ -54,6 +54,10 @@ job-time source mismatch fails before promotion. Both paths retain the persisted
 full-Debian acquisition hold. Promotion requests carry the exact contract
 version header so old in-flight workflows fail before moving prod. The
 generated layer advertises its own independent v3 contract.
+Contract v8 (B2, #394) adds full-archive acquisition identities for the other
+distro families, starting with Ubuntu's `ubuntu-deb-extraction`. Each is held
+from prod server-side (`FULL_<DISTRO>_PROMOTION_HELD`) until its own promotion
+authorization; clients reject v7 and v9 servers before any write.
 
 B4 adds per-page demand scores and indexable membership, plus a declared tier
 count verified through existing upload shards. Scored releases filter their
