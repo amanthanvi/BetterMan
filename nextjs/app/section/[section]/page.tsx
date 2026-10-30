@@ -3,11 +3,15 @@ import type { Metadata } from 'next'
 import { notFound, permanentRedirect } from 'next/navigation'
 
 import { SectionFilter } from '../../../components/browse/SectionFilter'
-import { RunningHead, sectionLabel } from '../../../components/man/RunningHead'
+import { bsdSectionLabel, RunningHead, sectionLabel } from '../../../components/man/RunningHead'
 import { LinkPendingHint } from '../../../components/ui/LinkPendingHint'
 import { FastApiError, listSection, withDistroFallback } from '../../../lib/api'
 import { DISTRO_LABEL, withDistro, type Distro } from '../../../lib/distro'
-import { explicitDistro, getFirst, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
+import type { Lang } from '../../../lib/i18n/locales'
+import { tRich } from '../../../lib/i18n/rich'
+import { localizedSeo } from '../../../lib/i18n/seo'
+import { getI18n } from '../../../lib/i18n/server'
+import { explicitDistro, explicitLang, getFirst, resolveRequestDistro, resolveRequestLang, type SearchParams } from '../../../lib/requestContext'
 
 function getGroupKey(name: string): string {
   const first = name.trim().charAt(0).toUpperCase()
@@ -38,13 +42,14 @@ function groupByLeadingChar<T extends { name: string }>(items: readonly T[]): Ar
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 const SECTIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 
-function buildSectionHref(opts: { section: string; urlDistro: Distro | null; offset: number; cursor?: string | null; before?: string | null; from?: string | null }) {
+function buildSectionHref(opts: { section: string; urlDistro: Distro | null; urlLang: Lang | null; offset: number; cursor?: string | null; before?: string | null; from?: string | null }) {
   const params = new URLSearchParams()
   if (opts.offset > 0) params.set('offset', String(opts.offset))
   if (opts.cursor != null) params.set('cursor', opts.cursor)
   if (opts.before != null) params.set('before', opts.before)
   if (opts.from != null) params.set('from', opts.from)
   if (opts.urlDistro) params.set('distro', opts.urlDistro)
+  if (opts.urlLang) params.set('lang', opts.urlLang)
   const qs = params.toString()
   return qs ? `/section/${encodeURIComponent(opts.section)}?${qs}` : `/section/${encodeURIComponent(opts.section)}`
 }
@@ -76,17 +81,23 @@ function PaginationControl({
   )
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ section: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ section: string }>
+  searchParams: Promise<SearchParams>
+}): Promise<Metadata> {
   const { section } = await params
-  const title = `Section ${section} — BetterMan`
+  const sp = await searchParams
+  const { t, lang } = await getI18n(resolveRequestLang(sp))
+  const title = t('{title} — BetterMan', { title: t('Section {section}', { section }) })
+  const description = t('Browse BetterMan man pages in section {section}.', { section })
   return {
     title,
-    description: `Browse BetterMan man pages in section ${section}.`,
-    openGraph: {
-      title,
-      description: `Browse BetterMan man pages in section ${section}.`,
-      type: 'website',
-    },
+    description,
+    openGraph: { title, description, type: 'website' },
+    ...localizedSeo(lang, withDistro(`/section/${encodeURIComponent(section)}`, explicitDistro(sp))),
   }
 }
 
@@ -100,6 +111,8 @@ export default async function SectionPage({
   const { section } = await params
   const sp = await searchParams
   const requestedDistro = await resolveRequestDistro(sp)
+  const { t, lang } = await getI18n(resolveRequestLang(sp))
+  const urlLang = explicitLang(sp)
   const offset = Number.parseInt(getFirst(sp.offset) ?? '0', 10)
   const safeOffset = Number.isFinite(offset) && offset >= 0 ? offset : 0
   const cursor = getFirst(sp.cursor)
@@ -110,7 +123,7 @@ export default async function SectionPage({
   // Old offset-only bookmarks cannot seek cheaply. Restart their browse at a
   // canonical first page instead of surfacing the backend cursor-required error.
   if (safeOffset > 5000 && cursor === undefined && before === undefined && from === undefined) {
-    permanentRedirect(buildSectionHref({ section, urlDistro: explicitDistro(sp), offset: 0 }))
+    permanentRedirect(buildSectionHref({ section, urlDistro: explicitDistro(sp), urlLang, offset: 0 }))
   }
 
   const { distro, data } = await withDistroFallback(requestedDistro, (activeDistro) =>
@@ -130,36 +143,42 @@ export default async function SectionPage({
   const hasNextPage = data.nextCursor !== null
   const canRestart = data.results.length === 0 && (data.offset > 0 || cursor !== undefined || before !== undefined || from !== undefined)
   const onPage = new Set(groups.map((group) => group.key))
+  // English keeps the dataset's own section name; another language names it as man does there.
+  const sectionName = lang === 'en' ? (bsdSectionLabel(data.section, distro, t) ?? data.label) : sectionLabel(data.section, t, distro)
   const firstName = data.results[0]?.name
   const lastName = data.results.at(-1)?.name
 
   return (
     <div className="mx-auto max-w-[64rem]">
-      <RunningHead title={`Section ${data.section}`} label={data.label} end={DISTRO_LABEL[distro]} />
+      <RunningHead title={t('Section {section}', { section: data.section })} label={sectionName} end={DISTRO_LABEL[distro]} />
       <header className="pt-9">
         <h1 className="font-serif text-3xl font-semibold tracking-[-0.015em] md:text-4xl">
           <span className="mr-[0.3em] font-normal text-ink-3 oldstyle-nums">{data.section}</span>
-          {data.label}
+          {sectionName}
         </h1>
         <p className="mt-2.5 font-serif text-lg italic text-ink-2">
-          {data.total.toLocaleString()} pages in {DISTRO_LABEL[distro]}
-          {firstName && lastName && data.results.length > 1 && data.results.length < data.total ? (
-            <>
-              ; this page lists <b className="font-semibold not-italic">{firstName}</b> to <b className="font-semibold not-italic">{lastName}</b>
-            </>
-          ) : null}
-          .
+          {firstName && lastName && data.results.length > 1 && data.results.length < data.total
+            ? tRich(
+                t,
+                '{count, plural, one {# page} other {# pages}} in {distro}; this page lists {first} to {last}.',
+                {
+                  first: <b className="font-semibold not-italic">{firstName}</b>,
+                  last: <b className="font-semibold not-italic">{lastName}</b>,
+                },
+                { count: data.total, distro: DISTRO_LABEL[distro] },
+              )
+            : t('{count, plural, one {# page} other {# pages}} in {distro}.', { count: data.total, distro: DISTRO_LABEL[distro] })}
         </p>
-        <nav aria-label="Sections" className="mt-4 text-sm leading-[1.9] text-ink-3">
+        <nav aria-label={t('Sections')} className="mt-4 text-sm leading-[1.9] text-ink-3">
           {SECTIONS.map((n, index) => (
             <span key={n}>
               {index ? ' · ' : null}
               <Link
-                href={withDistro(`/section/${n}`, urlDistro)}
+                href={withDistro(`/section/${n}`, urlDistro, urlLang)}
                 aria-current={n === data.section ? 'page' : undefined}
                 className={`whitespace-nowrap no-underline ${n === data.section ? 'font-semibold text-ink' : 'text-ink-2 hover:text-accent'}`}
               >
-                <span className="font-serif text-[0.875rem] text-ink-3 oldstyle-nums">{n}</span> {sectionLabel(n)}
+                <span className="font-serif text-[0.875rem] text-ink-3 oldstyle-nums">{n}</span> {sectionLabel(n, t, distro)}
               </Link>
             </span>
           ))}
@@ -167,15 +186,16 @@ export default async function SectionPage({
       </header>
 
       <div className="sticky top-14 z-10 -mx-5 mt-8 flex flex-wrap items-center gap-x-8 gap-y-2 border-b border-rule bg-paper px-5 py-2.5 md:mx-0 md:px-0">
-        <form className="flex min-w-0 flex-[0_1_22rem] items-baseline gap-3" action="/search" method="get" role="search" aria-label={`Search section ${data.section}`}>
+        <form className="flex min-w-0 flex-[0_1_22rem] items-baseline gap-3" action="/search" method="get" role="search" aria-label={t('Search section {section}', { section: data.section })}>
           <input type="hidden" name="section" value={data.section} />
           {urlDistro ? <input type="hidden" name="distro" value={urlDistro} /> : null}
+          {urlLang ? <input type="hidden" name="lang" value={urlLang} /> : null}
           {/* Keyed by the page shown: a new page remounts the filter, clearing it and its hidden rows. */}
           <SectionFilter key={`${firstName}:${lastName}:${data.results.length}`} section={data.section} shown={data.results.length} />
         </form>
 
         {/* Every letter: on this page it jumps to its group; otherwise it starts a page there. */}
-        <nav aria-label="Jump to letter" className="flex flex-wrap font-serif text-[0.9375rem]">
+        <nav aria-label={t('Jump to letter')} className="flex flex-wrap font-serif text-[0.9375rem]">
           {LETTERS.map((letter) =>
             onPage.has(letter) ? (
               <a key={letter} href={`#${groupAnchorId(letter)}`} className="bm-az hover:text-accent">
@@ -183,7 +203,7 @@ export default async function SectionPage({
               </a>
             ) : (
               // Plain anchors: 26 Link components would repeat their props in the RSC payload.
-              <a key={letter} href={buildSectionHref({ section: data.section, urlDistro, offset: 0, from: letter.toLowerCase() })} className="bm-az text-ink-3 hover:text-accent">
+              <a key={letter} href={buildSectionHref({ section: data.section, urlDistro, urlLang, offset: 0, from: letter.toLowerCase() })} className="bm-az text-ink-3 hover:text-accent">
                 {letter}
               </a>
             ),
@@ -194,15 +214,15 @@ export default async function SectionPage({
       {data.results.length === 0 ? (
         <p className="mt-8 font-serif text-lg italic text-ink-2">
           {data.total === 0
-            ? `Section ${data.section} has no pages in ${DISTRO_LABEL[distro]}.`
+            ? t('Section {section} has no pages in {distro}.', { section: data.section, distro: DISTRO_LABEL[distro] })
             : from
-              ? `No names in section ${data.section} start at ${from.toUpperCase()} or later.`
-              : 'No more names in this section.'}
+              ? t('No names in section {section} start at {letter} or later.', { section: data.section, letter: from.toUpperCase() })
+              : t('No more names in this section.')}
           {data.prevCursor ? (
             <>
               {' '}
-              <Link href={buildSectionHref({ section: data.section, urlDistro, offset: 0, before: data.prevCursor })} className="not-italic underline decoration-rule-2 underline-offset-[3px] hover:text-accent">
-                Last page
+              <Link href={buildSectionHref({ section: data.section, urlDistro, urlLang, offset: 0, before: data.prevCursor })} className="not-italic underline decoration-rule-2 underline-offset-[3px] hover:text-accent">
+                {t('Last page')}
               </Link>
             </>
           ) : null}
@@ -210,7 +230,7 @@ export default async function SectionPage({
       ) : null}
       <div className="mt-6 md:columns-2 md:gap-14" data-bm-section-list>
         {groups.map((group) => (
-          <section key={group.key} aria-label={`Names starting with ${group.key}`} data-bm-letter className="[&:first-child>h2]:mt-0">
+          <section key={group.key} aria-label={t('Names starting with {letter}', { letter: group.key })} data-bm-letter className="[&:first-child>h2]:mt-0">
             <h2
               id={groupAnchorId(group.key)}
               className="mt-5 mb-1.5 break-after-avoid scroll-mt-28 border-b border-rule pb-1 font-serif text-xl font-semibold"
@@ -221,7 +241,7 @@ export default async function SectionPage({
               {group.items.map((r) => (
                 <li key={`${r.name}:${r.section}`}>
                   <Link
-                    href={withDistro(`/man/${encodeURIComponent(r.name)}/${encodeURIComponent(r.section)}`, urlDistro)}
+                    href={withDistro(`/man/${encodeURIComponent(r.name)}/${encodeURIComponent(r.section)}`, urlDistro, urlLang)}
                     className="group no-underline"
                   >
                     <span className="group-hover:text-accent">
@@ -240,28 +260,28 @@ export default async function SectionPage({
       <div className="mt-10 flex flex-wrap items-baseline justify-between gap-3 border-t border-rule pt-4">
         <p className="text-xs text-ink-3">
           {data.results.length === 0
-            ? `Showing 0 of ${data.total.toLocaleString()} results.`
+            ? t('Showing 0 of {total} results.', { total: data.total.toLocaleString(lang) })
             : positioned
-              ? `Showing ${data.offset + 1}-${data.offset + data.results.length} of ${data.total.toLocaleString()} results.`
-              : `Showing ${firstName} to ${lastName}, ${data.results.length.toLocaleString()} of ${data.total.toLocaleString()} results.`}
+              ? t('Showing {from}-{to} of {total} results.', { from: data.offset + 1, to: data.offset + data.results.length, total: data.total.toLocaleString(lang) })
+              : t('Showing {first} to {last}, {count} of {total} results.', { first: firstName ?? '', last: lastName ?? '', count: data.results.length.toLocaleString(lang), total: data.total.toLocaleString(lang) })}
         </p>
         <div className="flex items-baseline gap-5">
           {canRestart ? (
-            <PaginationControl href={buildSectionHref({ section: data.section, urlDistro, offset: 0 })} disabled={false}>
-              First page
+            <PaginationControl href={buildSectionHref({ section: data.section, urlDistro, urlLang, offset: 0 })} disabled={false}>
+              {t('First page')}
             </PaginationControl>
           ) : null}
           <PaginationControl
-            href={buildSectionHref({ section: data.section, urlDistro, offset: prevOffset, before: data.prevCursor })}
+            href={buildSectionHref({ section: data.section, urlDistro, urlLang, offset: prevOffset, before: data.prevCursor })}
             disabled={!hasPrevPage}
           >
-            Previous
+            {t('Previous')}
           </PaginationControl>
           <PaginationControl
-            href={buildSectionHref({ section: data.section, urlDistro, offset: nextOffset, cursor: data.nextCursor })}
+            href={buildSectionHref({ section: data.section, urlDistro, urlLang, offset: nextOffset, cursor: data.nextCursor })}
             disabled={!hasNextPage}
           >
-            Next
+            {t('Next')}
           </PaginationControl>
         </div>
       </div>

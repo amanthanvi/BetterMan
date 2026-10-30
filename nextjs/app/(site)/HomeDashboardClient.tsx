@@ -18,6 +18,10 @@ import {
   type RecentItem,
 } from '../../lib/recent'
 import { useDistro } from '../../components/state/distro'
+import { useLang } from '../../components/state/lang'
+import { tRich } from '../../lib/i18n/rich'
+import type { Lang } from '../../lib/i18n/locales'
+import type { ClientT } from '../../lib/i18n/server'
 import { ManSectionLabel } from '../../components/man/RunningHead'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Kbd } from '../../components/ui/Kbd'
@@ -26,9 +30,9 @@ import { formatRelativeTime } from '../../lib/time'
 
 type RecentPageItem = Extract<RecentItem, { kind: 'page' }>
 
-function formatRelativeFromMs(ms: number): string {
+function formatRelativeFromMs(ms: number, lang: Lang, t: ClientT): string {
   try {
-    return formatRelativeTime(new Date(ms).toISOString())
+    return formatRelativeTime(new Date(ms).toISOString(), lang, t('just now'))
   } catch {
     return ''
   }
@@ -36,18 +40,24 @@ function formatRelativeFromMs(ms: number): string {
 
 function EntryRow({
   urlDistro,
+  urlLang,
+  lang,
+  t,
   name,
   section,
   description,
   timestamp,
 }: {
   urlDistro: Distro | null
+  urlLang: Lang | null
+  lang: Lang
+  t: ClientT
   name: string
   section: string
   description?: string
   timestamp: number
 }) {
-  const href = withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, urlDistro)
+  const href = withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, urlDistro, urlLang)
 
   return (
     <>
@@ -58,13 +68,14 @@ function EntryRow({
         {description ? <span className="text-ink-2"> {description}</span> : null}
         <LinkPendingHint />
       </Link>
-      <span className="shrink-0 font-sans text-xs text-ink-3">{formatRelativeFromMs(timestamp)}</span>
+      <span className="shrink-0 font-sans text-xs text-ink-3">{formatRelativeFromMs(timestamp, lang, t)}</span>
     </>
   )
 }
 
 export function HomeDashboardClient() {
   const { urlDistro } = useDistro()
+  const { t, lang, urlLang } = useLang()
   const [recentPages, setRecentPages] = useState<RecentPageItem[]>([])
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([])
   // /#recent and /#bookmarks (the h key, /history, /bookmarks, app shortcuts) ask for a
@@ -121,17 +132,17 @@ export function HomeDashboardClient() {
   return (
     <div className="mt-14 grid gap-10 sm:grid-cols-2 sm:gap-8">
       {recentPages.length || asked === 'recent' ? (
-        <section id="recent" aria-label="Recent" className="min-w-0">
-          <ManSectionLabel as="h2">Recent</ManSectionLabel>
+        <section id="recent" aria-label={t('Recent')} className="min-w-0">
+          <ManSectionLabel as="h2">{t('Recent')}</ManSectionLabel>
           {recentPages.length ? null : (
-            <EmptyState title="No recent pages" className="mt-1">
-              Pages you open are listed here.
+            <EmptyState title={t('No recent pages')} className="mt-1">
+              {t('Pages you open are listed here.')}
             </EmptyState>
           )}
           <ul className={LIST}>
             {recentPages.map((it) => (
               <li key={`${it.name}:${it.section}:${it.at}`} className={ROW}>
-                <EntryRow urlDistro={urlDistro} name={it.name} section={it.section} description={it.description} timestamp={it.at} />
+                <EntryRow urlDistro={urlDistro} urlLang={urlLang} lang={lang} t={t} name={it.name} section={it.section} description={it.description} timestamp={it.at} />
               </li>
             ))}
           </ul>
@@ -139,24 +150,24 @@ export function HomeDashboardClient() {
       ) : null}
 
       {bookmarks.length || asked === 'bookmarks' ? (
-        <section id="bookmarks" aria-label="Bookmarks" className="min-w-0">
-          <ManSectionLabel as="h2">Bookmarks</ManSectionLabel>
+        <section id="bookmarks" aria-label={t('Bookmarks')} className="min-w-0">
+          <ManSectionLabel as="h2">{t('Bookmarks')}</ManSectionLabel>
           {bookmarks.length ? null : (
-            <EmptyState title="No bookmarks yet" className="mt-1">
-              Press <Kbd>m</Kbd> on a page to keep it here.
+            <EmptyState title={t('No bookmarks yet')} className="mt-1">
+              {tRich(t, 'Press {key} on a page to keep it here.', { key: <Kbd>m</Kbd> })}
             </EmptyState>
           )}
           <ul className={LIST}>
             {bookmarks.map((it) => (
               <li key={`${it.name}:${it.section}:${it.addedAt}`} className={`group/row ${ROW}`}>
-                <EntryRow urlDistro={urlDistro} name={it.name} section={it.section} description={it.description} timestamp={it.addedAt} />
+                <EntryRow urlDistro={urlDistro} urlLang={urlLang} lang={lang} t={t} name={it.name} section={it.section} description={it.description} timestamp={it.addedAt} />
                 <button
                   type="button"
                   className="shrink-0 font-sans text-xs text-ink-3 underline decoration-rule-2 underline-offset-[3px] hover:text-accent focus-visible:opacity-100 group-hover/row:opacity-100 group-focus-within/row:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0"
                   onClick={() => removeBookmark({ name: it.name, section: it.section })}
-                  aria-label={`Remove bookmark for ${it.name}(${it.section})`}
+                  aria-label={t('Remove bookmark for {citation}', { citation: `${it.name}(${it.section})` })}
                 >
-                  Remove
+                  {t('Remove')}
                 </button>
               </li>
             ))}

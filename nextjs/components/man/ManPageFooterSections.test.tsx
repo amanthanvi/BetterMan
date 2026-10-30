@@ -1,10 +1,11 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it } from 'vitest'
 import { ManPageFooterSections } from './ManPageFooterSections'
+import { tServer } from '../../lib/i18n/testing'
 it('omits unavailable derived headings and renders capped backlinks, family and package links', () => {
   const props = { reportHref: 'https://github.com/example/issues/new', urlDistro: 'freebsd' as const, relatedItems: [] }
-  expect(renderToStaticMarkup(<ManPageFooterSections {...props} />)).not.toContain('Referenced by')
-  const html = renderToStaticMarkup(<ManPageFooterSections {...props} derived={{
+  expect(renderToStaticMarkup(<ManPageFooterSections urlLang={null} t={tServer} {...props} />)).not.toContain('Referenced by')
+  const html = renderToStaticMarkup(<ManPageFooterSections urlLang={null} t={tServer} {...props} derived={{
     referencedBy: { items: [{ name: 'bsdtar', section: '1' }], hasMore: true },
     family: { name: 'git', items: [{ name: 'git-add', section: '1' }], hasMore: true },
     package: { name: 'libX11', version: '1.8' },

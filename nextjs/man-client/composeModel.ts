@@ -1,4 +1,7 @@
 import { portabilityWords } from '../lib/manBrief'
+import type { T } from '../lib/i18n/translate'
+import type { ManKey } from '../lib/i18n/catalog/en/man'
+import type { PlainKey } from '../lib/i18n/lite'
 
 /**
  * The composer's command, without a DOM. The manual's argument notation
@@ -68,10 +71,10 @@ export function commandText(name: string, picks: ComposePick[]): { text: string;
 }
 
 /** Where a flag is not on all three systems, and two exclusive modes picked together. */
-export function composerWarnings(picks: ComposePick[]): string {
+export function composerWarnings(picks: ComposePick[], t: T<PlainKey<ManKey>>): string {
   const out: string[] = []
-  for (const pick of picks) if (pick.portability) out.push(`${pick.flag}: ${portabilityWords(pick.portability)}.`)
+  for (const pick of picks) if (pick.portability) out.push(t('{flag}: {words}.', { flag: pick.flag, words: portabilityWords(pick.portability, t) }))
   const modes = picks.filter((pick) => pick.mode).map((pick) => pick.flag)
-  if (modes.length > 1) out.push(`Choose one mode: ${modes.join(' and ')} conflict.`)
+  if (modes.length > 1) out.push(t('Choose one mode: {modes} conflict.', { modes: new Intl.ListFormat(t.lang, { style: 'long', type: 'conjunction' }).format(modes) }))
   return out.join(' ')
 }
