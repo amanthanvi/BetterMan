@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Ingestion: the distro containers and the FreeBSD job can install the ingestion package again. Since `ingestion/data/` was added (#436), `pip install` found two top-level packages and stopped, which would have failed every curated distro's ingest. The package is now named explicitly, and CI checks that pip can install it.
 - Security: the `zod` 3.22.4 that the pinned Vercel CLI's backend and Python builders use resolves to 4.6.7, since no 3.x release fixes GHSA-mrhx-c7xc-m3w5; those builders parse Python manifests identically under both. The `ip-address` under `sigstore`, which `deps:provenance` uses, resolves to 10.7.5 (GHSA-rxp7-6hxx-x8q5). Scorecard's Vulnerabilities check had reported both.
 - Dependencies: Next.js and `eslint-config-next` 16.4.3. Next 16.4.3 no longer loads the app-page runtime into `proxy.ts` and keeps OpenTelemetry request traces together. CodeQL's `init` and `analyze` move to 4.39.1, the release `upload-sarif` already used.
 - Browse (C5, #407): section pages always show A–Z; a letter on the page jumps to its group and any other starts a page at that letter (`/section/1?from=t`, a new `from` boundary on the section listing). One field filters the names on the page as you type and searches the whole section on Enter or without JavaScript. Sections link to each other, and the lede names the range shown. Package pages (`/pkg/<name>`) take the print-manual design: running head, mono name, version lede, and a ruled list of the package's manual pages.
