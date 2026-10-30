@@ -76,7 +76,7 @@ test('search: the top hit leads with one sourced example and its gloss, then the
   await expect(top).toContainText('from EXAMPLES')
   const flags = top.getByRole('list', { name: 'Key flags of tar(1)' })
   // -c (EXAMPLES) and --create (tldr) are one option: shown once.
-  await expect(flags.getByRole('link')).toHaveCount(4)
+  await expect(flags.getByRole('link')).toHaveCount(6)
   await expect(flags.locator('a[href="/man/tar/1#opt-create"]')).toHaveAttribute('href', '/man/tar/1#opt-create')
   await expect(flags).toContainText('Create a new archive.')
   // The example comes before the flags.
@@ -177,12 +177,15 @@ test('search: typed values are mono while placeholders keep their voice', async 
   expect(await family('input[name="bm-find"]')).toMatch(/^ui-monospace/)
 })
 
-for (const query of ['how do I extract a tarball', 'extract a tar archive', 'extract tarball', '--extract', '-xzf']) {
+for (const query of ['how do I extract a tarball', 'extract a tar archive', 'extract tarball', 'extract a tarb', '--extract', '-xzf', '-xzvf', '-czf', '-tf']) {
   test(`search: popularity ranks tar first for ${query}`, async ({ page }) => {
     await page.goto('/search?q=' + encodeURIComponent(query))
     const first = page.getByRole('list', { name: 'Search results' }).getByRole('listitem').first()
     await expect(first.getByRole('link', { name: 'tar(1)', exact: true })).toBeVisible()
     await expect(page.getByText('Did you mean:', { exact: false })).toHaveCount(0)
-    if (query.startsWith('-')) await expect(first.getByRole('link', { name: 'tar(1)', exact: true })).toHaveAttribute('href', '/man/tar/1#opt-extract')
+    if (query.startsWith('-')) {
+      const anchor = query === '-czf' ? 'opt-create' : query === '-tf' ? 'opt-list' : 'opt-extract'
+      await expect(first.getByRole('link', { name: 'tar(1)', exact: true })).toHaveAttribute('href', '/man/tar/1#' + anchor)
+    }
   })
 }

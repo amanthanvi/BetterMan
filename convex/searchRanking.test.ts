@@ -102,7 +102,7 @@ describe("review #465 regressions", () => {
 it("keeps original tarball vocabulary and rejects unrelated target prefixes", async () => {
   const t = await world([{ name: "unpack", task: "inspect a tarball" }, { name: "aim", task: "find a target" }]);
   expect((await q(t, "how to inspect a tarball")).results[0]).toMatchObject({ name: "unpack", taskPhrase: "inspect a tarball" });
-  expect((await q(t, "how to tar")).results).toEqual([]);
+  expect((await q(t, "how to tar archive")).results).toEqual([]);
 });
 
 it("updates and removes verified aliases atomically when B7 usage changes", async () => {

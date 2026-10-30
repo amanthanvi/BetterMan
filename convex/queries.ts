@@ -43,6 +43,15 @@ const MAX_DESCRIPTION_HITS = 24;
 const TASK_SYNONYMS = new Map([["tarball", "tar archive"], ["tarballs", "tar archive"]]);
 const SEARCH_STOP_WORDS = new Set("a an and are as at be by can do does for from how i in is it of on or the to what when where which with".split(" "));
 
+function taskExpansion(word: string, prefixWord?: string): string | undefined {
+  return TASK_SYNONYMS.get(word) ?? (word === prefixWord && word.length >= 4
+    ? [...TASK_SYNONYMS].find(([synonym]) => synonym.startsWith(word))?.[1] : undefined);
+}
+
+function wordOverlap(words: string[], queryWords: string[], prefixWord?: string): number {
+  return queryWords.filter(word => words.some(candidate => candidate === word || word === prefixWord && candidate.startsWith(word))).length;
+}
+
 function boundedInt(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   return Math.max(min, Math.min(Math.floor(value), max));
@@ -667,6 +676,7 @@ async function textHits(
   const symbols = section === null
     ? await ctx.db.query('manPageSymbols').withIndex('by_releaseId_and_termNorm', q => q.eq('releaseId', releaseId).eq('termNorm', queryNorm.replace(/=$/, ''))).take(8)
     : await ctx.db.query('manPageSymbols').withIndex('by_releaseId_and_section_and_termNorm', q => q.eq('releaseId', releaseId).eq('section', section).eq('termNorm', queryNorm.replace(/=$/, ''))).take(8);
+  const prefixWord = queryNorm.match(/[a-z0-9_]+$/)?.[0];
   const contentWords = queryNorm.split(/[^a-z0-9_]+/).filter((word) => word && !SEARCH_STOP_WORDS.has(word));
 
   const ranked = new Map<Id<"manPages">, RankedHit>();
@@ -680,7 +690,7 @@ async function textHits(
     // Convex returns ranked any-term matches. Keep content-word overlap, not
     // stop-word-only answers such as true(1) for "how do I extract a tarball".
     const words = `${doc.nameNorm} ${doc.descNorm}`.split(/[^a-z0-9_]+/);
-    const overlap = contentWords.filter((word) => words.includes(word)).length;
+    const overlap = wordOverlap(words, contentWords, prefixWord);
     if (queryNorm.includes(" ") && overlap === 0) return;
     ranked.set(doc.pageId, searchDocumentHit(doc, queryText, rankDescriptionDocument(doc, queryNorm, index) + overlap * 50));
   });
@@ -694,9 +704,9 @@ async function textHits(
   // One-letter words ("ls -l") would prefix-match most phrases.
   const taskWords = contentWords.filter((word) => word.length > 1);
   if (queryNorm.includes(" ") && taskWords.length) {
-    const taskQuery = queryNorm.replace(/\b[a-z]+\b/g, (word) => TASK_SYNONYMS.has(word) ? `${word} ${TASK_SYNONYMS.get(word)}` : word);
-    const expandedWords = [...new Set(taskWords.flatMap((word) => (TASK_SYNONYMS.has(word) ? `${word} ${TASK_SYNONYMS.get(word)}` : word).split(" ")))];
-    for (const hit of await taskHits(ctx, { releaseId, section, queryText: taskQuery, contentWords: expandedWords })) {
+    const taskQuery = queryNorm.replace(/\b[a-z]+\b/g, (word) => taskExpansion(word, prefixWord) ? `${word} ${taskExpansion(word, prefixWord)}` : word);
+    const expandedWords = [...new Set(taskWords.flatMap((word) => (taskExpansion(word, prefixWord) ? `${word} ${taskExpansion(word, prefixWord)}` : word).split(" ")))];
+    for (const hit of await taskHits(ctx, { releaseId, section, queryText: taskQuery, contentWords: expandedWords, prefixWord })) {
       const existing = ranked.get(hit.pageId!);
       if (!existing || existing.rank < hit.rank) ranked.set(hit.pageId!, hit);
     }
@@ -714,7 +724,7 @@ const MAX_TASK_HITS = 3;
 
 async function taskHits(
   ctx: QueryCtx,
-  args: { releaseId: Id<"datasetReleases">; section: string | null; queryText: string; contentWords: string[] },
+  args: { releaseId: Id<"datasetReleases">; section: string | null; queryText: string; contentWords: string[]; prefixWord?: string },
 ): Promise<RankedHit[]> {
   const rows = await ctx.db.query("manPageTaskPhrases")
     .withSearchIndex("search_taskText", (q) => {
@@ -729,7 +739,7 @@ async function taskHits(
     let best: { phrase: string; overlap: number } | null = null;
     for (const phrase of row.taskText.split("\n")) {
       const words = `${row.name} ${phrase}`.toLowerCase().split(/[^a-z0-9_]+/);
-      const overlap = args.contentWords.filter((word) => words.includes(word)).length;
+      const overlap = wordOverlap(words, args.contentWords, args.prefixWord);
       if (overlap && (!best || overlap > best.overlap)) best = { phrase, overlap };
     }
     if (!best) continue;

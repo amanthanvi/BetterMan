@@ -418,7 +418,8 @@ Separate from the release ingest contract, behind the same ingest secret:
 
 Task search adds `tar archive` alongside the original `tarball`/`tarballs` query
 word. This curated list applies only to task retrieval and evidence scoring.
-Phrase overlap uses complete tokens, including the task's command name as implicit
+Phrase overlap uses complete tokens except for the final type-ahead word,
+including the task's command name as implicit
 context: tar's "extract files from an archive" therefore shares `extract`, `tar`
 and `archive` with "extract a tar archive". Lexical overlap comes first,
 `popularityScore` breaks ties, then command name and section. A popular dd cannot
@@ -431,12 +432,22 @@ and section. B4's rounded score is retained as a secondary prior; tied essential
 packages are distinguished by their actual verified usage, not creation order.
 Aliases share evidence, so verified `-x` also supports `--extract`.
 
-`flagSearchCandidates` stores at most 16 candidates for a flag, with up to 12
-verified spellings per page (the same spelling budget as the top-hit brief).
-B7 usage updates refresh these rows, including withdrawals. Task-backfill version
-3 also builds them for existing active releases in batches of 16 pages, and sets
+`flagSearchCandidates` stores at most 16 candidates for a flag. The page budget
+is twelve verified **options**, aggregated by anchor before the cap, retaining
+all aliases of each selected option. Real tar's `--gzip`, `--gunzip`, `--ungzip`
+and `-z` therefore stay together. The top-hit brief keeps its separate twelve
+spelling lookup budget.
+
+B7 commits page usage first and schedules a refresh request. Requests coalesce
+into one serialized per-release backfill chain, rather than rewriting shared
+candidate rows in parallel with up to 256 page updates. Task-backfill version 4
+clears candidate rows and rebuilds from source in batches of four pages; a
+request arriving mid-scan requests one additional pass. This also restores
+previously evicted candidates when higher-ranked pages withdraw usage. It sets
 `datasetReleases.flagSearchReady` only when the full release scan completes.
-The existing deploy/activation entrypoints schedule this migration. Until it
+The existing deploy/activation entrypoints schedule this migration. Pending older
+jobs are canceled, and generation tokens make already-running or stale chains
+no-ops. Until it
 completes, scored and unscored releases both retain deterministic name-ordered
 option lookup. No option-row score backfill or new index on the large option
 table is needed; the only new index belongs to the initially empty sidecar table.
@@ -448,6 +459,7 @@ counts rank candidates, followed by popularity and deterministic name/section.
 Without complete verified coverage, a bounded name-ordered first-flag range is
 used. Direct attribution is bounded to 30 document reads before the optional
 brief; the saturated perf fixture measures that brief too. Recall remains bounded
-by the sidecar's 16 candidates and 12 spellings; broader coverage would need
+by the sidecar's 16 candidates and 12 complete options; broader coverage would need
 precomputed cluster keys. Existing named-cluster and ordinary search workloads
-retain their previous budgets.
+retain their previous budgets. The bare-cluster perf scenario now exercises six
+covering candidates and a full brief at 40 document reads.

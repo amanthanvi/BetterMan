@@ -287,7 +287,7 @@ export async function createExplainMultiFixture(onCall: () => void) {
   return t
 }
 
-// Isolated bare-cluster workload: tied essential-package scores, crowded -x, and all 12 brief lookups.
+// Worst-case bare-cluster workload: six covering candidates, crowded -x, and all 12 brief lookups.
 export async function createBareSearchFixture(onCall: () => void) {
   const t = await createSearchFixture(onCall)
   await t.run(async ctx => {
@@ -300,6 +300,17 @@ export async function createBareSearchFixture(onCall: () => void) {
     const verifiedFlagUsage = ['-x', '-z', '-f', ...extra].map(flag => ({ flag, count: flag.length === 2 ? 10 : 1, source: 'tldr' as const }))
     await ctx.db.patch(tar!._id, { popularityScore: 5470, verifiedFlagUsage })
     await syncFlagCandidates(ctx, { ...tar!, popularityScore: 5470, verifiedFlagUsage })
+    for (let i = 0; i < 5; i++) {
+      const name = `covering-${i}`
+      const pageId = await ctx.db.insert('manPages', { releaseId, datasetReleaseId: tar!.datasetReleaseId, externalId: name,
+        locale: 'en', distro: 'debian', name, section: '1', sitemapPage: 1, title: name, description: name,
+        sourcePath: name, contentSha256: name, hasParseWarnings: false, popularityScore: 5470,
+        verifiedFlagUsage: ['-x', '-z', '-f'].map(flag => ({ flag, count: 1, source: 'tldr' as const })) })
+      for (const row of optionFlagRows([{ flags: '-x', anchorId: 'x' }, { flags: '-z', anchorId: 'z' }, { flags: '-f', anchorId: 'f', argument: 'FILE' }])) {
+        await ctx.db.insert('manPageOptionFlags', { releaseId, pageId, nameNorm: name, section: '1', ...row })
+      }
+      await syncFlagCandidates(ctx, (await ctx.db.get(pageId))!)
+    }
     const grep = await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', releaseId).eq('name', 'grep')).unique()
     for (const flag of ['-x', '-z', '-f']) await ctx.db.insert('manPageOptionFlags', { releaseId, pageId: grep!._id, nameNorm: 'grep', section: '1', flag, flags: flag, anchorId: flag.slice(1), ...(flag === '-f' ? { takesArgument: true } : {}) })
     await ctx.db.patch(grep!._id, { popularityScore: 5470 })

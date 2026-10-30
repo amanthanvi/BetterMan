@@ -284,10 +284,10 @@ metadata. Their cold function/document/blob, HTML and client-byte metrics are
 budgeted separately. Existing metric policies and baselines are preserved.
 
 The `searchClusterBare` direct-query scenario covers `-xzf` with its top-hit brief,
-twelve verified flag lookups, tied 5470 popularity scores and six competing
-partial clusters. It requires tar first and records calls, documents and blob
-reads separately from the unchanged ordinary search page-view workload. The
-new descriptor caps it at one call and 20 document reads; existing descriptors
-and tolerances are unchanged. This measurement addition requires the existing
-`perf-budget-change` label and a Budget explanation, even though no existing
-allowance is raised.
+twelve verified flag lookups, tied 5470 popularity scores, six covering candidates
+and six competing partial clusters. It requires tar first and records calls,
+documents and blob reads separately from the unchanged ordinary search page-view
+workload. Its document limit is raised from 20 (one covering candidate) to 40,
+matching the measured saturated workload. The one-call/zero-blob limits, all other
+descriptors and all tolerances stay unchanged. This workload correction requires
+`perf-budget-change` and a Budget explanation acknowledging the additional reads.

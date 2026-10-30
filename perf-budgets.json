@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fixture": "scripts/perf-fixture.ts v13: isolated verified bare-cluster search with saturated brief; existing workloads unchanged",
+  "fixture": "scripts/perf-fixture.ts v14: worst-case bare cluster with six covering candidates and full brief; existing workloads unchanged",
   "profile": "Chromium, 1280x800, device scale 1, light, reduced motion, 4x CPU, no network throttle, cold browser, warm data cache; median of 5; 5s observation after network idle",
   "metrics": {
     "home.htmlBytes": {
@@ -698,7 +698,7 @@
       "absolute": 0
     },
     "searchClusterBare.documents": {
-      "baseline": 20,
+      "baseline": 40,
       "relative": 0,
       "absolute": 0
     },
@@ -715,7 +715,7 @@
     "convex": "1.48.0",
     "convexTest": "0.0.60"
   },
-  "fixtureSha256": "ac80d865d6562dab109286d6bd713f492c1a82a9bf9077959c56bedbcf23e79d",
+  "fixtureSha256": "9ff90c48629b0186dfc462f65c0e11c6e62b98253f018b43274cd286b249c424",
   "labBaseline": {
     "platform": "linux",
     "samplesPerRoute": 3,

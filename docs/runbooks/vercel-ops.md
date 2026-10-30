@@ -193,9 +193,12 @@ mode against a legacy release shape without popularity or verified flag usage.
 This revision removes #465's proposed indexes on `manPageOptionFlags`. Its sole
 new index is on a new, empty `flagSearchCandidates` table, so this rollout needs
 no `confirm_large_indexes` dispatch. Normal deployment schedules task-backfill
-version 3 through the existing entrypoint. That scan populates verified flag
+version 4 through the existing entrypoint. That scan populates verified flag
 candidates and marks each release `flagSearchReady` only on completion; until then
-search uses deterministic fallback. B7 keeps the candidates current afterward.
+search uses deterministic fallback. B7 page writes schedule coalesced requests to
+the same serialized release writer afterward. Each refresh rebuilds from source
+so withdrawals restore evicted candidates; search uses fallback while rebuilding.
+Pending old-version jobs are canceled and generation tokens supersede stale chains.
 `pnpm convex:task-check` reports completion/failures through the existing durable
 per-release status. No production workflow or migration was executed by the
 implementation agent.

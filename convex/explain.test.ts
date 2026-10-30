@@ -611,7 +611,14 @@ describe('task-phrase rows (C5)', () => {
             scanned: 1, written: 1, jobId, attempts: 0, updatedAt: 0 });
         }
       });
+      const oldJobs = await t.run(async ctx => (await ctx.db.query('taskPhraseBackfills').take(4)).map(row => row.jobId!));
       expect((await t.mutation(internal.taskPhrases.backfillActiveReleases, {})).scheduled).toBe(2);
+      expect(await t.run(async ctx => Promise.all(oldJobs.map(async id => (await ctx.db.system.get(id))?.state.kind)))).toEqual(['canceled', 'canceled']);
+      const current = await t.run(ctx => ctx.db.query('taskPhraseBackfills').take(4));
+      for (const row of current) {
+        expect(await t.mutation(internal.taskPhrases.backfillRelease, { releaseId: row.releaseId })).toEqual({ done: false });
+        expect(await t.mutation(internal.taskPhrases.backfillRelease, { releaseId: row.releaseId, generation: row.generation! - 1 })).toEqual({ done: false });
+      }
       await t.finishAllScheduledFunctions(() => vi.runAllTimers());
       const rows = await t.run(ctx => ctx.db.query('manPageTaskPhrases').take(4));
       expect(rows).toHaveLength(2);

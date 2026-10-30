@@ -128,9 +128,11 @@ function makePages(distro) {
           definitionBlocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Create a new archive.' }] }],
         },
         ...[
-          ['-x, --extract', 'opt-extract', 'Extract files from an archive.'],
-          ['-z, --gzip', 'opt-gzip', 'Filter through gzip.'],
+          ['-x, --extract, --get', 'opt-extract', 'Extract files from an archive.'],
+          ['-z, --gzip, --gunzip, --ungzip', 'opt-gzip', 'Filter through gzip.'],
           ['-f, --file ARCHIVE', 'opt-file', 'Use archive file.'],
+          ['-v, --verbose', 'opt-verbose', 'List processed files.'],
+          ['-t, --list', 'opt-list', 'List archive contents.'],
         ].map(([flags, id, description]) => ({
           id, termInlines: [{ type: 'code', text: flags }],
           definitionBlocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: description }] }],
@@ -138,7 +140,7 @@ function makePages(distro) {
       ],
     },
     { type: 'heading', id: 'examples', level: 2, text: 'EXAMPLES' },
-    { type: 'code_block', id: 'example-1', text: 'tar -cf archive.tar ./my-folder\n\ntar -xf archive.tar', languageHint: 'bash' },
+    { type: 'code_block', id: 'example-1', text: 'tar -cf archive.tar ./my-folder\n\ntar -xzf archive.tar.gz\n\ntar -czf archive.tar.gz ./my-folder\n\ntar -tvf archive.tar', languageHint: 'bash' },
     { type: 'heading', id: 'see-also', level: 2, text: 'SEE ALSO' },
     {
       type: 'paragraph',
@@ -165,9 +167,11 @@ function makePages(distro) {
     synopsis: ['tar [OPTION]... [FILE]...'],
     options: [
       { flags: '-c, --create', argument: null, description: 'Create a new archive.', anchorId: tarOptAnchor },
-      { flags: '-x, --extract', anchorId: 'opt-extract', description: 'Extract files from an archive.' },
-      { flags: '-z, --gzip', anchorId: 'opt-gzip', description: 'Filter through gzip.' },
+      { flags: '-x, --extract, --get', anchorId: 'opt-extract', description: 'Extract files from an archive.' },
+      { flags: '-z, --gzip, --gunzip, --ungzip', anchorId: 'opt-gzip', description: 'Filter through gzip.' },
       { flags: '-f, --file', argument: 'ARCHIVE', anchorId: 'opt-file', description: 'Use archive file.' },
+      { flags: '-v, --verbose', anchorId: 'opt-verbose', description: 'List processed files.' },
+      { flags: '-t, --list', anchorId: 'opt-list', description: 'List archive contents.' },
     ],
     seeAlso: [{ name: 'gzip', section: '1', resolvedPageId: gzip.externalId }, { name: 'cpio', section: '1', resolvedPageId: null }],
     popularityScore: 5470,
@@ -257,7 +261,7 @@ function makePages(distro) {
   })
   const competitors = [['instmodsh', 4900], ['ptar', 4900], ['dpkg', 5470]].map(([name, popularityScore]) => page({
     name, popularityScore, section: '1', title: `${name}(1)`, description: `${name} utility`,
-    toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: `${name} utility` }] }], options: [{ flags: '-x, --extract', anchorId: 'extract', description: 'Extract files.' }],
+    toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: `${name} utility` }] }], options: [{ flags: '-x, --extract, --get', anchorId: 'extract', description: 'Extract files.' }],
   }))
   const pages = [gzip, tar, printf1, printf3, openssl, evp, bash, perl, ...competitors]
   // Linux only, so FreeBSD and macOS have a page another distro carries.
@@ -369,7 +373,8 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
       page: { examples: [
         { description: 'Create an archive from a folder', command: 'tar -cf archive.tar ./my-folder' },
         { description: 'Extract a gzipped archive', command: 'tar -xzf archive.tar.gz' },
-      ], flagUsage: unscored ? [] : [{ flag: '-c', count: 1 }, { flag: '-x', count: 1 }, { flag: '-z', count: 1 }, { flag: '-f', count: 2 }] },
+        { description: 'List archive contents verbosely', command: 'tar -tvf archive.tar' },
+      ], flagUsage: unscored ? [] : [{ flag: '-c', count: 2 }, { flag: '-x', count: 1 }, { flag: '-z', count: 2 }, { flag: '-f', count: 4 }, { flag: '-v', count: 1 }, { flag: '-t', count: 1 }] },
       tldr: {
         commit: 'f4566462f5996e13a4f3523f21dc2a863aec53c1', path: 'common/tar.md', rejected: 0,
         examples: [{ description: 'Create an archive and write it to a file', command: 'tar --create --file path/to/target.tar path/to/file', placeholders: [[20, 38], [39, 51]] }],

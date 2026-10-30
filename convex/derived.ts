@@ -1,4 +1,3 @@
-import { syncFlagCandidates } from "./_flagSearch";
 import { getConvexSize, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -666,7 +665,7 @@ export const setVerifiedFlagUsage = internalMutation({
     const release = await ctx.db.get(page.releaseId);
     if (!release || release.pruning) throw new Error("RELEASE_NOT_AVAILABLE");
     await ctx.db.patch(page._id, { verifiedFlagUsage: args.usage });
-    await syncFlagCandidates(ctx, { ...page, verifiedFlagUsage: args.usage }, page);
+    await ctx.scheduler.runAfter(0, internal.taskPhrases.requestFlagRefresh, { releaseId: page.releaseId });
     const input = await inputForPage(ctx, page);
     const row = await storedRow(ctx, page.locale, page.distro, page.name, page.section);
     if (row && row.releaseId === page.releaseId && row.pageId === page._id && input?.status === "ready" && row.sourceContentSha256 === page.contentSha256) {

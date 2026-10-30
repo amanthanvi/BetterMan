@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { pathToFileURL } from 'node:url'
-import { ConvexHttpClient } from 'convex/browser'
-import { anyApi as api } from 'convex/server'
+let api
 
 const VALID_DISTROS = new Set(['debian', 'ubuntu', 'fedora', 'arch', 'alpine', 'freebsd', 'macos'])
 
@@ -98,7 +97,7 @@ export async function checkRanking(client, distro, strict = false) {
   if (distro !== 'debian') return { failures, warnings }
   for (const q of ['how do I extract a tarball', 'extract a tar archive', 'extract tarball', '--extract', '-xzf']) {
     try {
-      const result = await client.query(api.queries.search, { distro, q, section: null, limit: 5, offset: 0 })
+      const result = await client.query('queries:search', { distro, q, section: null, limit: 5, offset: 0 })
       const candidates = result.results.slice(0, strict ? 1 : 3)
       if (!candidates.some(hit => hit.name === 'tar' && hit.section === '1')) {
         issues.push(`ranking search ${q} did not place tar(1) in ${strict ? 'first place' : 'the top 3'}`)
@@ -225,6 +224,9 @@ async function main() {
   const distros = parseDistros()
   const minPageCount = parseMinPageCount()
   const expectedReleaseIds = parseExpectedReleaseIds(distros)
+  const { ConvexHttpClient } = await import('convex/browser')
+  const { anyApi } = await import('convex/server')
+  api = anyApi
   const client = new ConvexHttpClient(convexUrl)
   const releases = await client.query(api.queries.listSeoReleases, {})
   const activeDistros = new Set(releases.items.map((item) => item.distro))

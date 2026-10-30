@@ -372,9 +372,10 @@ try {
   metrics = { calls: 0, documents: 0, storageReads: 0 }
   const bare = await fixture.query(makeFunctionReference('queries:search'), { distro: 'debian', q: '-xzf', section: null, limit: 20, offset: 0, brief: true })
   assert.equal(bare.results[0]?.name, 'tar')
+  assert.equal(bare.results.length, 6, 'Worst-case bare cluster must resolve six covering candidates')
   assert.deepEqual(bare.results[0].highlights, ['-x, --extract', '-z, --gzip', '-f, --file'])
   assert.equal(bare.top.flags.length, 6, 'Bare cluster must include the saturated top-hit brief')
-  assert.ok(metrics.documents <= 30, 'Precomputed bare-cluster workload exceeded its read cap')
+  assert.ok(metrics.documents <= 40, 'Worst-case bare cluster plus brief exceeded its read cap')
   for (const [metric, value] of Object.entries(metrics)) actual[`searchClusterBare.${metric}`] = value
   details.searchClusterBare = { q: '-xzf', scope: 'direct Convex search with brief', costs: { ...metrics }, resultCount: bare.results.length }
   console.log(`searchClusterBare: ${JSON.stringify(metrics)}`)
