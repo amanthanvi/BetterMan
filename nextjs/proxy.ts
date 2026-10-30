@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { DISTRO_COOKIE, normalizeDistro } from './lib/distro'
 import { manBootScriptHash } from './lib/manBoot'
-import { encodeReleaseHeader, RELEASE_HEADER, RELEASE_PARAM, RELEASE_TOKEN_HEADER, releaseToken, servingRelease, type ReleaseInfo } from './lib/manRelease'
+import { encodeReleaseHeader, RELEASE_HEADER, RELEASE_PARAM, RELEASE_TOKEN_HEADER, releaseToken, servingRelease, UNKNOWN_RELEASE, type ReleaseInfo } from './lib/manRelease'
 
 function createNonce(): string {
   return btoa(crypto.randomUUID())
@@ -85,13 +85,15 @@ async function releaseWithin(distro: Parameters<typeof servingRelease>[0]): Prom
  * one is sent to the explicit URL, privately. Explicit URLs, and bare ones without
  * such a cookie, are rewritten to carry the active release, which keys the cache.
  */
-async function manProxy(request: NextRequest, cspEnabled: boolean): Promise<NextResponse> {
+async function manProxy(request: NextRequest, cspEnabled: boolean, text = false): Promise<NextResponse> {
   const url = request.nextUrl
   const explicit = normalizeDistro(url.searchParams.get('distro'))
   const preferred = normalizeDistro(request.cookies.get(DISTRO_COOKIE)?.value)
-  const csp = cspEnabled ? buildCsp([await manBootScriptHash()], { strictDynamic: false }) : null
+  const csp = cspEnabled ? text
+    ? buildCsp([`'nonce-${createNonce()}'`], { strictDynamic: true })
+    : buildCsp([await manBootScriptHash()], { strictDynamic: false }) : null
 
-  if (!explicit && preferred && preferred !== 'debian') {
+  if (!text && !explicit && preferred && preferred !== 'debian') {
     const target = url.clone()
     target.searchParams.delete(RELEASE_PARAM)
     target.searchParams.set('distro', preferred)
@@ -104,14 +106,12 @@ async function manProxy(request: NextRequest, cspEnabled: boolean): Promise<Next
   const requestHeaders = new Headers(request.headers)
   requestHeaders.delete(RELEASE_HEADER)
   requestHeaders.delete(RELEASE_TOKEN_HEADER)
-  if (release) {
-    requestHeaders.set(RELEASE_HEADER, encodeReleaseHeader(release))
-    // Proves to the renderer that this proxy, not the client, set the release.
-    requestHeaders.set(RELEASE_TOKEN_HEADER, releaseToken())
-  }
+  requestHeaders.set(RELEASE_HEADER, release ? encodeReleaseHeader(release) : UNKNOWN_RELEASE)
+  // Proves to the renderer that this proxy, not the client, set the release.
+  requestHeaders.set(RELEASE_TOKEN_HEADER, releaseToken())
   if (isLoopback(request)) return setSecurityHeaders(NextResponse.next({ request: { headers: requestHeaders } }), csp)
   const target = url.clone()
-  target.searchParams.set(RELEASE_PARAM, release?.datasetReleaseId ?? 'unknown')
+  target.searchParams.set(RELEASE_PARAM, release?.datasetReleaseId ?? UNKNOWN_RELEASE)
   return setSecurityHeaders(NextResponse.rewrite(target, { request: { headers: requestHeaders } }), csp)
 }
 
@@ -139,6 +139,11 @@ export async function proxy(request: NextRequest) {
   if (redirect) return setSecurityHeaders(redirect, null)
   const cspEnabled = process.env.CSP_ENABLED !== 'false'
   if (isManHtmlPath(request.nextUrl.pathname)) return await manProxy(request, cspEnabled)
+  const path = request.nextUrl.pathname
+  // Keep root concrete .txt routes in sync with the afterFiles rewrites in next.config.ts.
+  if (/^\/man\/[^/]+\/[^/]+\.txt$/.test(path) || (/^\/[^/]+\.txt$/.test(path) && path !== '/robots.txt')) {
+    return await manProxy(request, cspEnabled, true)
+  }
 
   if (!cspEnabled) return setSecurityHeaders(NextResponse.next(), null)
 
@@ -164,5 +169,6 @@ export const config = {
     // Man page prefetches get the release key too, so they are cacheable and a
     // client cannot reach the renderer past the proxy with its own release header.
     { source: '/man/:path*' },
+    { source: '/:name.txt' },
   ],
 }

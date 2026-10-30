@@ -6,7 +6,7 @@ vi.mock('./convexClient', () => ({ getConvexClient: () => convex }))
 import { createHash } from 'node:crypto'
 
 import { MAN_BOOT_SCRIPT, manBootScriptHash } from './manBoot'
-import { decodeReleaseHeader, encodeReleaseHeader, RELEASE_TTL_MS, resetReleaseCache, servingRelease, trustedRelease } from './manRelease'
+import { decodeReleaseHeader, encodeReleaseHeader, RELEASE_TTL_MS, resetReleaseCache, servingRelease, trustedProxyRelease, trustedRelease } from './manRelease'
 
 const info = (distro: string, datasetReleaseId = `2026-10-28+${distro}`) => ({ datasetReleaseId, distro, locale: 'en', pageCount: 7, lastUpdated: '2026-10-28T00:00:00Z' })
 
@@ -57,4 +57,12 @@ it('trusts a forwarded release only with the proxy token', () => {
   expect(trustedRelease({ 'x-bm-release': header, 'x-bm-release-token': 'secret-tokem' })).toBeNull()
   delete process.env.BM_RELEASE_TOKEN
   expect(trustedRelease({ 'x-bm-release': header, 'x-bm-release-token': '' })).toBeNull()
+})
+
+it('distinguishes a trusted unknown release from missing or malformed headers', () => {
+  vi.stubEnv('BM_RELEASE_TOKEN', 'secret-token')
+  expect(trustedProxyRelease({ 'x-bm-release': 'unknown', 'x-bm-release-token': 'secret-token' })).toBeNull()
+  expect(trustedProxyRelease({ 'x-bm-release': 'unknown' })).toBeUndefined()
+  expect(trustedProxyRelease({ 'x-bm-release': '{}', 'x-bm-release-token': 'secret-token' })).toBeUndefined()
+  vi.unstubAllEnvs()
 })

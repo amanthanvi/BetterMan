@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Man pages: isolate plain-text manuals and redirects by dataset release across promotions and rollbacks (#452).
 - CI: the e2e job fails when the committed `convex/_generated` differs from what `npx convex dev` generates, so a Convex upgrade or a new Convex module cannot merge with stale generated code. The AI guideline files under `convex/_generated/ai/` are not compared.
 - Ingestion: reject archive aliases whose exact package target failed to parse, cover canonical versus provider ownership through the real parser, and document the full-Debian nc provider switch before promotion (#393).
 - Ingestion: the distro containers and the FreeBSD job can install the ingestion package again. Since `ingestion/data/` was added (#436), `pip install` found two top-level packages and stopped, which would have failed every curated distro's ingest. The package is now named explicitly, and CI checks that pip can install it.

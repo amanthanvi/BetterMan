@@ -18,10 +18,11 @@ const manual: ManPageResponse = {
   content: { blocks: [], toc: [], synopsis: ['tar [OPTION]...'] },
 }
 const ctx = (page = ['tar', '1']) => ({ params: Promise.resolve({ page }) })
-const req = (query = '') => new Request(`https://betterman.sh/man/tar/1.txt${query}`, { headers: { 'x-vercel-forwarded-for': '192.0.2.1' } })
+const req = (query = '') => new Request(`https://betterman.sh/man/tar/1.txt${query}`, { headers: { 'x-vercel-forwarded-for': '192.0.2.1', 'x-bm-release-token': 'test-token', 'x-bm-release': JSON.stringify({ datasetReleaseId: 'test', distro: 'debian', pageCount: 1, lastUpdated: '' }) } })
 
 beforeEach(() => {
   vi.resetAllMocks()
+  vi.stubEnv('BM_RELEASE_TOKEN', 'test-token')
   vi.stubEnv('PUBLIC_BASE_URL', 'https://betterman.sh')
   vi.mocked(isRateLimited).mockResolvedValue(false)
   vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'page', data: manual })
@@ -39,7 +40,7 @@ it('uses the existing section payload, with a canonical HTML pointer and page-AP
   expect(res.headers.get('link')).toBe('<https://betterman.sh/man/tar/1?distro=ubuntu>; rel="canonical"')
   expect(await res.text()).toContain('TAR(1)')
   expect(isRateLimited).toHaveBeenCalledWith(request.headers, 'page')
-  expect(fetchManByNameAndSectionOrAlias).toHaveBeenCalledExactlyOnceWith({ distro: 'ubuntu', name: 'tar', section: '1' })
+  expect(fetchManByNameAndSectionOrAlias).toHaveBeenCalledExactlyOnceWith({ distro: 'ubuntu', name: 'tar', section: '1', release: 'test' })
   expect(fetchManResolve).not.toHaveBeenCalled()
 })
 
@@ -49,7 +50,7 @@ it('resolves the short form to the HTML section cache and ignores browser distro
   const res = await GET(request, ctx(['TAR']))
   expect(res.status).toBe(308)
   expect(res.headers.get('location')).toBe('/man/tar/1.txt')
-  expect(fetchManResolve).toHaveBeenCalledExactlyOnceWith({ distro: 'debian', name: 'tar' })
+  expect(fetchManResolve).toHaveBeenCalledExactlyOnceWith({ distro: 'debian', name: 'tar', release: 'test' })
   expect(fetchManByNameAndSectionOrAlias).not.toHaveBeenCalled()
 })
 
@@ -88,7 +89,7 @@ it('falls back only for an unavailable release and uses its canonical distro', a
   const res = await GET(req('?distro=arch'), ctx())
   expect(res.status).toBe(200)
   expect(res.headers.get('link')).toBe('<https://betterman.sh/man/tar/1>; rel="canonical"')
-  expect(fetchManByNameAndSectionOrAlias).toHaveBeenLastCalledWith({ distro: 'debian', name: 'tar', section: '1' })
+  expect(fetchManByNameAndSectionOrAlias).toHaveBeenLastCalledWith({ distro: 'debian', name: 'tar', section: '1', release: 'test' })
 })
 
 it('offers explicit text URLs for ambiguous names', async () => {
@@ -129,7 +130,7 @@ it('HEAD has the same headers and rate limit, with no body', async () => {
 it('loads tar.1.txt from the same section payload used by HTML', async () => {
   const res = await GET(req(), ctx(['tar.1']))
   expect(res.status).toBe(200)
-  expect(fetchManByNameAndSectionOrAlias).toHaveBeenCalledExactlyOnceWith({ distro: 'debian', name: 'tar', section: '1' })
+  expect(fetchManByNameAndSectionOrAlias).toHaveBeenCalledExactlyOnceWith({ distro: 'debian', name: 'tar', section: '1', release: 'test' })
   expect(fetchManResolve).not.toHaveBeenCalled()
 })
 
@@ -153,7 +154,7 @@ it('decodes Perl route parameters exactly once for text payloads and name-only r
   const response = await GET(req(), ctx(['foo%3A%3Abar', '3pm']))
   expect(response.status).toBe(200)
   expect(await response.text()).toContain('FOO::BAR(3pm)')
-  expect(fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'foo::bar', section: '3pm' })
+  expect(fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'foo::bar', section: '3pm', release: 'test' })
   vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'page', name: 'foo::bar', section: '3pm', title: '', description: '', datasetReleaseId: 'r1' })
   expect((await GET(req(), ctx(['foo%3A%3Abar']))).headers.get('location')).toBe('/man/foo%3A%3Abar/3pm.txt')
 })
@@ -166,7 +167,16 @@ it.each(['foo%253A%253Abar', 'foo%ZZ'])('rejects malformed or doubly encoded tex
 it('selects an explicit package provider and preserves it through short-route redirects', async () => {
   const res = await GET(req('?pkg=alternate'), ctx())
   expect(res.status).toBe(200)
-  expect(fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'tar', section: '1', pkg: 'alternate' })
+  expect(fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'tar', section: '1', pkg: 'alternate', release: 'test' })
   const redirect = await GET(req('?pkg=alternate'), ctx(['tar']))
   expect(redirect.headers.get('location')).toBe('/man/tar/1.txt?pkg=alternate')
+})
+
+
+it('does not share a response when the proxy release is absent or does not match', async () => {
+  const untrusted = req()
+  untrusted.headers.delete('x-bm-release-token')
+  expect((await GET(untrusted, ctx())).headers.get('cache-control')).toBe('private, no-store')
+  vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'page', data: { ...manual, page: { ...manual.page, datasetReleaseId: 'other' } } })
+  expect((await GET(req(), ctx())).headers.get('cache-control')).toBe('private, no-store')
 })

@@ -19,6 +19,7 @@ export type ReleaseInfo = {
 export const RELEASE_TTL_MS = 60_000
 /** Forwards the release the cache key used to the renderer, for its footer and data-cache keys. */
 export const RELEASE_HEADER = 'x-bm-release'
+export const UNKNOWN_RELEASE = 'unknown'
 /**
  * Sent beside RELEASE_HEADER. The renderer trusts the release only with this
  * token, so a request that reached it some other way (a matcher gap, a direct
@@ -73,11 +74,17 @@ function constantTimeEqual(a: string, b: string): boolean {
 
 type HeaderValue = string | string[] | undefined | null
 
-/** The release the proxy forwarded, or null when it lacks the proxy's token or is malformed. */
-export function trustedRelease(headers: Record<string, HeaderValue>): ReleaseInfo | null {
+/** Undefined means untrusted, null means the proxy could not resolve a release. */
+export function trustedProxyRelease(headers: Record<string, HeaderValue>): ReleaseInfo | null | undefined {
   const token = [headers[RELEASE_TOKEN_HEADER]].flat()[0]
-  if (!token || !process.env.BM_RELEASE_TOKEN || !constantTimeEqual(token, process.env.BM_RELEASE_TOKEN)) return null
-  return decodeReleaseHeader(headers[RELEASE_HEADER])
+  if (!token || !process.env.BM_RELEASE_TOKEN || !constantTimeEqual(token, process.env.BM_RELEASE_TOKEN)) return undefined
+  if (headers[RELEASE_HEADER] === UNKNOWN_RELEASE) return null
+  return decodeReleaseHeader(headers[RELEASE_HEADER]) ?? undefined
+}
+
+/** The release the proxy forwarded, or null when unknown or untrusted. */
+export function trustedRelease(headers: Record<string, HeaderValue>): ReleaseInfo | null {
+  return trustedProxyRelease(headers) ?? null
 }
 
 /** Anything malformed reads as unknown. */

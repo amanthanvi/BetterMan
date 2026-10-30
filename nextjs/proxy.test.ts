@@ -66,8 +66,8 @@ it('drops a client-sent release and uses an unknown key when no release answers'
   release.servingRelease.mockResolvedValue(null)
   const response = await proxy(new NextRequest('https://betterman.sh/man/tar/1?__bm_release=forged', { headers: { 'x-bm-release': JSON.stringify(releaseFor('debian')) } }))
   expect(new URL(response.headers.get('x-middleware-rewrite')!).searchParams.get('__bm_release')).toBe('unknown')
-  expect(response.headers.get('x-middleware-request-x-bm-release')).toBeNull()
-  expect(response.headers.get('x-middleware-request-x-bm-release-token')).toBeNull()
+  expect(response.headers.get('x-middleware-request-x-bm-release')).toBe('unknown')
+  expect(response.headers.get('x-middleware-request-x-bm-release-token')).toBe('test-release-token')
 })
 
 it.each([
@@ -94,13 +94,15 @@ it.each([
   expect(response.headers.get('set-cookie')).toBeNull()
 })
 
-it('leaves text exports, share images and other routes to their own handlers', async () => {
+it('keys text exports without applying the HTML distro cookie', async () => {
   for (const path of ['/man/tar/1.txt', '/man/tar/1/og', '/man', '/man/tar/1/extra', '/tar']) expect(isManHtmlPath(path)).toBe(false)
   // A one-segment name ending in .txt is no text export: the man page renderer answers it.
   expect(isManHtmlPath('/man/ls.txt')).toBe(true)
   const response = await proxy(new NextRequest('https://betterman.sh/man/tar/1.txt', { headers: { cookie: 'bm-distro=ubuntu' } }))
   expect(response.status).toBe(200)
   expect(response.headers.get('content-security-policy')).toContain("'nonce-")
+  expect(new URL(response.headers.get('x-middleware-rewrite')!).searchParams.get('__bm_release')).toBe('2026-10-28+debian')
+  expect(release.servingRelease).toHaveBeenCalledWith('debian')
 })
 
 it.each(['/api', '/api/v1/info', '/api/v1/man/tar/1', '/assets', '/assets/site.js', '/assets/entry', '/_bm/man.0123456789abcdef.js'])('skips API and asset routes: %s', (url) => {
@@ -134,4 +136,11 @@ it.each(['/explain?cmd=tar%20-x', '/search?q=tar'])('keeps the nonce CSP on %s',
   vi.stubEnv('NODE_ENV', 'production')
   const csp = (await proxy(new NextRequest(`https://betterman.sh${url}`))).headers.get('content-security-policy')!
   expect(csp).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/)
+})
+
+
+it.each(['/tar.txt', '/tar.1.txt', '/man/tar/1.txt'])('keys text URL and its prefetch on the active release: %s', async (path) => {
+  expect(unstable_doesMiddlewareMatch({ config, url: path, headers: { purpose: 'prefetch' } })).toBe(true)
+  const response = await proxy(new NextRequest(`https://betterman.sh${path}?__bm_release=forged`))
+  expect(new URL(response.headers.get('x-middleware-rewrite')!).searchParams.get('__bm_release')).toBe('2026-10-28+debian')
 })

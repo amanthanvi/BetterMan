@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
  * Release A is active, B is promoted, then A comes back (a rollback). For up to
@@ -30,6 +30,9 @@ vi.mock('./rateLimit', () => ({ isRateLimited: async () => false }))
 import { getFunctionName, type FunctionReference } from 'convex/server'
 
 import { lookupManPage, manMiss, resolveManName } from './manLookup'
+import { GET, HEAD } from '../app/plain-text/[...page]/route'
+
+vi.mock('./manText', () => ({ renderManText: (data: { page: { datasetReleaseId: string } }) => `release ${data.page.datasetReleaseId}` }))
 
 // What each release answers: in A, race-probe(1) is a page; in B it lives in section 9,
 // the alias points elsewhere and the page is gone.
@@ -74,6 +77,7 @@ beforeEach(() => {
   backend.action.mockReset().mockImplementation(async (_ref: unknown, args: { name: string }) => manByNameAndSection(args))
   backend.query.mockReset().mockImplementation(async (ref: FunctionReference<'query'>, args: Record<string, unknown>) => secondary(getFunctionName(ref), args))
 })
+afterEach(() => vi.unstubAllEnvs())
 
 describe('a promotion and a rollback within the proxy TTL', () => {
   it('stores nothing B answered under A, so the rollback serves A again', async () => {
@@ -129,4 +133,41 @@ describe('a promotion and a rollback within the proxy TTL', () => {
       answeredByKey: true,
     })
   })
+})
+
+
+it('does not cache text pages, redirects or misses from B under A across rollback', async () => {
+  vi.stubEnv('BM_RELEASE_TOKEN', 'race-test-token')
+  const headers = { 'x-bm-release-token': 'race-test-token', 'x-bm-release': JSON.stringify({ datasetReleaseId: 'A', distro: 'debian', pageCount: 1, lastUpdated: '' }) }
+  const get = (page: string[]) => GET(new Request('https://betterman.sh/text', { headers }), { params: Promise.resolve({ page }) })
+  backend.active = 'B'
+  for (const page of [['race-related', '1'], ['race-alias', '1'], ['race-probe'], ['race-probe', '1']]) {
+    const response = await get(page)
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
+  }
+  backend.active = 'A'
+  expect(await (await get(['race-related', '1'])).text()).toBe('release A')
+  expect((await get(['race-alias', '1'])).headers.get('location')).toBe('/man/gzip/1.txt')
+  expect((await get(['race-probe'])).headers.get('location')).toBe('/man/race-probe/1.txt')
+  expect((await get(['race-probe', '1'])).headers.get('cache-control')).toContain('public')
+  const head = await HEAD(new Request('https://betterman.sh/text', { method: 'HEAD', headers }), { params: Promise.resolve({ page: ['race-related', '1'] }) })
+  expect(await head.text()).toBe('')
+  expect(head.headers.get('cache-control')).toContain('public')
+})
+
+it('reuses the unkeyed data cache only for a trusted unknown release, while keeping responses private', async () => {
+  vi.stubEnv('BM_RELEASE_TOKEN', 'race-test-token')
+  backend.active = 'A'
+  const get = (headers: Record<string, string>, page: string[]) => GET(new Request('https://betterman.sh/plain-text', { headers }), { params: Promise.resolve({ page }) })
+  const unknown = { 'x-bm-release-token': 'race-test-token', 'x-bm-release': 'unknown' }
+  for (let i = 0; i < 2; i++) {
+    expect((await get(unknown, ['race-related', '1'])).headers.get('cache-control')).toBe('private, no-store')
+    expect((await get(unknown, ['race-probe'])).headers.get('cache-control')).toBe('private, no-store')
+  }
+  expect(backend.action).toHaveBeenCalledTimes(1)
+  expect(backend.query).toHaveBeenCalledTimes(1)
+  for (let i = 0; i < 2; i++) {
+    expect((await get({ 'x-bm-release': 'unknown' }, ['race-related', '1'])).headers.get('cache-control')).toBe('private, no-store')
+  }
+  expect(backend.action).toHaveBeenCalledTimes(3)
 })

@@ -59,7 +59,7 @@ const nextConfig: NextConfig = {
           destination: '/sitemaps-internal/:distro',
         },
       ],
-      // Concrete routes (notably robots.txt) win; these run before the short-URL catch-all.
+      // Concrete routes (notably robots.txt) win; keep proxy.ts's root .txt exclusions in sync.
       afterFiles: [
         { source: '/man/:name/:section.txt', destination: '/plain-text/:name/:section' },
         { source: '/:name.txt', destination: '/plain-text/:name' },
