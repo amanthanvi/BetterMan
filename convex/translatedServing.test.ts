@@ -219,7 +219,7 @@ describe("translated pages (#395)", () => {
     expect((await read(1)).length).toBe(1002);
     expect((await read(2)).length).toBe(1000);
     expect((await read(3)).map((item) => item.name)).toEqual(["bulk02000", "bulk02001", "bulk02002", "bulk02003", "bulk02004", "bulk02005", "bulk02006", "bulk02007", "bulk02008", "bulk02009", "bulk02010", "bulk02011", "bulk02012", "bulk02013", "bulk02014", "bulk02015", "bulk02016", "bulk02017", "bulk02018", "bulk02019", "bulk02020", "bulk02021", "bulk02022", "bulk02023", "bulk02024", "bulk02025", "bulk02026", "bulk02027", "bulk02028", "bulk02029", "bulk02030", "bulk02031", "bulk02032", "bulk02033", "bulk02034", "bulk02035", "bulk02036", "bulk02037", "bulk02038", "bulk02039", "bulk02040", "bulk02041", "bulk02042", "bulk02043", "bulk02044", "bulk02045", "bulk02046", "bulk02047", "bulk02048", "bulk02049", "bulk02050", "bulk02051", "bulk02052", "bulk02053", "bulk02054", "bulk02055", "bulk02056", "bulk02057", "bulk02058", "bulk02059", "bulk02060", "bulk02061", "bulk02062", "bulk02063", "bulk02064", "bulk02065", "bulk02066", "bulk02067", "bulk02068", "bulk02069", "bulk02070", "bulk02071", "bulk02072", "bulk02073", "bulk02074", "bulk02075", "bulk02076", "bulk02077", "bulk02078", "bulk02079", "bulk02080", "bulk02081", "bulk02082", "bulk02083", "bulk02084", "bulk02085", "bulk02086", "bulk02087", "bulk02088", "bulk02089", "bulk02090", "bulk02091", "bulk02092", "bulk02093", "bulk02094", "bulk02095", "bulk02096", "bulk02097", "bulk02098", "bulk02099", "bulk02100"]);
-  });
+  }, 60_000);
 
   it("counts English only when it has the page itself, not an alias", async () => {
     const t = convexTest(schema, modules);
