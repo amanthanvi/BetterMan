@@ -2,6 +2,9 @@ import type { GetServerSidePropsContext } from 'next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const limiter = vi.hoisted(() => ({ isRateLimited: vi.fn() }))
+vi.mock('../../lib/rateLimit', () => limiter)
+
 const lookup = vi.hoisted(() => ({ lookupManPage: vi.fn(), manMiss: vi.fn(), resolveManName: vi.fn() }))
 vi.mock('../../lib/manLookup', () => lookup)
 
@@ -43,6 +46,7 @@ afterEach(() => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  limiter.isRateLimited.mockResolvedValue(false)
   lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data, related: [], servedRelease: '2026-10-28+debian' })
   lookup.manMiss.mockImplementation(async (opts: object) => ({ ...opts, suggestions: [], distros: [], limited: false, answeredByKey: true }))
 })
@@ -361,6 +365,18 @@ it('keeps an alias target package ahead of an explicit name-route selector', asy
   await expect(nameProps(context({ name: 'ftp' }, { pkg: 'ftp.app' }).ctx)).resolves.toMatchObject({ redirect: { destination: '/man/tnftp/1?pkg=tnftp' } })
   lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'alias', name: 'tnftp', section: '1' }, servedRelease: release.datasetReleaseId })
   await expect(nameProps(context({ name: 'ftp' }, { pkg: 'ftp.app' }).ctx)).resolves.toMatchObject({ redirect: { destination: '/man/tnftp/1' } })
+})
+
+it('keeps repeated explicit misses private without a page-limit mutation or typo reads', async () => {
+  lookup.lookupManPage.mockResolvedValue({ kind: 'miss', servedRelease: release.datasetReleaseId })
+  for (const pkg of ['invented-one', 'invented-two', 'invented-three']) {
+    const { ctx, res } = context({ name: 'tar', section: '1' }, { pkg })
+    await pageProps(ctx)
+    expect(res.statusCode).toBe(404)
+    expect(res.headers['cache-control']).toBe('private, no-store')
+  }
+  expect(limiter.isRateLimited).not.toHaveBeenCalled()
+  expect(lookup.manMiss).not.toHaveBeenCalled()
 })
 
 describe('UI language (docs/i18n.md)', () => {

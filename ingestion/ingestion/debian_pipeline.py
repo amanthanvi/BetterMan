@@ -81,14 +81,14 @@ def require_job_budget(phase: str):
         raise RuntimeError(f"Job budget exhausted during Debian {phase}; release remains inactive")
 
 
-def sample_packages(packages: list[Package], limit: int | None) -> list[Package]:
+def sample_packages(packages: list[Package], limit: int | None, distro="debian") -> list[Package]:
     if limit is None:
         return packages
     if limit < 1:
         raise ValueError("Package limit must be positive")
-    curated_names = set(FULL_PACKAGE_SET_DEBIAN) | {
-        value[0] for value in CURATED_ALTERNATIVES.values()
-    }
+    curated_names = set(
+        FULL_PACKAGE_SET_DEBIAN if distro == "debian" else FULL_PACKAGE_SET_BY_DISTRO[distro]
+    ) | {value[0] for value in CURATED_ALTERNATIVES.values()}
     curated_names |= {"perl-doc", "libssl-doc", "mariadb-client"}
     curated = sorted(
         (p for p in packages if p.name in curated_names or p.name.startswith("postgresql-client-")),
@@ -102,12 +102,17 @@ def sample_packages(packages: list[Package], limit: int | None) -> list[Package]
 
 class Workspace:
     distro = "debian"
+    pins = {}
 
     def __init__(self, root: Path, *, limit: int | None = None, distro="debian"):
         self.distro = distro
-        if distro not in {"debian", "ubuntu"}:
+        if distro not in {"debian", "ubuntu", "fedora"}:
             raise ValueError("Unsupported deb archive distro")
-        pins_path = PINS if distro == "debian" else PINS.with_name("ubuntu-noble.json")
+        pins_path = (
+            PINS
+            if distro == "debian"
+            else PINS.with_name({"ubuntu": "ubuntu-noble.json", "fedora": "fedora-44.json"}[distro])
+        )
         self.root = root.resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         fingerprint = sha256_hex(pins_path.read_bytes())
@@ -115,17 +120,26 @@ class Workspace:
         if marker.exists() and marker.read_text() != fingerprint:
             raise ValueError("Workspace belongs to different archive pins")
         marker.write_text(fingerprint)
-        self.pins, self.all_manual_packages = (
-            catalog(self.root / "indexes")
-            if distro == "debian"
-            else catalog(self.root / "indexes", pins_path)
-        )
-        self.registrations = (
-            private_registrations(PINS.parent / self.pins["privateManuals"])
-            if self.pins.get("privateManuals")
-            else private_registrations()
-        )
-        self.packages = sample_packages(self.all_manual_packages, limit)
+        if distro == "fedora":
+            from ingestion.fedora_archives import catalog as rpm_catalog
+
+            self.pins, self.all_manual_packages, self.available = rpm_catalog(
+                self.root / "indexes", pins_path
+            )
+            self.registrations = {"packages": {}}
+        else:
+            self.pins, self.all_manual_packages = (
+                catalog(self.root / "indexes")
+                if distro == "debian"
+                else catalog(self.root / "indexes", pins_path)
+            )
+            self.registrations = (
+                private_registrations(PINS.parent / self.pins["privateManuals"])
+                if self.pins.get("privateManuals")
+                else private_registrations()
+            )
+            self.available = available_packages(self.root / "indexes", popularity(self.pins))
+        self.packages = sample_packages(self.all_manual_packages, limit, distro)
         selection_path = self.root / "selection.json"
         if selection_path.exists():
             selection = json.loads(selection_path.read_text())
@@ -137,7 +151,6 @@ class Workspace:
             selection_path.write_text(
                 json.dumps({"limit": limit, "packages": [p.name for p in self.packages]})
             )
-        self.available = available_packages(self.root / "indexes", popularity(self.pins))
         # Retain the original curated pass, including runtime packages such as
         # vim-tiny whose manual slaves live in vim-common. Their postinst data
         # supplies alternatives; they are never installed.
@@ -146,7 +159,10 @@ class Workspace:
             self.available[n]
             # G++ and vim-tiny have alternatives but no manual-owned archive
             # paths. Their control scripts still participate in a full election.
-            for n in sorted(set(FULL_PACKAGE_SET_BY_DISTRO[distro]) | {"g++", "vim-tiny"})
+            for n in sorted(
+                set(FULL_PACKAGE_SET_BY_DISTRO[distro])
+                | ({"g++", "vim-tiny"} if distro in {"debian", "ubuntu"} else set())
+            )
             if n in self.available and n not in selected_names
         ]
         self.store = ArchiveStore(self.root, registrations=self.registrations)
@@ -195,6 +211,9 @@ class Workspace:
         require_job_budget("acquisition")
         cdn = debian_cdn_enabled() if self.distro == "debian" else True
         cdn_base = self.pins.get("cdn", "https://deb.debian.org/debian")
+        if self.distro == "fedora":
+            cdn = False
+        suffix = self.pins.get("archiveSuffix", ".deb")
         snapshot_url = f"{self.pins['mirror']}/{package.filename}"
         fallbacks = []
         with self._disk_lock:
@@ -204,8 +223,8 @@ class Workspace:
             ):
                 raise RuntimeError("Insufficient workspace disk for bounded archive extraction")
             self._reserved += package.size
-            self._inflight.add(f"{package.sha256}.deb")
-        archive = self.cache / f"{package.sha256}.deb"
+            self._inflight.add(f"{package.sha256}{suffix}")
+        archive = self.cache / f"{package.sha256}{suffix}"
         try:
             started = time.monotonic()
             size = download(
@@ -213,12 +232,21 @@ class Workspace:
                 archive,
                 package.sha256,
                 package.size,
-                fallback_url=snapshot_url if cdn else None,
+                fallback_url=snapshot_url
+                if cdn
+                else (
+                    f"{self.pins['fallbackMirror']}/{package.filename}"
+                    if self.pins.get("fallbackMirror")
+                    else None
+                ),
                 on_fallback=fallbacks.append,
             )
             downloaded = time.monotonic()
             archive.touch()
-            entries = extract(
+            extractor = extract
+            if self.distro == "fedora":
+                from ingestion.fedora_archives import extract as extractor
+            entries = extractor(
                 archive,
                 package,
                 self.root,
@@ -229,15 +257,20 @@ class Workspace:
         finally:
             with self._disk_lock:
                 self._reserved -= package.size
-                self._inflight.discard(f"{package.sha256}.deb")
+                self._inflight.discard(f"{package.sha256}{suffix}")
                 self._evict_archives()
         return package, entries, size, downloaded - started, extracted - downloaded, len(fallbacks)
 
     def _evict_archives(self):
         # Called under the disk lock. In-flight archives are excluded; complete
         # extracted packages remain resumable independently of archive eviction.
-        used = sum(p.stat().st_size for p in self.cache.glob("*.deb"))
-        for candidate in sorted(self.cache.glob("*.deb"), key=lambda p: p.stat().st_mtime):
+        used = sum(
+            p.stat().st_size for p in self.cache.glob("*" + self.pins.get("archiveSuffix", ".deb"))
+        )
+        for candidate in sorted(
+            self.cache.glob("*" + self.pins.get("archiveSuffix", ".deb")),
+            key=lambda p: p.stat().st_mtime,
+        ):
             if used <= self.cache_limit:
                 break
             if candidate.name in self._inflight:
@@ -255,7 +288,8 @@ class Workspace:
             }.values()
         )
         # Consume restored archives before fresh downloads can evict them.
-        pending.sort(key=lambda p: not (self.cache / f"{p.sha256}.deb").is_file())
+        suffix = self.pins.get("archiveSuffix", ".deb")
+        pending.sort(key=lambda p: not (self.cache / f"{p.sha256}{suffix}").is_file())
         started = time.monotonic()
         download_seconds = extract_seconds = 0
         cache_hits = fallback_count = 0
@@ -406,7 +440,12 @@ class Workspace:
             for name in package.provides:
                 providers.setdefault(name, set()).add(package.name)
         result = {}
-        for requested in FULL_PACKAGE_SET_BY_DISTRO[self.distro]:
+        requested_packages = (
+            FULL_PACKAGE_SET_DEBIAN
+            if self.distro == "debian"
+            else FULL_PACKAGE_SET_BY_DISTRO[self.distro]
+        )
+        for requested in requested_packages:
             if requested not in _COMMAND_PAGES or requested in _COMMAND_PAGE_EXCLUSIONS.get(
                 self.distro, {}
             ):
@@ -462,6 +501,10 @@ class Workspace:
         return result
 
     def sources(self):
+        # Rebuild RPM-generated links from this selection's election on each pass.
+        if self.distro == "fedora":
+            with self.store.db:
+                self.store.db.execute("DELETE FROM entries WHERE kind='generated-link'")
         curated_owners = (
             {}
             if self.distro == "debian"
@@ -557,6 +600,20 @@ class Workspace:
                     }
                 )
                 continue
+            if self.distro == "fedora":
+                with self.store.db:
+                    self.store.db.executemany(
+                        "INSERT OR IGNORE INTO entries VALUES (?,?,?,?,NULL)",
+                        [
+                            (
+                                winner,
+                                f"usr/share/man/man{section}/{name}.{section}{suffix}",
+                                "generated-link",
+                                target,
+                            )
+                            for suffix in ("", ".gz", ".xz", ".bz2", ".zst")
+                        ],
+                    )
             for pkg, path, priority in ranked:
                 if path is not None:
                     normalized = name.lower()

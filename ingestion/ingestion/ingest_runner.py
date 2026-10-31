@@ -1237,7 +1237,11 @@ def _license_items(
 
 
 def _iter_license_items(
-    *, licenses: MutableMapping[str, str], distro: str, dataset_release_id: str
+    *,
+    licenses: MutableMapping[str, str],
+    distro: str,
+    dataset_release_id: str,
+    stored: bool = False,
 ) -> Iterator[dict]:
     for package in sorted(licenses):
         text = licenses[package]
@@ -1253,10 +1257,12 @@ def _iter_license_items(
         size = len(
             encode_json({**item, "datasetReleaseId": dataset_release_id, "releaseId": "x" * 32})
         )
-        if size > _LICENSE_DOCUMENT_MAX_BYTES:
+        budget = 7 * 1024**2 if stored else _LICENSE_DOCUMENT_MAX_BYTES
+        if size > budget:
+            limit = "stored-notice 7 MiB" if stored else "Convex 1 MiB"
             raise RuntimeError(
-                f"license document exceeds Convex 1 MiB limit: package={package}, "
-                f"encodedBytes={size}, budget={_LICENSE_DOCUMENT_MAX_BYTES}; text is not truncated"
+                f"license document exceeds {limit} limit: package={package}, "
+                f"encodedBytes={size}, budget={budget}; text is not truncated"
             )
         yield item
 

@@ -11,7 +11,8 @@ export const INGEST_CONTRACT_SCHEMA_VERSION = 8;
 
 export const INGEST_CONTRACT = {
   schemaVersion: INGEST_CONTRACT_SCHEMA_VERSION,
-  acquisitions: ["deb-extraction", "ubuntu-deb-extraction"],
+  storedLicenseText: true,
+  acquisitions: ["deb-extraction", "ubuntu-deb-extraction", "fedora-rpm-extraction"],
   functions: [
     "ingest.createRelease",
     "ingest.insertStoredPages",

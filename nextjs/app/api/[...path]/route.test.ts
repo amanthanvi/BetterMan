@@ -524,11 +524,11 @@ describe('bounded on-demand portability details', () => {
   })
 })
 
-it('passes explicit package selection through the page API', async () => {
+it.each(['alternate', 'lsb_release', 'SDL2_sound-devel', 'R'])('passes package selection %s unchanged through the page API', async pkg => {
   apiMocks.fetchManByNameAndSectionOrAlias.mockResolvedValue({ kind: 'page', data: { page: { name: 'shared', section: '1' } } })
-  const response = await GET(request('/api/v1/man/shared/1?pkg=alternate'), { params: Promise.resolve({ path: ['v1', 'man', 'shared', '1'] }) })
+  const response = await GET(request(`/api/v1/man/shared/1?pkg=${pkg}`), { params: Promise.resolve({ path: ['v1', 'man', 'shared', '1'] }) })
   expect(response.status).toBe(200)
-  expect(apiMocks.fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'shared', section: '1', pkg: 'alternate' })
+  expect(apiMocks.fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'shared', section: '1', pkg })
 })
 
 it.each([true, false, undefined])('keeps legacy JSON indexing and marks only explicit long-tail payloads noindex: %s', async indexable => {
@@ -541,4 +541,32 @@ it.each([true, false, undefined])('keeps legacy JSON indexing and marks only exp
       expect(res.headers.get('x-robots-tag')).toBe(indexable === false ? 'noindex' : null)
     }
   }
+})
+
+it('streams the complete large license as gzip without crossing the browser CSP', async () => {
+  const { fetchLicenseText } = await import('@/lib/api')
+  const { gunzipSync } = await import('node:zlib')
+  const license = { package: 'large', licenseId: 'pkg:large', licenseName: 'large', text: 'copyright notice\n'.repeat(280000) }
+  vi.mocked(fetchLicenseText).mockResolvedValue({ ...license, text: '', textUrl: 'https://storage.test/large' })
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(license))))
+  try {
+    const req = request('/api/v1/licenses/large?distro=fedora')
+    req.headers.set('accept-encoding', 'gzip, br')
+    const response = await GET(req, context(['v1', 'licenses', 'large']))
+    expect(response.headers.get('content-encoding')).toBe('gzip')
+    expect(response.headers.get('vary')).toBe('Accept-Encoding')
+    const bytes = new Uint8Array(await response.arrayBuffer())
+    expect(bytes.length).toBeLessThan(4 * 1024 * 1024)
+    expect(JSON.parse(gunzipSync(bytes).toString())).toEqual(license)
+  } finally { vi.unstubAllGlobals() }
+})
+
+it.each(['', 'gzip;q=0'])('offers a storage redirect when gzip is unavailable (%s)', async encoding => {
+  const { fetchLicenseText } = await import('@/lib/api')
+  vi.mocked(fetchLicenseText).mockResolvedValue({ package: 'large', licenseId: 'pkg:large', licenseName: 'large', text: '', textUrl: 'https://storage.test/large' })
+  const req = request('/api/v1/licenses/large?distro=fedora')
+  req.headers.set('accept-encoding', encoding)
+  const response = await GET(req, context(['v1', 'licenses', 'large']))
+  expect(response.status).toBe(307)
+  expect(response.headers.get('location')).toBe('https://storage.test/large')
 })

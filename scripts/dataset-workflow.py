@@ -14,7 +14,7 @@ import urllib.request
 from pathlib import Path
 
 LINUX = ["debian", "ubuntu", "fedora", "arch", "alpine"]
-FULL_DISTROS = ["debian", "ubuntu"]
+FULL_DISTROS = ["debian", "ubuntu", "fedora"]
 BSD = ["freebsd", "macos"]
 RESULTS = Path("dataset-results")
 MAX_EXPECTED_RELEASE_IDS_BYTES = 4096
@@ -274,11 +274,12 @@ def promote(distro):
             ingest_secret=os.environ["CONVEX_INGEST_SECRET"],
         )
         contract = retry_request(client.require_deployed_contract)
-        allowed = full_promotion_enabled("ubuntu")
-        if "ubuntu-deb-extraction" in contract.get("acquisitions", []):
-            payload["allowFullUbuntu"] = allowed
-        elif allowed:
-            raise ValueError("Deploy B2 ubuntu acquisition support before full promotion")
+        for family, identity in {"ubuntu": "ubuntu-deb-extraction", "fedora": "fedora-rpm-extraction"}.items():
+            allowed = full_promotion_enabled(family)
+            if identity in contract.get("acquisitions", []):
+                payload["allowFull" + family.capitalize()] = allowed
+            elif allowed:
+                raise ValueError(f"Deploy B2 {family} acquisition support before full promotion")
         record["stage"] = "verify staging source"
         save(distro, record)
         if not ingest:

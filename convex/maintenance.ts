@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { MANIFEST_CONTENT_TYPE, MANIFEST_ORPHAN_MIN_AGE_MS } from "./_manifestStorage";
+import { LICENSE_CONTENT_TYPE, MANIFEST_CONTENT_TYPE, MANIFEST_ORPHAN_MIN_AGE_MS } from "./_manifestStorage";
 import { RELEASE_CHILD_TABLES, releaseChildRows, type ReleaseChildTable } from "./_releaseChildren";
 import { distroValidator } from "./schema";
 import { pageUploadProgress } from "./_releaseManifest";
@@ -59,6 +59,7 @@ const storageStatsTableValidator = v.union(
   v.literal("derivedPageInputs"),
   v.literal("licensePackages"),
   v.literal("licenses"),
+  v.literal("storedLicenseFiles"),
   v.literal("manPageContentBlobChunks"),
   v.literal("manPageContentBlobs"),
   v.literal("manPageContentChunks"),
@@ -102,6 +103,7 @@ export const STORAGE_STATS_FIELDS: { [T in StorageStatsTable]: Array<Extract<key
   manPageDerived: ["key", "summaryJson"],
   licensePackages: ["packageName", "version"],
   licenses: ["licenseId", "licenseName", "licenseText"],
+  storedLicenseFiles: [],
   manPageContentBlobChunks: ["chunk"],
   manPageContentBlobs: ["docJson", "synopsisJson", "optionsJson", "seeAlsoJson"],
   manPageContentChunks: ["chunk"],
@@ -313,7 +315,7 @@ async function deleteReleaseChildrenByTable(
 ): Promise<number> {
   const rows = await releaseChildRows(ctx, table, releaseId, limit);
   for (const row of rows) {
-    if (table === "releaseManifests" && "storageId" in row && row.storageId) await ctx.storage.delete(row.storageId);
+    if ((table === "releaseManifests" || table === "licenses") && "storageId" in row && row.storageId) await ctx.storage.delete(row.storageId);
     await ctx.db.delete(row._id);
   }
   return rows.length;
@@ -1039,7 +1041,7 @@ export const measureReleaseBatch = internalQuery({
         const blob = await ctx.db.get(row.blobId);
         if (blob) { documents++; jsonBytes += bytes(blob); }
         if (blob?.storageId) storageBytes += (await ctx.db.system.get(blob.storageId))?.size ?? 0;
-      } else if (args.table === "releaseManifests" && "storageId" in row && row.storageId) {
+      } else if ((args.table === "releaseManifests" || args.table === "licenses") && "storageId" in row && row.storageId) {
         storageBytes += (await ctx.db.system.get(row.storageId))?.size ?? 0;
       }
     }
@@ -1065,7 +1067,7 @@ export const measurePageLookup = internalQuery({
 });
 
 
-// Also reclaim manifests whose HTTP action died after store() and before the
+// Reclaim manifests and license files whose HTTP action died after store() and before the
 // release mutation. The distinct MIME type and 24h grace exclude unrelated files
 // and every live upload action; indexed reference checks serialize with linking.
 export const cleanupOrphanManifestFilesBatch = internalMutation({
@@ -1080,9 +1082,10 @@ export const cleanupOrphanManifestFilesBatch = internalMutation({
     let storageDeletes = 0;
     const files = [];
     for (const file of batch.page) {
-      if (file.contentType !== MANIFEST_CONTENT_TYPE || file._creationTime > Date.now() - MANIFEST_ORPHAN_MIN_AGE_MS) continue;
-      const ref = await ctx.db.query("releaseManifests")
-        .withIndex("by_storageId", (q) => q.eq("storageId", file._id)).first();
+      if (![MANIFEST_CONTENT_TYPE, LICENSE_CONTENT_TYPE].includes(file.contentType ?? "") || file._creationTime > Date.now() - MANIFEST_ORPHAN_MIN_AGE_MS) continue;
+      const ref = file.contentType === LICENSE_CONTENT_TYPE
+        ? await ctx.db.query("storedLicenseFiles").withIndex("by_storageId", q => q.eq("storageId", file._id)).first()
+        : await ctx.db.query("releaseManifests").withIndex("by_storageId", q => q.eq("storageId", file._id)).first();
       if (ref) continue;
       orphans++;
       if (args.dryRun) files.push({ storageId: file._id, ageMs: Date.now() - file._creationTime, size: file.size });

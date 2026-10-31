@@ -82,7 +82,7 @@ export type LicensesResponse = {
   packages: LicensePackage[]
 }
 
-export type LicenseTextResponse = { package: string; licenseId: string; licenseName: string; text: string }
+export type LicenseTextResponse = { package: string; licenseId: string; licenseName: string; text: string; textUrl?: string | null }
 
 export class FastApiError extends Error {
   status: number
@@ -255,10 +255,21 @@ const cachedResolveManByName = unstable_cache(
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
+const cachedProvidersFor = unstable_cache(
+  async (distro: Distro, name: string, section: string, _release: string | null) =>
+    cacheableManPage(await convex().query(api.queries.providersFor, { distro, name, section }), _release),
+  ['betterman', 'convex', 'providers-for', 'v1'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
+async function providersFor(opts: { distro: Distro; name: string; section: string; release?: string }) {
+  return await mapConvexError(() => cachedProvidersFor(opts.distro, opts.name, opts.section, opts.release ?? null))
+}
+
 const cachedManByNameAndSection = unstable_cache(
-  async (distro: Distro, name: string, section: string, pkg: string | null, _release: string | null) =>
+  async (distro: Distro, name: string, section: string, _release: string | null, pkg: string | null = null) =>
     cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section, ...(pkg ? { pkg } : {}), reportRelease: true }), _release),
-  ['betterman', 'convex', 'man-by-name-and-section', 'v7'],
+  ['betterman', 'convex', 'man-by-name-and-section', 'provider-proof-v1'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -475,9 +486,14 @@ export async function fetchManByNameAndSectionOrAlias(opts: {
   pkg?: string
   release?: string
 }): Promise<ManByNameAndSectionResult> {
-  const result = (await mapConvexError(() =>
-    cachedManByNameAndSection(opts.distro, opts.name, opts.section, packageName(opts.pkg) ?? null, opts.release ?? null),
-  )) as ConvexManByNameAndSectionResult
+  const pkg = packageName(opts.pkg)
+  if (pkg) {
+    const providers = await providersFor(opts)
+    if (!providers.packages.includes(pkg)) throw pageNotFound(servedRelease(providers))
+  }
+  const result = await mapConvexError(() =>
+    cachedManByNameAndSection(opts.distro, opts.name, opts.section, opts.release ?? null, pkg ?? null),
+  ) as ConvexManByNameAndSectionResult
   if (!result || result.kind === 'not_found') throw pageNotFound(servedRelease(result))
   return result
 }

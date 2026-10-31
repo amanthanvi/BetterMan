@@ -53,7 +53,7 @@ class WorkflowTest(unittest.TestCase):
         self.addCleanup(self.no_network.stop)
         self.contract = patch.object(ConvexIngestClient, '_get_json', return_value={
             'schemaVersion': REQUIRED_SCHEMA_VERSION, 'functions': list(REQUIRED_FUNCTIONS),
-            'declarationCounts': list(REQUIRED_DECLARATION_COUNTS), 'activatePending': True,
+            'declarationCounts': list(REQUIRED_DECLARATION_COUNTS), 'activatePending': True, 'acquisitions': ['deb-extraction', 'ubuntu-deb-extraction', 'fedora-rpm-extraction'],
         }).start()
         self.source_ids = {}
 
@@ -184,6 +184,24 @@ class WorkflowTest(unittest.TestCase):
             for returned_distro, release in [('ubuntu', 'release-ubuntu'), ('debian', 'release-ubuntu'), ('ubuntu', 'different')]:
                 with self.post_mock(lambda request, **kwargs: io.BytesIO(json.dumps({'promoted': [], 'skipped': [{'distro': returned_distro, 'datasetReleaseId': release, 'reason': reason}]}).encode())):
                     self.assertEqual(w.promote('ubuntu'), 0 if returned_distro == 'ubuntu' and release == 'release-ubuntu' else 1)
+
+    def test_fedora_gates_do_not_borrow_other_family_authorization(self):
+        for event in ['schedule', 'workflow_dispatch']:
+            for enabled in [False, True]:
+                for allowed in [False, True]:
+                    _, rows = self.plan(BETTERMAN_WORKFLOW_EVENT=event,
+                        BETTERMAN_FEDORA_FULL='1' if enabled else '',
+                        BETTERMAN_FEDORA_FULL_INPUT='true' if enabled else 'false',
+                        BETTERMAN_FEDORA_FULL_PROMOTE='1' if allowed else '',
+                        BETTERMAN_FEDORA_FULL_PROMOTE_INPUT='false',
+                        BETTERMAN_UBUNTU_FULL_PROMOTE='1', BETTERMAN_DEBIAN_FULL_PROMOTE='1')
+                    row = next(r for r in rows if r['distro'] == 'fedora')
+                    self.assertEqual(row['full_fedora'], enabled)
+                    self.assertEqual(row['promote'], not enabled or allowed)
+        self.plan(BETTERMAN_INGEST_ENABLED='false')
+        for reason in ['FULL_FEDORA_PROMOTION_HELD', 'FULL_FEDORA_TIER_REQUIRED']:
+            with self.post_mock(lambda request, **kwargs: io.BytesIO(json.dumps({'promoted': [], 'skipped': [{'distro': 'fedora', 'datasetReleaseId': 'release-fedora', 'reason': reason}]}).encode())):
+                self.assertEqual(w.promote('fedora'), 0)
 
     def test_full_debian_promotion_hold_and_explicit_recovery(self):
         os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
@@ -677,7 +695,7 @@ function assertWorkflowWiring(workflow) {
   assert.ok(!JSON.stringify(download).includes('secrets.'))
   assert.ok(!JSON.stringify(download).includes('--local-upload'))
   assert.match(download.steps.find(s => s.name === 'Acquire only; never create a Convex client').run, /--download-only$/)
-  for (const distro of ['ubuntu']) {
+  for (const distro of ['ubuntu', 'fedora']) {
     assert.equal(workflow.on.workflow_dispatch.inputs[`${distro}_full`].default, false)
     assert.equal(workflow.on.workflow_dispatch.inputs[`${distro}_full_promote`].default, false)
     assert.equal(workflow.env[`BETTERMAN_${distro.toUpperCase()}_FULL`], '${{ vars.BETTERMAN_' + distro.toUpperCase() + '_FULL }}')

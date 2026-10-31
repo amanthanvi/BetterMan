@@ -36,3 +36,4 @@ venv/
 # Full-distro rehearsal artifacts and verified acquisition
 .cache/b2/
 .cache/ubuntu/
+.cache/fedora/

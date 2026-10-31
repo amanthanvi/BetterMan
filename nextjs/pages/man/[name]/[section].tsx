@@ -144,7 +144,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   const unproven = Boolean(firstQuery(query.pkg) || firstQuery(query.flag)) || offList
 
   if (found.kind === 'miss') {
-    const miss = await manMiss({ name, section, distro, urlDistro, headers: requestHeaders(req.headers), ...(releaseKey ? { release: releaseKey } : {}) })
+    const miss: ManMiss = pkg ? { name, section, distro, urlDistro, suggestions: [], distros: [], limited: false, answeredByKey: false } : await manMiss({ name, section, distro, urlDistro, headers: requestHeaders(req.headers), ...(releaseKey ? { release: releaseKey } : {}) })
     res.statusCode = 404
     setManCache(res, miss.limited || unproven ? MAN_PRIVATE_CACHE : MAN_MISS_CACHE, { keyed: keyed && miss.answeredByKey })
     return { props: { kind: 'miss', head: missingManHead(manT(i18n)), miss, release, i18n } }

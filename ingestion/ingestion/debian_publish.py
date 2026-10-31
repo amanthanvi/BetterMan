@@ -43,11 +43,14 @@ def ingest_debian(
     import sys
 
     if sys.version_info < (3, 14) or not shutil.which("mandoc"):
-        raise RuntimeError("Debian archive ingestion requires Python 3.14 and mandoc")
+        raise RuntimeError("Full archive ingestion requires Python 3.14 and mandoc")
     client = ConvexIngestClient(convex_url, ingest_secret)
     contract = client.require_deployed_contract()  # Before acquisition or any writes.
-    if distro == "ubuntu" and "ubuntu-deb-extraction" not in contract.get("acquisitions", []):
-        raise RuntimeError("Deploy B2's v8 Ubuntu acquisition support before full ingestion")
+    identities = {"ubuntu": "ubuntu-deb-extraction", "fedora": "fedora-rpm-extraction"}
+    if distro in identities and identities[distro] not in contract.get("acquisitions", []):
+        raise RuntimeError(f"Deploy B2's v8 {distro} acquisition support before full ingestion")
+    if distro == "fedora" and contract.get("storedLicenseText") is not True:
+        raise RuntimeError("Deploy stored-license support before full Fedora ingestion")
     import os
 
     from ingestion.debian_indexes import PINS
@@ -57,7 +60,11 @@ def ingest_debian(
         raise ValueError("Full imports require staging and gated promotion")
     base = Path(__file__).resolve().parents[2] / ".cache" / distro
     root = Path(os.environ.get(f"BETTERMAN_{distro.upper()}_WORKDIR", str(base / "workspaces")))
-    pins = PINS if distro == "debian" else PINS.with_name("ubuntu-noble.json")
+    pins = (
+        PINS
+        if distro == "debian"
+        else PINS.with_name({"ubuntu": "ubuntu-noble.json", "fedora": "fedora-44.json"}[distro])
+    )
     # A different lock cannot reuse extracted state, even in the same runner path.
     root = root / sha256_hex(pins.read_bytes())
     workspace = Workspace(root, distro=distro)
@@ -79,6 +86,9 @@ def publish_workspace(
     import time
 
     distro = workspace.distro
+    notice_text = copyright_text
+    if distro == "fedora":
+        from ingestion.fedora_archives import copyright_text as notice_text
     workspace.timings = {}
     started = time.monotonic()
     with (
@@ -114,7 +124,9 @@ def publish_workspace(
         published_packages = [workspace.available[name] for name in sorted(used)]
         for package in published_packages:
             require_job_budget("copyright collection")
-            licenses[package.name] = copyright_text(workspace, package.name)
+            text = notice_text(workspace, package.name)
+            if text.strip():
+                licenses[package.name] = text
         policy = PopularityPolicy.load()
         sitemap = _build_sitemap_page_map(pages=canonical, policy=policy)
         manifest = {
@@ -122,11 +134,13 @@ def publish_workspace(
             "acquisition": workspace.pins["acquisition"],
             "imageRef": workspace.pins["mirror"],
             "imageDigest": workspace.pins["releaseSha256"],
-            "arch": "amd64",
+            "arch": workspace.pins.get("architecture", "amd64"),
             "distro": distro,
             "pins": workspace.pins,
             "popularitySource": workspace.pins.get("popularitySource", "popcon by_inst installed"),
-            "alternatives": "postinst priority, popcon, package/path; curated awk/vi/nc policy",
+            "alternatives": workspace.pins.get(
+                "alternatives", "postinst priority, popcon, package/path; curated awk/vi/nc policy"
+            ),
             "alternativesSkipped": workspace.alternatives_skipped,
             "packages": [
                 {
@@ -134,6 +148,11 @@ def publish_workspace(
                     "version": p.version,
                     "sha256": p.sha256,
                     "installed": p.installed,
+                    **(
+                        {"licenseExpression": p.license, "sourceRpm": p.source}
+                        if distro == "fedora"
+                        else {}
+                    ),
                 }
                 for p in published_packages
             ],
@@ -146,7 +165,10 @@ def publish_workspace(
         batches = [declarations[i : i + 200] for i in range(0, len(declarations), 200)]
         # Check every notice before creating the release; never truncate.
         for _item in _iter_license_items(
-            licenses=licenses, distro=distro, dataset_release_id=release_id
+            licenses=licenses,
+            distro=distro,
+            dataset_release_id=release_id,
+            stored=distro == "fedora",
         ):
             pass
         workspace.timings["metadataSeconds"] = (
@@ -232,7 +254,10 @@ def publish_workspace(
         license_started = time.monotonic()
         pending = []
         for notice in _iter_license_items(
-            licenses=licenses, distro=distro, dataset_release_id=release_id
+            licenses=licenses,
+            distro=distro,
+            dataset_release_id=release_id,
+            stored=distro == "fedora",
         ):
             require_job_budget("license upload")
             if pending and (

@@ -206,7 +206,7 @@ it.each([true, false, undefined])('carries tier robots on text GET and HEAD: %s'
   }
 })
 
-it.each(['?zz=1', '?distro=ubuntu&distro=fedora', '?pkg=Bad_Name'])('answers a query the proxy would have redirected (%s) privately', async (query) => {
+it.each(['?zz=1', '?distro=ubuntu&distro=fedora', '?pkg=Bad/Name'])('answers a query the proxy would have redirected (%s) privately', async (query) => {
   const res = await GET(req(query), ctx())
   expect(res.headers.get('cache-control')).toBe('private, no-store')
 })

@@ -44,6 +44,12 @@ it("preserves every provider, seals only complete uploads, and isolates canonica
   expect(await activate()).toMatchObject({ pending: true });
   await t.finishAllScheduledFunctions(() => vi.runAllTimers());
   expect(await activate()).toMatchObject({ pending: false });
+  expect(await t.query(api.queries.providersFor, { distro: "debian", name: "SHARED", section: "1" }))
+    .toEqual({ packages: ["alternate", "identical", "popular", "stub"], datasetReleaseId: "providers" });
+  expect(await t.query(api.queries.providersFor, { distro: "debian", name: "missing", section: "1" }))
+    .toEqual({ packages: [], datasetReleaseId: "providers" });
+  await expect(t.query(api.queries.providersFor, { distro: "debian", name: "shared", section: "1", ...{ stage: "staging" } }))
+    .rejects.toThrow();
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "stub" }))
     .toMatchObject({ kind: "alias", name: "shared", section: "1", pkg: "popular" });
   await t.run(async ctx => {

@@ -115,6 +115,7 @@ const licenseInput = v.object({
   licenseId: v.string(),
   licenseName: v.string(),
   licenseText: v.string(),
+  storageId: v.optional(v.id("_storage")),
   sourceUrl: v.union(v.string(), v.null()),
 });
 
@@ -328,7 +329,7 @@ export const createRelease = internalMutation({
   handler: async (ctx, args) => {
     if (args.indexablePageCount !== undefined && (!validManifestCount(args.indexablePageCount) || args.indexablePageCount > args.pageCount)) throw new Error("INVALID_INDEX_POLICY");
     const acquisition = args.packageManifest !== undefined ? releaseAcquisition(args.packageManifest) : args.acquisition;
-    if (acquisition === "ubuntu-deb-extraction" && args.distro !== "ubuntu") throw new Error("INVALID_RELEASE_MANIFEST");
+    if ((acquisition === "ubuntu-deb-extraction" && args.distro !== "ubuntu") || (acquisition === "fedora-rpm-extraction" && args.distro !== "fedora")) throw new Error("INVALID_RELEASE_MANIFEST");
     if (args.acquisition !== undefined && acquisition !== args.acquisition) throw new Error("INVALID_RELEASE_MANIFEST");
     const packages = args.licensePackages ?? [];
     if (args.providerCount !== undefined && (!validManifestCount(args.providerCount) || args.packageBatches === undefined)) throw new Error("INVALID_RELEASE_MANIFEST");
@@ -779,6 +780,7 @@ export const insertLicenses = internalMutation({
 
     let inserted = 0;
     let skipped = 0;
+    const unusedStorageIds = [];
     for (const license of args.licenses) {
       const pkg = license.packageName.trim().toLowerCase();
       const existing = await ctx.db
@@ -788,11 +790,13 @@ export const insertLicenses = internalMutation({
         )
         .unique();
       if (existing) {
+        if (license.storageId) unusedStorageIds.push(license.storageId);
         skipped += 1;
         continue;
       }
       if (immutable) throw new Error("RELEASE_SEALED");
-      if (!license.licenseText.trim()) throw new Error("EMPTY_LICENSE_TEXT");
+      if (!license.licenseText.trim() && !license.storageId) throw new Error("EMPTY_LICENSE_TEXT");
+      if (license.storageId && (!await ctx.db.system.get(license.storageId) || license.licenseText)) throw new Error("INVALID_INGEST_PAYLOAD");
       const declaration = await ctx.db.query("licensePackages")
         .withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", release._id).eq("packageName", pkg)).unique();
       if (!declaration?.hasLicenseText) throw new Error("UNDECLARED_LICENSE_PACKAGE");
@@ -804,13 +808,17 @@ export const insertLicenses = internalMutation({
         licenseId: license.licenseId,
         licenseName: license.licenseName,
         licenseText: license.licenseText,
+        storageId: license.storageId,
         sourceUrl: optionalString(license.sourceUrl),
+      });
+      if (license.storageId) await ctx.db.insert("storedLicenseFiles", {
+        releaseId: release._id, storageId: license.storageId,
       });
       inserted += 1;
     }
 
     if (inserted > 0) await recordOtherUploads(ctx, release, "licenses", inserted);
-    return { inserted, skipped };
+    return unusedStorageIds.length ? { inserted, skipped, unusedStorageIds } : { inserted, skipped };
   },
 });
 
@@ -837,6 +845,7 @@ export const activateRelease = internalMutation({
     activatedAt: v.string(),
     allowFullDebian: v.optional(v.boolean()),
     allowFullUbuntu: v.optional(v.boolean()),
+    allowFullFedora: v.optional(v.boolean()),
   },
   returns: v.object({
     stage: datasetStageValidator,
@@ -852,7 +861,7 @@ export const activateRelease = internalMutation({
     if (!release) throw new Error("RELEASE_NOT_FOUND");
     if (release.pruning) throw new Error("RELEASE_PRUNING");
 
-    const archiveHold = fullArchivePromotionReason(release, args.stage, args.allowFullUbuntu);
+    const archiveHold = fullArchivePromotionReason(release, args.stage, args);
     if (archiveHold) throw new Error(archiveHold);
 
     if (fullDebianTierMissing(release, args.stage)) throw new Error("FULL_DEBIAN_TIER_REQUIRED");
@@ -950,6 +959,7 @@ export const promoteActiveReleases = internalMutation({
     activatedAt: v.string(),
     allowFullDebian: v.optional(v.boolean()),
     allowFullUbuntu: v.optional(v.boolean()),
+    allowFullFedora: v.optional(v.boolean()),
     expectedDatasetReleaseId: v.optional(expectedReleaseIdsValidator),
   },
   returns: v.object({
@@ -993,7 +1003,7 @@ export const promoteActiveReleases = internalMutation({
       if (!release) throw new Error("RELEASE_NOT_FOUND");
       // Check persisted acquisition identity in the pointer transaction; a
       // preflight read or mirror URL would not enforce the release's hold.
-      const archiveHold = fullArchivePromotionReason(release, args.toStage, args.allowFullUbuntu);
+      const archiveHold = fullArchivePromotionReason(release, args.toStage, args);
       if (archiveHold) {
         skipped.push({ distro, datasetReleaseId: candidate.datasetReleaseId, reason: archiveHold });
         continue;

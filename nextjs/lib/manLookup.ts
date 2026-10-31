@@ -64,7 +64,7 @@ export async function lookupManPage(opts: {
       ...(err instanceof FastApiError && err.datasetReleaseId ? { datasetReleaseId: err.datasetReleaseId } : {}),
     }))
   // Related reads run beside the document, for the requested distro; a fallback to Debian reads them again.
-  const related = relatedFor(opts.distro)
+  const related = pkg ? null : relatedFor(opts.distro)
   const found = await orMissing(
     withDistroFallback(opts.distro, (distro) =>
       fetchManByNameAndSectionOrAlias({ distro, name, section, ...(pkg ? { pkg } : {}), ...(release ? { release } : {}) }),
@@ -72,7 +72,7 @@ export async function lookupManPage(opts: {
   )
   if (isMissing(found)) return { kind: 'miss', servedRelease: found.servedRelease }
   if (found.data.kind === 'alias') return { ...found.data, distro: found.distro, servedRelease: servedRelease(found.data) }
-  const relatedResult = await (found.distro === opts.distro ? related : relatedFor(found.distro))
+  const relatedResult = await (found.distro === opts.distro && related ? related : relatedFor(found.distro))
   const pageRelease = servedRelease(found.data)
   // The page is one answer only when its related links come from the same release; otherwise
   // it names no single release, so the route does not share it under any key.

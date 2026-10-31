@@ -134,3 +134,24 @@ test('only a manual deploy may confirm indexes on large Convex tables', () => {
   assert.equal(tasks, "exec convex run --prod taskPhrases:backfillActiveReleases {}")
   assert.equal(deployArgs('false')[2], tasks)
 })
+
+test('the index preflight fails closed before Convex deploy without using schema evaluation', () => {
+  const name = 'Require confirmation for large-table index changes'
+  assert.ok(workflow.indexOf(`- name: ${name}`) < workflow.indexOf('- name: Deploy current Convex functions'))
+  const block = workflow.split(`      - name: ${name}\n`)[1].split('\n      - name: ')[0]
+  assert.match(block, /if: needs.resolve_revision.outputs.require_current_main == 'true'/)
+  assert.match(block, /BETTERMAN_CONFIRM_LARGE_INDEXES: \$\{\{ github.event_name == 'workflow_dispatch' && inputs.confirm_large_indexes }}/)
+  assert.doesNotMatch(block, /continue-on-error|\|\|\s*true/)
+  assert.match(block, /tooling\/scripts\/check-convex-indexes\.mjs/)
+  assert.match(workflow, /path: app\n          fetch-depth: 2/)
+  const dir = mkdtempSync(join(tmpdir(), 'betterman-index-preflight-'))
+  try {
+    writeFileSync(join(dir, 'node'), '#!/usr/bin/env bash\nexit 23\n')
+    chmodSync(join(dir, 'node'), 0o755)
+    const marker = join(dir, 'convex-started')
+    assert.throws(() => execFileSync('bash', ['-c', `${stepScript(name)}\ntouch "${marker}"`], {
+      stdio: 'pipe', env: { PATH: `${dir}:${process.env.PATH}`, GITHUB_WORKSPACE: dir },
+    }), error => error.status === 23)
+    assert.equal(existsSync(marker), false)
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
