@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fixture": "scripts/perf-fixture.ts v13: cached package providers and translated releases (#395) alongside unchanged browser corpus",
+  "fixture": "scripts/perf-fixture.ts v16: saturated bare clusters plus translated/manual fallback scenarios",
   "profile": "Chromium, 1280x800, device scale 1, light, reduced motion, 4x CPU, no network throttle, cold browser, warm data cache; median of 5; 5s observation after network idle",
   "metrics": {
     "home.htmlBytes": {
@@ -692,6 +692,36 @@
       "relative": 0.02,
       "absolute": 0
     },
+    "searchClusterBare.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "searchClusterBare.documents": {
+      "baseline": 40,
+      "relative": 0,
+      "absolute": 0
+    },
+    "searchClusterBare.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "searchClusterBareShort.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "searchClusterBareShort.documents": {
+      "baseline": 40,
+      "relative": 0,
+      "absolute": 0
+    },
+    "searchClusterBareShort.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
     "manTranslated.htmlBytes": {
       "baseline": 53411,
       "relative": 0.02,
@@ -760,7 +790,7 @@
     "convex": "1.48.0",
     "convexTest": "0.0.60"
   },
-  "fixtureSha256": "4ee7a6aa0a6485ed61ccbc219e1e0175caeb4514942383ea2216ba2e8eac9dda",
+  "fixtureSha256": "391ff0ce498a6bcbafe4170882d80a4406afbbb771421e56e7b17e9f0d23efa9",
   "labBaseline": {
     "platform": "linux",
     "samplesPerRoute": 3,

@@ -54,7 +54,9 @@ def ingest_debian(
     }
     if distro in identities and identities[distro] not in contract.get("acquisitions", []):
         raise RuntimeError(f"Deploy B2's v8 {distro} acquisition support before full ingestion")
-    if distro in {"fedora", "arch", "alpine"} and contract.get("storedLicenseText") is not True:
+    # Every archive distro ships notices over Convex's 1 MiB document limit (Debian's
+    # libboost1.83-tools-dev is about 2.2 MB), so all of them use stored notices.
+    if contract.get("storedLicenseText") is not True:
         raise RuntimeError(f"Deploy stored-license support before full {distro} ingestion")
     import os
 
@@ -208,7 +210,7 @@ def publish_workspace(
             licenses=licenses,
             distro=distro,
             dataset_release_id=release_id,
-            stored=distro in {"fedora", "arch", "alpine"},
+            stored=True,
         ):
             pass
         workspace.timings["metadataSeconds"] = (
@@ -297,7 +299,7 @@ def publish_workspace(
             licenses=licenses,
             distro=distro,
             dataset_release_id=release_id,
-            stored=distro in {"fedora", "arch", "alpine"},
+            stored=True,
         ):
             require_job_budget("license upload")
             if pending and (

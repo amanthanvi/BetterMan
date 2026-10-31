@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { api, internal } from "./_generated/api";
 import { flagTakesArgument, flagArgumentOptional, flagAllowsShortEquals, MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, parseOptionQuery } from "./_optionFlags";
+import { syncFlagCandidates } from "./_flagSearch";
 import { nameEditDistance } from "./_searchTypos";
 import schema from "./schema";
 import { INGEST_CONTRACT } from "./ingestContract";
@@ -596,5 +597,93 @@ describe("search correctness", () => {
     expect(nameEditDistance("chca", "chabc")).toBe(2);
     expect(nameEditDistance("chabc", "chca")).toBe(2);
     expect(nameEditDistance("grep", "chmod")).toBeGreaterThan(2);
+  });
+});
+
+describe("popularity ranking (#464)", () => {
+  async function fixture(scored = true) {
+    const specs = [
+      ["instmodsh", "create tarball from installed module", 4900],
+      ["ptar", "extract a tar archive", 4900],
+      ["dpkg", "extract package files", 5470],
+      ["tar", "extract files from an archive", 5470],
+      ["ls", "list directory contents", 9000],
+      ["ssh", "connect to remote host", 8000],
+    ] as const;
+    const pages = specs.map(([name, , score]) => {
+      const options = name === "tar"
+        ? tarOptions.map(o => o.anchorId === "opt-file" ? { ...o, argument: "ARCHIVE" } : o)
+        : name === "ls" || name === "ssh" ? null : [{ flags: "-x, --extract", anchorId: "extract" }];
+      return { ...page(name, options), ...(scored ? { indexable: true, popularityScore: score } : {}) };
+    });
+    const t = await seeded(pages);
+    await t.run(async (ctx) => {
+      const release = (await ctx.db.query("datasetReleases").take(1))[0];
+      if (scored) await ctx.db.patch(release._id, { indexablePageCount: pages.length, flagSearchReady: true });
+      for (const [name, phrase] of specs) {
+        const p = await ctx.db.query("manPages").withIndex("by_releaseId_and_name_and_section", q => q.eq("releaseId", release._id).eq("name", name)).unique();
+        if (scored && name === "tar") {
+          const current = { ...p!, verifiedFlagUsage: ["-x", "-z", "-f"].map(flag => ({ flag, count: 1, source: "tldr" as const })) };
+          await ctx.db.patch(p!._id, { verifiedFlagUsage: current.verifiedFlagUsage });
+          await syncFlagCandidates(ctx, current);
+        }
+        await ctx.db.insert("manPageTaskPhrases", {
+          releaseId: release._id, pageId: p!._id, contentSha256: p!.contentSha256,
+          name, section: "1", title: name, description: p!.description, taskText: phrase,
+          ...(scored ? { popularityScore: p!.popularityScore } : {}),
+        });
+      }
+    });
+    return t;
+  }
+
+  it.each(["how do I extract a tarball", "extract a tar archive", "extract tarball", "--extract", "-xzf"])("ranks tar first for %s", async (q) => {
+    const result = await search(await fixture(), q);
+    expect(result.results[0]).toMatchObject({ name: "tar", section: "1" });
+    expect(result.correctedQuery).toBeUndefined();
+    if (q === "-xzf") expect(result.results[0].highlights).toEqual(["-x, --extract", "-z, --gzip", "-f, --file"]);
+  });
+
+  it("keeps exact names, typos and citations ahead of popularity", async () => {
+    const t = await fixture();
+    for (const [q, name] of [["tar", "tar"], ["ls", "ls"], ["ssh", "ssh"], ["tarr", "tar"], ["tar(1)", "tar"]]) {
+      expect((await search(t, q)).results[0]).toMatchObject({ name, section: "1" });
+    }
+    expect((await search(t, "-xzf", "8")).results).toEqual([]);
+    expect((await search(t, "-fxz")).results).toEqual([]);
+    expect((await search(t, "how constructor __proto__")).results).toEqual([]);
+  });
+
+  it("bounds saturated bare-cluster reads below 30 documents, even with a brief", async () => {
+    const t = convexTest({ schema, modules, transactionLimits: { documentsRead: 30 } });
+    const releaseId = await t.run(async ctx => {
+      const releaseId = await ctx.db.insert("datasetReleases", {
+        datasetReleaseId: "clusters", locale: "en", distro: "debian", imageRef: "test", imageDigest: "test",
+        ingestedAt: "2026-10-30", pageCount: 20, indexablePageCount: 20,
+      });
+      await ctx.db.insert("activeReleases", { stage: "prod", locale: "en", distro: "debian", releaseId, datasetReleaseId: "clusters", activatedAt: "2026-10-30" });
+      return releaseId;
+    });
+    for (let i = 0; i < 20; i++) await t.run(async ctx => {
+      const name = `tool${i}`;
+      const pageId = await ctx.db.insert("manPages", {
+        releaseId, datasetReleaseId: "clusters", externalId: name, locale: "en", distro: "debian", name,
+        section: "1", sitemapPage: 1, title: name, description: name, sourcePath: name, contentSha256: name,
+        hasParseWarnings: false, popularityScore: i,
+      });
+      for (const flag of ["-x", "-z", "-f"]) await ctx.db.insert("manPageOptionFlags", {
+        releaseId, pageId, nameNorm: name, section: "1", flag, flags: flag, anchorId: flag.slice(1),
+      });
+    });
+    const result = await t.query(api.queries.search, { distro: "debian", q: "-xzf", section: null, limit: 20, offset: 0, brief: true });
+    expect(result.results).toHaveLength(5);
+    expect(result.results[0].name).toBe("tool0");
+  });
+
+  it("degrades to lexical task relevance and deterministic flag results without scores", async () => {
+    const t = await fixture(false);
+    expect((await search(t, "extract a tar archive")).results[0].name).toBe("tar");
+    expect((await search(t, "--extract")).results[0].name).toBe("dpkg");
+    expect((await search(t, "-xzf")).results[0].name).toBe("tar");
   });
 });

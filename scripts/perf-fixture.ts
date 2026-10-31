@@ -4,6 +4,7 @@ import schema from '../convex/schema'
 import { internal } from '../convex/_generated/api'
 import { persistOptionSignature } from '../convex/_derivedInputs'
 import { serializeStoredPayload } from '../convex/_storedPayload'
+import { syncFlagCandidates } from '../convex/_flagSearch'
 import { optionFlagRows } from '../convex/_optionFlags'
 import { instrumentModules } from './perf-metrics.mjs'
 import { actionGeneric, makeFunctionReference, queryGeneric } from 'convex/server'
@@ -317,6 +318,43 @@ export async function createExplainMultiFixture(onCall: () => void) {
     }
     const bash=(await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section',q=>q.eq('releaseId',git.releaseId).eq('name','bash')).first())!
     for(let i=0;i<4;i++) await ctx.db.insert('manPageSymbols',{releaseId:git.releaseId,pageId:bash._id,name:'bash',section:'1',title:'bash(1)',description:'Syntax',term:'shell:pipeline',termNorm:'shell:pipeline',anchorId:`pipeline${i}`,excerpt:'Pipeline',kind:'shell'})
+  })
+  return t
+}
+
+// Worst-case bare-cluster workload: nine covering candidates, crowded -x, and all 12 brief lookups.
+export async function createBareSearchFixture(onCall: () => void) {
+  const t = await createSearchFixture(onCall)
+  await t.run(async ctx => {
+    const active = await ctx.db.query('activeReleases').withIndex('by_stage_and_locale_and_distro', q => q.eq('stage', 'prod').eq('locale', 'en').eq('distro', 'debian')).unique()
+    const { releaseId } = active!
+    await ctx.db.patch(releaseId, { flagSearchReady: true })
+    const tar = await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', releaseId).eq('name', 'tar')).unique()
+    const extra = Array.from({ length: 9 }, (_, i) => `--fixture-${i}`)
+    for (const flag of extra) await ctx.db.insert('manPageOptionFlags', { releaseId, pageId: tar!._id, nameNorm: 'tar', section: '1', flag, flags: flag, anchorId: flag.slice(2) })
+    const verifiedFlagUsage = ['-x', '-z', '-f', ...extra].map(flag => ({ flag, count: flag.length === 2 ? 10 : 1, source: 'tldr' as const }))
+    await ctx.db.patch(tar!._id, { popularityScore: 5470, verifiedFlagUsage })
+    await syncFlagCandidates(ctx, { ...tar!, popularityScore: 5470, verifiedFlagUsage })
+    for (let i = 0; i < 8; i++) {
+      const name = `covering-${i}`
+      const pageId = await ctx.db.insert('manPages', { releaseId, datasetReleaseId: tar!.datasetReleaseId, externalId: name,
+        locale: 'en', distro: 'debian', name, section: '1', sitemapPage: 1, title: name, description: name,
+        sourcePath: name, contentSha256: name, hasParseWarnings: false, popularityScore: 5470,
+        verifiedFlagUsage: ['-x', '-z', '-f'].map(flag => ({ flag, count: 1, source: 'tldr' as const })) })
+      for (const row of optionFlagRows([{ flags: '-x', anchorId: 'x' }, { flags: '-z', anchorId: 'z' }, { flags: '-f', anchorId: 'f', argument: 'FILE' }])) {
+        await ctx.db.insert('manPageOptionFlags', { releaseId, pageId, nameNorm: name, section: '1', ...row })
+      }
+      await syncFlagCandidates(ctx, (await ctx.db.get(pageId))!)
+    }
+    const grep = await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', releaseId).eq('name', 'grep')).unique()
+    for (const flag of ['-x', '-z', '-f']) await ctx.db.insert('manPageOptionFlags', { releaseId, pageId: grep!._id, nameNorm: 'grep', section: '1', flag, flags: flag, anchorId: flag.slice(1), ...(flag === '-f' ? { takesArgument: true } : {}) })
+    await ctx.db.patch(grep!._id, { popularityScore: 5470 })
+    for (let i = 0; i < 6; i++) {
+      const name = `a-crowded-${i}`
+      const pageId = await ctx.db.insert('manPages', { releaseId, datasetReleaseId: grep!.datasetReleaseId,
+        externalId: name, locale: 'en', distro: 'debian', name, section: '1', sitemapPage: 1, title: name, description: name, sourcePath: name, contentSha256: name, hasParseWarnings: false, popularityScore: 5470 })
+      await ctx.db.insert('manPageOptionFlags', { releaseId, pageId, nameNorm: name, section: '1', flag: '-x', flags: '-x', anchorId: 'x' })
+    }
   })
   return t
 }
