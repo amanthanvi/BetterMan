@@ -7,6 +7,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import resource
 import shutil
 import sqlite3
@@ -122,6 +123,15 @@ class Workspace:
         )
         self.root = root.resolve()
         self.root.mkdir(parents=True, exist_ok=True)
+        # Exclusions are reviewed pins, bound to the same workspace hash as the indexes.
+        exclusions = json.loads(pins_path.read_text()).get("excludedPackages", {})
+        if not isinstance(exclusions, dict) or any(
+            not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9+_.-]*", name)
+            or not isinstance(reason, str)
+            or not reason.strip()
+            for name, reason in exclusions.items()
+        ):
+            raise ValueError("Invalid pinned package exclusions")
         fingerprint = sha256_hex(pins_path.read_bytes())
         marker = self.root / "pins.sha256"
         if marker.exists() and marker.read_text() != fingerprint:
@@ -151,12 +161,14 @@ class Workspace:
                 else private_registrations()
             )
             self.available = available_packages(self.root / "indexes", popularity(self.pins))
+        self.all_manual_packages = [p for p in self.all_manual_packages if p.name not in exclusions]
         self.packages = sample_packages(self.all_manual_packages, limit, distro)
         selection_path = self.root / "selection.json"
         if selection_path.exists():
             selection = json.loads(selection_path.read_text())
             if selection["limit"] != limit:
                 raise ValueError("Workspace was created for a different sample limit")
+            self.require_allowed_packages(selection["packages"])
             by_name = {package.name: package for package in self.all_manual_packages}
             self.packages = [by_name[name] for name in selection["packages"]]
         else:
@@ -167,6 +179,7 @@ class Workspace:
         # vim-tiny whose manual slaves live in vim-common. Their postinst data
         # supplies alternatives; they are never installed.
         selected_names = {p.name for p in self.packages}
+        self.require_allowed_packages(FULL_PACKAGE_SET_BY_DISTRO[distro])
         self.curated_packages = [
             self.available[n]
             # G++ and vim-tiny have alternatives but no manual-owned archive
@@ -204,7 +217,11 @@ class Workspace:
             self.packages = [self.available[p.name] for p in self.packages]
             self.curated_packages = [self.available[p.name] for p in self.curated_packages]
         self.owners = sqlite3.connect(self.root / "indexes" / "owners.sqlite3")
-        self.acquired = {p.name for p in self.available.values() if self.store.complete(p)}
+        self.acquired = {
+            p.name
+            for p in self.available.values()
+            if p.name not in exclusions and self.store.complete(p)
+        }
         # Never resolve through stale/incomplete extraction records. Keep the
         # hashed source files for recovery, but reconstruct their index from a
         # verified archive when that package is next needed.
@@ -241,6 +258,12 @@ class Workspace:
         self._reserved = 0
         self._inflight = set()
         self.missing: list[dict] = []
+
+    def require_allowed_packages(self, names):
+        for name in names:
+            reason = self.pins.get("excludedPackages", {}).get(name)
+            if reason is not None:
+                raise RuntimeError(f"Archive dependency requires excluded package {name}: {reason}")
 
     def _acquire(self, package: Package):
         if self.distro == "alpine":
@@ -335,11 +358,13 @@ class Workspace:
             candidate.unlink()
 
     def acquire(self, packages=None, *, workers=2):
+        packages = self.packages + self.curated_packages if packages is None else list(packages)
+        self.require_allowed_packages(p.name for p in packages)
         workers = min(2, max(1, workers))
         pending = list(
             {
                 p.name: p
-                for p in (self.packages + self.curated_packages if packages is None else packages)
+                for p in packages
                 if p.name not in self.acquired
             }.values()
         )
@@ -411,6 +436,7 @@ class Workspace:
         )
 
     def resolve(self, package: str, path: str, **kwargs):
+        self.require_allowed_packages([package])
         for _ in range(32):
             try:
                 return self.store.resolve(package, path, **kwargs)
@@ -422,6 +448,7 @@ class Workspace:
                 ).get(exc.path)
                 if repair:
                     owner, target = repair
+                    self.require_allowed_packages([owner])
                     if owner not in self.acquired:
                         self.acquire([self.available[owner]], workers=1)
                     with self.store.db:

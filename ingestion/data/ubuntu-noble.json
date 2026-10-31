@@ -25,6 +25,10 @@
   "privateManuals": "ubuntu-private-manuals.json",
   "popularitySource": "Debian by_inst exact-name proxy; Ubuntu popcon is defunct",
   "privateManualsSha256": "1fde8d82a37cfa8133fa0eeed198c7af927f3427c8de24585e8386cb74bd534b",
+  "excludedPackages": {
+    "bcc": "No copyright notice in the pinned archive (linux86 0.16.17-3.5build1).",
+    "bin86": "No copyright notice in the pinned archive (linux86 0.16.17-3.5build1)."
+  },
   "sourceTargets": {
     "usr/share/doc/libssl3/copyright": [
       "libssl3t64",
