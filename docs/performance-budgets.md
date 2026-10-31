@@ -334,3 +334,9 @@ retained, alongside B3’s existing 50-byte search gzip allowance. Only the
 translated scenario baselines are re-recorded; every tolerance and unrelated
 baseline remains unchanged. Without drift, the translated case measures
 **4 calls / 14 documents / 1 storage read**; the English fallback is **4 / 29 / 1**.
+
+At the #474 tip, v16’s combined fixture includes the finished translation drift
+build and note. Its recorded translated case is **4 / 17 / 1**, with zero
+tolerance on calls, documents, and storage reads; fallback remains **4 / 29 / 1**.
+Both bare-cluster cases measure **1 / 38 / 0**, within the unchanged **1 / 40 / 0**
+budgets. The combined drift-fixture SHA-256 is `de81e551eeed9da7a3b6a894ba2f5da1c32c8e7190a3cb8529cff99e19745462`.
