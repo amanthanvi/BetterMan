@@ -32,7 +32,7 @@ BetterMan now serves {{DEBIAN_PAGES}} manuals from {{DEBIAN_PACKAGES}} Debian {{
 
 ## Short URLs and plain text
 
-`betterman.sh/tar`, `betterman.sh/tar.1` and `betterman.sh/tar/-x` go where you expect. Add `.txt` for plain text: `curl betterman.sh/tar.txt`. Browsers can add BetterMan as a search engine, with suggestions.
+`betterman.sh/tar`, `betterman.sh/tar.1` and `betterman.sh/tar/-x` go where you expect. Add `.txt` for plain text: `curl -L betterman.sh/tar.txt`. Browsers can add BetterMan as a search engine, with suggestions.
 
 ## Generated text is labelled
 

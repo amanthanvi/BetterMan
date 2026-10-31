@@ -206,59 +206,9 @@ jobs:
         id: plan
         run: python3 scripts/dataset-workflow.py plan
 
-  demand:
-    name: Export shared page demand
-    needs: [preflight, plan]
-    if: ${{ needs.plan.outputs.enabled == 'true' }}
-    runs-on: ubuntu-latest
-    environment: production
-    timeout-minutes: 10
-    outputs:
-      available: ${{ steps.snapshot.outputs.available }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: ${{ needs.plan.outputs.ingest == 'true' }}
-        with:
-          persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        if: ${{ needs.plan.outputs.ingest == 'true' }}
-        with:
-          version: 10.34.4
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
-        if: ${{ needs.plan.outputs.ingest == 'true' }}
-        with:
-          node-version: 26
-      - name: Snapshot page demand once for every distro
-        id: snapshot
-        if: ${{ needs.plan.outputs.ingest == 'true' }}
-        env:
-          PLAUSIBLE_API_KEY: ${{ secrets.PLAUSIBLE_API_KEY }}
-          PLAUSIBLE_SITE_ID: betterman.sh
-          PLAUSIBLE_COUNTS_OUTPUT: ${{ github.workspace }}/.plausible-counts.json
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in 1 2 3; do
-            if pnpm analytics:counts; then break; fi
-            if [[ "$attempt" == 3 ]]; then exit 1; fi
-            sleep "$((attempt * 2))"
-          done
-          if [[ -f "$PLAUSIBLE_COUNTS_OUTPUT" ]]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Share aggregate snapshot
-        if: ${{ steps.snapshot.outputs.available == 'true' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: page-demand
-          path: ${{ github.workspace }}/.plausible-counts.json
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 14
-
   ingest:
     name: Dataset (${{ matrix.distro }})
-    needs: [preflight, plan, demand]
+    needs: [preflight, plan]
     if: ${{ needs.plan.outputs.enabled == 'true' }}
     strategy:
       fail-fast: false
@@ -297,16 +247,6 @@ jobs:
         with:
           node-version: 26
           cache: pnpm
-      - name: Download shared page-demand snapshot
-        if: ${{ needs.plan.outputs.ingest == 'true' && needs.demand.outputs.available == 'true' }}
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: page-demand
-          path: ${{ github.workspace }}
-      - name: Select shared page-demand snapshot
-        if: ${{ needs.plan.outputs.ingest == 'true' && needs.demand.outputs.available == 'true' }}
-        run: echo "BETTERMAN_PLAUSIBLE_COUNTS=$GITHUB_WORKSPACE/.plausible-counts.json" >> "$GITHUB_ENV"
-
       # Preserve the promotion job's no-lifecycle-scripts install policy.
       - name: Install verification dependencies
         id: verification_dependencies
@@ -418,9 +358,6 @@ jobs:
             set -- --activate
             if [ "${BETTERMAN_INGEST_SAMPLE}" = "true" ]; then
               set -- --sample --no-activate
-            fi
-            if [ -f "$GITHUB_WORKSPACE/.plausible-counts.json" ]; then
-              export BETTERMAN_PLAUSIBLE_COUNTS="$GITHUB_WORKSPACE/.plausible-counts.json"
             fi
             # Run checkout sources so B4's checksum-pinned data accompanies the module.
             export PYTHONPATH="$GITHUB_WORKSPACE/ingestion${PYTHONPATH:+:$PYTHONPATH}"
