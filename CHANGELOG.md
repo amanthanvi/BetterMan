@@ -4,6 +4,8 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Reject translated inline includes whose symlinks resolve outside their language root, and verify Python/workflow language copies against B9 (#395).
+
 - Prove package selectors with cached provider metadata instead of reading default content; remove the extra HTML limiter and retain bounded provider caches within the 5-call/13-document/1-storage-read alternate budget (#394).
 
 - Include the index-policy checker in the Next container build context so frontend type checking resolves its test import (#394).
