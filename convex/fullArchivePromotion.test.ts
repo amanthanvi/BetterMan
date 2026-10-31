@@ -10,6 +10,7 @@ const families = [
   { distro: "ubuntu" as const, acquisition: "ubuntu-deb-extraction" },
   { distro: "fedora" as const, acquisition: "fedora-rpm-extraction" },
   { distro: "arch" as const, acquisition: "arch-pkg-extraction" },
+  { distro: "alpine" as const, acquisition: "alpine-apk-extraction" },
 ];
 
 it.each(families.flatMap(family => [false, true].map(scored => ({ ...family, scored }))))(
@@ -33,7 +34,7 @@ it.each(families.flatMap(family => [false, true].map(scored => ({ ...family, sco
       await ctx.db.insert("activeReleases", { releaseId: release!._id, datasetReleaseId, locale: "en", distro, stage: "staging", activatedAt: "now" });
     });
     for (const allowed of [false, true]) {
-      const authorizations = { allowFullDebian: true, allowFullUbuntu: distro === "ubuntu" ? allowed : true, allowFullFedora: distro === "fedora" ? allowed : true, allowFullArch: distro === "arch" ? allowed : true };
+      const authorizations = { allowFullDebian: true, allowFullUbuntu: distro === "ubuntu" ? allowed : true, allowFullFedora: distro === "fedora" ? allowed : true, allowFullArch: distro === "arch" ? allowed : true, allowFullAlpine: distro === "alpine" ? allowed : true };
       const direct = await t.fetch("/ingest/activate", { method: "POST", headers, body: JSON.stringify({ datasetReleaseId, stage: "prod", activatedAt: "now", ...authorizations }) });
       expect(direct.status).toBe(409);
       expect(await direct.json()).toMatchObject({ error: { code: `FULL_${distro.toUpperCase()}_${scored ? "PROMOTION_HELD" : "TIER_REQUIRED"}` } });

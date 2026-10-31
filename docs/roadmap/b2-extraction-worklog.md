@@ -20,8 +20,18 @@ zero page actions/pkg entries), unchanged selector case, alias proof and release
 mismatch/rollback. Backend tests cover package lists, alias routes, missing route
 release identity and stage rejection. Fedora checks pass: 871 frontend / 3,283 Convex / 968 ingestion / 127 ops / 13
 workflow tests; lint/grammar/typecheck/public-API/codegen-no-drift/pip all pass.
-Perf passes with standard/default 4/26/1 and alternate 5/13/1. Remaining: commit/
-push #470; restack/check/push #473/#476, final combined E2E, refresh/recheck Proof.
+Perf passes with standard/default 4/26/1 and alternate 5/13/1. Fedora pushed
+08b831d0; Arch pushed cbd5d19e with 990 ingestion / 871 frontend / 3,285 Convex /
+127 ops / 13 workflow tests and all lint/typecheck/public-API/codegen/pip/perf
+checks passing. Arch implementation range-diff unchanged. Alpine code restacked
+unchanged; one historical worklog conflict kept this current record. Alpine
+passes 1,020 ingestion / 871 frontend / 3,287 Convex / 127 ops / 13 workflow tests
+and all lint/typecheck/public-API/codegen/pip/perf checks. All three family perf
+runs hit 5/13/1 alternate and 4/26/1 standard/default. Final production build and
+22 provider/man-query/short-URL E2E tests pass. Servers stopped after exact PID
+verification. Remaining: Alpine docs/push and final remote Proof/guard snapshot;
+lead owns updated-head independent review, staging measurement/pins and prod
+sign-off. No merge, dispatch, shared/production writes or CI watches.
 
 #477 c8dde155 is OPEN. Applied with cherry-pick --no-commit only for local perf;
 patch reversed; exact original bytes verified before committing. Its sole change

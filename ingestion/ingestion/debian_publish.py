@@ -50,11 +50,14 @@ def ingest_debian(
         "ubuntu": "ubuntu-deb-extraction",
         "fedora": "fedora-rpm-extraction",
         "arch": "arch-pkg-extraction",
+        "alpine": "alpine-apk-extraction",
     }
     if distro in identities and identities[distro] not in contract.get("acquisitions", []):
         raise RuntimeError(f"Deploy B2's v8 {distro} acquisition support before full ingestion")
-    if distro in {"fedora", "arch"} and contract.get("storedLicenseText") is not True:
-        raise RuntimeError("Deploy stored-license support before full Fedora ingestion")
+    # Every archive distro ships notices over Convex's 1 MiB document limit (Debian's
+    # libboost1.83-tools-dev is about 2.2 MB), so all of them use stored notices.
+    if contract.get("storedLicenseText") is not True:
+        raise RuntimeError(f"Deploy stored-license support before full {distro} ingestion")
     import os
 
     from ingestion.debian_indexes import PINS
@@ -72,6 +75,7 @@ def ingest_debian(
                 "ubuntu": "ubuntu-noble.json",
                 "fedora": "fedora-44.json",
                 "arch": "arch-20261001.json",
+                "alpine": "alpine-v3.23.json",
             }[distro]
         )
     )
@@ -101,6 +105,8 @@ def publish_workspace(
         from ingestion.fedora_archives import copyright_text as notice_text
     elif distro == "arch":
         from ingestion.arch_archives import copyright_text as notice_text
+    elif distro == "alpine":
+        from ingestion.alpine_archives import copyright_text as notice_text
     workspace.timings = {}
     started = time.monotonic()
     with (
@@ -135,10 +141,16 @@ def publish_workspace(
         used |= {a["sourcePackage"] for a in workspace.alias_providers}
         published_packages = [workspace.available[name] for name in sorted(used)]
         for package in published_packages:
+            if not package.sha256:
+                raise RuntimeError("Missing verified archive SHA256 before publication")
             require_job_budget("copyright collection")
             text = notice_text(workspace, package.name)
             if text.strip():
                 licenses[package.name] = text
+        if distro == "alpine":
+            from ingestion.alpine_archives import write_sha256_pins
+
+            write_sha256_pins(workspace)
         policy = PopularityPolicy.load()
         sitemap = _build_sitemap_page_map(pages=canonical, policy=policy)
         manifest = {
@@ -163,9 +175,24 @@ def publish_workspace(
                     **(
                         {
                             "licenseExpression": p.license,
-                            ("sourceRpm" if distro == "fedora" else "packageBase"): p.source,
+                            (
+                                "sourceRpm"
+                                if distro == "fedora"
+                                else "origin"
+                                if distro == "alpine"
+                                else "packageBase"
+                            ): p.source,
                         }
-                        if distro in {"fedora", "arch"}
+                        if distro in {"fedora", "arch", "alpine"}
+                        else {}
+                    ),
+                    **(
+                        {
+                            "filename": p.filename,
+                            "controlChecksum": p.control_checksum,
+                            "dataSha256": p.data_sha256,
+                        }
+                        if distro == "alpine"
                         else {}
                     ),
                 }
@@ -183,7 +210,7 @@ def publish_workspace(
             licenses=licenses,
             distro=distro,
             dataset_release_id=release_id,
-            stored=distro in {"fedora", "arch"},
+            stored=True,
         ):
             pass
         workspace.timings["metadataSeconds"] = (
@@ -272,7 +299,7 @@ def publish_workspace(
             licenses=licenses,
             distro=distro,
             dataset_release_id=release_id,
-            stored=distro in {"fedora", "arch"},
+            stored=True,
         ):
             require_job_budget("license upload")
             if pending and (

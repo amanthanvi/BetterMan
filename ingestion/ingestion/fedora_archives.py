@@ -161,7 +161,7 @@ def catalog(root: Path, pins_path: Path):
 
 
 def notice_path(path):
-    return path.startswith("usr/share/licenses/") or (
+    return path.startswith(("usr/share/licenses/", "usr/share/spdx/text/")) or (
         path.startswith(("usr/share/doc/", "usr/lib/", "usr/lib64/"))
         and bool(
             re.search(r"(?:^|/)(?:copying|copyright|licen[cs]e|notice)(?:[._-][^/]*)?$", path, re.I)

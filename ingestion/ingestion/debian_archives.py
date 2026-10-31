@@ -240,6 +240,9 @@ class ArchiveStore:
                 (pkg TEXT, path TEXT, kind TEXT, target TEXT, file TEXT,
                 PRIMARY KEY(pkg,path));
             CREATE TABLE IF NOT EXISTS receipts(pkg TEXT PRIMARY KEY,digest TEXT,version INTEGER);
+            CREATE TABLE IF NOT EXISTS apk_hashes
+                (pkg TEXT PRIMARY KEY,control TEXT,sha256 TEXT,
+                 data_sha256 TEXT,data_offset INTEGER);
             CREATE INDEX IF NOT EXISTS entries_path ON entries(path);
         """)
 
@@ -252,17 +255,38 @@ class ArchiveStore:
             self.db.executemany("INSERT OR REPLACE INTO entries VALUES (?,?,?,?,?)", entries)
             self.db.execute(
                 "INSERT OR REPLACE INTO receipts VALUES (?,?,?)",
-                (package.name, package.sha256, EXTRACTOR_VERSION),
+                (
+                    package.name,
+                    getattr(package, "receipt_digest", package.sha256),
+                    EXTRACTOR_VERSION,
+                ),
             )
+            if hasattr(package, "control_checksum"):
+                if not re.fullmatch(r"[a-f0-9]{64}", package.sha256):
+                    raise ValueError("Missing verified APK archive SHA256")
+                self.db.execute(
+                    "INSERT OR REPLACE INTO apk_hashes VALUES (?,?,?,?,?)",
+                    (
+                        package.name,
+                        package.control_checksum,
+                        package.sha256,
+                        package.data_sha256,
+                        package.data_offset,
+                    ),
+                )
 
     def complete(self, package: Package):
         receipt = self.db.execute(
             "SELECT digest,version FROM receipts WHERE pkg=?", (package.name,)
         ).fetchone()
-        return receipt == (package.sha256, EXTRACTOR_VERSION) and all(
-            Path(row[0]).is_file()
-            for row in self.db.execute(
-                "SELECT file FROM entries WHERE pkg=? AND file IS NOT NULL", (package.name,)
+        return (
+            bool(package.sha256)
+            and receipt == (getattr(package, "receipt_digest", package.sha256), EXTRACTOR_VERSION)
+            and all(
+                Path(row[0]).is_file()
+                for row in self.db.execute(
+                    "SELECT file FROM entries WHERE pkg=? AND file IS NOT NULL", (package.name,)
+                )
             )
         )
 

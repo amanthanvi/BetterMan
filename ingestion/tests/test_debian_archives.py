@@ -304,6 +304,70 @@ def test_archive_publisher_uses_bounded_pipeline_and_declares_every_provider(
     assert any(path == "activate" for path, _ in calls)
 
 
+def test_debian_publisher_uploads_notices_over_one_mib_whole(archive_workspace, monkeypatch):
+    # Full Debian ships notices over Convex's 1 MiB document limit (libboost1.83-tools-dev is
+    # about 2.2 MB); they go through the stored-notice path untruncated, like the B2 distros.
+    import json
+
+    from ingestion import debian_publish
+    from ingestion.debian_indexes import PINS
+
+    obj = archive_workspace
+    obj.pins = {
+        **json.loads(PINS.read_text()),
+        "mirror": "https://example.test/snapshot",
+        "releaseSha256": "a" * 64,
+    }
+    notice = "L" * (2200 * 1024)
+    monkeypatch.setattr(debian_publish, "copyright_text", lambda *_args: notice)
+    monkeypatch.setenv("BETTERMAN_INGEST_WORKERS", "1")
+    calls = []
+
+    class Client:
+        def post(self, path, payload):
+            calls.append((path, payload))
+            if path == "/ingest/pages/storage":
+                return {"inserted": len(payload["pages"]), "skipped": 0}
+            return {}
+
+    debian_publish.publish_workspace(
+        obj, Client(), activate=False, dataset_stage="staging", git_sha="test", sample=True
+    )
+    texts = [
+        license["licenseText"]
+        for path, payload in calls
+        if path == "/ingest/licenses"
+        for license in payload["licenses"]
+    ]
+    assert texts and all(text == notice for text in texts)
+
+
+def test_full_debian_and_ubuntu_require_deployed_stored_notice_support(monkeypatch):
+    from ingestion import debian_publish
+
+    for distro, acquisitions in [("debian", []), ("ubuntu", ["ubuntu-deb-extraction"])]:
+        contract = {"acquisitions": acquisitions, "storedLicenseText": False}
+        monkeypatch.setattr(
+            debian_publish,
+            "ConvexIngestClient",
+            lambda *_, contract=contract: type(
+                "Client", (), {"require_deployed_contract": lambda _self: contract}
+            )(),
+        )
+        monkeypatch.setattr(
+            debian_publish, "Workspace", lambda *a, **kw: pytest.fail("must not acquire")
+        )
+        with pytest.raises(RuntimeError, match="stored-license support"):
+            debian_publish.ingest_debian(
+                activate=False,
+                convex_url="unused",
+                ingest_secret="unused",
+                dataset_stage="staging",
+                git_sha="test",
+                distro=distro,
+            )
+
+
 def test_contract_failure_precedes_archive_acquisition(monkeypatch):
     from ingestion import debian_publish
     from ingestion.convex_client import ConvexContractError

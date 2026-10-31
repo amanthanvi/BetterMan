@@ -28,6 +28,8 @@ def measure(root, distro, limit, curated=False, largest=False):
         from ingestion.fedora_archives import copyright_text as notice_text
     elif distro == "arch":
         from ingestion.arch_archives import copyright_text as notice_text
+    elif distro == "alpine":
+        from ingestion.alpine_archives import copyright_text as notice_text
     started = time.monotonic()
     workspace = Workspace(root, limit=limit, distro=distro)
     if largest:
@@ -37,7 +39,17 @@ def measure(root, distro, limit, curated=False, largest=False):
     if curated:
         requested = FULL_PACKAGE_SET_BY_DISTRO[distro]
         routes = {_COMMAND_PAGES[p] for p in requested if p in _COMMAND_PAGES}
+        if distro == "alpine":
+            routes.add(("httpd", "8"))
         selected = set(requested) | set(workspace.registrations["packages"])
+        if distro == "alpine":
+            allowed = workspace.command_owner_allowances()
+            selected.update(n for _route, _expected, owners in allowed.values() for n in owners)
+            selected = {
+                n
+                for n in selected
+                if n in workspace.available and (n in requested or n.endswith("-doc"))
+            }
         for path, pkg in workspace.owners.execute("SELECT path,pkg FROM owners"):
             match = MAN_PATH.fullmatch(path)
             if match and (match[1].lower(), match[2][:1]) in routes:
@@ -77,9 +89,13 @@ def measure(root, distro, limit, curated=False, largest=False):
             licenses=notices,
             distro=distro,
             dataset_release_id="b2-local-audit",
-            stored=distro in {"fedora", "arch"},
+            stored=distro in {"fedora", "arch", "alpine"},
         ):
             pass
+        if distro == "alpine":
+            from ingestion.alpine_archives import write_sha256_pins
+
+            write_sha256_pins(workspace)
         rss_factor = 1 if sys.platform == "darwin" else 1024
         report = {
             "distro": distro,
@@ -94,6 +110,7 @@ def measure(root, distro, limit, curated=False, largest=False):
                         "ubuntu": "ubuntu-noble.json",
                         "fedora": "fedora-44.json",
                         "arch": "arch-20261001.json",
+                        "alpine": "alpine-v3.23.json",
                     }[distro]
                 ).read_bytes()
             ),
@@ -132,7 +149,8 @@ def measure(root, distro, limit, curated=False, largest=False):
                 - set(notices)
             ),
             "packages": [
-                {"name": p.name, "sha256": p.sha256, "bytes": p.size} for p in workspace.packages
+                {"name": p.name, "sha256": workspace.available[p.name].sha256, "bytes": p.size}
+                for p in workspace.packages
             ],
         }
     workspace.store.db.close()
@@ -143,7 +161,7 @@ def measure(root, distro, limit, curated=False, largest=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--distro", choices=["ubuntu", "fedora", "arch"], required=True)
+    parser.add_argument("--distro", choices=["ubuntu", "fedora", "arch", "alpine"], required=True)
     parser.add_argument("--workdir", type=Path, required=True)
     parser.add_argument("--packages", type=int, default=50)
     mode = parser.add_mutually_exclusive_group()

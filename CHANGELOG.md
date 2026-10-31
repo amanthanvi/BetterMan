@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Full Debian and Ubuntu imports store license notices over Convex's 1 MiB document limit as files, like Fedora, Arch and Alpine; the 2026-10-31 full-Debian staging run stopped on libboost1.83-tools-dev's 2.2 MB notice (#394).
 - Prove package selectors with cached provider metadata instead of reading default content; remove the extra HTML limiter and retain bounded provider caches within the 5-call/13-document/1-storage-read alternate budget (#394).
 
 - Include the index-policy checker in the Next container build context so frontend type checking resolves its test import (#394).
@@ -17,11 +18,14 @@ All notable changes to BetterMan are documented here.
 - Concept explainers (B8, #400): BetterMan's own plain-English explainers over the manual's section 7 pages, at `/concept/<slug>`, plain server HTML in the man page shell (hash-only CSP, cached at the edge per deployment) and labelled as BetterMan's text, with the authoritative page (signal(7), glob(7), regex(7), …) linked first. Twenty drafts, chosen from the referenced-by data, live in `nextjs/content/concepts/` with their sources, corrected after a two-model panel review. A man page that references one ends with a quiet "Concepts:" footer line naming at most three, strongest first, and search shows matching explainers with the `concept` kind without displacing a command of the same name. Neither adds a Convex read. Only approved explainers render or reach `/sitemap-concepts.xml`; all twenty are approved after the panel's corrections and the owner's skim, and are listed there.
 - Man pages and their share images: URLs carry only an allowlist of query parameters (`distro`, `pkg`, `portability`, `flag`, `lang`). Any other parameter, a repeated one, an invalid value or another spelling redirects (308, `private, no-store`) to the URL it means, before it can render or fill the CDN; a flag or package the page does not have answers privately, on HTML and text URLs alike, and so does a request with a bare `_rsc`. Short URLs drop tracking parameters in their one redirect. Documented in `docs/runbooks/vercel-ops.md` (#408).
 - Share cards, icons and print in the print-manual identity (#408): man page and per-flag share cards in BM Text with the `betterman(1)` wordmark, one red marker and a running foot naming the distro and release day; a flag's short URL (`/tar/-x`) now lands on `/man/tar/1?flag=-x#x`, whose share image is that option's card; generated text on a card is plain and labelled. The favicon, app icons and manifest drop `>_` for a BM Text “b” over the red rule, and the Geist/JetBrains share-card TTFs give way to static BM Text and ligature-free JetBrains Mono WOFF subsets (OFL). No ligatures in code, flags, literals or anything typed; hanging punctuation where supported; page titles read `name(section) — BetterMan`, and `pnpm next:grammar` rejects straight quotes and hyphen dashes in BetterMan's copy. Man pages print like the manual: running head and foot with page numbers on every page (Chromium), numbered sections, no site chrome, addresses after outside links, and breaks that keep headings and terms with their text.
+- Ingestion: recover malformed APK responses/caches through verified mirror fallback, export Alpine SHA256 pin proposals for review, and require committed pins on subsequent acquisitions and resumes (#394).
+
 - Preserve case, underscores and single-character distro package selectors through provider lookups, retaining the 200-character ASCII cache-key bound (#394).
 
 - Ingestion: send Ubuntu promotion authorization only to backends advertising its acquisition capability, and reject unsupported explicit authorization (#394).
 - Ingestion: acquire pinned Arch indexes and packages CDN-first with checksum-verified archive fallback and bounded failure reasons (#394).
 - Ingestion: isolate B2's exact v8 contract from B4 v7 and translations v9 (#394).
+- Add opt-in full Alpine APK extraction with native control/data verification and independent staging holds (#394).
 - Add opt-in full Arch package extraction with independent staging and promotion holds (#394).
 - Add opt-in full Fedora RPM extraction with independent staging and promotion holds (#394).
 - Add opt-in full Ubuntu archive extraction with independent staging and promotion holds (#394).
