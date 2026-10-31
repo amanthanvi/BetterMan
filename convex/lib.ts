@@ -131,7 +131,7 @@ export function pageResponse(
       sourcePackageVersion: page.sourcePackageVersion ?? null,
       datasetReleaseId: release.datasetReleaseId,
       hasParseWarnings: page.hasParseWarnings,
-      indexable: pageIsIndexable(release, page),
+      indexable: release.locale === "en" && pageIsIndexable(release, page),
       popularityScore: page.popularityScore ?? 0,
     },
     content: contentPayload,

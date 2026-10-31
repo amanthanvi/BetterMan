@@ -135,6 +135,41 @@ export async function createProviderFixture(onCall: () => void) {
   return t
 }
 
+// Translated releases (#395) beside the unchanged corpus: German has bash(1),
+// French has a release without it, so `?lang=fr` measures the English fallback.
+export async function createTranslationFixture(onCall: () => void) {
+  const t = await createFixture(onCall)
+  await t.run(async ctx => {
+    const english = (await ctx.db.query('activeReleases').withIndex('by_stage_and_locale_and_distro', q =>
+      q.eq('stage', 'prod').eq('locale', 'en').eq('distro', 'debian')).unique())!
+    const englishBash = (await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q =>
+      q.eq('releaseId', english.releaseId).eq('name', 'bash').eq('section', '1')).unique())!
+    const content = (await ctx.db.query('manPageContents').withIndex('by_pageId', q => q.eq('pageId', englishBash._id)).unique())!
+    const blob = (await ctx.db.get(content.blobId!))!
+    const payload = JSON.parse(await (await ctx.storage.get(blob.storageId!))!.text())
+    for (const [locale, name] of [['de', 'bash'], ['fr', 'tar01']] as const) {
+      const datasetReleaseId = `2026-10-30+perf-v1-debian-${locale}`
+      const releaseId = await ctx.db.insert('datasetReleases', {
+        datasetReleaseId, distro: 'debian', locale, imageRef: 'fixture', imageDigest: 'fixture',
+        ingestedAt: '2026-10-30T00:00:00Z', pageCount: 1, sealed: true, manifestVerified: true,
+      })
+      await ctx.db.insert('activeReleases', { stage: 'prod', locale, distro: 'debian', releaseId, datasetReleaseId, activatedAt: '2026-10-30T00:00:00Z' })
+      const contentSha256 = `fixture-${locale}-${name}`
+      const doc = JSON.parse(payload.content.docJson)
+      doc.blocks.unshift({ type: 'paragraph', inlines: [{ type: 'text', text: `Übersetzte Handbuchseite (${locale}).` }] })
+      const storageId = await ctx.storage.store(new Blob([serializeStoredPayload(contentSha256, { ...payload.content, docJson: JSON.stringify(doc) })]))
+      const pageId = await ctx.db.insert('manPages', {
+        releaseId, datasetReleaseId, externalId: `debian-${locale}-${name}`, locale, distro: 'debian', name, section: '1', sitemapPage: 1,
+        title: `${name}(1)`, description: 'GNU Bourne-Again SHell (übersetzt)', sourcePath: `/fixture/${locale}/${name}.1`,
+        sourcePackage: `manpages-${locale}`, sourcePackageVersion: '4.27.0-1', contentSha256, hasParseWarnings: false, documentedVersion: 'GNU bash 5.2',
+      })
+      const blobId = await ctx.db.insert('manPageContentBlobs', { contentSha256, storageId })
+      await ctx.db.insert('manPageContents', { pageId, blobId, contentSha256 })
+    }
+  })
+  return t
+}
+
 // Extra query-only data keeps the original browser page-view corpus unchanged.
 export async function createSearchFixture(onCall: () => void) {
   const t = await createFixture(onCall)

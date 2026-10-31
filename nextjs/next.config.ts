@@ -48,6 +48,11 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
+        // Translated pages (#395), one file per distro, language and sitemap page; before the distro patterns.
+        {
+          source: '/sitemap-translations-:distro.:lang.:page.xml',
+          destination: '/sitemaps-internal/translations/:distro/:lang/:page',
+        },
         {
           source: '/sitemap-:distro-:page.xml',
           destination: '/sitemaps-internal/:distro/:page',

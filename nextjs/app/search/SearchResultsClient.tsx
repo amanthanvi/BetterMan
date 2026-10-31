@@ -22,6 +22,7 @@ async function fetchMore(opts: {
   section: string
   limit: number
   offset: number
+  lang: string | null
 }): Promise<SearchResponse> {
   const params = new URLSearchParams()
   params.set('q', opts.q)
@@ -29,6 +30,7 @@ async function fetchMore(opts: {
   params.set('offset', String(opts.offset))
   if (opts.section) params.set('section', opts.section)
   if (opts.distro !== 'debian') params.set('distro', opts.distro)
+  if (opts.lang) params.set('lang', opts.lang)
 
   const res = await fetch(`/api/v1/search?${params.toString()}`, {
     headers: { Accept: 'application/json' },
@@ -64,6 +66,7 @@ export function SearchResultsClient({
   section,
   initial,
   concepts = [],
+  lang = null,
 }: {
   /** The distro the results came from, after any Debian fallback. */
   distro: Distro
@@ -72,11 +75,14 @@ export function SearchResultsClient({
   initial: SearchResponse | null
   /** Explainers the query names, matched on the server. */
   concepts?: ConceptLink[]
+  /** `?lang=` (#395): translated hits first; the server's nextOffset then pages English. */
+  lang?: string | null
 }) {
   const { urlDistro } = useDistro()
   const { t, tn, urlLang } = useLang()
   const [results, setResults] = useState<SearchResult[]>(() => initial?.results ?? [])
   const [hasMore, setHasMore] = useState<boolean>(() => initial?.hasMore ?? false)
+  const [nextOffset, setNextOffset] = useState<number | null>(() => initial?.nextOffset ?? null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -88,6 +94,7 @@ export function SearchResultsClient({
     requestEpochRef.current += 1
     setResults(initial?.results ?? [])
     setHasMore(initial?.hasMore ?? false)
+    setNextOffset(initial?.nextOffset ?? null)
     setError(null)
     setLoading(false)
   }, [distro, initial, q, section])
@@ -100,9 +107,10 @@ export function SearchResultsClient({
     setLoading(true)
     setError(null)
     try {
-      const next = await fetchMore({ distro, q, section, limit: 20, offset: results.length })
+      const next = await fetchMore({ distro, q, section, limit: 20, offset: nextOffset ?? results.length, lang })
       if (epoch !== requestEpochRef.current) return
       setHasMore(next.hasMore)
+      setNextOffset(next.nextOffset ?? null)
       setResults((prev) => {
         const seen = new Set(prev.map((r) => `${r.name}:${r.section}`))
         const merged = prev.slice()
@@ -120,7 +128,7 @@ export function SearchResultsClient({
     } finally {
       if (epoch === requestEpochRef.current) setLoading(false)
     }
-  }, [distro, loading, q, results.length, section, t])
+  }, [distro, lang, loading, nextOffset, q, results.length, section, t])
 
   if (!q) {
     return (

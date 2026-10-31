@@ -1,6 +1,7 @@
 import { api } from '../../convex/_generated/api'
 import { getConvexClient } from './convexClient'
 import { normalizeDistro, type Distro } from './distro'
+import { translatedLang, type TranslatedLang } from './i18n/locales'
 
 /**
  * The active dataset release per distro, as the proxy sees it. Man page HTML is
@@ -61,6 +62,64 @@ export async function servingRelease(distro: Distro, now = Date.now()): Promise<
   return await cachedRelease('debian', now)
 }
 
+/**
+ * A translated page (`?lang=`, #395) also depends on that language's release,
+ * and falls back to English when the language lacks the page, so its cache key
+ * carries both. `datasetReleaseId` is null when the distro has no release in
+ * that language; `known` is false when the lookup failed or timed out.
+ */
+export type TranslationInfo = { lang: TranslatedLang; datasetReleaseId: string | null; known: boolean }
+
+export const TRANSLATION_HEADER = 'x-bm-translation-release'
+
+type Releases = { release: ReleaseInfo | null; translation: string | null }
+
+const both = new Map<string, { at: number; value: Promise<Releases | undefined> }>()
+
+async function readReleases(distro: Distro, lang: TranslatedLang): Promise<Releases> {
+  // One query answers both: English, and the language's release (or null).
+  const info = await getConvexClient().query(api.queries.getInfo, { distro, locale: lang })
+  const release = info.datasetReleaseId === 'uninitialized'
+    ? (distro === 'debian' ? null : await cachedRelease('debian', Date.now()))
+    : { datasetReleaseId: info.datasetReleaseId, distro, pageCount: info.pageCount, lastUpdated: info.lastUpdated }
+  return { release, translation: info.translation?.datasetReleaseId ?? null }
+}
+
+/**
+ * `?lang=` (#395): the serving English release and the language's release for
+ * `distro` in one Convex read, cached like servingRelease. Undefined when the
+ * read failed: the page then renders unkeyed and makes no translation claim.
+ */
+export function servingReleases(distro: Distro, lang: TranslatedLang, now = Date.now()): Promise<Releases | undefined> {
+  const key = `${distro}:${lang}`
+  const hit = both.get(key)
+  if (hit && now - hit.at < RELEASE_TTL_MS) return hit.value
+  const value: Promise<Releases | undefined> = readReleases(distro, lang).catch(() => undefined)
+  both.set(key, { at: now, value })
+  return value
+}
+
+/** The part of the cache key a translation adds after the English release. */
+export function translationKey(info: TranslationInfo): string {
+  return `~${info.lang}:${info.known ? info.datasetReleaseId ?? 'none' : UNKNOWN_RELEASE}`
+}
+
+/** The translation the proxy forwarded beside a trusted release header; null without `?lang=` or trust. */
+export function trustedTranslation(headers: Record<string, HeaderValue>): TranslationInfo | null {
+  if (trustedProxyRelease(headers) === undefined) return null
+  const raw = [headers[TRANSLATION_HEADER]].flat()[0]
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as Partial<TranslationInfo>
+    const lang = translatedLang(parsed.lang)
+    if (!lang || typeof parsed.known !== 'boolean') return null
+    const id = typeof parsed.datasetReleaseId === 'string' && parsed.datasetReleaseId ? parsed.datasetReleaseId : null
+    return { lang, datasetReleaseId: parsed.known ? id : null, known: parsed.known }
+  } catch {
+    return null
+  }
+}
+
 export function encodeReleaseHeader(info: ReleaseInfo): string {
   return JSON.stringify(info)
 }
@@ -110,4 +169,5 @@ export function decodeReleaseHeader(value: HeaderValue): ReleaseInfo | null {
 /** Test seam: forget cached releases. */
 export function resetReleaseCache() {
   releases.clear()
+  both.clear()
 }
