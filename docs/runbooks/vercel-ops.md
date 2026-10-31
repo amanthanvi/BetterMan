@@ -206,3 +206,34 @@ What the allowlist cannot know, the renderer settles: a `flag` the page does not
 Adding a parameter means adding it to `MAN_QUERY` with a validator over a bounded set and to `manQueryParams` for the URLs that read it, then here. Verify on a preview: `curl -sI 'https://<preview>/man/tar/1?zz=1'` answers `308` to `/man/tar/1` with `private, no-store`; `curl -sI 'https://<preview>/man/tar/1?flag=-Q'` answers `307`; and `/man/tar/1?flag=%2Dc` after `/man/tar/1?flag=-c` shows `x-vercel-cache: HIT` (one entry for both spellings).
 
 **Deploy order.** Man pages need the Convex functions that report the serving release (`reportRelease`). New Convex with old Next is safe. New Next with old Convex answers 500, because the old validator rejects the argument. `deploy.yml` always pushes Convex before Vercel and stops if the Convex deploy fails, so keep that order for any manual deploy too.
+
+## Search ranking rollout (#464)
+
+The production `convex:prod-check` used by deploy and post-promotion keeps its
+existing availability, typo, page/content and metadata goldens fatal. The five
+new task/flag ranking queries only report advisories when tar is outside the top
+three, including on unscored releases and during asynchronous backfills. Ranking
+quality cannot block the Vercel handoff after Convex has already deployed.
+
+For the local E2E seed, run `BETTERMAN_CHECK_RANKING=seed pnpm convex:prod-check`;
+that explicit mode requires tar first for all five cases and fails on query errors.
+Use `BETTERMAN_E2E_UNSCORED=1` with the seed script to verify the default production
+mode against a legacy release shape without popularity or verified flag usage.
+
+This revision removes #465's proposed indexes on `manPageOptionFlags`. Candidate
+indexes belong to the new, empty `flagSearchCandidates` table, so this rollout
+needs no `confirm_large_indexes` dispatch. Normal deployment schedules version 5
+through the existing task-backfill entrypoint. The first source scan marks a
+release ready and publishes its candidate generation. Legacy completed rows stay
+readable during migration; subsequent B7 updates never unset readiness.
+
+B7 page writes request a coalesced refresh with a thirty-second delayed start.
+The serialized writer builds a separate generation, publishes it atomically,
+and cleans old generations in bounded batches. Mid-pass writes request another
+pass without delaying publication of the one finishing. Readers keep the last
+completed ranking throughout. Source scans restore evicted candidates; canceled
+old jobs and generation tokens prevent stale chains from writing. An interrupted
+build resumes its staging generation and retains queued rescan requests.
+`pnpm convex:task-check` reports progress and failures through the existing
+per-release status. No production workflow or migration was executed by the
+implementation agent.

@@ -598,6 +598,39 @@ describe('task-phrase rows (C5)', () => {
     vi.useRealTimers();
   });
 
+  it('upgrades pending version-2 backfills and marks verified flag candidates ready', async () => {
+    vi.useFakeTimers();
+    try {
+      const t = await withTarLayer();
+      await t.run(async ctx => {
+        const pages = await ctx.db.query('manPages').withIndex('by_contentSha256', q => q.eq('contentSha256', 'tar')).take(4);
+        for (const page of pages) {
+          await ctx.db.patch(page._id, { popularityScore: 6123 });
+          const jobId = await ctx.scheduler.runAfter(0, internal.taskPhrases.backfillRelease, { releaseId: page.releaseId });
+          await ctx.db.insert('taskPhraseBackfills', { releaseId: page.releaseId, version: 2, cursor: null,
+            scanned: 1, written: 1, jobId, attempts: 0, updatedAt: 0 });
+        }
+      });
+      const oldJobs = await t.run(async ctx => (await ctx.db.query('taskPhraseBackfills').take(4)).map(row => row.jobId!));
+      expect((await t.mutation(internal.taskPhrases.backfillActiveReleases, {})).scheduled).toBe(2);
+      expect(await t.run(async ctx => Promise.all(oldJobs.map(async id => (await ctx.db.system.get(id))?.state.kind)))).toEqual(['canceled', 'canceled']);
+      const current = await t.run(ctx => ctx.db.query('taskPhraseBackfills').take(4));
+      for (const row of current) {
+        expect(await t.mutation(internal.taskPhrases.backfillRelease, { releaseId: row.releaseId })).toEqual({ done: false });
+        expect(await t.mutation(internal.taskPhrases.backfillRelease, { releaseId: row.releaseId, generation: row.generation! - 1 })).toEqual({ done: false });
+      }
+      await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+      const rows = await t.run(ctx => ctx.db.query('manPageTaskPhrases').take(4));
+      expect(rows).toHaveLength(2);
+      expect(rows.every(row => row.popularityScore === 6123)).toBe(true);
+      const releases = await t.run(ctx => ctx.db.query('datasetReleases').take(4));
+      expect(releases.every(release => release.flagSearchReady && release.flagSearchGeneration !== undefined)).toBe(true);
+      const flags = await t.run(ctx => ctx.db.query('flagSearchCandidates').take(20));
+      expect(flags.some(row => row.flag === '--extract' && row.candidates.some(c => c.name === 'tar'))).toBe(true);
+      expect((await t.mutation(internal.taskPhrases.backfillActiveReleases, {})).scheduled).toBe(0);
+    } finally { vi.useRealTimers(); }
+  });
+
   it('backfill every active release once, report durable per-release status, and are idempotent', async () => {
     vi.useFakeTimers();
     const t = await explainFixture();
