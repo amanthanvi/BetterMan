@@ -158,7 +158,7 @@ or `~de:none` when the distro has no German release. A forged
 the release token. `content.getManByNameAndSection` with `locale` resolves the
 language's page or alias, else English with the miss confirmed, in one
 read-model query, and returns whether English has the route, whether it is
-indexable, and every language with the route. `getRelated` with `locale`
+indexable, and the eligible English alternate. `getRelated` with `locale`
 resolves the same way. The data cache stores a translated answer only when the
 key's releases gave it: the language's release for its own page, and English
 plus the same confirmed miss for the fallback, so a release mismatch renders
@@ -171,25 +171,17 @@ through English by the server's `nextOffset`. English computes its top hit only
 when no translated hit can lead. A language without a release, or an unknown
 code, searches English unchanged.
 
-**Sitemaps.** Ingestion puts 1,000 translated pages on each sitemap page, and
-the index lists `/sitemap-translations-<distro>.<lang>.<n>.xml` for every
-sitemap page of each active translated release (German's projected 2,204
-pages are three files), each read in at most five 200-page chunks. Each entry carries the same set the page's HTML
-lists: every language with the route, plus English and `x-default` only when
-the English page exists and is indexable. Once #445 adds `indexable`, a
-noindex English page is neither annotated nor an alternate; the query returns
-that bit and `lib/translationSitemap.ts` drops it (tested). English pages carry
-no alternates in their HTML, because finding a page's translations would cost
-reads on every English view; each English URL is annotated in the sitemap
-instead, once, in the file of the first language that translates it. A
-200-page chunk reads at most 14 pointer/release documents, 200 pages and 6
-lookups per page, about 1,400 documents; a German file (about 2,200 pages) is
-about 15,400 documents per hourly regeneration, and sitemaps are crawled far
-less often.
+**Sitemaps.** Translated URLs are noindex. New translated releases declare zero
+indexable pages and put every page on sitemap page zero, so no translated
+sitemap is advertised. Legacy translated releases also advertise zero sitemap
+pages. The bounded legacy chunk reader remains available, but the public
+sitemap route returns 404 for an unadvertised page. The defensive XML serializer
+emits only confirmed indexable English URLs and English/x-default links, never
+localized URLs or an English route that does not exist.
 
 ### Read budget
 
-`perf:check` measures each case cold, through the real proxy and renderer:
+`perf:check` checks these budget ceilings cold, through the real proxy and renderer:
 
 | Page view | Calls | Documents | Storage reads |
 | --- | ---: | ---: | ---: |
@@ -198,8 +190,8 @@ less often.
 | Missing translation, English fallback (`manTranslationFallback`) | 4 | 29 | 1 |
 
 A translated page reads no derived summary or generated brief (both are
-English-only), and adds the English route check and one pointer plus one
-lookup per other language for its `hreflang` set. The fallback adds the
+English-only), and adds the English route check for its canonical and
+English/x-default alternates. It does not read other translation releases. The fallback adds the
 language's pointer and a page miss to the English read, in `getInfo`, the read
 model and `getRelated`. Translated search adds one pointer, one release and the
 language's own search to English's.
