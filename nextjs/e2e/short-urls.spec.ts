@@ -67,7 +67,7 @@ test('short urls: an unknown name lands on the man page 404', async ({ page }) =
 })
 
 test('short urls: an unknown flag still lands on the page', async ({ request }) => {
-  const res = await request.get('/tar/--extract', { maxRedirects: 0 })
+  const res = await request.get('/tar/--bogus', { maxRedirects: 0 })
   expect(res.status()).toBe(307)
   expect(res.headers()['location']).toBe('/man/tar')
 })

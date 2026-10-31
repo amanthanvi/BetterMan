@@ -1,4 +1,5 @@
 import { readProviderPackages } from "./_providers";
+import { compareFlagCandidates } from "./_flagSearch";
 import { pageIsIndexable, sitemapPageCount } from "./_indexPolicy";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
@@ -39,7 +40,19 @@ const MAX_LEGACY_SECTION_SCAN = 5_000;
 const SITEMAP_CHUNK_ITEMS = 5_000;
 const MAX_RELATED = 50;
 const MAX_DESCRIPTION_HITS = 24;
+// Curated task vocabulary only: keep command names, flags and explain input literal.
+const TASK_SYNONYMS = new Map([["tarball", "tar archive"], ["tarballs", "tar archive"]]);
 const SEARCH_STOP_WORDS = new Set("a an and are as at be by can do does for from how i in is it of on or the to what when where which with".split(" "));
+
+function taskExpansion(word: string, prefixWord?: string): string | undefined {
+  return TASK_SYNONYMS.get(word) ?? (word === prefixWord && word.length >= 4
+    ? [...TASK_SYNONYMS].find(([synonym]) => synonym.startsWith(word))?.[1] : undefined);
+}
+
+function wordOverlap(words: string[], queryWords: string[], prefixWord?: string): number {
+  return queryWords.reduce((score, word) => score + (words.includes(word) ? 1 :
+    word === prefixWord && word.length >= 4 && words.some(candidate => candidate.startsWith(word)) ? 0.5 : 0), 0);
+}
 
 function boundedInt(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
@@ -594,6 +607,36 @@ async function clusterHits(ctx: QueryCtx, releaseId: Id<"datasetReleases">, name
   return hits;
 }
 
+/** Verified-example coverage is checked before the candidate cap, not after it. */
+async function bareClusterHits(ctx: QueryCtx, release: Doc<"datasetReleases">, flag: string, section: string | null): Promise<RankedHit[]> {
+  const letters = [...flag.slice(1)].map(letter => `-${letter}`);
+  const hints = release.flagSearchReady ? await Promise.all([...new Set(letters)].map(part => ctx.db.query("flagSearchCandidates")
+    .withIndex("by_releaseId_and_generation_and_flag", q => q.eq("releaseId", release._id).eq("generation", release.flagSearchGeneration).eq("flag", part)).unique())) : [];
+  const merged = new Map(hints.flatMap(row => row?.candidates ?? []).map(candidate => [candidate.pageId, candidate]));
+  const preferred = [...merged.values()].filter(c => (section === null || c.section === section) && letters.every(f => c.usage.some(u => u.flag === f)))
+    .sort((a, b) => compareFlagCandidates(a, b, letters));
+  // Reserve release reads, every letter's candidate row, and the full 12-lookup brief.
+  const take = Math.floor((40 - 2 - letters.length - (MAX_TOP_FLAG_LOOKUPS + 2)) / (letters.length + 1));
+  const candidates = preferred.length ? preferred.slice(0, take) : await optionFlagRowsFor(ctx, {
+    releaseId: release._id, section, flag: letters[0], namePrefix: null, take,
+  });
+  const hits: RankedHit[] = [];
+  for (const candidate of candidates) {
+    const rows: Array<Doc<"manPageOptionFlags">> = [];
+    for (const part of letters) {
+      if (rows.length && (rows[rows.length - 1].takesArgument ?? flagTakesArgument(rows[rows.length - 1].flags))) break;
+      const row = "flag" in candidate && part === letters[0] ? candidate : await ctx.db.query("manPageOptionFlags")
+        .withIndex("by_pageId_and_flag", q => q.eq("pageId", candidate.pageId).eq("flag", part)).first();
+      if (!row) break;
+      rows.push(row);
+    }
+    if (rows.length !== letters.length) continue;
+    const hit = await optionHit(ctx, rows[0], 0);
+    if (hit) { hit.highlights = [...new Set(rows.map(row => row.flags))]; hits.push(hit); }
+  }
+  return hits;
+}
+
 function rankSearchDocument(
   doc: Pick<Doc<"manPageSearchDocuments">, "nameNorm" | "descNorm">,
   queryNorm: string,
@@ -661,6 +704,7 @@ async function textHits(
   const symbols = section === null
     ? await ctx.db.query('manPageSymbols').withIndex('by_releaseId_and_termNorm', q => q.eq('releaseId', releaseId).eq('termNorm', queryNorm.replace(/=$/, ''))).take(8)
     : await ctx.db.query('manPageSymbols').withIndex('by_releaseId_and_section_and_termNorm', q => q.eq('releaseId', releaseId).eq('section', section).eq('termNorm', queryNorm.replace(/=$/, ''))).take(8);
+  const prefixWord = queryNorm.match(/[a-z0-9_]+$/)?.[0];
   const contentWords = queryNorm.split(/[^a-z0-9_]+/).filter((word) => word && !SEARCH_STOP_WORDS.has(word));
 
   const ranked = new Map<Id<"manPages">, RankedHit>();
@@ -674,7 +718,7 @@ async function textHits(
     // Convex returns ranked any-term matches. Keep content-word overlap, not
     // stop-word-only answers such as true(1) for "how do I extract a tarball".
     const words = `${doc.nameNorm} ${doc.descNorm}`.split(/[^a-z0-9_]+/);
-    const overlap = contentWords.filter((word) => words.some((candidate) => candidate.startsWith(word))).length;
+    const overlap = wordOverlap(words, contentWords, prefixWord);
     if (queryNorm.includes(" ") && overlap === 0) return;
     ranked.set(doc.pageId, searchDocumentHit(doc, queryText, rankDescriptionDocument(doc, queryNorm, index) + overlap * 50));
   });
@@ -688,7 +732,9 @@ async function textHits(
   // One-letter words ("ls -l") would prefix-match most phrases.
   const taskWords = contentWords.filter((word) => word.length > 1);
   if (queryNorm.includes(" ") && taskWords.length) {
-    for (const hit of await taskHits(ctx, { releaseId, section, queryText, contentWords: taskWords })) {
+    const taskQuery = queryNorm.replace(/\b[a-z]+\b/g, (word) => taskExpansion(word, prefixWord) ? `${word} ${taskExpansion(word, prefixWord)}` : word);
+    const expandedWords = [...new Set(taskWords.flatMap((word) => (taskExpansion(word, prefixWord) ? `${word} ${taskExpansion(word, prefixWord)}` : word).split(" ")))];
+    for (const hit of await taskHits(ctx, { releaseId, section, queryText: taskQuery, contentWords: expandedWords, prefixWord })) {
       const existing = ranked.get(hit.pageId!);
       if (!existing || existing.rank < hit.rank) ranked.set(hit.pageId!, hit);
     }
@@ -706,7 +752,7 @@ const MAX_TASK_HITS = 3;
 
 async function taskHits(
   ctx: QueryCtx,
-  args: { releaseId: Id<"datasetReleases">; section: string | null; queryText: string; contentWords: string[] },
+  args: { releaseId: Id<"datasetReleases">; section: string | null; queryText: string; contentWords: string[]; prefixWord?: string },
 ): Promise<RankedHit[]> {
   const rows = await ctx.db.query("manPageTaskPhrases")
     .withSearchIndex("search_taskText", (q) => {
@@ -714,25 +760,26 @@ async function taskHits(
       return args.section === null ? base : base.eq("section", args.section);
     })
     .take(MAX_TASK_ROWS);
-  const hits: RankedHit[] = [];
-  for (const [index, row] of rows.entries()) {
-    if (hits.length >= MAX_TASK_HITS) break;
+  const hits: Array<RankedHit & { popularityScore?: number }> = [];
+  for (const row of rows) {
     // The phrase sharing the most content words with the query is the evidence;
     // a phrase sharing none (only stop words matched) is not a task match.
     let best: { phrase: string; overlap: number } | null = null;
     for (const phrase of row.taskText.split("\n")) {
-      const words = phrase.toLowerCase().split(/[^a-z0-9_]+/);
-      const overlap = args.contentWords.filter((word) => words.some((candidate) => candidate.startsWith(word))).length;
+      const words = `${row.name} ${phrase}`.toLowerCase().split(/[^a-z0-9_]+/);
+      const overlap = wordOverlap(words, args.contentWords, args.prefixWord);
       if (overlap && (!best || overlap > best.overlap)) best = { phrase, overlap };
     }
     if (!best) continue;
     hits.push({
       name: row.name, section: row.section, title: row.title, description: row.description,
       highlights: [], match: "task", taskPhrase: best.phrase, pageId: row.pageId,
-      rank: 2_000 + best.overlap * 100 - index,
+      popularityScore: row.popularityScore,
+      rank: 2_000 + best.overlap * 100,
     });
   }
-  return hits;
+  return hits.sort((a, b) => b.rank - a.rank || (b.popularityScore ?? 0) - (a.popularityScore ?? 0) || compareHits(a, b))
+    .slice(0, MAX_TASK_HITS).map((hit, index) => ({ ...hit, rank: 2_000 + MAX_TASK_HITS - index }));
 }
 
 // Names within two edits of `queryText`, for a lookup that found nothing.
@@ -875,6 +922,11 @@ export const search = query({
       if (!rows.length && flag.startsWith("--") && flag !== flag.toLowerCase()) {
         rows = await optionFlagRowsFor(ctx, { ...lookup, flag: flag.toLowerCase() });
       }
+      if (!rows.length && name === null && /^-[a-zA-Z0-9]{2,8}$/.test(flag)) {
+        const hits = await bareClusterHits(ctx, release, flag, section);
+        visible = hits.slice(offset, offset + limit);
+        hasMore = hits.length > offset + limit;
+      }
       if (!rows.length && isNamedCluster) {
         const hits = await clusterHits(ctx, release._id, name!, flag, section);
         if (hits.length) {
@@ -888,13 +940,20 @@ export const search = query({
           if (!exactCommand) rows = await optionFlagRowsFor(ctx, { ...lookup, exactName: false, flag });
         }
       }
-      if (rows.length) {
+      const hints = visible === null && name === null && release.flagSearchReady ? await ctx.db.query("flagSearchCandidates")
+        .withIndex("by_releaseId_and_generation_and_flag", q => q.eq("releaseId", release._id).eq("generation", release.flagSearchGeneration).eq("flag", flag.startsWith("--") ? flag.toLowerCase() : flag)).unique() : null;
+      const preferred = (hints?.candidates ?? []).filter(c => section === null || c.section === section);
+      if (rows.length || preferred.length) {
+        const candidates: Array<RankedHit | Doc<"manPageOptionFlags">> = [
+          ...preferred.map(c => ({ ...c, highlights: [c.flags], match: "option" as const, rank: 0 })),
+          ...rows.filter(row => !preferred.some(c => c.pageId === row.pageId)),
+        ];
         visible = [];
-        for (const row of rows.slice(offset, offset + limit)) {
-          const hit = await optionHit(ctx, row, 0);
+        for (const row of candidates.slice(offset, offset + limit)) {
+          const hit = "rank" in row ? row : await optionHit(ctx, row, 0);
           if (hit) visible.push(hit);
         }
-        hasMore = rows.length > offset + limit;
+        hasMore = candidates.length > offset + limit;
       } else if (visible === null) {
         if (!name) return { query: queryText, results: [], suggestions: [], hasMore: false, nextOffset: null };
         textQuery = name;

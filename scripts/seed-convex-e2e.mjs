@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import { setTimeout as sleep } from 'node:timers/promises'
 
 const stage = process.env.BETTERMAN_DATASET_STAGE || 'prod'
+const unscored = process.env.BETTERMAN_E2E_UNSCORED === '1'
 const secret = process.env.CONVEX_INGEST_SECRET
 const rawUrl = process.env.CONVEX_HTTP_URL || process.env.CONVEX_SITE_URL || process.env.CONVEX_URL
 
@@ -44,7 +45,7 @@ function stableSha(value) {
 
 function page({
   name, section, title, description, toc, blocks, synopsis = null, options = null, seeAlso = null,
-  sourcePackage = null, sourcePackageVersion = null,
+  sourcePackage = null, sourcePackageVersion = null, popularityScore = 0,
 }) {
   const doc = { toc, blocks }
   const plainText = [name, description, JSON.stringify(doc)].join(' ')
@@ -54,7 +55,7 @@ function page({
     section,
     sitemapPage: section === '3pm' ? 0 : 1,
     indexable: section !== '3pm',
-    popularityScore: 0,
+    popularityScore,
     title,
     description,
     sourcePath: `/e2e/${name}.${section}`,
@@ -126,10 +127,20 @@ function makePages(distro) {
           termInlines: [{ type: 'code', text: '-c, --create' }],
           definitionBlocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Create a new archive.' }] }],
         },
+        ...[
+          ['-x, --extract, --get', 'opt-extract', 'Extract files from an archive.'],
+          ['-z, --gzip, --gunzip, --ungzip', 'opt-gzip', 'Filter through gzip.'],
+          ['-f, --file ARCHIVE', 'opt-file', 'Use archive file.'],
+          ['-v, --verbose', 'opt-verbose', 'List processed files.'],
+          ['-t, --list', 'opt-list', 'List archive contents.'],
+        ].map(([flags, id, description]) => ({
+          id, termInlines: [{ type: 'code', text: flags }],
+          definitionBlocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: description }] }],
+        })),
       ],
     },
     { type: 'heading', id: 'examples', level: 2, text: 'EXAMPLES' },
-    { type: 'code_block', id: 'example-1', text: 'tar -cf archive.tar ./my-folder\n\ntar -xf archive.tar', languageHint: 'bash' },
+    { type: 'code_block', id: 'example-1', text: 'tar -cf archive.tar ./my-folder\n\ntar -xzf archive.tar.gz\n\ntar -czf archive.tar.gz ./my-folder\n\ntar -tvf archive.tar', languageHint: 'bash' },
     { type: 'heading', id: 'see-also', level: 2, text: 'SEE ALSO' },
     {
       type: 'paragraph',
@@ -154,8 +165,16 @@ function makePages(distro) {
     ],
     blocks: tarBlocks,
     synopsis: ['tar [OPTION]... [FILE]...'],
-    options: [{ flags: '-c, --create', argument: null, description: 'Create a new archive.', anchorId: tarOptAnchor }],
+    options: [
+      { flags: '-c, --create', argument: null, description: 'Create a new archive.', anchorId: tarOptAnchor },
+      { flags: '-x, --extract, --get', anchorId: 'opt-extract', description: 'Extract files from an archive.' },
+      { flags: '-z, --gzip, --gunzip, --ungzip', anchorId: 'opt-gzip', description: 'Filter through gzip.' },
+      { flags: '-f, --file', argument: 'ARCHIVE', anchorId: 'opt-file', description: 'Use archive file.' },
+      { flags: '-v, --verbose', anchorId: 'opt-verbose', description: 'List processed files.' },
+      { flags: '-t, --list', anchorId: 'opt-list', description: 'List archive contents.' },
+    ],
     seeAlso: [{ name: 'gzip', section: '1', resolvedPageId: gzip.externalId }, { name: 'cpio', section: '1', resolvedPageId: null }],
+    popularityScore: 5470,
     sourcePackage: 'tar',
     sourcePackageVersion: '1.35+dfsg-3',
   })
@@ -240,7 +259,11 @@ function makePages(distro) {
     name: 'foo::bar', section: '3pm', title: 'foo::bar(3pm)', description: 'Perl module route fixture', sourcePackage: 'perl',
     toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Perl module documentation.' }] }],
   })
-  const pages = [gzip, tar, printf1, printf3, openssl, evp, bash, perl]
+  const competitors = [['instmodsh', 4900], ['ptar', 4900], ['dpkg', 5470]].map(([name, popularityScore]) => page({
+    name, popularityScore, section: '1', title: `${name}(1)`, description: `${name} utility`,
+    toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: `${name} utility` }] }], options: [{ flags: '-x, --extract, --get', anchorId: 'extract', description: 'Extract files.' }],
+  }))
+  const pages = [gzip, tar, printf1, printf3, openssl, evp, bash, perl, ...competitors]
   // Linux only, so FreeBSD and macOS have a page another distro carries.
   if (distro !== 'freebsd' && distro !== 'macos') {
     pages.push(
@@ -309,7 +332,7 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
   }))
 
   // Retain one real legacy release shape to exercise rolling-deploy serving.
-  if (distro === 'macos') {
+  if (distro === 'macos' || unscored) {
     for (const page of pages) {
       delete page.indexable
       delete page.popularityScore
@@ -333,7 +356,7 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     ingestedAt: now,
     packageManifest: { packages: [] },
     pageCount: pages.length,
-    ...(distro === 'macos' ? {} : { indexablePageCount: pages.filter(p => p.indexable).length }),
+    ...(distro === 'macos' || unscored ? {} : { indexablePageCount: pages.filter(p => p.indexable).length }),
     providerCount: 5,
     packageBatches: [],
     aliasCount: 3,
@@ -347,20 +370,31 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     const tar = pages.find((p) => p.name === 'tar')
     await post('/ingest/generated', { records: [{
       contentSha256: tar.contentSha256,
-      page: { examples: [{ description: 'Create an archive from a folder', command: 'tar -cf archive.tar ./my-folder' }], flagUsage: [{ flag: '-c', count: 1 }] },
+      page: { examples: [
+        { description: 'Create an archive from a folder', command: 'tar -cf archive.tar ./my-folder' },
+        { description: 'Extract a gzipped archive', command: 'tar -xzf archive.tar.gz' },
+        { description: 'List archive contents verbosely', command: 'tar -tvf archive.tar' },
+      ], flagUsage: unscored ? [] : [{ flag: '-c', count: 2 }, { flag: '-x', count: 1 }, { flag: '-z', count: 2 }, { flag: '-f', count: 4 }, { flag: '-v', count: 1 }, { flag: '-t', count: 1 }] },
       tldr: {
         commit: 'f4566462f5996e13a4f3523f21dc2a863aec53c1', path: 'common/tar.md', rejected: 0,
         examples: [{ description: 'Create an archive and write it to a file', command: 'tar --create --file path/to/target.tar path/to/file', placeholders: [[20, 38], [39, 51]] }],
-        flagUsage: [{ flag: '--create', count: 1 }],
+        flagUsage: unscored ? [] : [{ flag: '--create', count: 1 }, { flag: '--file', count: 1 }],
       },
       generated: {
         provider: 'opencode-go', model: 'deepseek-v4.1-flash', promptVersion: 'b6-v1', generatedAt: '2026-10-28',
         summary: 'Creates and extracts archive files <b>such as</b> tarballs.',
         examples: [{ description: 'Create an archive of the current folder', command: 'tar -c .' }],
-        taskPhrases: ['create a tar archive', 'bundle a folder'],
+        taskPhrases: ['create a tar archive', 'bundle a folder', 'extract files from an archive'],
         rejected: 0,
       },
     }] })
+    for (const [name, phrase] of [['instmodsh', 'create tarball from installed module'], ['ptar', 'extract a tar archive'], ['dpkg', 'extract package files']]) {
+      const competitor = pages.find(p => p.name === name)
+      await post('/ingest/generated', { records: [{ contentSha256: competitor.contentSha256, generated: {
+        provider: 'fixture', model: 'fixture', promptVersion: 'b6-v1', generatedAt: '2026-10-30',
+        summary: `${name} utility`, examples: [], rejected: 0, taskPhrases: [phrase],
+      } }] })
+    }
   }
   await post('/ingest/pages/storage', { datasetReleaseId, pages: [{
     ...pages.find((p) => p.name === 'foo::bar'), externalId: crypto.randomUUID(), sourcePackage: 'same-perl', providerOnly: true,
