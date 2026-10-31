@@ -443,8 +443,15 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
       { type: 'heading', id: 'BESCHREIBUNG', level: 2, text: 'BESCHREIBUNG' },
       { type: 'paragraph', inlines: [{ type: 'text', text: 'GNU tar speichert viele Dateien zusammen in einem einzigen Archiv.' }] },
     ],
-    // Older than English tar 1.35 and without -c/--create: the drift note's evidence.
-    options: [{ flags: '-x, --extract', argument: null, description: 'Entpackt ein Archiv.', anchorId: 'opt-x' }],
+    // Older than English tar 1.35 and, of English tar's options, missing only -c/--create:
+    // the drift note's evidence. Keep the rest in step with the English seed above.
+    options: [
+      { flags: '-x, --extract, --get', argument: null, description: 'Entpackt ein Archiv.', anchorId: 'opt-x' },
+      { flags: '-z, --gzip, --gunzip, --ungzip', argument: null, description: 'Filtert durch gzip.', anchorId: 'opt-gzip' },
+      { flags: '-f, --file', argument: 'ARCHIV', description: 'Verwendet die Archivdatei.', anchorId: 'opt-file' },
+      { flags: '-v, --verbose', argument: null, description: 'Listet die verarbeiteten Dateien auf.', anchorId: 'opt-verbose' },
+      { flags: '-t, --list', argument: null, description: 'Listet den Inhalt eines Archivs auf.', anchorId: 'opt-list' },
+    ],
   })
   await post('/ingest/release', {
     datasetReleaseId, locale: 'de', distro: 'debian', imageRef: 'e2e', imageDigest: 'e2e', ingestedAt: now,
