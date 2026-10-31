@@ -380,12 +380,12 @@ async function licensesForRelease(distro: Distro, fresh: boolean) {
   if (Array.isArray(packageManifest?.packages)) {
     for (const entry of packageManifest.packages) {
       if (typeof entry?.name === 'string' && Array.isArray(entry.standardLicenseIdentifiers) && entry.standardLicenseIdentifiers.length === 0) {
-        warningOnly.add(entry.name)
+        warningOnly.add(entry.name.toLowerCase())
       }
     }
   }
   return { ...first, packageManifest: inlineManifest ? packageManifest : first.packageManifest,
-    packages: packages.map(p => warningOnly.has(p.name) ? { ...p, licenseWarning: NO_LICENSE_TEXT } : p) }
+    packages: packages.map(p => warningOnly.has(p.name.toLowerCase()) ? { ...p, licenseWarning: NO_LICENSE_TEXT } : p) }
 }
 
 const cachedLicenseText = unstable_cache(

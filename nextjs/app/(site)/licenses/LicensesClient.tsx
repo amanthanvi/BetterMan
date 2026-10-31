@@ -136,14 +136,12 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
                       disabled={!p.hasLicenseText}
                     >
                       <div className="flex items-baseline justify-between gap-3">
-                        <div
-                          className={`min-w-0 truncate font-mono text-sm font-bold ${
-                            isSelected ? 'text-accent' : ''
-                          }`}
-                        >
-                          {p.name}
+                        <div className="min-w-0">
+                          <div className={`truncate font-mono text-sm font-bold ${isSelected ? 'text-accent' : ''}`}>
+                            {p.name}
+                          </div>
                           {!p.hasLicenseText || p.licenseWarning ? (
-                            <span className="ml-2 font-sans text-xs font-normal text-ink-3">{t('No license text.')}</span>
+                            <div className="text-xs text-ink-3">{t('No license text.')}</div>
                           ) : null}
                         </div>
                         <div className="shrink-0 font-mono text-xs text-ink-3">{p.version}</div>

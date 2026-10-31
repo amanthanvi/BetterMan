@@ -52,7 +52,7 @@ it('keeps a large manifest as a separate download instead of embedding it in HTM
 it('projects warning-only coverage from detached B2 manifests without embedding the manifest', async () => {
   mocks.query.mockResolvedValue({ ...first, packages: [pkg('gap'), pkg('partial'), pkg('own')], packageManifestUrl: 'https://files.example/large', packageManifestBytes: 2_000_000 })
   const manifest = { packages: [
-    { name: 'gap', standardLicenseIdentifiers: [], missingLicenseIdentifiers: ['Public-Domain'] },
+    { name: 'GAP', standardLicenseIdentifiers: [], missingLicenseIdentifiers: ['Public-Domain'] },
     { name: 'partial', standardLicenseIdentifiers: ['MIT'], missingLicenseIdentifiers: ['custom:x'] },
     { name: 'own' },
   ] }

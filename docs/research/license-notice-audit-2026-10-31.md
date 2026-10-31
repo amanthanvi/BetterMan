@@ -521,3 +521,23 @@ implicit case-derived Zlib mapping. Fedora ppp retains other standard texts
 and existing custom gaps, and additionally records its simple lowercase
 `zlib`/`xlock` names as unresolved. No other package coverage totals changed.
 The same metadata-positive notice-content and 557-larger-Alpine-APK limits apply.
+
+### Integration with main's contract v9
+
+Main `701a390b` was normally merged into #488, then that head was normally
+merged into #489. B3's `_catalog`/`_sample`/`_curated` workspace hooks,
+localized-root extraction/includes and `localized_manuals` are preserved;
+#488's source-target validation and receipt version 7 remain. The stack inherits
+main's contract v9 and introduces no additional contract/schema changes.
+
+Post-merge #488: 1,165 pytest tests (89.43% coverage), 1,007 Next tests and 124
+ops tests passed. Post-merge #489: 1,194 pytest tests (89.60%), 1,012 Next tests
+and 124 ops tests passed. Ruff lint/format, Next lint/grammar and each PR's
+base-relative diff guards passed. The unchanged Convex tree also passed 3,382
+tests and type checking. Pytest retains one existing SQLite ResourceWarning.
+The Fedora no-upload benchmark was rerun after integration: 3,219 pages, no
+parse failures/unresolved sources, **28** entries with actual license text,
+and `expect` correctly in `packagesWithoutLicenseText`; its warning entry is
+still retained for explanation. SSR warning projection also tests the
+normalized package names used by the existing license API. No full publication
+replay or browser E2E was run, and neither PR was merged or deployed.

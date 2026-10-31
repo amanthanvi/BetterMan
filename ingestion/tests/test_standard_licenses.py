@@ -269,7 +269,9 @@ def test_checksum_pin_failure_prevents_archive_use(tmp_path, monkeypatch):
     with_comment = io.BytesIO()
     with (
         tarfile.open(fileobj=io.BytesIO(body)) as original,
-        tarfile.open(fileobj=with_comment, mode="w:gz", pax_headers={"comment": "a" * 40}) as archive,
+        tarfile.open(
+            fileobj=with_comment, mode="w:gz", pax_headers={"comment": "a" * 40}
+        ) as archive,
     ):
         for member in original:
             archive.addfile(member, original.extractfile(member))
