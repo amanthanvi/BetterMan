@@ -439,3 +439,111 @@ def test_alpine_metadata_owner_directory_alias_can_reach_spdx_fallback(notice_wo
     w.register("spdx-licenses-text", [("usr/share/spdx/text/MIT.txt", b"MIT text", None)])
     w.owners.execute("DELETE FROM owners")
     assert alpine_archives.copyright_text(w, "tool-doc") == "MIT text"
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "usr/lib/python3.14/site-packages/go_vendor_tools/license_detection/detector.py",
+        "usr/lib/python3.14/site-packages/go_vendor_tools/license_detection/__pycache__/detector.cpython-314.pyc",
+        "usr/lib/python3.14/site-packages/go_vendor_tools/config/licenses.py",
+        "usr/lib/python3.14/site-packages/hatchling/licenses/__init__.py",
+        "usr/lib/python3.14/site-packages/hatchling/licenses/data.txt",
+        "usr/lib/python3.14/site-packages/reuse/resources/licenses.json",
+        "usr/lib/python3.14/site-packages/pip/_internal/commands/license.py",
+        "usr/share/licenses/tool/LICENSE.pyc",
+        "usr/share/doc/tool/licenses/plugin.so.1",
+    ],
+)
+def test_notice_predicate_rejects_code_and_module_license_directories(path):
+    assert not fedora_archives.notice_path(path)
+
+
+def test_code_is_not_published_ahead_of_real_mit_notice(notice_workspace):
+    w = notice_workspace
+    w.register(
+        "go-vendor-tools",
+        [
+            (
+                "usr/lib/python3.14/site-packages/go_vendor_tools/license_detection/__init__.py",
+                b"def detect(): pass",
+                None,
+            ),
+            (
+                "usr/lib/python3.14/site-packages/go_vendor_tools/license_detection/__pycache__/detect.pyc",
+                b"\xa7\r\r\nbytecode",
+                None,
+            ),
+            ("usr/share/licenses/go-vendor-tools/LICENSE", b"real MIT notice", None),
+        ],
+    )
+    assert fedora_archives.copyright_text(w, "go-vendor-tools") == "real MIT notice"
+
+
+def test_arch_partial_spdx_records_unmatched_declared_identifiers(notice_workspace):
+    w = notice_workspace
+    w.distro = "arch"
+    w.register(
+        "fuse2fs",
+        [("usr/share/licenses/fuse2fs", b"", "e2fsprogs")],
+        license="GPL AND LGPL AND MIT",
+    )
+    w.register(
+        "licenses",
+        [
+            ("usr/share/licenses/spdx/GPL-2.0-only.txt", b"GPL text", None),
+            ("usr/share/licenses/spdx/LGPL-2.1-only.txt", b"LGPL text", None),
+        ],
+    )
+    assert arch_archives.copyright_text(w, "fuse2fs") == "GPL text\n\nLGPL text"
+    assert w.unmatched_license_identifiers["fuse2fs"] == ["MIT"]
+
+
+def test_arch_spdx_deduplicates_identical_version_texts(notice_workspace):
+    w = notice_workspace
+    w.distro = "arch"
+    w.register("tool", [], license="GPL")
+    w.register(
+        "licenses",
+        [
+            ("usr/share/licenses/spdx/GPL-2.0-only.txt", b"same GPL text", None),
+            ("usr/share/licenses/spdx/GPL-2.0-or-later.txt", b"same GPL text", None),
+        ],
+    )
+    assert arch_archives.copyright_text(w, "tool") == "same GPL text"
+
+
+def test_directory_notice_fanout_has_a_cumulative_visit_limit(notice_workspace, monkeypatch):
+    w = notice_workspace
+    members = [("usr/share/licenses/tool", b"", "level0")]
+    for level in range(5):
+        members.extend(
+            (f"usr/share/licenses/level{level}/alias{i}", b"", f"../level{level + 1}")
+            for i in range(4)
+        )
+    members.append(("usr/share/licenses/level5/LICENSE", b"full notice", None))
+    w.register("tool", members)
+    monkeypatch.setattr(fedora_archives, "MAX_NOTICE_VISITS", 32, raising=False)
+    resolve = w.resolve
+    calls = []
+
+    def bounded(*args, **kwargs):
+        calls.append(args)
+        assert len(calls) <= 100, "unbounded directory fan-out"
+        return resolve(*args, **kwargs)
+
+    monkeypatch.setattr(w, "resolve", bounded)
+    with pytest.raises(ValueError, match="visit limit"):
+        fedora_archives.copyright_text(w, "tool")
+    assert len(calls) <= 32
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "usr/share/licenses/tool/LICENSE.pdf.gz",
+        "usr/share/doc/tool/licenses/generator.sh",
+    ],
+)
+def test_notice_predicate_rejects_binary_documents_and_shell_code(path):
+    assert not fedora_archives.notice_path(path)

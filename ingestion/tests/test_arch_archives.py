@@ -101,6 +101,11 @@ def test_arch_package_cdn_fallback_verifies_both_sources_and_replaces_bad_cache(
     )
     pins = json.loads((Path(__file__).parents[1] / "data/arch-20261001.json").read_text())
 
+    # This catalog fixture contains only one package, not the real repair owners.
+    pins["sourceTargets"] = {}
+    (tmp_path / "arch-20261001.json").write_text(json.dumps(pins))
+    monkeypatch.setattr("ingestion.debian_pipeline.PINS", tmp_path / "debian-trixie.json")
+
     def catalog(root, pins_path):
         root.mkdir(parents=True)
         with sqlite3.connect(root / "owners.sqlite3") as db:

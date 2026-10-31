@@ -26,6 +26,8 @@ from ingestion.debian_indexes import (
 )
 from ingestion.util import sha256_hex
 
+MAX_NOTICE_VISITS = 4096
+
 
 @dataclass(frozen=True)
 class ArchivePackage(Package):
@@ -169,23 +171,45 @@ def catalog(root: Path, pins_path: Path):
 
 
 def notice_path(path):
-    return path.startswith(
-        ("usr/share/licenses/", "usr/share/spdx/text/", "usr/share/texlive/licenses/")
-    ) or (
+    uncompressed = re.sub(r"\.(?:gz|xz|bz2|zst)$", "", path, flags=re.I)
+    if re.search(
+        r"\.(?:py[coi]?|[cm]?[jt]sx?|c|cc|cpp|cxx|h|hh|hpp|hxx|go|rs|rb|pl|"
+        r"pm|sh|bash|zsh|fish|lua|php|java|class|jar|o|a|so(?:\.[0-9]+)*|"
+        r"dll|exe|bin|wasm|mo|json|ya?ml|toml|pdf|png|jpe?g|gif|ico|svg|"
+        r"woff2?|[ot]tf|zip|tar)$",
+        uncompressed,
+        re.I,
+    ):
+        return False
+    return (
         path.startswith(
-            (
-                "usr/share/doc/",
-                "usr/share/kvirc/",
-                "usr/lib/",
-                "usr/lib64/",
-                "usr/include/llvm/",
-            )
+            ("usr/share/licenses/", "usr/share/spdx/text/", "usr/share/texlive/licenses/")
         )
-        and bool(
-            re.search(
-                r"(?:^|/)(?:copying|copyright|licen[cs]es?|notice)(?:[._-][^/]*)?(?:/|$)",
+        or bool(
+            re.match(
+                r"^usr/share/doc/[^/]+/(?:copying|copyright|licen[cs]es?|notices?)(?:/|$)",
                 path,
                 re.I,
+            )
+            or re.match(r"^usr/lib(?:64)?/.*\.dist-info/licenses(?:/|$)", path, re.I)
+            or re.match(r"^usr/share/kvirc/[^/]+/license(?:/|$)", path, re.I)
+        )
+        or (
+            path.startswith(
+                (
+                    "usr/share/doc/",
+                    "usr/share/kvirc/",
+                    "usr/lib/",
+                    "usr/lib64/",
+                    "usr/include/llvm/",
+                )
+            )
+            and bool(
+                re.search(
+                    r"(?:^|/)(?:copying|copyright|licen[cs]e|notice)(?:[._-][^/]*)?$",
+                    path,
+                    re.I,
+                )
             )
         )
     )
@@ -262,7 +286,13 @@ def extract(archive, package, root, *, quota=None, **_kwargs):
     return entries
 
 
-def _notice_texts(workspace, package, path, *, directory_fallback=None, seen=frozenset()):
+def _notice_texts(
+    workspace, package, path, *, directory_fallback=None, seen=frozenset(), remaining=None
+):
+    remaining = [MAX_NOTICE_VISITS] if remaining is None else remaining
+    if remaining[0] <= 0:
+        raise ValueError("License notice visit limit exceeded")
+    remaining[0] -= 1
     try:
         yield workspace.resolve(package, path).decode("utf-8", errors="replace")
     except MissingSource as exc:
@@ -298,7 +328,7 @@ def _notice_texts(workspace, package, path, *, directory_fallback=None, seen=fro
                 and exc.path.startswith("usr/share/licenses/")
                 and exc.path.count("/") == 3
             ):
-                text = directory_fallback(exc.package, exc.path)
+                text = directory_fallback(exc.package, exc.path, remaining)
                 if text.strip():
                     logging.warning(
                         json.dumps(
@@ -321,10 +351,12 @@ def _notice_texts(workspace, package, path, *, directory_fallback=None, seen=fro
                     child,
                     directory_fallback=directory_fallback,
                     seen=seen | {key},
+                    remaining=remaining,
                 )
 
 
 def copyright_text(workspace, package, *, directory_fallback=None):
+    remaining = [MAX_NOTICE_VISITS]
     metadata = workspace.available[package]
     if not hasattr(workspace, "notice_owners"):
         workspace.notice_owners = {
@@ -350,7 +382,7 @@ def copyright_text(workspace, package, *, directory_fallback=None):
     for owner, path in paths:
         if notice_path(path):
             for text in _notice_texts(
-                workspace, owner, path, directory_fallback=directory_fallback
+                workspace, owner, path, directory_fallback=directory_fallback, remaining=remaining
             ):
                 if text.strip() and text not in texts:
                     texts.append(text)
@@ -363,7 +395,11 @@ def copyright_text(workspace, package, *, directory_fallback=None):
         ):
             if owner in siblings and notice_path(path):
                 for text in _notice_texts(
-                    workspace, owner, path, directory_fallback=directory_fallback
+                    workspace,
+                    owner,
+                    path,
+                    directory_fallback=directory_fallback,
+                    remaining=remaining,
                 ):
                     if text.strip() and text not in texts:
                         texts.append(text)

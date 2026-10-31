@@ -192,3 +192,116 @@ owners, a second directory alias, rejected name-similarity guesses, missing
 notice files beside readable notices, absent matching SPDX text and blocked
 matching SPDX entries. Contract v8, committed Alpine pins, extraction receipts
 and the publisher/manifest schema are unchanged by the follow-up.
+
+## Independent review corrections
+
+The supplied independent Opus review reported no blocking findings and identified
+the following corrections. These preserve the existing policy that a package
+can be declared with `hasLicenseText: false`; this PR does not decide whether
+that policy should change.
+
+1. The widened directory-segment predicate matched module source and data as
+   notices. The pinned Fedora filelists reproduce the review's 145 newly matched
+   non-directory paths in 70 manual-owning packages. Of those, 44 paths in ten
+   packages are rejected by the corrected predicate; the rest include legitimate
+   nested notice texts. Directory contents are now accepted only in reserved
+   license/SPDX roots, direct package documentation notice directories,
+   `.dist-info/licenses/`, and the verified kvirc notice location. Named notice
+   files remain supported in the existing roots. Code, bytecode, binary and data
+   extensions are excluded, including compressed forms. Extraction receipts
+   advance from 6 to 7 so cached files cannot reintroduce the rejected content.
+   Twelve regression cases first failed and now pass, including a collector test
+   where Python source/bytecode previously preceded the real MIT notice.
+   Fresh checksum-verified RPM reads of go-vendor-tools, python3-hatchling,
+   reuse and python3-pip retain 4, 1, 9 and 22 notice files respectively, with
+   no `.py`, `.pyc` or JSON files stored as notices.
+2. Arch's partial fallback now records unmatched declared identifiers on the
+   package manifest as `unmatchedLicenseIdentifiers`. For fuse2fs and e2fsprogs
+   this records `["MIT"]` while retaining available GNU texts. Operators AND,
+   OR and WITH are not identifiers. A unit regression and a publisher test
+   first failed and now verify both the recorded gap and continued publication.
+   The field lives inside the existing opaque package manifest, accepted by
+   `declareRelease.packageManifest: v.any()` and retained in `releaseManifests`.
+   No ingest contract, endpoint validator or Convex schema changes are needed.
+3. Identical Arch fallback bodies are deduplicated independently of identifier
+   matching, so both identifiers count as matched even when they share a body.
+   The `-only`/`-or-later` regression first returned duplicate text and now returns
+   one copy. The real Arch rehearsal's maximum notice shrank from 314,466 to
+   157,232 bytes.
+4. Every package collection shares a cumulative 4,096-visit directory-walk
+   budget, including source-sibling roots and Alpine recovery walks. The depth
+   cycle check remains. A crafted fan-out regression used to exceed 100 calls;
+   with a test budget of 32 it now fails closed within 32 calls.
+5. The optional sourceTargets validation is included. Canonical safe relative
+   paths and two-string targets are checked before catalog loading; owners must
+   exist in the elected catalog before acquisition. Five malformed/unknown-owner
+   tests first failed and now pass. The Arch CDN fixture now supplies its own
+   pins matching its one-package catalog, rather than unrelated real repair pins.
+
+### Notice coverage under the existing policy
+
+These are ownership measurements, not a new publication gate. A manual path
+means a path matching the ingestion manual pattern, including translations and
+symlinks, before route election, alias collapsing or parser rejection. These
+counts must not be presented as counts of final published routes.
+
+| Distro and measured scope | Packages without notice text/candidates | Manual paths owned by those packages |
+| --- | ---: | ---: |
+| Fedora: complete pinned manual-package catalog, package/source-sibling file candidates | 1,757 | 18,385 |
+| Arch: complete pinned manual-package catalog, after actual SPDX fallback | 110 | 840 |
+| Alpine: 3,941 verified doc/manual APKs of at most 256 KiB, actual collector and fallback | 68 | 643 |
+
+Fedora: primary identities elect the package versions; filelists non-directory
+notice candidates are grouped by exact source RPM, then manual-owning packages
+are checked against their group. This reproduces the widened predicate's 1,755
+packages and 18,383 manual paths. Excluding code adds perl-License-Syntax
+(`license_syntax.pl`) and xmountains (`copyright.h`), one manual path each, giving
+1,757 and 18,385 under the corrected predicate. The snapshot has 9,970 manual
+packages; the two already-pinned malcontent exclusions leave 9,968 eligible
+packages and do not change this gap count. Examples: man-pages (2,941 paths),
+expect (8), byacc (2), bpftool (12) and ca-certificates (2). Other large examples
+are dpdk-devel (6,160), gl-manpages (953) and perl-Net-Amazon (410). Filelists
+proves candidate absence; it cannot prove that every candidate elsewhere is
+nonblank/readable. Thus the count is structural, not a full publication replay.
+
+Arch: all three checksum-verified `.files` databases are scanned. Directory
+entries and top-level directory-link candidates do not count as notice bodies;
+regular notice candidates are grouped by package base. Of 3,714 manual-owning
+packages, 2,217 have no candidate in their source family. The actual fallback
+is then executed against the checksum-verified licenses-20240728-1 archive:
+110 still return no text, owning 840 manual paths. Examples include
+perl-perl-critic (198, PerlArtistic), perl-net-dns (88, MIT), perl-font-ttf
+(77, Artistic2.0), perl-ppix-regexp (65, PerlArtistic), lei (40, AGPL), kubeone
+(27, Apache) and runc (17, Apache). This does not introduce mappings for those
+legacy identifiers. Of the candidates using nonblank SPDX fallback, 441 have
+unmatched identifiers which the new manifest field can expose. Candidate-file
+content was not downloaded for the entire 18.5 GB corpus, so metadata-positive
+packages are not claimed to have independently verified nonblank text.
+
+Alpine: all 3,941 previously verified small APKs were acquired through the actual
+workspace verifier/extractor, and their notices were collected with the actual
+Alpine collector. There were no errors: 3,873 produced nonblank text and 68 did
+not. Among the 2,994 packages that actually contain manuals, 62 lack notice text
+and own 643 paths; the other six zero-text selected doc packages own no manuals.
+The extracted set contains 21,985 manual paths in total. Examples: libselinux-doc
+(247, Public-Domain), net-snmp-doc (141, Net-SNMP), perl-font-ttf-doc
+(77, Artistic License 2.0), openjdk21-doc (28, GPL-2.0-with-classpath-exception),
+openjdk17-doc (27, the same identifier) and vde2-doc (22, GPL). The 557 larger
+selected APKs were not acquired for this measurement; other source siblings in
+that unscanned set can change whole-corpus results. No extrapolated full-Alpine
+gap count is claimed.
+
+Zero-text gaps are already visible per release: `_build_license_packages`
+includes every published package and sets `hasLicenseText` from the notice set;
+`declareLicensePackagesBatch` persists that flag, package name and version in
+the `licensePackages` table keyed by release. False values are retained, not
+dropped. The new publisher regression explicitly verifies a zero-text package
+is still declared false alongside a partial-text package with unmatched MIT.
+Only the unmatched-identifier metadata needed adding; no new zero-text field or
+policy change was introduced.
+
+Review-fix verification: Ruff lint/format passed; all 1,107 ingestion tests passed
+(90.16% coverage, one existing unclosed SQLite ResourceWarning); all 122 ops
+tests passed. The Arch no-upload rehearsal again passed with 6,864 pages,
+32 notices, no parse failures/unresolved sources and no selected package without
+text. No workflow dispatch, deployment or live backend operation was performed.

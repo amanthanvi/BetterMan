@@ -126,7 +126,9 @@ def extract(archive, package, root, *, quota=None, **_kwargs):
 
 def copyright_text(workspace, package):
     text = package_notice(
-        workspace, package, directory_fallback=lambda _owner, _path: spdx_notice(workspace, package)
+        workspace,
+        package,
+        directory_fallback=lambda _owner, _path, _remaining: spdx_notice(workspace, package),
     )
     if text:
         return text
@@ -136,24 +138,33 @@ def copyright_text(workspace, package):
 def spdx_notice(workspace, package):
     # Arch's licenses package supplies the exact declared SPDX texts; read only
     # verified archive entries, never the host's installed license directory.
+    identifiers = set(
+        re.findall(r"[A-Za-z0-9][A-Za-z0-9.+-]*", workspace.available[package].license)
+    ) - {"AND", "OR", "WITH"}
+    if not hasattr(workspace, "unmatched_license_identifiers"):
+        workspace.unmatched_license_identifiers = {}
+    workspace.unmatched_license_identifiers[package] = sorted(identifiers)
     if "licenses" not in workspace.available:
         return ""
     if "licenses" not in workspace.acquired:
         workspace.acquire([workspace.available["licenses"]], workers=1)
-    identifiers = set(
-        re.findall(r"[A-Za-z0-9][A-Za-z0-9.+-]*", workspace.available[package].license)
-    )
+    matched = set()
     texts = []
     for (path,) in workspace.store.db.execute(
-        "SELECT path FROM entries WHERE pkg='licenses' AND kind IN ('file','link')"
+        "SELECT path FROM entries WHERE pkg='licenses' AND kind IN ('file','link','blocked')"
     ):
         identifier = Path(path).name.removesuffix(".txt")
         # Legacy Arch GPL/LGPL names specify no version; retain all canonical
         # version texts rather than guessing one or publishing no license text.
         legacy = re.fullmatch(r"(GPL|LGPL)-([0-9.]+)-(?:only|or-later)", identifier)
-        if (
-            identifier in identifiers
-            or (legacy and {legacy[1], legacy[1] + legacy[2].removesuffix(".0")} & identifiers)
-        ) and notice_path(path):
-            texts.append(workspace.resolve("licenses", path).decode("utf-8", errors="replace"))
+        declared = {identifier}
+        if legacy:
+            declared.update({legacy[1], legacy[1] + legacy[2].removesuffix(".0")})
+        if declared & identifiers and notice_path(path):
+            text = workspace.resolve("licenses", path).decode("utf-8", errors="replace")
+            if text.strip():
+                matched.update(declared & identifiers)
+                if text not in texts:
+                    texts.append(text)
+    workspace.unmatched_license_identifiers[package] = sorted(identifiers - matched)
     return "\n\n".join(texts)

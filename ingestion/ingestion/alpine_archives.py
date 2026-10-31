@@ -256,14 +256,16 @@ def copyright_text(workspace, package):
     text = package_notice(
         workspace,
         package,
-        directory_fallback=lambda owner, path: directory_notice(workspace, package, owner, path),
+        directory_fallback=lambda owner, path, remaining: directory_notice(
+            workspace, package, owner, path, remaining
+        ),
     )
     if text:
         return text
     return spdx_notice(workspace, package)
 
 
-def directory_notice(workspace, package, owner, path):
+def directory_notice(workspace, package, owner, path, remaining):
     # APKINDEX has no paths: probe only exact origins/dependencies and declared
     # capability providers, then establish ownership from verified archive entries.
     sources = {package, owner}
@@ -287,7 +289,10 @@ def directory_notice(workspace, package, owner, path):
                     workspace,
                     owner,
                     path,
-                    directory_fallback=lambda _owner, _path: spdx_notice(workspace, package),
+                    directory_fallback=lambda _owner, _path, _remaining: spdx_notice(
+                        workspace, package
+                    ),
+                    remaining=remaining,
                 )
             )
     return spdx_notice(workspace, package)
