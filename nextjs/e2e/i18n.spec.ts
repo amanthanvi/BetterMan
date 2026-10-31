@@ -30,8 +30,9 @@ test.describe('English is the default', () => {
 
 test.describe('every reviewed language is public', () => {
   test('every reviewed language renders publicly and the switch lists all six', async ({ page }) => {
+    // gzip(1) has no translated manual in the seed (#395): an English manual under each localized UI.
     for (const [code] of SIX) {
-      await page.goto(`/man/tar/1?lang=${code}`)
+      await page.goto(`/man/gzip/1?lang=${code}`)
       expect(await lang(page), code).toBe(code)
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
     }
@@ -54,16 +55,17 @@ test.describe('every reviewed language is public', () => {
 
 test.describe('a language that renders', () => {
   test('man page: translated chrome, the script’s strings, noindex and the English canonical', async ({ page }) => {
-    await page.goto('/man/tar/1?lang=de')
+    // An English manual under German chrome; a translated manual is indexable with its own canonical (translations.spec.ts).
+    await page.goto('/man/gzip/1?lang=de')
     await waitForInteractiveShell(page)
     expect(await lang(page)).toBe('de')
     await expect(page.getByRole('banner', { name: 'Seitenkopf' })).toBeVisible()
     await expect(page.getByRole('contentinfo', { name: 'Seitenfuß' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Einstellungen zum Lesen' })).toBeVisible()
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
-    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/man\/tar\/1$/)
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/man\/gzip\/1$/)
     // The manual itself is upstream text and stays as written.
-    await expect(page.locator('[data-bm-manual]')).toContainText('tar')
+    await expect(page.locator('[data-bm-manual]')).toContainText('gzip')
     // The static script reads its strings from the page: no second locale is bundled.
     await page.getByRole('button', { name: 'In der Seite suchen' }).click()
     await expect(page.getByRole('textbox', { name: 'In der Seite suchen' })).toBeVisible()

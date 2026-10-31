@@ -480,3 +480,26 @@ describe('UI language (docs/i18n.md)', () => {
     expect(render(propsOf(miss))).toContain('Aucune entrée de manuel pour ta dans la section 9')
   })
 })
+
+
+it.each([
+  [true, true, true], [true, false, false], [false, true, false], [false, false, false],
+])('keeps a translated page noindex and uses only a proven indexable English canonical (%s, %s)', async (englishHasRoute, englishIndexable, canonical) => {
+  lookup.lookupManPage.mockResolvedValue({
+    kind: 'page', distro: 'debian',
+    data: { ...data, page: { ...page, locale: 'de', indexable: false } },
+    related: [], servedRelease: release.datasetReleaseId,
+    translation: { state: 'translated', lang: 'de', englishHasRoute, englishIndexable, languages: ['en', 'de', 'fr'] },
+  })
+  const { ctx, res } = context({ name: 'tar', section: '1' }, { lang: 'de' })
+  const { head } = propsOf(await pageProps(ctx)) as { head: ManHeadData }
+  expect(head.noindex).toBe(true)
+  expect(res.headers['x-robots-tag']).toBe('noindex')
+  expect(head.canonical).toBe(canonical ? 'http://localhost:3000/man/tar/1' : null)
+  expect(head.alternates).toEqual(canonical ? [
+    { hrefLang: 'en', href: 'http://localhost:3000/man/tar/1' },
+    { hrefLang: 'x-default', href: 'http://localhost:3000/man/tar/1' },
+  ] : [])
+  const html = renderToStaticMarkup(<ManHeadTags {...head} />)
+  expect(html).not.toContain('?lang=')
+})

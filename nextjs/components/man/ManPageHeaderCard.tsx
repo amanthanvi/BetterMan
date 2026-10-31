@@ -24,6 +24,7 @@ function buildVariantPicker(variants: ManPageVariant[]): { ordered: ManPageVaria
 export function ManPageHeaderCard({
   page,
   synopsis,
+  contentLang,
   variants,
   providers,
   distro,
@@ -33,6 +34,8 @@ export function ManPageHeaderCard({
 }: {
   page: ManPage
   synopsis?: string[] | null
+  /** A translated manual's language (#395): its description and synopsis only. */
+  contentLang?: string
   variants: ManPageVariant[]
   providers?: ManPageResponse['providers']
   distro: Distro
@@ -50,7 +53,7 @@ export function ManPageHeaderCard({
         <span className="ml-[0.08em] text-[0.5em] font-normal tracking-normal text-ink-3 oldstyle-nums">({page.section})</span>
       </h1>
       {page.description ? (
-        <p className="bm-lede mt-2.5 max-w-text font-serif text-lg italic text-ink-2 md:text-[1.375rem] md:leading-[1.35]">
+        <p lang={contentLang} className="bm-lede mt-2.5 max-w-text font-serif text-lg italic text-ink-2 md:text-[1.375rem] md:leading-[1.35]">
           {page.description}
         </p>
       ) : null}
@@ -163,7 +166,7 @@ export function ManPageHeaderCard({
       {synopsis?.length ? (
         <div className="mt-9">
           <ManSectionLabel as="h2">{t('SYNOPSIS')}</ManSectionLabel>
-          <pre tabIndex={0} role="group" aria-label={t('Synopsis')} className="mt-1.5 overflow-x-auto pl-[1.75em] text-sm leading-[1.65]">
+          <pre lang={contentLang} tabIndex={0} role="group" aria-label={t('Synopsis')} className="mt-1.5 overflow-x-auto pl-[1.75em] text-sm leading-[1.65]">
             <code>{synopsis.join('\n')}</code>
           </pre>
         </div>

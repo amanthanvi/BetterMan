@@ -34,6 +34,8 @@ export type SearchResult = {
   anchorId?: string
   /** The generated task phrase a task match came from (render as text). */
   taskPhrase?: string
+  /** A hit from a translated release (#395); English hits omit it. */
+  locale?: string
 }
 
 /** The first hit's worked example and key flags; present only when the page has them. */
@@ -90,6 +92,7 @@ export class FastApiError extends Error {
   bodyText?: string
   /** For a miss: the release that answered it, when Convex says (see servedRelease). */
   datasetReleaseId?: string
+  translatedReleaseId?: string | null
 
   constructor(status: number, code: string, message: string, bodyText?: string) {
     super(message)
@@ -138,6 +141,14 @@ export function servedRelease(value: unknown): string | null {
   const v = value as { datasetReleaseId?: unknown; data?: { page?: { datasetReleaseId?: unknown } } } | null
   const served = v?.datasetReleaseId ?? v?.data?.page?.datasetReleaseId
   return typeof served === 'string' && served ? served : null
+}
+
+/** A translated hit, or English after a miss in precisely the keyed translation release. */
+export function nameResolutionAnsweredBy(value: unknown, english: string | null, translated: string | null): boolean {
+  const served = servedRelease(value)
+  const fallback = value as { translatedReleaseId?: unknown } | null
+  return english !== null && served !== null &&
+    (served === translated || (served === english && fallback?.translatedReleaseId === translated))
 }
 
 /**
@@ -203,6 +214,7 @@ const cachedSearch = unstable_cache(
     limit: number,
     offset: number,
     brief: boolean,
+    locale: string | null = null,
   ) =>
     await convex().query(api.queries.search, {
       distro,
@@ -211,6 +223,7 @@ const cachedSearch = unstable_cache(
       limit,
       offset,
       ...(brief ? { brief } : {}),
+      ...(locale ? { locale } : {}),
     }),
   ['betterman', 'convex', 'search', 'v2'],
   { revalidate: SEARCH_REVALIDATE_SECONDS },
@@ -266,10 +279,22 @@ async function providersFor(opts: { distro: Distro; name: string; section: strin
   return await mapConvexError(() => cachedProvidersFor(opts.distro, opts.name, opts.section, opts.release ?? null))
 }
 
+// `?lang=` (#395): the language's sections first. Keyed by both releases; stored
+// only when one of them answered (the language for its own hit, English otherwise).
+const cachedResolveManByNameIn = unstable_cache(
+  async (distro: Distro, name: string, lang: string, english: string, translated: string | null) => {
+    const value = await convex().query(api.queries.resolveManByName, { distro, name, locale: lang })
+    if (!nameResolutionAnsweredBy(value, english, translated)) throw new UncacheableManPage(value)
+    return cacheableManPage(value)
+  },
+  ['betterman', 'convex', 'resolve-man-by-name-lang', 'v2'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
 const cachedManByNameAndSection = unstable_cache(
   async (distro: Distro, name: string, section: string, _release: string | null, pkg: string | null = null) =>
     cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section, ...(pkg ? { pkg } : {}), reportRelease: true }), _release),
-  ['betterman', 'convex', 'man-by-name-and-section', 'provider-proof-v1'],
+  ['betterman', 'convex', 'man-by-name-and-section', 'provider-proof-v1', 'v8'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -281,8 +306,8 @@ const cachedManMetaByNameAndSection = unstable_cache(
 )
 
 const cachedRelated = unstable_cache(
-  async (distro: Distro, name: string, section: string, _release: string | null) =>
-    cacheableManPage(await convex().query(api.queries.getRelated, { distro, name, section, reportRelease: true }), _release),
+  async (distro: Distro, name: string, section: string, _release: string | null, locale: string | null = null) =>
+    cacheableManPage(await convex().query(api.queries.getRelated, { distro, name, section, ...(locale ? { locale } : {}), reportRelease: true }), _release),
   ['betterman', 'convex', 'related', 'v2'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
@@ -380,6 +405,8 @@ export async function search(opts: {
   offset?: number
   /** The first hit's example and key flags: the search page and home only. */
   brief?: boolean
+  /** A translated language (#395): its pages first, then English. */
+  lang?: string | null
 }): Promise<SearchResponse> {
   return await mapConvexError(() =>
     cachedSearch(
@@ -389,6 +416,7 @@ export async function search(opts: {
       opts.limit ?? 20,
       opts.offset ?? 0,
       opts.brief === true,
+      ...(opts.lang ? [opts.lang] : []),
     ),
   )
 }
@@ -470,9 +498,16 @@ export async function fetchManByName(opts: {
 export type ManResolveResult = Exclude<FunctionReturnType<typeof api.queries.resolveManByName>, { kind: 'not_found' }>
 
 /** Resolves a name-only URL from page metadata, without loading the document. */
-export async function fetchManResolve(opts: { distro: Distro; name: string; release?: string }): Promise<ManResolveResult> {
-  const result = await mapConvexError(() => cachedResolveManByName(opts.distro, opts.name, opts.release ?? null))
-  if (result.kind === 'not_found') throw pageNotFound(servedRelease(result))
+export async function fetchManResolve(opts: { distro: Distro; name: string; release?: string; lang?: { lang: string; translated: string | null } }): Promise<ManResolveResult> {
+  const { lang } = opts
+  const result = await mapConvexError(() => lang && opts.release
+    ? cachedResolveManByNameIn(opts.distro, opts.name, lang.lang, opts.release, lang.translated)
+    : cachedResolveManByName(opts.distro, opts.name, opts.release ?? null))
+  if (result.kind === 'not_found') {
+    const error = pageNotFound(servedRelease(result))
+    error.translatedReleaseId = result.translatedReleaseId
+    throw error
+  }
   return result
 }
 
@@ -498,6 +533,45 @@ export async function fetchManByNameAndSectionOrAlias(opts: {
   return result
 }
 
+/**
+ * How Convex answered `?lang=` (#395): the language's own page or alias, or
+ * English with a confirmed miss (`translatedReleaseId` null when the distro has
+ * no release in the language).
+ */
+export type TranslationAnswer =
+  | { state: 'translated'; locale: string; englishReleaseId: string; englishHasRoute?: boolean; englishIndexable?: boolean; languages?: string[] }
+  | { state: 'missing'; locale: string; translatedReleaseId: string | null }
+
+export type TranslatedManResult = (ManByNameAndSectionResult | { kind: 'not_found'; datasetReleaseId?: string }) & { translation: TranslationAnswer }
+
+/**
+ * Whether the proxy's two keys answered a `?lang=` read: the language's release
+ * for its own page, English (and the confirmed miss in the language's key) for
+ * the fallback. Only then may the answer be shared under them.
+ */
+export function translationAnsweredBy(value: TranslatedManResult, english: string | null, translated: string | null): boolean {
+  const served = servedRelease(value)
+  if (!english || !served) return false
+  return value.translation.state === 'translated'
+    ? served === translated && value.translation.englishReleaseId === english
+    : served === english && value.translation.translatedReleaseId === translated
+}
+
+const cachedTranslatedMan = unstable_cache(
+  async (distro: Distro, name: string, section: string, lang: string, english: string, translated: string | null) => {
+    const value = (await convex().action(api.content.getManByNameAndSection, { distro, name, section, locale: lang, reportRelease: true })) as TranslatedManResult
+    if (!translationAnsweredBy(value, english, translated)) throw new UncacheableManPage(value)
+    return cacheableManPage(value)
+  },
+  ['betterman', 'convex', 'man-translated', 'v8'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
+/** `?lang=` in one call: the language's page or alias, else English with the miss confirmed. */
+export async function fetchTranslatedMan(opts: { distro: Distro; name: string; section: string; lang: string; english: string; translated: string | null }): Promise<TranslatedManResult> {
+  return await mapConvexError(() => cachedTranslatedMan(opts.distro, opts.name, opts.section, opts.lang, opts.english, opts.translated))
+}
+
 export type RelatedResponse = { items: SectionPage[]; datasetReleaseId?: string }
 
 export type ManPageMetaResponse = { page: ManPage }
@@ -514,8 +588,9 @@ export async function fetchRelated(opts: {
   name: string
   section: string
   release?: string
+  lang?: string
 }): Promise<RelatedResponse> {
-  const result = await mapConvexError(() => cachedRelated(opts.distro, opts.name, opts.section, opts.release ?? null))
+  const result = await mapConvexError(() => cachedRelated(opts.distro, opts.name, opts.section, opts.release ?? null, ...(opts.lang ? [opts.lang] : [])))
   if (!result || ('found' in result && result.found === false)) throw pageNotFound(servedRelease(result))
   return result as RelatedResponse
 }

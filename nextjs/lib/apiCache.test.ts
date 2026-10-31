@@ -10,6 +10,7 @@ vi.mock('next/cache', () => ({ unstable_cache: (fn: (...args: unknown[]) => Prom
 } }))
 vi.mock('./convexClient', () => ({ getConvexClient: () => ({ action: mocks.action, query: mocks.query }) }))
 import { fetchManByName, fetchManByNameAndSectionOrAlias } from './api'
+import { resolveManName } from './manLookup'
 beforeEach(() => { vi.clearAllMocks(); mocks.cache.clear() })
 it('returns an oversized manual without a cache write or a second Convex call', async () => {
   const data = { page: { name: 'gcc' }, content: { blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'a'.repeat(2_100_000) }] }] }, variants: [] }
@@ -68,4 +69,33 @@ it('never stores provider proof from another release under the requested release
   expect(mocks.query).toHaveBeenCalledTimes(3)
   expect(mocks.action).toHaveBeenCalledTimes(1)
   expect(mocks.cache.size).toBe(2)
+})
+
+
+it.each(['de2', null, undefined])('does not cache or key an English fallback read against translated release %s under de1', async active => {
+  mocks.query.mockResolvedValue({ kind: 'page', name: 'tar', section: '5', datasetReleaseId: 'en1', translatedReleaseId: active })
+  const key = { lang: 'de' as const, known: true, datasetReleaseId: 'de1' }
+  const skewed = await resolveManName('tar', 'debian', 'en1', key)
+  expect(skewed).toMatchObject({ result: { section: '5' }, servedRelease: null })
+  expect(mocks.cache.size).toBe(0)
+  mocks.query.mockResolvedValue({ kind: 'page', name: 'tar', section: '1', datasetReleaseId: 'de1' })
+  const rolledBack = await resolveManName('tar', 'debian', 'en1', key)
+  expect(rolledBack).toMatchObject({ result: { section: '1' }, servedRelease: 'en1' })
+  expect(mocks.query).toHaveBeenCalledTimes(2)
+})
+
+it.each(['de1', null])('retains keyed English fallbacks when their translated pointer matches %s', async translated => {
+  mocks.query.mockResolvedValue({ kind: 'page', name: 'tar', section: '5', datasetReleaseId: 'en1', translatedReleaseId: translated })
+  for (let i = 0; i < 2; i++) {
+    expect(await resolveManName('tar', 'debian', 'en1', { lang: 'de', known: true, datasetReleaseId: translated }))
+      .toMatchObject({ result: { section: '5' }, servedRelease: 'en1' })
+  }
+  expect(mocks.query).toHaveBeenCalledTimes(1)
+})
+
+it('keeps a name miss private when its translated pointer differs from the key', async () => {
+  mocks.query.mockResolvedValue({ kind: 'not_found', datasetReleaseId: 'en1', translatedReleaseId: 'de2' })
+  expect(await resolveManName('tar', 'debian', 'en1', { lang: 'de', known: true, datasetReleaseId: 'de1' }))
+    .toEqual({ result: null, servedRelease: null })
+  expect(mocks.cache.size).toBe(0)
 })

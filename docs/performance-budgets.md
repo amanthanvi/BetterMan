@@ -309,3 +309,25 @@ man page uses **four calls, 26 documents and one storage read**, meeting the
 requested target. The existing `perf-budgets.json` ceiling remains **five calls,
 29 documents and one storage read**; it is an allowance, not the current measured
 cost. Analytics changes no Convex reads.
+## Translated page cases
+
+B3 (#395) adds `manTranslated` (`/man/bash/1?lang=de`) and
+`manTranslationFallback` (`/man/bash/1?lang=fr`) from the same corpus plus a
+German release with bash(1) and a French release without it. Each must render
+cold through the proxy: the German page with `lang="de"`, its note and its
+eligible English alternates and `noindex`; the fallback as English with the missing-translation note and
+`noindex`. Both allow 4 calls and 1 storage read, with ceilings of 15 and 29 documents.
+The fixture hash changed for these rows only; every existing baseline and
+tolerance is unchanged.
+
+The translated-language miss serving English (`manTranslationFallback`) measured
+**4 calls / 29 documents / 1 storage read** through the production proxy and
+renderer. Removing the translation sitemap pipeline adds no page-view reads.
+
+Fixture **v16** combines main/#465’s saturated bare-cluster scenarios
+(`searchClusterBare` and `searchClusterBareShort`) with B3’s translated and
+missing-translation browser scenarios. Main’s existing metric policies are
+retained, alongside B3’s existing 50-byte search gzip allowance. Only the
+translated scenario baselines are re-recorded; every tolerance and unrelated
+baseline remains unchanged. Without drift, the translated case measures
+**4 calls / 14 documents / 1 storage read**; the English fallback is **4 / 29 / 1**.

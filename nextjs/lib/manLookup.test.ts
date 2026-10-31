@@ -16,6 +16,7 @@ vi.mock('./api', async (importOriginal) => {
     FastApiError: actual.FastApiError,
     withDistroFallback: actual.withDistroFallback,
     servedRelease: actual.servedRelease,
+    nameResolutionAnsweredBy: actual.nameResolutionAnsweredBy,
     answeredBy: actual.answeredBy,
     fetchManByNameAndSectionOrAlias: mocks.fetchManByNameAndSectionOrAlias,
     fetchRelated: mocks.fetchRelated,
