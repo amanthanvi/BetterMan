@@ -126,7 +126,7 @@ def extract(archive, package, root, *, quota=None, **_kwargs):
 
 def copyright_text(workspace, package):
     text = package_notice(
-        workspace, package, directory_fallback=lambda: spdx_notice(workspace, package)
+        workspace, package, directory_fallback=lambda _owner, _path: spdx_notice(workspace, package)
     )
     if text:
         return text

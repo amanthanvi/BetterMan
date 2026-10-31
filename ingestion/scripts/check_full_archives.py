@@ -78,10 +78,12 @@ def measure(root, distro, limit, curated=False, largest=False):
                 sample=False,
             )
         notices = _LicenseSpool(spool.connection)
-        for pkg in sorted(
-            {p.source_package for p in spool.refs()}
+        used = (
+            {p.name for p in workspace.packages}
+            | {p.source_package for p in spool.refs()}
             | {a["sourcePackage"] for a in workspace.alias_providers}
-        ):
+        )
+        for pkg in sorted(used):
             text = notice_text(workspace, pkg)
             if text.strip():
                 notices[pkg] = text
@@ -141,13 +143,7 @@ def measure(root, distro, limit, curated=False, largest=False):
             ],
             "verifiedLicenses": len(notices),
             "maxLicenseBytes": max((len(notices[p].encode()) for p in notices), default=0),
-            "packagesWithoutLicenseText": sorted(
-                (
-                    {p.source_package for p in spool.refs()}
-                    | {a["sourcePackage"] for a in workspace.alias_providers}
-                )
-                - set(notices)
-            ),
+            "packagesWithoutLicenseText": sorted(used - set(notices)),
             "packages": [
                 {"name": p.name, "sha256": workspace.available[p.name].sha256, "bytes": p.size}
                 for p in workspace.packages

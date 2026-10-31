@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from ingestion import arch_archives, fedora_archives
+from ingestion import alpine_archives, arch_archives, fedora_archives
 from ingestion.debian_archives import ArchiveStore, ExtractedQuota, MissingSource
 from ingestion.debian_pipeline import Workspace
 from tests.test_fedora_archives import payload
@@ -137,7 +137,11 @@ def test_missing_notice_file_is_not_hidden_by_other_notices_or_spdx(
         members.insert(0, ("usr/share/licenses/tool/NOTICE", b"other notice", None))
     w.register("tool", members)
     w.register("licenses", [("usr/share/licenses/spdx/MIT.txt", b"MIT license", None)])
-    collector = arch_archives.copyright_text if distro == "arch" else fedora_archives.copyright_text
+    collector = {
+        "arch": arch_archives.copyright_text,
+        "alpine": alpine_archives.copyright_text,
+        "fedora": fedora_archives.copyright_text,
+    }[distro]
     with pytest.raises(MissingSource, match="missing/LICENSE"):
         collector(w, "tool")
 
@@ -299,3 +303,139 @@ def test_directory_notice_children_include_non_bmp_filenames(notice_workspace):
         "base", [("usr/share/licenses/base/\U0001f4dc.txt", b"full notice", None)], acquired=False
     )
     assert fedora_archives.copyright_text(w, "tool") == "full notice"
+
+
+@pytest.mark.parametrize("owner_notice", [False, True])
+def test_alpine_qt_directory_alias_uses_metadata_owner_or_verified_spdx(
+    notice_workspace, owner_notice
+):
+    import dataclasses
+
+    from ingestion import alpine_archives
+
+    w = notice_workspace
+    w.distro = "alpine"
+    w.register(
+        "qt5-qtfeedback-doc",
+        [("usr/share/licenses/qt5-qtfeedback", b"", "qt5-base")],
+        source="qt5-qtfeedback",
+        license="LGPL-2.1-only AND Qt-GPL-exception-1.0",
+    )
+    runtime = w.register("qt5-qtfeedback", [], acquired=False)
+    w.available[runtime.name] = dataclasses.replace(runtime, depends=("so:libQt5Core.so.5",))
+    base = w.register(
+        "qt5-qtbase",
+        [("usr/share/licenses/qt5-base/LICENSE", b"Qt upstream notice", None)]
+        if owner_notice
+        else [],
+        acquired=False,
+    )
+    w.available[base.name] = dataclasses.replace(base, provides=("so:libQt5Core.so.5",))
+    w.register(
+        "spdx-licenses-text",
+        [
+            ("usr/share/spdx/text/LGPL-2.1-only.txt", b"LGPL 2.1 text", None),
+            ("usr/share/spdx/text/Qt-GPL-exception-1.0.txt", b"Qt exception text", None),
+        ],
+        acquired=False,
+    )
+    # APKINDEX contains no paths; only acquisition can establish ownership.
+    w.owners.execute("DELETE FROM owners")
+    text = alpine_archives.copyright_text(w, "qt5-qtfeedback-doc")
+    if owner_notice:
+        assert text == "Qt upstream notice"
+        assert "spdx-licenses-text" not in w.acquired
+    else:
+        assert "LGPL 2.1 text" in text and "Qt exception text" in text
+    assert "qt5-qtbase" in w.acquired
+    assert "qt5-base" not in w.available
+
+
+def test_alpine_directory_owner_can_be_a_direct_dependency(notice_workspace):
+    import dataclasses
+
+    from ingestion import alpine_archives
+
+    w = notice_workspace
+    w.distro = "alpine"
+    package = w.register("tool-doc", [("usr/share/licenses/tool", b"", "shared")])
+    w.available[package.name] = dataclasses.replace(package, depends=("notice-provider",))
+    w.register(
+        "notice-provider",
+        [("usr/share/licenses/shared/LICENSE", b"full notice", None)],
+        acquired=False,
+    )
+    w.owners.execute("DELETE FROM owners")
+    assert alpine_archives.copyright_text(w, "tool-doc") == "full notice"
+
+
+def test_alpine_directory_owner_is_not_guessed_from_name_similarity(notice_workspace):
+    from ingestion import alpine_archives
+
+    w = notice_workspace
+    w.distro = "alpine"
+    w.register("tool-doc", [("usr/share/licenses/tool", b"", "qt5-base")])
+    w.register(
+        "qt5-qtbase", [("usr/share/licenses/qt5-base/LICENSE", b"unrelated", None)], acquired=False
+    )
+    w.owners.execute("DELETE FROM owners")
+    with pytest.raises(MissingSource):
+        alpine_archives.copyright_text(w, "tool-doc")
+    assert "qt5-qtbase" not in w.acquired
+
+
+def test_alpine_missing_directory_with_no_matching_spdx_fails_closed(notice_workspace):
+    w = notice_workspace
+    w.distro = "alpine"
+    w.register(
+        "tool-doc", [("usr/share/licenses/tool", b"", "absent")], license="LicenseRef-private"
+    )
+    w.register("spdx-licenses-text", [("usr/share/spdx/text/MIT.txt", b"MIT text", None)])
+    with pytest.raises(MissingSource):
+        alpine_archives.copyright_text(w, "tool-doc")
+
+
+def test_alpine_directory_owner_with_blocked_notice_cannot_use_spdx(notice_workspace):
+    import dataclasses
+
+    w = notice_workspace
+    w.distro = "alpine"
+    p = w.register("tool-doc", [("usr/share/licenses/tool", b"", "shared")])
+    w.available[p.name] = dataclasses.replace(p, depends=("provider",))
+    w.register(
+        "provider", [("usr/share/licenses/shared/LICENSE", b"", "/etc/passwd")], acquired=False
+    )
+    w.register("spdx-licenses-text", [("usr/share/spdx/text/MIT.txt", b"MIT text", None)])
+    w.owners.execute("DELETE FROM owners")
+    with pytest.raises(ValueError, match="leaves archive documentation roots"):
+        alpine_archives.copyright_text(w, "tool-doc")
+
+
+def test_alpine_blocked_matching_spdx_text_is_not_skipped(notice_workspace):
+    w = notice_workspace
+    w.distro = "alpine"
+    w.register(
+        "tool-doc", [("usr/share/licenses/tool", b"", "absent")], license="MIT AND BSD-3-Clause"
+    )
+    w.register(
+        "spdx-licenses-text",
+        [
+            ("usr/share/spdx/text/BSD-3-Clause.txt", b"BSD text", None),
+            ("usr/share/spdx/text/MIT.txt", b"", "/etc/passwd"),
+        ],
+    )
+    with pytest.raises(ValueError, match="leaves archive documentation roots"):
+        alpine_archives.copyright_text(w, "tool-doc")
+
+
+def test_alpine_metadata_owner_directory_alias_can_reach_spdx_fallback(notice_workspace):
+    import dataclasses
+
+    w = notice_workspace
+    w.distro = "alpine"
+    p = w.register("tool-doc", [("usr/share/licenses/tool", b"", "shared")])
+    w.available[p.name] = dataclasses.replace(p, depends=("provider",))
+    w.register("provider", [("usr/share/licenses/shared", b"", "absent")], acquired=False)
+    w.register("spdx-licenses-text", [("usr/share/spdx/text/MIT.txt", b"MIT text", None)])
+    w.owners.execute("DELETE FROM owners")
+    assert alpine_archives.copyright_text(w, "tool-doc") == "MIT text"

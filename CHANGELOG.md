@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Alpine full imports resolve license-directory aliases through verified metadata-related owners or the existing SPDX-text fallback, including Qt's absent `qt5-base` directory; no-upload rehearsals check selected packages even when they contain no manuals (#394).
 - Full archive imports read notices through license-directory links and retain nested license texts, including Fedora's shared TeX Live notices; Arch's verified SPDX fallback handles legacy GNU license names. Repair dnsconfd's dangling notice against its pinned RPM's complete MIT text and exclude Fedora's malcontent/malcontent-tools, whose LGPL notices are absent, without ignoring missing or blocked notices (#394).
 - Full archive imports skip a manual whose roff source the scanner refuses (for example a `.so` with extra arguments) and count it against the 2% parse gate, naming the page, instead of stopping the whole distro; the 2026-10-31 Arch and Alpine full staging runs stopped on one such page. Pages are still never rendered with an unresolved include, and other errors, such as an excluded package, still stop the run (#394).
 - Exclude Ubuntu noble's pinned bcc and bin86 packages, which ship no copyright notice, before full-import acquisition; record the reviewed exclusions in the release manifest and block dependencies on their files (#394).

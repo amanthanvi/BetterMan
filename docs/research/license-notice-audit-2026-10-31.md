@@ -30,7 +30,7 @@ scripts were never run and archive links were never created on disk.
   select their declared version. This preserves the existing Arch rule of
   using available shared license texts; it does not invent a missing MIT text.
 - Directory notices enumerate indexed owners and verified stored children,
-  recursively, with cycle limits. Only Arch's existing SPDX fallback can
+  recursively, with cycle limits. Arch and Alpine's existing SPDX fallbacks can
   satisfy an absent top-level license-directory alias, and that use is logged.
   Missing individual notices, blocked links and unreadable stored files fail.
   Readable notices are retained alongside a successful directory fallback.
@@ -86,9 +86,62 @@ The `.files` format has paths, not symlink targets: the other candidates remain
 metadata findings rather than confirmed archive-link shapes. The generic
 walker covers the observed shapes without package-name special cases.
 
-Alpine has no file lists. Its shared collector receives the nested-directory
-and blocked-entry fixes, with missing-notice regression coverage; no live
-Alpine acquisition was performed.
+## Alpine follow-up
+
+The same run parsed 43,132 Alpine pages before failing on
+`qt5-qtfeedback-doc:usr/share/licenses/qt5-base`. APKINDEX has no file lists.
+The pinned catalog contains 27,577 available packages and selects 4,498
+doc/manual packages (1,640,117,279 compressed bytes).
+
+Native APK control/data verification confirms that qt5-qtfeedback-doc
+0_git20180903-r2 contains only the notice link
+`usr/share/licenses/qt5-qtfeedback -> qt5-base`. Its observed whole-archive
+SHA256 is `686635552b75e5ce28d7c4d48693bb5743b2ebc10e2d4470c1d2fb23461c3e39`.
+There is no package named qt5-base. APKINDEX's exact `o:` origin identifies
+qt5-qtfeedback; that runtime's `D:` capabilities identify qt5-qtbase as a Qt
+library provider. Verified downloads of qt5-qtfeedback, qt5-qtbase and
+qt5-qtbase-doc contain no notice entries, so the directory is actually absent.
+
+Alpine's existing `spdx-licenses-text` package has all four declared texts:
+LGPL-2.1-only, LGPL-3.0-only, GPL-3.0-only and Qt-GPL-exception-1.0. Its observed
+SHA256 is `164a2e35481045569bbf3eed7379124461b69501f6264994c8fb3091a8288481`.
+The four verified texts yield a 103,743-byte notice, including separators.
+No Alpine exclusion or reviewed owner pin is needed for this case.
+
+For an unindexed directory, the collector probes exact origins, direct `D:`
+dependencies and declared providers of the requesting package and its origin.
+It establishes ownership only from acquired, verified entries; it does not
+derive a package name from the target directory or traverse an unbounded
+dependency graph. Already-acquired owners and indexed owners still take
+precedence. If no owner supplies the directory, Alpine's existing exact-ID
+SPDX fallback may satisfy the top-level alias. A missing individual notice,
+blocked target, unreadable source or unavailable matching fallback still fails.
+
+Bounded exposure audit: all 3,941 selected doc/manual APKs of at most 256 KiB
+were downloaded and passed native control/data verification: 112,655,982
+compressed bytes, zero verification/read failures. Payloads were streamed as
+data, with no extraction of links or execution of scripts. The audit includes
+all seven selected Qt doc packages. It found 793 packages with notice entries,
+788 with regular notices, and seven notice symlinks. Five are top-level aliases
+to the absent qt5-base directory: qt5-qtfeedback-doc, qt5-qtgraphicaleffects-doc,
+qt5-qtpim-doc, qt5-qtserialbus-doc and qt5-qtsystems-doc. The other two links are
+getdns-doc's COPYING -> LICENSE and libjpeg-turbo-doc's LICENSE.md into its doc
+directory. A live collector pass over all seven packages produced seven
+nonblank notices and no failures, with all five Qt aliases using the four
+verified SPDX texts. That pass acquired 44 packages including the curated
+benchmark set and metadata-related providers.
+
+The remaining 557 selected APKs total 1,527,461,297 compressed bytes and were
+not scanned. The audit establishes a bound, not full Alpine notice coverage.
+
+The no-upload benchmark previously collected licenses only for packages with
+parsed manuals. This missed the failure because qt5-qtfeedback-doc has no
+manuals: the publisher still collects its license as a selected package. The
+benchmark now checks the same selected/published package set. The corrected
+single-package Qt rehearsal plus curated dependencies passed: 1,425 pages,
+four collected notices, zero parse failures, zero unresolved sources and no
+selected/published package without notice text. It exported SHA256 proposals
+locally without modifying committed pins or creating an upload client.
 
 ## Validation and limits
 
@@ -121,7 +174,7 @@ extraction-cache receipts change. No full multi-hour import or production
 operation was run. Independent review is left to the lead; this task ran as
 an implementation sub-agent without nested delegation.
 
-Final local results: frozen uv sync/lint/format and all 1,078 ingestion tests
+Original PR results at `0e1e2989`: frozen uv sync/lint/format and all 1,078 ingestion tests
 passed (89.95% coverage; one existing unclosed SQLite ResourceWarning). Frozen
 pnpm install and all 122 ops tests passed. The Arch rehearsal produced 6,864
 pages and 32 notices, with no parse failures, unresolved sources or packages
@@ -130,3 +183,12 @@ without notice text. The expanded Fedora rehearsal produced 3,214 pages and
 Fedora man-pages without a separate notice, as the existing collector already
 did; this change does not claim complete license coverage of the entire corpus.
 Two pre-existing unsupported bash route names were recorded separately.
+
+Alpine follow-up results: Ruff lint and format checks and all 1,086 ingestion
+tests passed (90.12% coverage; one existing unclosed SQLite ResourceWarning).
+All 122 ops tests passed. The Qt directory regression first failed before the
+fix; additional tests cover metadata origin/capability and direct-dependency
+owners, a second directory alias, rejected name-similarity guesses, missing
+notice files beside readable notices, absent matching SPDX text and blocked
+matching SPDX entries. Contract v8, committed Alpine pins, extraction receipts
+and the publisher/manifest schema are unchanged by the follow-up.

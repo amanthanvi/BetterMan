@@ -289,8 +289,8 @@ def _notice_texts(workspace, package, path, *, directory_fallback=None, seen=fro
             )
         )
         if not children:
-            # Arch split packages can link an absent license directory; only their
-            # existing, verified SPDX fallback may satisfy that directory alias.
+            # A distro's existing verified SPDX fallback may satisfy an absent
+            # top-level directory alias, never a missing individual notice.
             if (
                 directory_fallback is not None
                 and path.startswith("usr/share/licenses/")
@@ -298,7 +298,7 @@ def _notice_texts(workspace, package, path, *, directory_fallback=None, seen=fro
                 and exc.path.startswith("usr/share/licenses/")
                 and exc.path.count("/") == 3
             ):
-                text = directory_fallback()
+                text = directory_fallback(exc.package, exc.path)
                 if text.strip():
                     logging.warning(
                         json.dumps(
