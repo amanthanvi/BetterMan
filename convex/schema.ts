@@ -52,6 +52,8 @@ export default defineSchema({
     uploadedPackageBatchCount: v.optional(v.number()),
     pageCount: v.number(),
     indexablePageCount: v.optional(v.number()),
+    flagSearchReady: v.optional(v.boolean()),
+    flagSearchGeneration: v.optional(v.number()),
     providerCount: v.optional(v.number()),
     aliasCount: v.optional(v.number()),
     licenseCount: v.optional(v.number()),
@@ -289,6 +291,17 @@ export default defineSchema({
       "nameNorm",
     ]),
 
+  // Bounded, precomputed verified-example candidates; no new index on the option table.
+  flagSearchCandidates: defineTable({
+    releaseId: v.id("datasetReleases"), flag: v.string(), generation: v.optional(v.number()),
+    candidates: v.array(v.object({
+      pageId: v.id("manPages"), name: v.string(), section: v.string(), title: v.string(), description: v.string(),
+      popularityScore: v.number(), usage: v.array(v.object({ flag: v.string(), count: v.number() })),
+      flags: v.string(), anchorId: v.string(),
+    })),
+  }).index("by_releaseId_and_flag", ["releaseId", "flag"])
+    .index("by_releaseId_and_generation_and_flag", ["releaseId", "generation", "flag"]),
+
   manPageSymbols: defineTable({
     ...symbolInput.fields,
     releaseId: v.id('datasetReleases'), pageId: v.id('manPages'),
@@ -453,6 +466,7 @@ export default defineSchema({
     section: v.string(),
     title: v.string(),
     description: v.string(),
+    popularityScore: v.optional(v.number()),
     // The phrases, one per line.
     taskText: v.string(),
   }).index("by_releaseId_and_pageId", ["releaseId", "pageId"])
@@ -466,6 +480,10 @@ export default defineSchema({
     scanned: v.number(),
     written: v.number(),
     completedVersion: v.optional(v.number()),
+    generation: v.optional(v.number()),
+    candidateGeneration: v.optional(v.number()),
+    clearingFlags: v.optional(v.boolean()),
+    rescanFlags: v.optional(v.boolean()),
     jobId: v.optional(v.id("_scheduled_functions")),
     attempts: v.number(),
     updatedAt: v.number(),

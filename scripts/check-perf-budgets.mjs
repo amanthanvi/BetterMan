@@ -176,7 +176,7 @@ async function sample(url, name, { cost = false, cpuRate = 4, fontDelayMs = 0, c
 try {
   process.env.RATE_LIMIT_TAG_KEY = 'perf-fixture-only'
   vite = await createViteServer({ configFile: false, logLevel: 'error', server: { middlewareMode: true, watch: null, hmr: false }, appType: 'custom' })
-  const { createFixture, createProviderFixture, createSearchFixture, createExplainFixture, createExplainMultiFixture, createDerivedResponseFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
+  const { createFixture, createProviderFixture, createSearchFixture, createBareSearchFixture, createExplainFixture, createExplainMultiFixture, createDerivedResponseFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
   let fixture = await createFixture(() => metrics.calls++)
   metrics = { calls: 0, documents: 0, storageReads: 0 }
   const runtime = globalThis.Convex
@@ -375,6 +375,26 @@ try {
     details[name] = { q, scope: 'direct Convex search query', costs: { ...metrics }, resultCount: result.results.length }
     console.log(`${name}: ${JSON.stringify(metrics)}`)
   }
+  fixture = await createBareSearchFixture(() => metrics.calls++)
+  metrics = { calls: 0, documents: 0, storageReads: 0 }
+  const bare = await fixture.query(makeFunctionReference('queries:search'), { distro: 'debian', q: '-xzf', section: null, limit: 20, offset: 0, brief: true })
+  assert.equal(bare.results[0]?.name, 'tar')
+  assert.equal(bare.results.length, 5, 'Three-letter cluster must use its bounded candidate allowance')
+  assert.deepEqual(bare.results[0].highlights, ['-x, --extract', '-z, --gzip', '-f, --file'])
+  assert.equal(bare.top.flags.length, 6, 'Bare cluster must include the saturated top-hit brief')
+  assert.ok(metrics.documents <= 40, 'Worst-case bare cluster plus brief exceeded its read cap')
+  for (const [metric, value] of Object.entries(metrics)) actual[`searchClusterBare.${metric}`] = value
+  details.searchClusterBare = { q: '-xzf', scope: 'direct Convex search with brief', costs: { ...metrics }, resultCount: bare.results.length }
+  console.log(`searchClusterBare: ${JSON.stringify(metrics)}`)
+  metrics = { calls: 0, documents: 0, storageReads: 0 }
+  const short = await fixture.query(makeFunctionReference('queries:search'), { distro: 'debian', q: '-xf', section: null, limit: 20, offset: 0, brief: true })
+  assert.equal(short.results[0]?.name, 'tar')
+  assert.equal(short.results.length, 7, 'Two-letter cluster must saturate its candidate allowance')
+  assert.equal(short.top.flags.length, 6)
+  assert.ok(metrics.documents <= 40, 'Two-letter cluster plus full brief exceeded its read cap')
+  for (const [metric, value] of Object.entries(metrics)) actual[`searchClusterBareShort.${metric}`] = value
+  details.searchClusterBareShort = { q: '-xf', scope: 'direct Convex search with brief', costs: { ...metrics }, resultCount: short.results.length }
+  console.log(`searchClusterBareShort: ${JSON.stringify(metrics)}`)
   fixture = await createExplainFixture(() => metrics.calls++)
   for (const [name, path, args] of [
     ['searchSymbol', 'queries:search', { distro: 'debian', q: 'ForwardAgent', section: null, limit: 20, offset: 0 }],
