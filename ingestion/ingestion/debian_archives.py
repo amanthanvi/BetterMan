@@ -17,6 +17,7 @@ from ingestion.debian_indexes import (
     BINARY_PATH,
     MAN_PATH,
     Package,
+    link_target,
     manual_registered,
     require_private_package,
     safe_path,
@@ -160,12 +161,7 @@ def extract(
             if BINARY_PATH.fullmatch(raw_path):
                 path = safe_path(raw_path)
                 if member.issym() or member.islnk():
-                    target = member.linkname
-                    if target.startswith("/"):
-                        target = target.lstrip("/")
-                    elif member.issym():
-                        target = posixpath.join(posixpath.dirname(path), target)
-                    target = safe_path(posixpath.normpath(target))
+                    target = link_target(path, member.linkname, symbolic=member.issym())
                     if BINARY_PATH.fullmatch(target):
                         entries.append((package.name, path, "binary-link", target, None))
                 elif member.isfile():
@@ -179,12 +175,7 @@ def extract(
             if member.issym() or member.islnk():
                 if not manual and not notice and path.count("/") != 3:
                     continue
-                target = member.linkname
-                if target.startswith("/"):
-                    target = target.lstrip("/")
-                elif member.issym():
-                    target = posixpath.join(posixpath.dirname(path), target)
-                target = safe_path(posixpath.normpath(target))
+                target = link_target(path, member.linkname, symbolic=member.issym())
                 if not target.startswith(DOC_ROOTS):
                     # Debian docs may link examples to /etc or alternatives.
                     # Keep no filesystem link and never read outside the store.
@@ -370,9 +361,14 @@ class ArchiveStore:
         # Use the same syntax state as the final guard: a `.so` after `.cc |`
         # is text, while `|so` is a real request. Resolve verified archive includes
         # before mandoc sees them; never consult the host filesystem.
-        from ingestion.mandoc import checked_source
+        from ingestion.mandoc import RoffSourceError, checked_source
 
-        data = checked_source(data, include=include)
+        try:
+            data = checked_source(data, include=include)
+        except RoffSourceError as exc:
+            # One refused page counts against the archive parse gate; it does not stop
+            # the distro. Other errors (e.g. an excluded package) still propagate.
+            raise ValueError(f"{owner}:{path}: {exc}") from exc
         return (owner, path, data) if details else data
 
     def manuals(self):
