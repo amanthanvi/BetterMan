@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ReadingPrefsProvider, useReadingPrefs } from '../components/state/readingPrefs'
 import type { ReadingPreferences } from '../lib/readingPrefs'
+import { ANALYTICS_BOOT_SCRIPT } from '../lib/analyticsBoot'
 import RootLayout from './layout'
 
 const saved: ReadingPreferences = {
@@ -30,19 +31,25 @@ function PrefsProbe() {
   return <output>{useReadingPrefs().prefs.fontSize}</output>
 }
 
-describe('RootLayout', () => {
-  afterEach(() => vi.unstubAllEnvs())
+afterEach(() => vi.unstubAllEnvs())
 
-  it('loads only a deferred same-origin tracker with the request nonce', async () => {
-    vi.stubEnv('NEXT_PUBLIC_PLAUSIBLE_DOMAIN', 'betterman.sh')
+describe('RootLayout', () => {
+
+  it('renders only the fixed head bootstrap with configured data and the request nonce', async () => {
+    vi.stubEnv('VERCEL_ENV', 'production')
+    vi.stubEnv('VERCEL_OBSERVABILITY_CLIENT_CONFIG', JSON.stringify({ analytics: { scriptSrc: '/project-intake/script.js', eventEndpoint: '/project-intake/event', viewEndpoint: '/project-intake/view' } }))
     const html = renderToStaticMarkup(await RootLayout({ children: null }))
-    expect(html).toContain('<script defer="" src="/assets/site.js" data-api="/assets/entry" data-domain="betterman.sh" nonce="test-nonce"></script>')
-    expect(html).not.toContain('plausible.io')
+    expect(html.split('</head>')[0]).toContain(`<script nonce="test-nonce" data-script-src="/project-intake/script.js" data-event-endpoint="/project-intake/event" data-view-endpoint="/project-intake/view">${ANALYTICS_BOOT_SCRIPT}</script>`)
+    expect(html).not.toContain('src="/project-intake/script.js" nonce=')
+    expect(html).not.toContain('<script defer=')
   })
 
-  it('omits the tracker when analytics is unconfigured', async () => {
-    vi.stubEnv('NEXT_PUBLIC_PLAUSIBLE_DOMAIN', '')
-    expect(renderToStaticMarkup(await RootLayout({ children: null }))).not.toContain('/assets/site.js')
+  it.each(['preview', 'development', ''])('omits analytics outside Vercel production (%s)', async (env) => {
+    vi.stubEnv('VERCEL_ENV', env)
+    vi.stubEnv('VERCEL_OBSERVABILITY_CLIENT_CONFIG', JSON.stringify({ analytics: { scriptSrc: '/project-intake/script.js' } }))
+    const html = renderToStaticMarkup(await RootLayout({ children: null }))
+    expect(html).not.toContain('window.va=')
+    expect(html).not.toContain('/project-intake/')
   })
   it('stamps saved reading preferences on the server-rendered body and seeds the provider', async () => {
     const html = renderToStaticMarkup(await RootLayout({ children: <PrefsProbe /> }))
@@ -58,4 +65,10 @@ describe('RootLayout', () => {
       '<link rel="search" type="application/opensearchdescription+xml" title="BetterMan" href="/opensearch.xml"/>',
     )
   })
+})
+
+it('emits no analytics in production until project configuration is available', async () => {
+  vi.stubEnv('VERCEL_ENV', 'production')
+  vi.stubEnv('VERCEL_OBSERVABILITY_CLIENT_CONFIG', '')
+  expect(renderToStaticMarkup(await RootLayout({ children: null }))).not.toContain('window.va=')
 })

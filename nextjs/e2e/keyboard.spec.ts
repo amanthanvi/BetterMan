@@ -44,8 +44,10 @@ test('shortcuts: single-key shortcuts are ignored while the command palette is o
 
   const input = page.getByRole('combobox', { name: 'Command palette input' })
   await page.getByRole('button', { name: 'Search' }).click()
-  await expect(input).toBeVisible()
-  await page.evaluate(() => {
+  await expect(input).toBeFocused()
+  // Let the focus trap's initial frame finish before deliberately moving focus out.
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
   })
   await expect(input).not.toBeFocused()

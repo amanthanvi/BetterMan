@@ -232,7 +232,7 @@ cannot prove those flags, or what the reader would run.
 ### What gets generated, and when
 
 [B4](roadmap/b4-index-by-demand.md) owns the indexed tier: sections 1, 5, 7
-and 8, popular packages and routes promoted by aggregate traffic. Generated
+and 8 plus popular packages (pinned popcon). Generated
 contract v3 returns the persisted tier and score. The default scan covers every
 section; the selector admits only that tier, ordered by descending demand score,
 then option-table presence and section order. Unscored legacy releases return `indexable: null`; the selector retains main's

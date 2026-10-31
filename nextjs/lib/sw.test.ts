@@ -29,11 +29,11 @@ function worker() {
   }
   runInNewContext(source, { self, caches, fetch, Response, URL })
 
-  function request(path: string, mode = 'navigate', destination = '') {
+  function request(path: string, mode = 'navigate', destination = '', method = 'GET') {
     let response!: Promise<Response>
     const pending: Promise<unknown>[] = []
     listeners.get('fetch')!({
-      request: { url: new URL(path, origin).href, method: 'GET', mode, destination },
+      request: { url: new URL(path, origin).href, method, mode, destination },
       respondWith: (value: Promise<Response>) => { response = value },
       waitUntil: (value: Promise<unknown>) => { pending.push(value) },
     })
@@ -50,11 +50,19 @@ function worker() {
 }
 
 describe('service worker', () => {
-  it('leaves the unhashed tracker to HTTP caching', () => {
+  it.each(['/assets/site.js', '/project-intake/script.js', '/other-deploy/script.js'])('never intercepts analytics (%s)', (path) => {
     const w = worker()
-    const request = w.request('/assets/site.js', 'cors', 'script')
+    const request = w.request(path, 'cors', 'script')
     expect(request.response).toBeUndefined()
     expect(w.cache.match).not.toHaveBeenCalled()
+    expect(w.fetch).not.toHaveBeenCalled()
+  })
+
+  it.each(['/project-intake/view', '/project-intake/event'])('never intercepts intake (%s)', (path) => {
+    const w = worker()
+    expect(w.request(path, 'cors', '', 'POST').response).toBeUndefined()
+    expect(w.request(path, 'cors').response).toBeUndefined()
+    expect(w.caches.open).not.toHaveBeenCalled()
     expect(w.fetch).not.toHaveBeenCalled()
   })
 
@@ -65,9 +73,12 @@ describe('service worker', () => {
     const cacheName = `bm-static-${sourceVersion}`
     w.caches.keys.mockResolvedValue([cacheName])
     w.entries.set(`${origin}/assets/site.js`, new Response('old tracker'))
+    w.entries.set(`${origin}/man/tar/1`, new Response('offline page'))
     await w.activate()
     expect(w.cache.delete).toHaveBeenCalledWith('/assets/site.js')
     expect(w.entries.has(`${origin}/assets/site.js`)).toBe(false)
+    expect(w.entries.has(`${origin}/man/tar/1`)).toBe(true)
+    expect(w.caches.delete).not.toHaveBeenCalled()
   })
 
   it('responds without waiting for a slow cache write', async () => {
