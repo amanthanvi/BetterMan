@@ -7,7 +7,7 @@ import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { packOptionSignature } from "./_derivedInputs";
 import { optionFlagRows } from "./_optionFlags";
 import { LICENSE_CONTENT_TYPE, MANIFEST_CONTENT_TYPE } from "./_manifestStorage";
-import { INGEST_CONTRACT } from "./ingestContract";
+import { INGEST_CONTRACT, INGEST_CONTRACT_HEADER } from "./ingestContract";
 import { canonicalJson } from "./ingest";
 import { releaseAcquisition } from "./_releaseManifest";
 import { GENERATED_CONTRACT, GENERATED_LIMITS, generationDoc } from "./_generatedLayer";
@@ -42,14 +42,16 @@ async function requireIngestSecret(req: Request): Promise<Response | null> {
   return null;
 }
 
-function ingestAction(handler: (ctx: ActionCtx, body: unknown) => Promise<Response>, requireContract = false) {
+function ingestAction(handler: (ctx: ActionCtx, body: unknown) => Promise<Response>, requireContract = true) {
   return httpAction(async (ctx, req) => {
     const auth = await requireIngestSecret(req);
     if (auth) return auth;
-    // Fence old in-flight workflows as well as new callers' preflight reads.
-    // The CAS field remains optional for manual operators using this contract.
-    if (requireContract && req.headers.get("x-betterman-ingest-contract") !== String(INGEST_CONTRACT.schemaVersion)) {
-      return jsonResponse({ error: { code: "INGEST_CONTRACT_MISMATCH", message: `Promotion requires ingest contract v${INGEST_CONTRACT.schemaVersion}; use the matching workflow/client and deploy Convex first.` } }, 409);
+    // Every release-contract request names the exact contract it was written
+    // for, so an older or newer client (or workflow) stops before any read or
+    // write, the way the client stops on an older or newer deployment. A shared
+    // feature subset is not enough: two contracts may name the same fields.
+    if (requireContract && req.headers.get(INGEST_CONTRACT_HEADER) !== String(INGEST_CONTRACT.schemaVersion)) {
+      return jsonResponse({ error: { code: "INGEST_CONTRACT_MISMATCH", message: `This deployment serves ingest contract v${INGEST_CONTRACT.schemaVersion}; use the matching workflow/client and deploy Convex first.` } }, 409);
     }
     let body: unknown;
     try {
@@ -252,7 +254,7 @@ http.route({
   method: "POST",
   handler: ingestAction(async (ctx, body) => {
     // Full archive production authorization belongs to the gated promote path.
-    const result = await ctx.runMutation(internal.ingest.activateRelease, { ...body as object, allowFullDebian: false, allowFullUbuntu: false, allowFullFedora: false, allowFullArch: false, allowFullAlpine: false } as never);
+    const result = await ctx.runMutation(internal.ingest.activateRelease, { ...body as object, allowFullDebian: false, allowFullUbuntu: false, allowFullFedora: false, allowFullArch: false, allowFullAlpine: false, allowTranslations: false } as never);
     return jsonResponse(result, result.pending ? 409 : 200);
   }),
 });
@@ -271,7 +273,7 @@ http.route({
   handler: ingestAction(async (ctx, body) => {
     const result = await ctx.runMutation(internal.ingest.promoteActiveReleases, body as never);
     return jsonResponse(result);
-  }, true),
+  }),
 });
 
 // Generated layer (B6). Separate from the release contract above: records are
@@ -292,7 +294,7 @@ http.route({
   handler: ingestAction(async (ctx, body) => {
     const result = await ctx.runQuery(internal.generated.listCandidates, body as never);
     return jsonResponse(result);
-  }),
+  }, false),
 });
 
 function parsedField(value: string | undefined): unknown {
@@ -347,7 +349,7 @@ http.route({
       }
     }
     return jsonResponse({ pages, deferred, skipped });
-  }),
+  }, false),
 });
 
 http.route({
@@ -356,7 +358,7 @@ http.route({
   handler: ingestAction(async (ctx, body) => {
     const result = await ctx.runMutation(internal.generated.propagateFlagUsage, body as never);
     return jsonResponse(result);
-  }),
+  }, false),
 });
 
 http.route({
@@ -369,7 +371,7 @@ http.route({
       updatedAt: new Date().toISOString(),
     } as never);
     return jsonResponse(result);
-  }),
+  }, false),
 });
 
 export default http;

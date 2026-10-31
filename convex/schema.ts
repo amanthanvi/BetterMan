@@ -176,6 +176,9 @@ export default defineSchema({
     optionContentBytes: v.optional(v.number()),
     optionExtractorVersion: v.optional(v.number()),
     hasParseWarnings: v.boolean(),
+    // Translated releases only (#395): the upstream version the translation
+    // documents, from its .TH source field. No index; read with the page.
+    documentedVersion: v.optional(v.string()),
     verifiedFlagUsage: v.optional(v.array(v.object({
       flag: v.string(), count: v.number(), source: v.union(v.literal("examples"), v.literal("tldr")),
     }))),

@@ -157,21 +157,20 @@ In BetterMan, the Arch ingest path handles this automatically (see `ingestion/in
 ## Deploy and activation recovery
 
 Do not deploy Convex during an `update-docs` / `update-dataset` run. Wait for all
-isolated distro matrix legs to finish before deploying. Contract **v7** retains
-v5 uploads, v6 verified-source reads and CAS promotion, adding B4 demand fields.
-Both ingestion and
-every promotion path call `require_deployed_contract()` and reject either an
-older or newer version before writes. Promotion additionally requires
-`X-BetterMan-Ingest-Contract: 7`: new Convex rejects old in-flight workflow calls
-without the header as `409 INGEST_CONTRACT_MISMATCH`, before moving pointers.
-New workflow code against v5 fails its preflight; if Convex rolls back between
-preflight and POST, v5's validator rejects the unknown CAS field as an invalid
-payload before any mutation writes. There is no unconditional fallback.
-Vercel can lag the Convex deploy because this exchange goes directly to Convex.
-An old ingest already past its preflight may finish compatible uploads or
-staging activation, but cannot promote through the v7 HTTP fence. Do not deploy
-during the live full-Debian run (including run `40957721036`); let it finish,
-deploy Convex v7, then use a fresh matching promotion-only dispatch if needed.
+isolated distro matrix legs to finish before deploying. Contracts go v7 (index
+by demand, #445), v8 (B2 full extractions) and **v9** (translated manuals,
+#395). Versions match exactly, both ways: ingestion and every promotion path
+call `require_deployed_contract()`, which rejects any other advertised version
+or contract shape before writes, and **every** release-contract route (release,
+license-packages, pages, pages/storage, aliases, licenses, activate,
+promotion-source and promote) requires `X-BetterMan-Ingest-Contract: 9`. Convex
+rejects a missing or different header as `409 INGEST_CONTRACT_MISMATCH` before
+any read or write, so an old in-flight workflow stops at its next request
+instead of writing or moving pointers. The generated layer keeps its own
+contract. There is no unconditional fallback. Vercel can lag the Convex deploy
+because this exchange goes directly to Convex. Do not deploy during a live
+dataset run; let it finish, deploy Convex, then use a fresh matching dispatch
+(an interrupted upload re-ingests under a new release ID).
 Once the workflow and deployment
 have settled, use the matching client. If upload was incomplete, re-ingest under
 a new release ID; if upload and sealing completed, resume activation of that ID
@@ -264,6 +263,27 @@ should the owner set `BETTERMAN_DEBIAN_FULL_PROMOTE=1` to enable recurring full
 promotions. Setting it alone does not opt into full ingestion. Non-empty
 repository values other than exactly `1` emit a workflow warning and remain off. Empty
 values are treated as unset without warning; warnings never echo supplied values.
+
+### Translated manuals (#395)
+
+The `update-translations` workflow ingests Debian's translated manuals (de, fr,
+es, pt-BR, ja, ru) as one staging release per language. It is a no-op unless
+the repository variable `BETTERMAN_DEBIAN_TRANSLATIONS=1` (schedule) or the
+dispatch input `debian_translations: true` opts in, and it shares the
+`update-dataset` concurrency group. Each language is its own matrix leg with
+its own result artifact (`dataset-result-debian-<lang>`).
+
+Translated releases never reach prod by default. Convex holds them
+(`TRANSLATED_PROMOTION_HELD`) unless the promote request carries
+`allowTranslations`, which the workflow sends only with
+`debian_translations_promote: true` or `BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE=1`.
+They are archive extractions, so they also need `debian_full_promote: true`
+(or `BETTERMAN_DEBIAN_FULL_PROMOTE=1`). Promotion needs owner sign-off on the
+measured staging cost first. A promotion-only dispatch:
+`gh workflow run update-translations -f locale=de -f debian_translations_promote=true -f debian_full_promote=true -f expected_release_id=<inspected-staging-release-id>`.
+A dispatched promotion requires one language and that ID; the run fails if
+staging holds any other release.
+A held promotion records `held: <reason>` and succeeds without moving prod.
 
 Archive payloads now try the regular Debian CDN before the pinned snapshot,
 with SHA256 and size still bound to the pinned Packages index. Metadata never

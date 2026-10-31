@@ -15,8 +15,10 @@ from pathlib import Path
 
 from ingestion.debian_indexes import (
     BINARY_PATH,
+    LOCALIZED_MAN_PATH,
     MAN_PATH,
     Package,
+    localized_manual,
     manual_registered,
     require_private_package,
     safe_path,
@@ -138,9 +140,19 @@ def postinst_from_archive(archive: Path) -> str:
 
 
 def extract(
-    archive: Path, package: Package, root: Path, *, quota=None, registrations=None
+    archive: Path,
+    package: Package,
+    root: Path,
+    *,
+    quota=None,
+    registrations=None,
+    localized_roots=frozenset(),
 ) -> list[tuple]:
-    """Stream past unrelated members; write only man sources and copyrights."""
+    """Stream past unrelated members; write only man sources and copyrights.
+
+    Translated roots (usr/share/man/<lang>/) are kept only when requested, so
+    English workspaces and their receipts are unchanged.
+    """
     require_private_package(package, registrations)
     files = root / "files"
     files.mkdir(parents=True, exist_ok=True)
@@ -174,7 +186,9 @@ def extract(
             if not raw_path.startswith(DOC_ROOTS):
                 continue
             path = safe_path(member.name)
-            manual = manual_registered(package.name, path, registrations)
+            manual = manual_registered(package.name, path, registrations) or (
+                localized_manual(path, localized_roots) is not None
+            )
             notice = COPYRIGHT.fullmatch(path)
             if member.issym() or member.islnk():
                 if not manual and not notice and path.count("/") != 3:
@@ -356,8 +370,16 @@ class ArchiveStore:
             else:
                 resolved = posixpath.join(posixpath.dirname(path), target)
             resolved = safe_path(posixpath.normpath(resolved))
-            if not MAN_PATH.fullmatch(resolved):
-                repair = self.source_targets.get(resolved)
+            localized = LOCALIZED_MAN_PATH.fullmatch(path)
+            # A translation includes only its own language root: English (or
+            # another language) included into it would publish under its lang.
+            allowed = (
+                localized_manual(resolved, {localized[1]})
+                if localized
+                else MAN_PATH.fullmatch(resolved)
+            )
+            if not allowed:
+                repair = self.source_targets.get(resolved) if not localized else None
                 if not repair or not MAN_PATH.fullmatch(repair[1]):
                     raise ValueError("Roff include escapes manual root")
                 return self.resolve(repair[0], repair[1], set(seen), details=with_details)
@@ -374,6 +396,15 @@ class ArchiveStore:
 
         data = checked_source(data, include=include)
         return (owner, path, data) if details else data
+
+    def localized_manuals(self, root: str):
+        for pkg, path in self.db.execute(
+            "SELECT pkg,path FROM entries WHERE path LIKE ? ORDER BY pkg,path",
+            (f"usr/share/man/{root}/%",),
+        ):
+            match = localized_manual(path, {root})
+            if match:
+                yield pkg, path, match[2].lower(), match[3].lower()
 
     def manuals(self):
         for pkg, path in self.db.execute(

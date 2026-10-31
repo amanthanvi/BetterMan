@@ -41,9 +41,16 @@ class ConvexContractError(RuntimeError):
 # Keep these aligned with convex/ingestContract.ts. Ingestion refuses to write
 # until GET /ingest/contract advertises the same schema version, functions,
 # declaration counts, and activate-pending flag. Alignment test:
-# tests/test_ingest_contract.py. B2 v8 retains v7 demand scores and tier counts,
-# adding full-distro acquisition identities, promotion holds and stored notices.
-REQUIRED_SCHEMA_VERSION = 8
+# tests/test_ingest_contract.py. v6 retains v5 uploads and adds verified
+# promotion-source reads and compare-and-swap promotion. v7 is index by demand
+# (#445) and v8 the B2 full extractions (#394). v9 adds content locales:
+# translated releases, per-locale promotion behind the translated hold, and the
+# optional stored-page documentedVersion (#395). Versions must match exactly,
+# both ways: this client refuses any other advertised version or contract
+# shape, and every POST names this version in CONTRACT_HEADER so the server
+# refuses an older or newer client.
+REQUIRED_SCHEMA_VERSION = 9
+CONTRACT_HEADER = "X-BetterMan-Ingest-Contract"
 REQUIRED_FUNCTIONS = (
     "ingest.createRelease",
     "ingest.insertStoredPages",
@@ -111,20 +118,18 @@ def _contract_problems(payload: object) -> list[str]:
     version = payload.get("schemaVersion")
     if type(version) is not int or version != REQUIRED_SCHEMA_VERSION:
         problems.append(f"schemaVersion {version!r} != {REQUIRED_SCHEMA_VERSION}")
+    # Exact lists, not subsets: a deployment that advertises more than this
+    # client knows serves a different contract even under a shared number.
     functions = payload.get("functions")
     if not isinstance(functions, list):
         problems.append("functions is missing")
-    else:
-        missing = [name for name in REQUIRED_FUNCTIONS if name not in functions]
-        if missing:
-            problems.append("missing functions: " + ", ".join(missing))
+    elif functions != list(REQUIRED_FUNCTIONS):
+        problems.append(f"functions {functions!r} != {list(REQUIRED_FUNCTIONS)!r}")
     counts = payload.get("declarationCounts")
     if not isinstance(counts, list):
         problems.append("declarationCounts is missing")
-    else:
-        missing_counts = [name for name in REQUIRED_DECLARATION_COUNTS if name not in counts]
-        if missing_counts:
-            problems.append("missing declaration counts: " + ", ".join(missing_counts))
+    elif counts != list(REQUIRED_DECLARATION_COUNTS):
+        problems.append(f"declarationCounts {counts!r} != {list(REQUIRED_DECLARATION_COUNTS)!r}")
     if payload.get("activatePending") is not True:
         problems.append("activatePending is not true")
     return problems
@@ -325,6 +330,7 @@ class ConvexIngestClient:
                 "Authorization": f"Bearer {self.ingest_secret}",
                 "Content-Type": "application/json; charset=utf-8",
                 "Accept": "application/json",
+                CONTRACT_HEADER: str(REQUIRED_SCHEMA_VERSION),
             },
         )
 
