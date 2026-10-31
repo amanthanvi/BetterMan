@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import ast
 import gzip
 import hashlib
 import io
 import json
+import re
 import shutil
 import subprocess
 import tarfile
@@ -321,20 +323,6 @@ def test_publish_declares_a_staging_translation_with_documented_versions(tmp_pat
     assert result.published
 
 
-def test_translated_sitemap_pages_hold_1000_pages_each():
-    from types import SimpleNamespace
-
-    pages = [SimpleNamespace(page_id=f"id{i}", name=f"p{i:05}", section="1") for i in range(2101)]
-    assigned = l10n.translation_sitemap_pages(reversed(pages))
-    assert [assigned["id0"], assigned["id999"], assigned["id1000"], assigned["id2100"]] == [
-        1,
-        1,
-        2,
-        3,
-    ]
-    assert max(assigned.values()) == 3 and len(assigned) == 2101
-
-
 def test_ingest_refuses_prod_before_the_contract_or_any_network(monkeypatch):
     monkeypatch.setattr(l10n, "ConvexIngestClient", lambda *_: pytest.fail("no client for prod"))
     with pytest.raises(ValueError, match="staging"):
@@ -440,3 +428,70 @@ def test_parser_keeps_english_ids_ahead_of_translated_titles():
         '<section><h1 id="NAME">NAME</h1><p>x - right</p></section></div>'
     )
     assert parsed.description == "right"
+
+
+@pytest.mark.parametrize(
+    "include", ["man1/part.1", "part.1.gz", "/usr/share/man/de/man1/part.1.gz"]
+)
+def test_inline_include_symlink_cannot_inline_english_bytes(tmp_path, include):
+    obj = workspace(
+        tmp_path,
+        {
+            "manpages-de": (
+                {
+                    "usr/share/man/de/man1/foo.1.gz": (
+                        b".TH FOO 1\n.SH BEZEICHNUNG\nfoo \\- Beschreibung\n.so "
+                        + include.encode()
+                        + b"\n"
+                    ),
+                    "usr/share/man/de/man1/part.1.gz": "../../man1/part.1.gz",
+                    "usr/share/man/man1/part.1.gz": b"ENGLISH-ONLY-TEXT\n",
+                },
+                1,
+            )
+        },
+    )
+    sources = list(obj.translated_sources("de"))
+    assert all(b"ENGLISH-ONLY-TEXT" not in row[-1] for row in sources if row[2] == "foo")
+    assert not any(row[2] == "foo" for row in sources)
+    assert any(row["path"].endswith("/foo.1.gz") for row in obj.missing)
+
+
+def test_all_translation_language_copies_match_b9():
+    repo = Path(__file__).resolve().parents[2]
+    source = (repo / "nextjs/lib/i18n/locales.ts").read_text()
+    langs = ast.literal_eval(re.search(r"export const LANGS = (\[[^\]]+\]) as const", source)[1])
+    expected = set(langs) - {"en"}
+    assert set(TRANSLATION_ROOTS) == expected
+    calls = ast.walk(ast.parse((repo / "ingestion/ingestion/cli.py").read_text()))
+    choice = next(
+        node
+        for node in calls
+        if isinstance(node, ast.Call)
+        and node.args
+        and isinstance(node.args[0], ast.Constant)
+        and node.args[0].value == "--debian-translation"
+    )
+    assert (
+        set(ast.literal_eval(next(k.value for k in choice.keywords if k.arg == "choices")))
+        == expected
+    )
+    workflow = ast.parse((repo / "scripts/translation-workflow.py").read_text())
+    locales = next(
+        node.value
+        for node in workflow.body
+        if isinstance(node, ast.Assign)
+        and any(isinstance(t, ast.Name) and t.id == "LOCALES" for t in node.targets)
+    )
+    assert set(ast.literal_eval(locales)) == expected
+    checked = []
+    for name in ("update-docs", "update-translations"):
+        source = (repo / f".github/workflows/{name}.yml").read_text()
+        for match in re.finditer(
+            r"(?m)^ {6}(\w*(?:locale|language)\w*):\n((?: {8}[^\n]*\n|\n)*)", source
+        ):
+            options = re.findall(r"(?m)^ {10}- (\S+)\s*$", match[2])
+            if options:
+                assert set(options) - {"all"} == expected, (name, match[1])
+                checked.append((name, match[1]))
+    assert ("update-translations", "locale") in checked

@@ -382,8 +382,12 @@ class ArchiveStore:
                 repair = self.source_targets.get(resolved) if not localized else None
                 if not repair or not MAN_PATH.fullmatch(repair[1]):
                     raise ValueError("Roff include escapes manual root")
-                return self.resolve(repair[0], repair[1], set(seen), details=with_details)
-            return self.resolve(owner, resolved, set(seen), details=with_details)
+                result = self.resolve(repair[0], repair[1], set(seen), details=True)
+            else:
+                result = self.resolve(owner, resolved, set(seen), details=True)
+            if localized and not localized_manual(result[1], {localized[1]}):
+                raise ValueError("Translated include resolves outside its language root")
+            return result if with_details else result[2]
 
         if stub:
             if not follow_stubs:

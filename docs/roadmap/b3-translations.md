@@ -203,5 +203,5 @@ The owner signs off on measured staging cost first. The lead dispatches
 each language's staging release (`maintenance:measureReleaseBatch` per table),
 then authorize a promotion-only dispatch for that one language with
 `debian_translations_promote`, `debian_full_promote` and the signed-off
-`expected_release_id`, which Convex checks as the compare-and-swap expectation. Serving (`?lang=`, search, sitemaps, hreflang) and
+`expected_release_id`, which Convex checks as the compare-and-swap expectation. Serving (`?lang=`, search, hreflang) and
 the drift note land in the following pull requests.
