@@ -76,7 +76,7 @@ def test_extracted_receipts_and_checksum_cache_resume_and_revalidate(tmp_path, m
         "gawk", "1", "pool/main/g/gawk.deb", hashlib.sha256(data).hexdigest(), len(data)
     )
     pins = tmp_path / "pins"
-    pins.write_text("test pins")
+    pins.write_text("{}")
     cache = tmp_path / "cache"
     monkeypatch.setenv("BETTERMAN_DEBIAN_CACHE_DIR", str(cache))
     monkeypatch.setattr(pipeline, "PINS", pins)
