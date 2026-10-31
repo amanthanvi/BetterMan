@@ -101,12 +101,8 @@ def publish_workspace(
 
     distro = workspace.distro
     notice_text = copyright_text
-    if distro == "fedora":
-        from ingestion.fedora_archives import copyright_text as notice_text
-    elif distro == "arch":
-        from ingestion.arch_archives import copyright_text as notice_text
-    elif distro == "alpine":
-        from ingestion.alpine_archives import copyright_text as notice_text
+    if distro in {"fedora", "arch", "alpine"}:
+        from ingestion.standard_licenses import license_text as notice_text
     workspace.timings = {}
     started = time.monotonic()
     with (
@@ -162,6 +158,11 @@ def publish_workspace(
             "arch": workspace.pins.get("architecture", "amd64"),
             "distro": distro,
             "pins": workspace.pins,
+            **(
+                {"standardLicenseTextSource": workspace.standard_license_provenance}
+                if hasattr(workspace, "standard_license_provenance")
+                else {}
+            ),
             "excludedPackages": workspace.pins.get("excludedPackages", {}),
             "popularitySource": workspace.pins.get("popularitySource", "popcon by_inst installed"),
             "alternatives": workspace.pins.get(
@@ -174,6 +175,7 @@ def publish_workspace(
                     "version": p.version,
                     "sha256": p.sha256,
                     "installed": p.installed,
+                    **getattr(workspace, "standard_license_metadata", {}).get(p.name, {}),
                     **(
                         {"unmatchedLicenseIdentifiers": unmatched}
                         if (

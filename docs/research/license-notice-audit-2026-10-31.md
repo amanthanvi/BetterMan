@@ -305,3 +305,239 @@ Review-fix verification: Ruff lint/format passed; all 1,107 ingestion tests pass
 tests passed. The Arch no-upload rehearsal again passed with 6,864 pages,
 32 notices, no parse failures/unresolved sources and no selected package without
 text. No workflow dispatch, deployment or live backend operation was performed.
+
+## Owner policy: attach canonical standard texts (stacked on #488)
+
+The owner subsequently chose standard-text attachment for Fedora, Arch and
+Alpine packages with no reachable package/source notice. The collection order
+is verified own/source notices (including sourceTargets and metadata-established
+directory owners), existing verified distro shared texts, then canonical SPDX
+texts for each remaining declared identifier. Existing notices remain unchanged.
+Partial shared fallbacks are completed: fuse2fs keeps the Arch GPL/LGPL bodies
+first and receives MIT from the pinned SPDX copy. Byte-identical bodies appear
+once, while all identifiers they cover remain recorded. Missing individual
+notice files, unreadable shared entries and Debian/Ubuntu's missing copyright
+still fail closed; standard texts do not mask those failures.
+
+### Reviewed data and expression handling
+
+`ingestion/data/spdx-license-list.json` pins the official
+[`spdx/license-list-data` v3.29.0 release](https://github.com/spdx/license-list-data/releases/tag/v3.29.0)
+at commit `31ba1a50e5397e00a304dbadc76531740e89ee48`, archive size
+49,400,135 bytes and SHA256
+`d69195f5b11d4b84ffccd12d943e90732694d00fea42dc81fcc66f79d6cc8104`.
+The release/tag identity was checked through GitHub; the actual archive was
+downloaded and checksum-verified, and its indexes/texts were loaded successfully:
+740 license texts and 86 exception texts. The entire archive is verified at
+ingest time and cached in the workspace, following the existing download pin
+pattern. This avoids committing approximately 5.1 MB of canonical text or a
+subset that would have to grow with the package catalog. The loader reads
+bounded regular archive members as data and never extracts archive links or
+reads installed host license files. Deprecated license and exception filenames
+follow the official archive's distinct conventions.
+
+The parser validates complete AND/OR/WITH expressions, parentheses and exception
+positions; it attaches every OR alternative. It keeps the raw declaration for
+display and distinguishes license identifiers from exception identifiers.
+Official identifiers are case-insensitive. Only the explicit reviewed table in
+`license-expression-aliases.json` maps legacy names: unversioned GNU families
+get every published version, versioned legacy GNU names retain both only/later
+texts unless `+` specifies later, and the named Arch/Alpine Artistic aliases
+map to their exact canonical IDs. Ambiguous `Apache`, `BSD`, `MPL`, `FDL`,
+`Public-Domain`, custom LicenseRefs and differently named exceptions are not
+guessed. Invalid operator spelling or missing operators are recorded as parse
+errors, rather than partially interpreting the declaration.
+
+Each affected package's existing opaque manifest entry now records
+`standardLicenseIdentifiers`, `spdxLicenseIdentifiers` (the newly pinned source's
+contribution), `missingLicenseIdentifiers` and, when needed,
+`licenseExpressionError`. The older `unmatchedLicenseIdentifiers` records only
+identifiers still missing after both sources. Root `standardLicenseTextSource`
+records the archive pin and the legacy-table SHA256. No declaration endpoint,
+schema or contract version changes are required: these fields remain inside
+the existing packageManifest JSON, and the publisher test asserts the unchanged
+`name`/`version`/`hasLicenseText` declaration shape.
+
+Published entries state “Standard text for the declared license <ID>; this
+package ships no license file.” Each block identifies its verified distro
+package or SPDX release source, and exceptions are labelled separately. The
+entry shows remaining missing IDs and expression errors above the text. When
+nothing can be attached it stores an explicit warning-only entry; this is
+visible but is **not counted below as receiving standard text**.
+`hasLicenseText` describes the stored nonblank entry and is consequently true
+for these explanatory entries too; the attached-ID list, missing-ID list and
+expression-error field distinguish their actual coverage. The licenses page
+already renders the full entry as escaped text in an accessible scrollable
+region. Its entry renderer is now directly tested for attribution, remaining
+gaps and HTML escaping. The manual footer's existing `/licenses` link preserves
+distro/language and leads to this same package list/detail view
+(`ManShell.tsx`, existing `e2e/man.spec.ts` link assertion); no API changes or new
+navigation path are needed.
+
+### Coverage after shared texts and pinned SPDX fill
+
+These measurements use #488's latest notice predicate at `30eb9d47`, including
+the capitalised source-suffix exceptions and plural notice names. The scope and
+manual-path definition above still apply; paths are not elected/published routes.
+
+| Metric | Fedora | Arch | Alpine verified subset |
+| --- | ---: | ---: | ---: |
+| Eligible packages examined | 9,968 | 3,714 | 3,941 |
+| Packages needing shared/standard fallback | 1,757 | 2,217 | 3,147 |
+| Packages receiving any standard texts | 1,683 | 2,200 | 3,082 |
+| Their manual paths | 18,212 | 21,645 | 18,139 |
+| Packages filled from the new pinned SPDX copy | 1,683 | 31 | 18 |
+| Their manual paths | 18,212 | 371 | 220 |
+| Packages with remaining IDs or unparseable declarations | 98 | 23 | 93 |
+| Their manual paths | 3,280 | 165 | 681 |
+| Warning-only packages, with zero attached standard IDs | 74 | 17 | 65 |
+| Their manual paths | 173 | 72 | 447 |
+
+The gap row includes both partial coverage and warning-only packages, so it
+overlaps the receiving-text row. Fedora/Arch reread the complete pinned
+filelists/`.files` databases, identify source-family groups without regular
+notice candidates, and run the actual new standard resolver against verified
+shared and official text inventories. Metadata-positive package notice bodies
+were not all downloaded; these are structural fallback measurements, not a
+complete publication replay. Arch's small new-source count reflects the many
+identifiers already supplied by its licenses package, including the explicit
+legacy mappings now applied before canonical fill.
+
+Alpine used a fresh workspace, acquiring the same 3,941 APKs of at most 256 KiB
+through the native checksum verifier/extractor, reusing verified cached
+downloads. The actual new notice collector ran across that whole subset with
+zero errors. Its origin/dependency owner probing occurs before standard
+attachment. The other 557 larger selected APKs remain unscanned; no full-Alpine
+estimate is claimed. Counts for fallback packages can differ from the historic
+collector's fallback because legacy expansions now cover all specified GNU
+versions and the canonical collector records each standard attachment.
+
+Remaining-gap examples, with manual-path counts:
+
+- Fedora: man-pages (2,941) attaches its canonical IDs but still declares
+  `LicenseRef-Fedora-Public-Domain` and `LicenseRef-Fedora-UltraPermissive`;
+  expect (8) has only the unknown Public-Domain reference; perl-Net-UPnP has
+  `LicenseRef-Callaway-BSD`.
+- Arch: mono (64) retains GNU texts but has ambiguous `MPL`; kubeone (27) and
+  runc (17) declare ambiguous `Apache`; GCC cross packages declare `FDL`.
+  libffado's lowercase `or` and mate-settings-daemon's missing operator are
+  reported as unparseable, without silently inventing semantics.
+- Alpine: libselinux-doc (247) declares `Public-Domain`; libarchive-doc (45)
+  has BSD texts plus missing `Public-Domain`; ceph18-doc (44) has standard texts
+  plus missing `custom`. unifont-doc, ipmiutil-doc and outils-doc contain missing
+  operators. `OpenSSL-Exception` remains unknown in strongswan/wget2/pdns rather
+  than being mapped to a differently named exception.
+
+Regression evidence: new tests first failed on the absent exact-expression,
+legacy-fill and own-notice collector functions; they now assert all OR
+alternatives, WITH exceptions, GNU supersets, existing shared-text ordering,
+MIT completion, deduplication and own-notice preservation. An exception-kind
+regression exposed a license ID incorrectly satisfying a WITH term and now
+records it as missing. The checksum test rejects corrupt bytes with no published
+cache, then accepts the matching pinned fixture, including deprecated texts.
+Unknown IDs/invalid expressions are recorded and shown; missing individual
+notices and Debian/Ubuntu copyright still raise. A native Alpine publisher
+fixture checks the final manifest, stored attribution/gap text and unchanged v8
+declaration shape. Two Next render tests prove the published wording is visible
+and escaped.
+
+Verification on top of latest #488: Ruff lint and format passed; all 1,130
+ingestion tests passed (90.31% coverage, one existing SQLite ResourceWarning);
+all 122 ops tests and 986 Next tests passed; Next lint and visual grammar passed.
+The full verified SPDX archive and the Alpine subset were exercised locally.
+A small Fedora no-upload benchmark selected dnsconfd, man-pages and expect,
+acquired 47 packages including the normal curated dependencies, parsed 3,219
+pages and produced 29 entries with zero parse failures or unresolved sources.
+dnsconfd retained its verified notice; man-pages attached 13 canonical IDs and
+recorded its two custom gaps; expect produced a visible Public-Domain warning
+with zero attached IDs. The largest entry was 99,825 bytes. Two already-known
+unsupported bash route names were reported separately. Command:
+`pnpm ingest:full-benchmark --distro fedora --workdir ../.cache/b2/standard-license-policy/fedora-benchmark --packages 3`
+(the workdir's selection.json names those three packages). Browser E2E and a
+complete distro publication replay were not run; no backend, workflow,
+deployment, env or secret changes were made.
+
+### #489 independent-review corrections
+
+The review identified that `LGPL2` must not choose LGPL 2.0 over 2.1. It now
+expands to all four 2.0/2.1 only/later identifiers; ambiguous `LGPL2+` likewise
+retains both 2.0-later and 2.1-later texts. The complete table was audited:
+unversioned GPL/LGPL/AGPL include every version; GPL1/2/3, LGPL3 and AGPL1/3
+have no other minor version in their named major family. Explicit LGPL2.1 and
+fully versioned `*-2.0+` forms retain their specified version. The Artistic
+aliases identify exact licenses. Tests check GNU supersets and every alias
+target against a fixture of all 740 license and 86 exception IDs, derived from
+the checksum-verified v3.29.0 archive and bound to the same release/SHA pin.
+
+Case folding now applies only to hyphenated SPDX-shaped tokens. Simple names
+must be exact canonical IDs or explicit reviewed table entries: `Ruby` is
+canonical, `RUBY` remains a gap, and `bsd-3-clause` normalizes to `BSD-3-Clause`.
+No new legacy-name mappings were added. Displayed declarations collapse all
+whitespace to one space, so metadata newlines cannot forge headings; the raw
+manifest declaration and exact-expression parser remain unchanged.
+
+Warning-only entries now begin with the fixed marker “No license text is
+available for this package.” Python and TypeScript regressions pin that literal.
+The Next license-list adapter projects zero-attached-ID packages from the opaque
+manifest as a presentation warning. These rows are dimmed and say “No license
+text.” before selection, while their explanatory detail remains accessible.
+For B2 this requires reading the detached manifest on the server; large
+manifests still stay out of HTML/API data, and only the per-package warning is
+projected. Debian/Ubuntu's existing large-manifest behavior is unchanged. No
+Convex query, schema or ingest contract changes are made for this distinction:
+the stored-entry `hasLicenseText` flag must remain true for upload integrity.
+The no-upload benchmark now excludes warning-only entries from
+`verifiedLicenses` and includes them in `packagesWithoutLicenseText`.
+License text uses `whitespace-pre-wrap` and remains escaped React text.
+
+The mixed case is intentionally unchanged: when a package has an own notice
+plus a missing top-level directory, the old distro collector returns the own
+notice and its existing unlabelled shared fallback. It records missing IDs only
+in `unmatchedLicenseIdentifiers`; canonical completion and the new standard-text
+labels do not apply to that package. A regression locks down this compatibility
+choice. Additional tests cover `+`, deprecated SPDX IDs, `Public-Domain` and
+`custom:*` gaps. These compatibility cases already passed before this round;
+the actual behavior defects were observed red and then green.
+
+The generated GitHub tag-archive URL remains pinned by exact size/SHA256.
+Its global PAX comment was cheaply verified to equal the pinned commit
+`31ba1a50e5397e00a304dbadc76531740e89ee48`, and the loader now rejects a mismatch
+after checksum verification. GitHub does not guarantee that generated archive
+bytes stay stable: regeneration can still fail the checksum for the same
+commit. Recovery requires reviewing and re-pinning the archive checksum/size;
+there is no unpinned retry or checksum bypass.
+
+Re-evaluating the same verified fallback sets with the reviewed mappings and
+case policy gives the following current counts (packages / manual paths):
+
+| Scope | Any standard texts | New pinned SPDX fill | Remaining gaps/errors | Warning-only |
+| --- | ---: | ---: | ---: | ---: |
+| Fedora | 1,683 / 18,212 | 1,683 / 18,212 | 98 / 3,280 | 74 / 173 |
+| Arch | 2,199 / 21,644 | 30 / 370 | 24 / 166 | 18 / 73 |
+| Alpine verified subset | 3,082 / 18,139 | 18 / 220 | 93 / 681 | 65 / 447 |
+
+Arch gif2png (`ZLIB`, one manual path) is now an explicit gap rather than an
+implicit case-derived Zlib mapping. Fedora ppp retains other standard texts
+and existing custom gaps, and additionally records its simple lowercase
+`zlib`/`xlock` names as unresolved. No other package coverage totals changed.
+The same metadata-positive notice-content and 557-larger-Alpine-APK limits apply.
+
+### Integration with main's contract v9
+
+Main `701a390b` was normally merged into #488, then that head was normally
+merged into #489. B3's `_catalog`/`_sample`/`_curated` workspace hooks,
+localized-root extraction/includes and `localized_manuals` are preserved;
+#488's source-target validation and receipt version 7 remain. The stack inherits
+main's contract v9 and introduces no additional contract/schema changes.
+
+Post-merge #488: 1,165 pytest tests (89.43% coverage), 1,007 Next tests and 124
+ops tests passed. Post-merge #489: 1,194 pytest tests (89.60%), 1,012 Next tests
+and 124 ops tests passed. Ruff lint/format, Next lint/grammar and each PR's
+base-relative diff guards passed. The unchanged Convex tree also passed 3,382
+tests and type checking. Pytest retains one existing SQLite ResourceWarning.
+The Fedora no-upload benchmark was rerun after integration: 3,219 pages, no
+parse failures/unresolved sources, **28** entries with actual license text,
+and `expect` correctly in `packagesWithoutLicenseText`; its warning entry is
+still retained for explanation. SSR warning projection also tests the
+normalized package names used by the existing license API. No full publication
+replay or browser E2E was run, and neither PR was merged or deployed.

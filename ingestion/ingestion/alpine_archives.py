@@ -265,7 +265,7 @@ def copyright_text(workspace, package):
     return spdx_notice(workspace, package)
 
 
-def directory_notice(workspace, package, owner, path, remaining):
+def acquire_directory_owner(workspace, package, owner, path):
     # APKINDEX has no paths: probe only exact origins/dependencies and declared
     # capability providers, then establish ownership from verified archive entries.
     sources = {package, owner}
@@ -284,17 +284,23 @@ def directory_notice(workspace, package, owner, path, remaining):
             "SELECT 1 FROM entries WHERE path=? OR (path>=? AND path<?) LIMIT 1",
             (path, path + "/", path + "0"),
         ).fetchone():
-            return "\n\n".join(
-                _notice_texts(
-                    workspace,
-                    owner,
-                    path,
-                    directory_fallback=lambda _owner, _path, _remaining: spdx_notice(
-                        workspace, package
-                    ),
-                    remaining=remaining,
-                )
+            return True
+    return False
+
+
+def directory_notice(workspace, package, owner, path, remaining):
+    if acquire_directory_owner(workspace, package, owner, path):
+        return "\n\n".join(
+            _notice_texts(
+                workspace,
+                owner,
+                path,
+                directory_fallback=lambda _owner, _path, _remaining: spdx_notice(
+                    workspace, package
+                ),
+                remaining=remaining,
             )
+        )
     return spdx_notice(workspace, package)
 
 
