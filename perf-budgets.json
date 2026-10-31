@@ -723,7 +723,7 @@
       "absolute": 0
     },
     "manTranslated.htmlBytes": {
-      "baseline": 53356,
+      "baseline": 53620,
       "relative": 0.02,
       "absolute": 0
     },
@@ -733,7 +733,7 @@
       "absolute": 0
     },
     "manTranslated.documents": {
-      "baseline": 14,
+      "baseline": 17,
       "relative": 0,
       "absolute": 0
     },
@@ -783,14 +783,14 @@
       "absolute": 0
     }
   },
-  "sourceHead": "37e65b2b914e41253aa199752f86b23a1f0dd741",
+  "sourceHead": "aaca3bd519ed73a86fbcc5718ade7f09a52e4c37",
   "toolchain": {
     "next": "16.4.3",
     "playwright": "1.64.1",
     "convex": "1.48.0",
     "convexTest": "0.0.60"
   },
-  "fixtureSha256": "4107e32b8678b5c5316906f0d4892753c29b17be2a62d0a52ea6cf9bd893bee3",
+  "fixtureSha256": "de81e551eeed9da7a3b6a894ba2f5da1c32c8e7190a3cb8529cff99e19745462",
   "labBaseline": {
     "platform": "linux",
     "samplesPerRoute": 3,

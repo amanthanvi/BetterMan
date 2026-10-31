@@ -2,6 +2,7 @@ import { pageIsIndexable } from "./_indexPolicy";
 import type { Doc } from "./_generated/dataModel";
 import type { PageDerivedResponse } from "./_derivedEncoding";
 import type { ManPageBrief } from "./_generatedLayer";
+import type { PageTranslationDrift } from "./translationDrift";
 
 export const DISTROS = [
   "debian",
@@ -106,7 +107,7 @@ export function pageResponse(
   content: ManPageContentPayload,
   variants: Array<{ distro: string; datasetReleaseId: string; contentSha256: string }>,
   // Enrichment beside the upstream content, each part optional and independent.
-  extras: { derived?: PageDerivedResponse | null; brief?: ManPageBrief | null; providers?: ManProviders | null } = {},
+  extras: { derived?: PageDerivedResponse | null; brief?: ManPageBrief | null; providers?: ManProviders | null; drift?: PageTranslationDrift | null; driftPending?: boolean } = {},
 ) {
   const doc = parseJsonField(content.docJson);
   const contentPayload: Record<string, unknown> =
@@ -139,6 +140,8 @@ export function pageResponse(
     ...(extras.derived ? { derived: extras.derived } : {}),
     brief: extras.brief ?? null,
     providers: extras.providers ?? null,
+    ...(extras.drift ? { translationDrift: extras.drift } : {}),
+    ...(extras.driftPending ? { translationDriftPending: true } : {}),
   };
 }
 

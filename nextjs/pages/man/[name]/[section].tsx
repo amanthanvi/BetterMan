@@ -14,7 +14,7 @@ import type { ServerT } from '../../../lib/i18n/server'
 import { manCanonicalPath } from '../../../lib/manCanonical'
 import { hasBareRsc, isManQuery } from '../../../lib/manQuery'
 import { manOption, shareFlag, withShareFlag } from '../../../lib/manShare'
-import { MAN_MISS_CACHE, MAN_PAGE_CACHE, MAN_PRIVATE_CACHE, setManCache } from '../../../lib/manCache'
+import { MAN_MISS_CACHE, MAN_PAGE_CACHE, MAN_PENDING_CACHE, MAN_PRIVATE_CACHE, setManCache } from '../../../lib/manCache'
 import { LANGS, setLang } from '../../../lib/i18n/locales'
 import { lookupManPage, manMiss, type ManMiss, type TranslationOutcome } from '../../../lib/manLookup'
 import { RELEASE_PARAM, trustedRelease, trustedTranslation, type ReleaseInfo } from '../../../lib/manRelease'
@@ -189,8 +189,10 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
 
   const origin = getPublicOrigin({ headers: requestHeaders(req.headers) })
   const { page } = found.data
-  setManCache(res, offList ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })
   if (!isIndexable(page) || (urlLang !== null && urlLang !== 'en') || found.translation) res.setHeader('X-Robots-Tag', 'noindex')
+  // A translated page's drift note may still be building for the current English release (#395).
+  const pending = found.translation?.state === 'translated' && found.data.translationDriftPending === true
+  setManCache(res, offList ? MAN_PRIVATE_CACHE : pending ? MAN_PENDING_CACHE : MAN_PAGE_CACHE, { keyed })
   return {
     props: {
       kind: 'page',
@@ -242,6 +244,7 @@ export default function ManPageRoute(props: Props) {
           urlLang={i18n.urlLang}
           t={t}
           translation={translation ?? undefined}
+          drift={translation?.state === 'translated' ? data.translationDrift : undefined}
         />
       </ManShell>
       <ManScript i18n={i18n} />

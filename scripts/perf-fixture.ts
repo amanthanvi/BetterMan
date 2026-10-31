@@ -166,6 +166,15 @@ export async function createTranslationFixture(onCall: () => void) {
       })
       const blobId = await ctx.db.insert('manPageContentBlobs', { contentSha256, storageId })
       await ctx.db.insert('manPageContents', { pageId, blobId, contentSha256 })
+      // A finished drift build with a note on German bash(1): the drift read's full cost (#395).
+      await ctx.db.insert('translationDriftBuilds', {
+        releaseId, englishReleaseId: english.releaseId, cursor: null, scanned: 1, drifted: locale === 'de' ? 1 : 0, done: true, updatedAt: 0,
+      })
+      if (locale === 'de') {
+        await ctx.db.insert('manPageTranslationDrift', {
+          releaseId, pageId, englishReleaseId: english.releaseId, documented: '5.2', english: '5.3', older: true, missingFlags: ['--debugger'], missingCount: 1,
+        })
+      }
     }
   })
   return t

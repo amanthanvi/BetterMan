@@ -7,6 +7,8 @@ All notable changes to BetterMan are documented here.
 - Bind English name-resolution fallbacks to the translated release that confirmed the miss, and remove the unused translated-sitemap pipeline (#395).
 
 - Reject translated inline includes whose symlinks resolve outside their language root, and verify Python/workflow language copies against B9 (#395).
+
+- Translated manuals (B3, #395), part 3: a translated page notes in one line when it documents an older release than English (its `.TH` release against the English package's upstream version) and lists the options English has that it lacks. Computed after activation in bounded batches (`manPageTranslationDrift`, rebuilt whenever English or the translation moves), never per request; a note compared with an English release that is no longer active is not shown.
 - Man pages: plain-text pages start with NAME and no longer print an extracted OPTIONS block ahead of it when DESCRIPTION already lists the options, as on coreutils `ls` (#483).
 - Full archive imports skip a manual whose roff source the scanner refuses (for example a `.so` with extra arguments) and count it against the 2% parse gate, naming the page, instead of stopping the whole distro; the 2026-10-31 Arch and Alpine full staging runs stopped on one such page. Pages are still never rendered with an unresolved include, and other errors, such as an excluded package, still stop the run (#394).
 - Exclude Ubuntu noble's pinned bcc and bin86 packages, which ship no copyright notice, before full-import acquisition; record the reviewed exclusions in the release manifest and block dependencies on their files (#394).
