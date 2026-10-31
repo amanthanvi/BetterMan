@@ -289,6 +289,7 @@ try {
       assert.ok(html.includes('lang="de" data-bm-manual-text') && html.includes('Übersetzte Handbuchseite (de).') && html.includes('data-bm-translation="translated"'), 'The German page must render in German')
       const head = html.split("</head>")[0]
       assert.ok(head.includes('<meta name="robots" content="noindex"') && /hreflang="en"/i.test(head) && /hreflang="x-default"/i.test(head) && !/hreflang="de"/i.test(head), 'The German page stays noindex with only indexable English alternates')
+      assert.ok(html.includes('data-bm-translation-drift') && html.includes('--debugger'), 'The German page must show its drift note')
     }
     if (name === 'manTranslationFallback') {
       assertNoManStreaming(html)

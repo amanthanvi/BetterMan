@@ -409,6 +409,8 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
       { type: 'heading', id: 'BESCHREIBUNG', level: 2, text: 'BESCHREIBUNG' },
       { type: 'paragraph', inlines: [{ type: 'text', text: 'GNU tar speichert viele Dateien zusammen in einem einzigen Archiv.' }] },
     ],
+    // Older than English tar 1.35 and without -c/--create: the drift note's evidence.
+    options: [{ flags: '-x, --extract', argument: null, description: 'Entpackt ein Archiv.', anchorId: 'opt-x' }],
   })
   await post('/ingest/release', {
     datasetReleaseId, locale: 'de', distro: 'debian', imageRef: 'e2e', imageDigest: 'e2e', ingestedAt: now,

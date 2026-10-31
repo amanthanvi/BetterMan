@@ -194,7 +194,7 @@ less often.
 | Page view | Calls | Documents | Storage reads |
 | --- | ---: | ---: | ---: |
 | English man page (unchanged) | 4 | 26 | 1 |
-| Translated page (`manTranslated`) | 4 | 15 | 1 |
+| Translated page with its drift note (`manTranslated`) | 4 | 18 | 1 |
 | Missing translation, English fallback (`manTranslationFallback`) | 4 | 29 | 1 |
 
 A translated page reads no derived summary or generated brief (both are
@@ -204,6 +204,45 @@ language's pointer and a page miss to the English read, in `getInfo`, the read
 model and `getRelated`. Translated search adds one pointer, one release and the
 language's own search to English's.
 
+## Drift note
+
+A translated page says, in one line, when it lags its English page, and lists
+the options English has that it lacks. It is computed after activation, never
+per request (`convex/translationDrift.ts`, rules in `convex/_translationDrift.ts`):
+
+- **Older release.** The translation's `documentedVersion` (its `.TH` source
+  field, e.g. `GNU tar 1.34`) gives the last dotted release; the English page's
+  package version gives its upstream release (`1.35+dfsg-3.1` → `1.35`, epoch,
+  Debian revision and repack suffix removed). Compared component-wise; claimed
+  only when both are known and the translation's is lower.
+- **Missing options.** English option flags minus the translation's, from
+  `manPageOptionFlags`. Claimed only when the translation's own options table
+  parsed at least one flag, so a parse gap never reads as drift. The note
+  lists up to 24 flags, sorted by flag (`--create` before `-c`), and counts the rest.
+
+Rows live in `manPageTranslationDrift`, only for pages that drift, each naming
+the English release it compared. `translationDriftBuilds` tracks one build per
+translated release in batches of 8 pages (each page reads its English page
+and up to 400 option rows per side). Activating or promoting a translation
+builds against English at the public stage when the translation is served
+there, else at the stage that points at it; activating or promoting English
+rebuilds every active translation of that distro. Both tables are release
+children, so pruning removes them.
+
+The page read adds the public English pointer, the page's drift row and its
+release's build (at most 3 documents) to a translated page, still in 4 calls
+(`perf:check` `manTranslated`). A row compared with another English release is
+ignored, so after an English promotion the note never shows stale. The note
+names the English release it compared with, and an answer whose note names
+another English release than the proxy's key is not shared. Until the build
+for the current English release finishes (about 275 batches for German), the
+page reports `translationDriftPending`: it skips the data cache and the CDN
+keeps it for a minute instead of an hour, so the note appears soon after the
+build completes. English pages read nothing new.
+
+Japanese `.TH` lines rarely carry a release (15% in the sample), so Japanese
+notes are mostly about missing options.
+
 ## Before promotion
 
 The owner signs off on measured staging cost first. The lead dispatches
@@ -212,4 +251,4 @@ each language's staging release (`maintenance:measureReleaseBatch` per table),
 then authorize a promotion-only dispatch for that one language with
 `debian_translations_promote`, `debian_full_promote` and the signed-off
 `expected_release_id`, which Convex checks as the compare-and-swap expectation. Serving (`?lang=`, search, sitemaps, hreflang) and
-the drift note land in the following pull requests.
+the drift note are documented above.

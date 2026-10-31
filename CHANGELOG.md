@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Translated manuals (B3, #395), part 3: a translated page notes in one line when it documents an older release than English (its `.TH` release against the English package's upstream version) and lists the options English has that it lacks. Computed after activation in bounded batches (`manPageTranslationDrift`, rebuilt whenever English or the translation moves), never per request; a note compared with an English release that is no longer active is not shown.
 - Prove package selectors with cached provider metadata instead of reading default content; remove the extra HTML limiter and retain bounded provider caches within the 5-call/13-document/1-storage-read alternate budget (#394).
 
 - Include the index-policy checker in the Next container build context so frontend type checking resolves its test import (#394).

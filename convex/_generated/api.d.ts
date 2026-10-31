@@ -33,6 +33,7 @@ import type * as _shellParser from "../_shellParser.js";
 import type * as _shellWrappers from "../_shellWrappers.js";
 import type * as _storedPayload from "../_storedPayload.js";
 import type * as _symbols from "../_symbols.js";
+import type * as _translationDrift from "../_translationDrift.js";
 import type * as content from "../content.js";
 import type * as crons from "../crons.js";
 import type * as derived from "../derived.js";
@@ -51,6 +52,7 @@ import type * as queries from "../queries.js";
 import type * as rateLimit from "../rateLimit.js";
 import type * as related from "../related.js";
 import type * as taskPhrases from "../taskPhrases.js";
+import type * as translationDrift from "../translationDrift.js";
 
 import type {
   ApiFromModules,
@@ -84,6 +86,7 @@ declare const fullApi: ApiFromModules<{
   _shellWrappers: typeof _shellWrappers;
   _storedPayload: typeof _storedPayload;
   _symbols: typeof _symbols;
+  _translationDrift: typeof _translationDrift;
   content: typeof content;
   crons: typeof crons;
   derived: typeof derived;
@@ -102,6 +105,7 @@ declare const fullApi: ApiFromModules<{
   rateLimit: typeof rateLimit;
   related: typeof related;
   taskPhrases: typeof taskPhrases;
+  translationDrift: typeof translationDrift;
 }>;
 
 /**

@@ -286,7 +286,7 @@ const cachedResolveManByNameIn = unstable_cache(
 const cachedManByNameAndSection = unstable_cache(
   async (distro: Distro, name: string, section: string, _release: string | null, pkg: string | null = null) =>
     cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section, ...(pkg ? { pkg } : {}), reportRelease: true }), _release),
-  ['betterman', 'convex', 'man-by-name-and-section', 'provider-proof-v1', 'v8'],
+  ['betterman', 'convex', 'man-by-name-and-section', 'provider-proof-v1', 'v9'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -540,6 +540,9 @@ export type TranslatedManResult = (ManByNameAndSectionResult | { kind: 'not_foun
 export function translationAnsweredBy(value: TranslatedManResult, english: string | null, translated: string | null): boolean {
   const served = servedRelease(value)
   if (!english || !served) return false
+  // A drift note compared with another English release is that release's answer, not this key's.
+  const drift = value.kind === 'page' ? value.data.translationDrift : undefined
+  if (drift && drift.englishReleaseId !== english) return false
   return value.translation.state === 'translated'
     ? served === translated && value.translation.englishReleaseId === english
     : served === english && value.translation.translatedReleaseId === translated
@@ -549,9 +552,11 @@ const cachedTranslatedMan = unstable_cache(
   async (distro: Distro, name: string, section: string, lang: string, english: string, translated: string | null) => {
     const value = (await convex().action(api.content.getManByNameAndSection, { distro, name, section, locale: lang, reportRelease: true })) as TranslatedManResult
     if (!translationAnsweredBy(value, english, translated)) throw new UncacheableManPage(value)
+    // Until its drift build finishes, a translated page is not kept: its note may still appear.
+    if (value.kind === 'page' && value.data.translationDriftPending) throw new UncacheableManPage(value)
     return cacheableManPage(value)
   },
-  ['betterman', 'convex', 'man-translated', 'v8'],
+  ['betterman', 'convex', 'man-translated', 'v9'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 

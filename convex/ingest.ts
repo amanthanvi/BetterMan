@@ -13,6 +13,7 @@ import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, type OptionFlagRow } from "./_optionFlags";
 import { insertSymbols, symbolInput } from './_symbols';
 import { DEFAULT_LOCALE, isContentLocale } from "./_locales";
+import { scheduleTranslationDrift } from "./translationDrift";
 import {
   compactManPageSearchText,
   DATASET_STAGES,
@@ -920,6 +921,8 @@ export const activateRelease = internalMutation({
       await ctx.db.insert("activeReleases", payload);
     }
 
+    // Translated pages compare with English after either pointer moves (#395).
+    await scheduleTranslationDrift(ctx, release);
     // Derived corpus data and task phrases are English-only (#395): generated
     // phrases are keyed by English content hashes, so a translation has none.
     if (release.locale === DEFAULT_LOCALE) {
@@ -1073,6 +1076,7 @@ export const promoteActiveReleases = internalMutation({
       }
 
       promoted.push({ distro, datasetReleaseId: candidate.datasetReleaseId });
+      await scheduleTranslationDrift(ctx, release);
     }
 
     if (args.toStage === "prod" && promoted.length && locale === DEFAULT_LOCALE) await scheduleDerivedBuild(ctx, locale);
