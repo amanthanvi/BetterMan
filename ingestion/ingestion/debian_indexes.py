@@ -142,9 +142,10 @@ def safe_path(value: str) -> str:
 def link_target(path: str, linkname: str, *, symbolic: bool) -> str:
     """Resolve an archive link target to an archive-relative path.
 
-    Symlinks resolve like the kernel does: relative to the link's directory,
-    with ".." stopping at the root (Fedora's llvm12 links /usr/bin entries
-    via one ".." too many). The result names a path inside the archive's own
+    Symlinks resolve like the kernel does: relative to the link's directory
+    (or the root, for absolute targets), with ".." stopping at the root, so
+    "/../x" names "x" too (Fedora's llvm12 links /usr/bin entries via one ".."
+    too many). The result names a path inside the archive's own
     namespace; extraction never creates links and never reads the host.
     Hard links keep naming an archive member exactly.
     """
