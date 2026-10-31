@@ -139,6 +139,7 @@ def publish_workspace(
             p.source_package for p in refs if p.source_package
         }
         used |= {a["sourcePackage"] for a in workspace.alias_providers}
+        workspace.require_allowed_packages(used)
         published_packages = [workspace.available[name] for name in sorted(used)]
         for package in published_packages:
             if not package.sha256:
@@ -161,6 +162,7 @@ def publish_workspace(
             "arch": workspace.pins.get("architecture", "amd64"),
             "distro": distro,
             "pins": workspace.pins,
+            "excludedPackages": workspace.pins.get("excludedPackages", {}),
             "popularitySource": workspace.pins.get("popularitySource", "popcon by_inst installed"),
             "alternatives": workspace.pins.get(
                 "alternatives", "postinst priority, popcon, package/path; curated awk/vi/nc policy"
