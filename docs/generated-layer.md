@@ -413,3 +413,63 @@ Separate from the release ingest contract, behind the same ingest secret:
 - The long tail (other sections, non-English) waits for promotion by demand.
 - The deterministic parts could be built during ingestion, where the parsed
   pages are already in memory, instead of read back from Convex.
+
+## Task and flag search ranking
+
+Task search adds `tar archive` alongside the original `tarball`/`tarballs` query
+word. This curated list applies only to task retrieval and evidence scoring.
+Phrase overlap uses exact tokens except for a final type-ahead word of at least
+four characters, which scores half an exact match. It includes
+the task's command name as implicit
+context: tar's "extract files from an archive" therefore shares `extract`, `tar`
+and `archive` with "extract a tar archive". Lexical overlap comes first,
+`popularityScore` breaks ties, then command name and section. A popular dd cannot
+displace convert's more complete "convert an image to png" evidence. All eight
+retrieved task rows are ranked before three are retained; names, citations,
+flags and explain input keep their literal semantics.
+
+Flag ranking uses B7's verified example/tldr usage before B4 popularity, then name
+and section. B4's rounded score is retained as a secondary prior; tied essential
+packages are distinguished by their actual verified usage, not creation order.
+Aliases share evidence, so verified `-x` also supports `--extract`.
+
+`flagSearchCandidates` stores at most 16 candidates for a flag. The page budget
+is twelve verified **options**, aggregated by anchor before the cap, retaining
+all aliases of each selected option. Real tar's `--gzip`, `--gunzip`, `--ungzip`
+and `-z` therefore stay together. The top-hit brief keeps its separate twelve
+spelling lookup budget.
+
+B7 commits page usage first and schedules a refresh request. Requests share a
+30-second delayed start per release; requests arriving after scanning starts ask
+for one later pass. Task-backfill version 5 builds a new candidate generation in
+four-page batches while readers retain the last completed generation, including
+legacy rows that have no generation key. A completed pass atomically switches
+`flagSearchGeneration` and marks the first generation ready. Later refreshes never
+clear readiness or mutate the reader's completed snapshot. A pass is published
+even when more updates are queued, so ongoing generation runs cannot postpone
+publication indefinitely.
+
+The source scan restores evicted candidates. Old snapshots and superseded partial
+builds are cleaned in bounded batches of sixteen rows, guarded against deleting
+the active generation. Pending older jobs are canceled and generation tokens make
+stale chains no-ops. Retries preserve both the partially built generation and any
+queued rescan. Existing deploy/activation entrypoints start the migration; no new
+index on the large option table is needed. Candidate indexes belong to the new,
+initially empty sidecar table.
+
+Bare clusters merge the candidate row for every unique letter (at most eight)
+before filtering for complete verified coverage. This preserves recall when a
+page is missing from the first letter's sixteen candidates. Real option rows are
+still verified on the same page; an argument-taking flag cannot consume later
+letters. Verified usage counts rank candidates, followed by popularity and
+name/section. Without complete coverage, bounded name-ordered fallback remains.
+
+Every cluster length reserves two release reads, all letter rows, and fourteen
+reads for the optional full brief. Each verified candidate costs one option row
+per letter plus one page, so the candidate ceiling is
+`floor((40 - 2 - clusterLength - 14) / (clusterLength + 1))`. Two-letter clusters
+can inspect seven pages and three-letter clusters five. Both saturated perf
+scenarios include the full brief and must stay within forty reads. Ordinary
+search and named-cluster workloads retain their prior budgets. Recall remains
+bounded by sixteen candidates per flag and twelve complete options per page;
+broader coverage would need precomputed cluster keys.

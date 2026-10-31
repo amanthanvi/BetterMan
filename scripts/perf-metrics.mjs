@@ -9,6 +9,28 @@ export function recordSyscall(metrics, op, result) {
   if (op === 'storage/getBlob' && result !== null) metrics.storageReads++
 }
 
+// Fixture mutations use platform limits; every tested search still has its actual read budget.
+/** @template T @param {() => Promise<T>} run @param {number} limit @returns {Promise<T>} */
+export async function withDocumentBudget(run, limit) {
+  const runtime = globalThis.Convex
+  const metrics = { documents: 0, storageReads: 0 }
+  globalThis.Convex = new Proxy(runtime, {
+    get(target, key) {
+      if (!['asyncSyscall', 'jsSyscall'].includes(key)) return Reflect.get(target, key)
+      return async (op, args) => {
+        const result = await Reflect.get(target, key)(op, args)
+        recordSyscall(metrics, op, key === 'asyncSyscall' ? JSON.parse(result) : result)
+        return result
+      }
+    },
+  })
+  try {
+    const result = await run()
+    assert.ok(metrics.documents <= limit, `Search read ${metrics.documents} documents; limit ${limit}`)
+    return result
+  } finally { globalThis.Convex = runtime }
+}
+
 // convex-test injects runQuery/runAction directly, bypassing call syscalls.
 // Wrap registered handlers in its module map to include nested invocations.
 export function instrumentModules(modules, onCall) {

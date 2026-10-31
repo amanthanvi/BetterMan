@@ -776,6 +776,38 @@ test('FreeBSD VM ingest imports checkout sources so B4 policy pins are present',
   assert.ok(exportAt < script.indexOf('run freebsd ingest'))
 })
 
+test('FreeBSD VM bootstrap installs the interpreter sqlite3 package when the module is missing', () => {
+  const script = readWorkflow().jobs.ingest.steps.find(step => step.id === 'freebsd').with.run
+  const python = spawnSync('python3', ['-c', 'import sys; print(sys.executable)'], { encoding: 'utf8' }).stdout.trim()
+  const version = spawnSync(python, ['-c', 'import sys; print("%d%d" % sys.version_info[:2])'], { encoding: 'utf8' }).stdout.trim()
+  const root = mkdtempSync(join(tmpdir(), 'bm-fbsd-sqlite-'))
+  try {
+    mkdirSync(join(root, 'bin'))
+    mkdirSync(join(root, 'scripts'))
+    copyFileSync(resolve('scripts/dataset-workflow.py'), join(root, 'scripts/dataset-workflow.py'))
+    writeFileSync(join(root, 'bin/pkg'), '#!/bin/sh\necho "$*" >> "$PKG_LOG"\n', { mode: 0o755 })
+    writeFileSync(join(root, 'bin/cargo'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+    writeFileSync(join(root, 'bin/python3'), `#!/bin/sh
+if [ "$1" = -c ] && [ "$2" = 'import sqlite3' ] && [ "\${HAS_SQLITE:-1}" = 0 ]; then exit 1; fi
+case "$*" in
+  -c*|scripts/dataset-workflow.py*) exec '${python.replaceAll("'", "'\\''")}' "$@" ;;
+  '-m ingestion.cli'*) echo '{"event":"ingest_done","datasetReleaseId":"freebsd-test","published":true}' ;;
+esac
+`, { mode: 0o755 })
+    for (const hasSqlite of ['0', '1']) {
+      const log = join(root, `pkg-${hasSqlite}.log`)
+      const env = { ...process.env, GITHUB_WORKSPACE: root, BETTERMAN_INGEST_SAMPLE: 'false',
+        PATH: `${join(root, 'bin')}:${process.env.PATH}`, PKG_LOG: log, HAS_SQLITE: hasSqlite }
+      const run = spawnSync('bash', ['-c', script], { cwd: root, env, encoding: 'utf8' })
+      assert.equal(run.status, 0, run.stderr + run.stdout)
+      const installs = readFileSync(log, 'utf8')
+      assert.equal(installs.includes(`install -y py${version}-sqlite3`), hasSqlite === '0', installs)
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
 test('FreeBSD VM script copies failure evidence back and host rejects it', () => {
   const vm = readWorkflow().jobs.ingest.steps.find(step => step.id === 'freebsd')
   const script = vm.with.run
