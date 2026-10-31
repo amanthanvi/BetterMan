@@ -89,18 +89,6 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
     ):
         if os.environ.get(name):
             cmd.extend(["-e", name])
-    if snapshot := os.environ.get("BETTERMAN_PLAUSIBLE_COUNTS"):
-        counts = Path(snapshot).resolve(strict=True)
-        if not counts.is_file():
-            raise ValueError("Plausible snapshot must be a file")
-        cmd.extend(
-            [
-                "-v",
-                f"{counts}:/demand-counts.json:ro",
-                "-e",
-                "BETTERMAN_PLAUSIBLE_COUNTS=/demand-counts.json",
-            ]
-        )
     if platform:
         cmd.extend(["--platform", platform])
     if network:

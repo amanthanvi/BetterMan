@@ -6,6 +6,8 @@ import { DEFAULT_LANG, LANG_COOKIE, LANG_PARAM, type Lang } from './lib/i18n/loc
 import { LANG_HEADER } from './lib/i18n/request'
 import { translationFixHref } from './lib/i18n/fix'
 import { LANG_SWITCH_PATH, FIX_PATH, pathInLang, safeLocalPath } from './lib/i18n/switch'
+import { analyticsConfig } from './lib/analyticsConfig'
+import { analyticsBootScriptHash } from './lib/analyticsBoot'
 import { manBootScriptHash } from './lib/manBoot'
 import { normalizeManQuery } from './lib/manQuery'
 import { encodeReleaseHeader, RELEASE_HEADER, RELEASE_PARAM, RELEASE_TOKEN_HEADER, releaseToken, servingRelease, UNKNOWN_RELEASE, type ReleaseInfo } from './lib/manRelease'
@@ -39,6 +41,10 @@ function buildCsp(scripts: string[], { strictDynamic }: { strictDynamic: boolean
   ]
 
   return csp.join('; ')
+}
+
+async function cachedPageScriptHashes(): Promise<string[]> {
+  return [await manBootScriptHash(), ...(analyticsConfig() ? [await analyticsBootScriptHash()] : [])]
 }
 
 function setSecurityHeaders(response: NextResponse, csp: string | null) {
@@ -135,7 +141,7 @@ async function manProxy(request: NextRequest, cspEnabled: boolean, text = false)
   const remembered = text ? null : rememberedLang(request)
   const csp = cspEnabled ? text
     ? buildCsp([`'nonce-${createNonce()}'`], { strictDynamic: true })
-    : buildCsp([await manBootScriptHash()], { strictDynamic: false }) : null
+    : buildCsp(await cachedPageScriptHashes(), { strictDynamic: false }) : null
 
   const redirect = manQueryRedirect(request, csp)
   if (redirect) return redirect
@@ -260,7 +266,7 @@ export async function proxy(request: NextRequest) {
   if (isManHtmlPath(request.nextUrl.pathname)) return await manProxy(request, cspEnabled)
   // Explainers depend only on the URL and the deployment: the man pages' hash-only CSP, no nonce, no cookie.
   if (isConceptHtmlPath(request.nextUrl.pathname)) {
-    const csp = cspEnabled ? buildCsp([await manBootScriptHash()], { strictDynamic: false }) : null
+    const csp = cspEnabled ? buildCsp(await cachedPageScriptHashes(), { strictDynamic: false }) : null
     return manQueryRedirect(request, csp) ?? setSecurityHeaders(NextResponse.next(), csp)
   }
   const path = request.nextUrl.pathname

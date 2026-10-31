@@ -266,7 +266,7 @@ recorded alongside the earlier admission cases; the original browser fixture
 and all existing metric policies remain intact. Main's generated brief and
 its `{ derived, brief }` page response are retained during the rebase.
 
-The integrated man page measures five calls, 29 documents and one blob read:
+The recorded integrated man-page ceiling is five calls, 29 documents and one blob read:
 main's generated-brief lookup adds one document to the earlier derived-only
 28-document case. Symbol search remains ten documents and the explanation
 ceiling remains 66. All pre-existing metric descriptors and tolerances are
@@ -282,3 +282,14 @@ one different document and one identical hash. The default disclosure must
 contain both links; the alternate must render its own content and noindex
 metadata. Their cold function/document/blob, HTML and client-byte metrics are
 budgeted separately. Existing metric policies and baselines are preserved.
+
+## Analytics migration
+
+Vercel Web Analytics uses platform same-origin intake, removing one BetterMan
+relay function invocation per pageview and per custom event (#421). It loads only
+on the Vercel production deployment; the perf harness, previews, CI and Docker
+emit no tracker. No byte or read budget is raised by this migration. The measured
+man page uses **four calls, 26 documents and one storage read**, meeting the
+requested target. The existing `perf-budgets.json` ceiling remains **five calls,
+29 documents and one storage read**; it is an allowance, not the current measured
+cost. Analytics changes no Convex reads.
