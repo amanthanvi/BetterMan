@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Man pages: plain-text pages start with NAME and no longer print an extracted OPTIONS block ahead of it when DESCRIPTION already lists the options, as on coreutils `ls` (#483).
 - Full Debian and Ubuntu imports store license notices over Convex's 1 MiB document limit as files, like Fedora, Arch and Alpine; the 2026-10-31 full-Debian staging run stopped on libboost1.83-tools-dev's 2.2 MB notice (#394).
 - Prove package selectors with cached provider metadata instead of reading default content; remove the extra HTML limiter and retain bounded provider caches within the 5-call/13-document/1-storage-read alternate budget (#394).
 
