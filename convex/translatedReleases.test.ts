@@ -20,7 +20,7 @@ const releaseInput = (datasetReleaseId: string, locale: string, distro: Distro =
 
 async function readyRelease(t: Harness, datasetReleaseId: string, locale: string, stage: DatasetStage | null, manifest: unknown = null) {
   const { releaseId } = await t.mutation(internal.ingest.createRelease, { ...releaseInput(datasetReleaseId, locale), packageManifest: manifest, ...(manifest ? { indexablePageCount: 0 } : {}) });
-  await t.run((ctx) => ctx.db.patch(releaseId, { sealed: true, manifestVerified: true, relatedMetadataCompletedVersion: 0 }));
+  await t.run((ctx) => ctx.db.patch(releaseId, { sealed: true, manifestVerified: true, relatedMetadataCompletedVersion: manifest ? 1 : 0 }));
   if (stage) await point(t, releaseId, stage);
   return releaseId;
 }
