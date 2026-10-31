@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Full archive imports skip a manual whose roff source the scanner refuses (for example a `.so` with extra arguments) and count it against the 2% parse gate, naming the page, instead of stopping the whole distro; the 2026-10-31 Arch and Alpine full staging runs stopped on one such page. Pages are still never rendered with an unresolved include, and other errors, such as an excluded package, still stop the run (#394).
 - Full Debian and Ubuntu imports store license notices over Convex's 1 MiB document limit as files, like Fedora, Arch and Alpine; the 2026-10-31 full-Debian staging run stopped on libboost1.83-tools-dev's 2.2 MB notice (#394).
 - Prove package selectors with cached provider metadata instead of reading default content; remove the extra HTML limiter and retain bounded provider caches within the 5-call/13-document/1-storage-read alternate budget (#394).
 
