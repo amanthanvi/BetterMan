@@ -287,7 +287,8 @@ try {
     if (name === 'manTranslated') {
       assertNoManStreaming(html)
       assert.ok(html.includes('lang="de" data-bm-manual-text') && html.includes('Übersetzte Handbuchseite (de).') && html.includes('data-bm-translation="translated"'), 'The German page must render in German')
-      assert.ok(/hreflang="de"/i.test(html) && /hreflang="x-default"/i.test(html), 'The German page must carry its hreflang set')
+      const head = html.split("</head>")[0]
+      assert.ok(head.includes('<meta name="robots" content="noindex"') && /hreflang="en"/i.test(head) && /hreflang="x-default"/i.test(head) && !/hreflang="de"/i.test(head), 'The German page stays noindex with only indexable English alternates')
     }
     if (name === 'manTranslationFallback') {
       assertNoManStreaming(html)

@@ -20,7 +20,7 @@ the upstream release a translation documents (its `.TH` source field, for
 example `GNU tar 1.34`), which the drift note compares with English.
 
 Ingest contract v9 (after #445's v7 and B2's v8) requires the exact version both ways, in `X-BetterMan-Ingest-Contract` on every release-contract request, and adds: release locales are validated against
-`convex/_locales.ts`; `getPromotionSource` and `promoteActiveReleases` take an
+B9's shared list via `convex/_locales.ts`; `getPromotionSource` and `promoteActiveReleases` take an
 optional `locale` (English when absent, one locale per request); stored pages
 may carry `documentedVersion`. Derived corpus data, task phrases and generated
 text stay English-only, so activating or promoting a translation schedules none
@@ -135,13 +135,14 @@ and the translation note's strings are in B9's server catalog in every language.
 
 Two robots rules compose. B9's: an English manual viewed with a localized UI is
 a duplicate of the English URL, so it is `noindex` with the English canonical.
-B3's: a translated manual is its own page, with its own canonical and the same
-index policy as its English page. The English fallback for a missing
-translation follows B9's rule.
+Translated manuals and English fallbacks follow B9's noindex rule. The canonical
+is English only when that English page exists and is indexable under B4's release
+tier. hreflang/x-default target only indexable English pages; translated URLs
+are never alternate targets or advertised sitemaps.
 
 | Request | Answer |
 | --- | --- |
-| `/man/tar/1?lang=de`, German release has tar(1) | The German page in German chrome. `lang="de"` marks the manual's own text only (description, synopsis, option descriptions, body); BetterMan's labels carry the UI language. A one-line note names the shipping distro and package, with a link to the English original (through B9's language switch, so a remembered language does not bounce back) only when English has the page itself (an English `.so` alias does not count). Canonical is itself; `hreflang` lists every language with the route, plus English and `x-default` when English has it and is indexable. |
+| `/man/tar/1?lang=de`, German release has tar(1) | The German page in German chrome. `lang="de"` marks the manual's own text only (description, synopsis, option descriptions, body); BetterMan's labels carry the UI language. A one-line note names the shipping distro and package, with a link to the English original (through B9's language switch, so a remembered language does not bounce back) only when English has the page itself (an English `.so` alias does not count). The page is `noindex`; its English canonical and English/x-default alternates exist only when English has an indexable page. |
 | `/man/gzip/1?lang=de`, German release lacks gzip(1) | The English page with a one-line note that the distro ships no German translation. Canonical English, `noindex`. No redirect. |
 | The German read fails, or the proxy could not read the releases | The English page, `private`, with no note: no claim is made without a confirmed miss. |
 | `/man/gtar/1?lang=de` (a German `.so` alias) | Redirect to `/man/tar/1?lang=de`. Name-only URLs keep `?lang=` too. |

@@ -155,8 +155,8 @@ describe("translated pages (#395)", () => {
     await corpus(t);
     expect(await t.query(api.queries.listTranslationSeoReleases, {})).toEqual({
       items: [
-        { distro: "debian", locale: "de", datasetReleaseId: "debian-de", ingestedAt: "2026-10-30T00:00:00Z", pageCount: 2, sitemapPages: 1 },
-        { distro: "debian", locale: "fr", datasetReleaseId: "debian-fr", ingestedAt: "2026-10-30T00:00:00Z", pageCount: 2, sitemapPages: 1 },
+        { distro: "debian", locale: "de", datasetReleaseId: "debian-de", ingestedAt: "2026-10-30T00:00:00Z", pageCount: 2, sitemapPages: 0 },
+        { distro: "debian", locale: "fr", datasetReleaseId: "debian-fr", ingestedAt: "2026-10-30T00:00:00Z", pageCount: 2, sitemapPages: 0 },
       ],
     });
     const chunk = await t.query(api.queries.listTranslationSitemapChunk, { distro: "debian", locale: "fr", paginationOpts: { numItems: 50, cursor: null } });
@@ -248,6 +248,20 @@ describe("translated pages (#395)", () => {
     });
     const answer = await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "tar", section: "1", locale: "de", reportRelease: true });
     expect(answer).toMatchObject({ data: { page: { indexable: false } }, translation: { englishHasRoute: true, englishIndexable: expected, languages: expected ? ["en"] : [] } });
+  });
+
+  it("keeps a translated-only section picker from canonicalizing to an English 404", async () => {
+    const t = convexTest(schema, modules);
+    await corpus(t);
+    await t.run(async ctx => {
+      const pointer = (await ctx.db.query("activeReleases").withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "prod").eq("locale", "de").eq("distro", "debian")).unique())!;
+      const page = (await ctx.db.query("manPages").withIndex("by_releaseId_and_name_and_section", q => q.eq("releaseId", pointer.releaseId).eq("name", "nur-de").eq("section", "1")).unique())!;
+      const { _id, _creationTime, ...fields } = page;
+      void _id; void _creationTime;
+      await ctx.db.insert("manPages", { ...fields, externalId: "nur-de-3", section: "3" });
+    });
+    expect(await t.query(api.queries.resolveManByName, { distro: "debian", name: "nur-de", locale: "de" })).toMatchObject({ kind: "ambiguous", indexable: false });
+    expect(await t.query(api.queries.resolveManByName, { distro: "debian", name: "nur-de" })).toMatchObject({ kind: "not_found" });
   });
 
   it("resolves a name-only URL in the language first, then English", async () => {

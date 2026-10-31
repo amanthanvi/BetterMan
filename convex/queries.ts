@@ -260,7 +260,7 @@ export const resolveManByName = query({
       const found = await resolvePageByName(ctx, { release: translatedRelease, name });
       if (found.kind !== "not_found") {
         const datasetReleaseId = translated.datasetReleaseId;
-        if (found.kind !== "page") return { ...found, datasetReleaseId };
+        if (found.kind !== "page") return { ...found, ...(found.kind === "ambiguous" ? { indexable: false } : {}), datasetReleaseId };
         const { section, title, description } = found.page;
         return { kind: "page" as const, name: found.page.name, section, title, description, datasetReleaseId };
       }
