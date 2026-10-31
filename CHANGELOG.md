@@ -7,6 +7,7 @@ All notable changes to BetterMan are documented here.
 - Bind English name-resolution fallbacks to the translated release that confirmed the miss, and remove the unused translated-sitemap pipeline (#395).
 
 - Reject translated inline includes whose symlinks resolve outside their language root, and verify Python/workflow language copies against B9 (#395).
+- Man pages: plain-text pages start with NAME and no longer print an extracted OPTIONS block ahead of it when DESCRIPTION already lists the options, as on coreutils `ls` (#483).
 - Full archive imports skip a manual whose roff source the scanner refuses (for example a `.so` with extra arguments) and count it against the 2% parse gate, naming the page, instead of stopping the whole distro; the 2026-10-31 Arch and Alpine full staging runs stopped on one such page. Pages are still never rendered with an unresolved include, and other errors, such as an excluded package, still stop the run (#394).
 - Exclude Ubuntu noble's pinned bcc and bin86 packages, which ship no copyright notice, before full-import acquisition; record the reviewed exclusions in the release manifest and block dependencies on their files (#394).
 - Full archive imports resolve symlink targets the way the kernel does, with `..` stopping at the root (absolute targets included); Fedora's llvm12 links (`../../usr/lib64/llvm12/bin/bugpoint` from `/usr/bin`) stopped the 2026-10-31 full-Fedora staging run. Member names with `..` are still rejected, and link targets remain data that are never created or read outside the store (#394).
