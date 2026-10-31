@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import re
 import sqlite3
 import subprocess
@@ -13,7 +14,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 
-from ingestion.debian_archives import MAX_SOURCE_BYTES, ExtractedQuota
+from ingestion.debian_archives import MAX_SOURCE_BYTES, ExtractedQuota, MissingSource
 from ingestion.debian_indexes import (
     BINARY_PATH,
     MAN_PATH,
@@ -168,10 +169,24 @@ def catalog(root: Path, pins_path: Path):
 
 
 def notice_path(path):
-    return path.startswith(("usr/share/licenses/", "usr/share/spdx/text/")) or (
-        path.startswith(("usr/share/doc/", "usr/lib/", "usr/lib64/"))
+    return path.startswith(
+        ("usr/share/licenses/", "usr/share/spdx/text/", "usr/share/texlive/licenses/")
+    ) or (
+        path.startswith(
+            (
+                "usr/share/doc/",
+                "usr/share/kvirc/",
+                "usr/lib/",
+                "usr/lib64/",
+                "usr/include/llvm/",
+            )
+        )
         and bool(
-            re.search(r"(?:^|/)(?:copying|copyright|licen[cs]e|notice)(?:[._-][^/]*)?$", path, re.I)
+            re.search(
+                r"(?:^|/)(?:copying|copyright|licen[cs]es?|notice)(?:[._-][^/]*)?(?:/|$)",
+                path,
+                re.I,
+            )
         )
     )
 
@@ -247,7 +262,69 @@ def extract(archive, package, root, *, quota=None, **_kwargs):
     return entries
 
 
-def copyright_text(workspace, package):
+def _notice_texts(workspace, package, path, *, directory_fallback=None, seen=frozenset()):
+    try:
+        yield workspace.resolve(package, path).decode("utf-8", errors="replace")
+    except MissingSource as exc:
+        key = (exc.package, exc.path)
+        if key in seen or len(seen) >= 64:
+            raise ValueError("License directory link cycle") from exc
+        prefix = exc.path + "/"
+        # Directories have no stored file; acquire their indexed children instead.
+        # "0" follows "/" in SQLite's ordering, bounding every Unicode child name.
+        owners = {
+            row[0]
+            for row in workspace.owners.execute(
+                "SELECT DISTINCT pkg FROM owners WHERE path>=? AND path<?",
+                (prefix, exc.path + "0"),
+            )
+        }
+        for owner in sorted(owners - workspace.acquired):
+            workspace.acquire([workspace.available[owner]], workers=1)
+        children = list(
+            workspace.store.db.execute(
+                "SELECT pkg,path FROM entries WHERE path>=? AND path<? "
+                "AND kind IN ('file','link','blocked') ORDER BY path,pkg",
+                (prefix, exc.path + "0"),
+            )
+        )
+        if not children:
+            # Arch split packages can link an absent license directory; only their
+            # existing, verified SPDX fallback may satisfy that directory alias.
+            if (
+                directory_fallback is not None
+                and path.startswith("usr/share/licenses/")
+                and path.count("/") == 3
+                and exc.path.startswith("usr/share/licenses/")
+                and exc.path.count("/") == 3
+            ):
+                text = directory_fallback()
+                if text.strip():
+                    logging.warning(
+                        json.dumps(
+                            {
+                                "event": "archive_notice_directory_fallback",
+                                "package": package,
+                                "path": path,
+                                "target": exc.path,
+                            }
+                        )
+                    )
+                    yield text
+                    return
+            raise
+        for owner, child in children:
+            if notice_path(child):
+                yield from _notice_texts(
+                    workspace,
+                    owner,
+                    child,
+                    directory_fallback=directory_fallback,
+                    seen=seen | {key},
+                )
+
+
+def copyright_text(workspace, package, *, directory_fallback=None):
     metadata = workspace.available[package]
     if not hasattr(workspace, "notice_owners"):
         workspace.notice_owners = {
@@ -265,26 +342,31 @@ def copyright_text(workspace, package):
         workspace.acquire([metadata], workers=1)
     paths = list(
         workspace.store.db.execute(
-            "SELECT pkg,path FROM entries WHERE pkg=? AND kind IN ('file','link')", (package,)
+            "SELECT pkg,path FROM entries WHERE pkg=? AND kind IN ('file','link','blocked')",
+            (package,),
         )
     )
     texts = []
     for owner, path in paths:
         if notice_path(path):
-            text = workspace.resolve(owner, path).decode("utf-8", errors="replace")
-            if text.strip() and text not in texts:
-                texts.append(text)
+            for text in _notice_texts(
+                workspace, owner, path, directory_fallback=directory_fallback
+            ):
+                if text.strip() and text not in texts:
+                    texts.append(text)
     if not texts:
         owners = workspace.notice_owners & siblings
         for owner in sorted(owners - workspace.acquired):
             workspace.acquire([workspace.available[owner]], workers=1)
         for owner, path in workspace.store.db.execute(
-            "SELECT pkg,path FROM entries WHERE kind IN ('file','link')"
+            "SELECT pkg,path FROM entries WHERE kind IN ('file','link','blocked')"
         ):
             if owner in siblings and notice_path(path):
-                text = workspace.resolve(owner, path).decode("utf-8", errors="replace")
-                if text.strip() and text not in texts:
-                    texts.append(text)
+                for text in _notice_texts(
+                    workspace, owner, path, directory_fallback=directory_fallback
+                ):
+                    if text.strip() and text not in texts:
+                        texts.append(text)
     # A license expression is provenance, not the license text.
     return "\n\n".join(texts)
 

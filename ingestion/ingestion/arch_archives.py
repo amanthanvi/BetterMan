@@ -125,9 +125,15 @@ def extract(archive, package, root, *, quota=None, **_kwargs):
 
 
 def copyright_text(workspace, package):
-    text = package_notice(workspace, package)
+    text = package_notice(
+        workspace, package, directory_fallback=lambda: spdx_notice(workspace, package)
+    )
     if text:
         return text
+    return spdx_notice(workspace, package)
+
+
+def spdx_notice(workspace, package):
     # Arch's licenses package supplies the exact declared SPDX texts; read only
     # verified archive entries, never the host's installed license directory.
     if "licenses" not in workspace.available:
@@ -141,6 +147,13 @@ def copyright_text(workspace, package):
     for (path,) in workspace.store.db.execute(
         "SELECT path FROM entries WHERE pkg='licenses' AND kind IN ('file','link')"
     ):
-        if Path(path).name.removesuffix(".txt") in identifiers and notice_path(path):
+        identifier = Path(path).name.removesuffix(".txt")
+        # Legacy Arch GPL/LGPL names specify no version; retain all canonical
+        # version texts rather than guessing one or publishing no license text.
+        legacy = re.fullmatch(r"(GPL|LGPL)-([0-9.]+)-(?:only|or-later)", identifier)
+        if (
+            identifier in identifiers
+            or (legacy and {legacy[1], legacy[1] + legacy[2].removesuffix(".0")} & identifiers)
+        ) and notice_path(path):
             texts.append(workspace.resolve("licenses", path).decode("utf-8", errors="replace"))
     return "\n\n".join(texts)

@@ -1,0 +1,301 @@
+"""License collection follows verified archive directories and fails closed."""
+
+import json
+import sqlite3
+from pathlib import Path
+
+import pytest
+
+from ingestion import arch_archives, fedora_archives
+from ingestion.debian_archives import ArchiveStore, ExtractedQuota, MissingSource
+from ingestion.debian_pipeline import Workspace
+from tests.test_fedora_archives import payload
+
+
+@pytest.fixture
+def notice_workspace(tmp_path):
+    workspace = object.__new__(Workspace)
+    workspace.distro = "fedora"
+    workspace.pins = {}
+    workspace.store = ArchiveStore(tmp_path)
+    workspace.owners = sqlite3.connect(":memory:")
+    workspace.owners.execute("CREATE TABLE owners(path TEXT,pkg TEXT,PRIMARY KEY(path,pkg))")
+    workspace.available = {}
+    workspace.acquired = set()
+    workspace.downloads = []
+    archives = {}
+
+    def register(name, members, *, source=None, license="MIT", acquired=True):
+        package = fedora_archives.ArchivePackage(
+            name,
+            "1",
+            f"Packages/{name}.rpm",
+            "a" * 64,
+            1,
+            license=license,
+            source=source or name,
+        )
+        workspace.available[name] = package
+        archives[name] = members
+        workspace.owners.executemany(
+            "INSERT INTO owners VALUES (?,?)", [(path, name) for path, _, _ in members]
+        )
+        if acquired:
+            acquire([package])
+        return package
+
+    def acquire(packages, **_kwargs):
+        for package in packages:
+            workspace.downloads.append(package.name)
+            workspace.store.add(
+                package,
+                fedora_archives.extract_payload(
+                    payload(archives[package.name]),
+                    package,
+                    tmp_path,
+                    quota=ExtractedQuota(tmp_path / "files"),
+                ),
+            )
+            workspace.acquired.add(package.name)
+
+    workspace.acquire = acquire
+    workspace.register = register
+    yield workspace
+    workspace.store.db.close()
+    workspace.owners.close()
+
+
+def test_license_directory_link_acquires_target_owner_and_reads_all_notices(notice_workspace):
+    w = notice_workspace
+    w.register("split", [("usr/share/licenses/split", b"", "base")])
+    w.register(
+        "base",
+        [
+            ("usr/share/licenses/base/COPYING", b"first license", None),
+            ("usr/share/licenses/base/nested/NOTICE", b"second license", None),
+        ],
+        acquired=False,
+    )
+    assert fedora_archives.copyright_text(w, "split") == "first license\n\nsecond license"
+    assert w.downloads == ["split", "base"]
+
+
+def test_nested_license_directory_links_are_followed_as_store_data(notice_workspace):
+    w = notice_workspace
+    w.register("split", [("usr/share/licenses/split", b"", "middle")])
+    w.register("middle", [("usr/share/licenses/middle", b"", "base")], acquired=False)
+    w.register(
+        "base",
+        [
+            ("usr/share/licenses/base/subdir", b"", "../other"),
+            ("usr/share/licenses/other/LICENSE", b"full license", None),
+        ],
+        acquired=False,
+    )
+    assert fedora_archives.copyright_text(w, "split") == "full license"
+    assert not any(p.is_symlink() for p in w.store.root.rglob("*"))
+
+
+def test_arch_missing_split_license_directory_uses_verified_spdx_fallback(notice_workspace):
+    w = notice_workspace
+    w.distro = "arch"
+    w.register("fuse2fs", [("usr/share/licenses/fuse2fs", b"", "e2fsprogs")], source="e2fsprogs")
+    w.register("e2fsprogs", [], source="e2fsprogs", acquired=False)
+    w.register(
+        "licenses", [("usr/share/licenses/spdx/MIT.txt", b"MIT license", None)], acquired=False
+    )
+    assert arch_archives.copyright_text(w, "fuse2fs") == "MIT license"
+    assert "licenses" in w.acquired
+
+
+def test_dnsconfd_exact_pinned_repair_reads_the_rpm_dist_info_notice(notice_workspace):
+    w = notice_workspace
+    w.pins = json.loads((Path(__file__).parents[1] / "data/fedora-44.json").read_text())
+    w.register(
+        "dnsconfd",
+        [
+            ("usr/share/licenses/dnsconfd/LICENSE", b"", "./distribution/LICENSE"),
+            (
+                "usr/lib/python3.14/site-packages/dnsconfd-1.7.5.dist-info/licenses/LICENSE",
+                b"MIT notice",
+                None,
+            ),
+        ],
+    )
+    assert fedora_archives.copyright_text(w, "dnsconfd") == "MIT notice"
+
+
+@pytest.mark.parametrize("distro", ["fedora", "arch", "alpine"])
+@pytest.mark.parametrize("readable", [False, True])
+def test_missing_notice_file_is_not_hidden_by_other_notices_or_spdx(
+    notice_workspace, distro, readable
+):
+    w = notice_workspace
+    w.distro = distro
+    members = [("usr/share/licenses/tool/LICENSE", b"", "missing/LICENSE")]
+    if readable:
+        members.insert(0, ("usr/share/licenses/tool/NOTICE", b"other notice", None))
+    w.register("tool", members)
+    w.register("licenses", [("usr/share/licenses/spdx/MIT.txt", b"MIT license", None)])
+    collector = arch_archives.copyright_text if distro == "arch" else fedora_archives.copyright_text
+    with pytest.raises(MissingSource, match="missing/LICENSE"):
+        collector(w, "tool")
+
+
+def test_blocked_notice_link_is_not_ignored_beside_readable_notice(notice_workspace):
+    w = notice_workspace
+    w.register(
+        "tool",
+        [
+            ("usr/share/licenses/tool/NOTICE", b"other notice", None),
+            ("usr/share/licenses/tool/LICENSE", b"", "../../../../../etc/passwd"),
+        ],
+    )
+    with pytest.raises(ValueError, match="leaves archive documentation roots"):
+        fedora_archives.copyright_text(w, "tool")
+
+
+def test_arch_missing_directory_without_spdx_text_fails_closed(notice_workspace):
+    w = notice_workspace
+    w.distro = "arch"
+    w.register("tool", [("usr/share/licenses/tool", b"", "missing")], license="LicenseRef-private")
+    w.register("licenses", [("usr/share/licenses/spdx/MIT.txt", b"MIT license", None)])
+    with pytest.raises((MissingSource, RuntimeError)):
+        arch_archives.copyright_text(w, "tool")
+
+
+def test_directory_notice_cycle_fails_closed(notice_workspace):
+    w = notice_workspace
+    w.register(
+        "tool",
+        [
+            ("usr/share/licenses/tool", b"", "base"),
+            ("usr/share/licenses/base/recursive", b"", "../tool"),
+        ],
+    )
+    with pytest.raises(ValueError, match="cycle"):
+        fedora_archives.copyright_text(w, "tool")
+
+
+def test_unreadable_stored_notice_is_not_hidden_by_readable_notice(notice_workspace):
+    w = notice_workspace
+    w.register(
+        "tool",
+        [
+            ("usr/share/licenses/tool/NOTICE", b"other notice", None),
+            ("usr/share/licenses/tool/LICENSE", b"full license", None),
+        ],
+    )
+    stored = w.store.db.execute(
+        "SELECT file FROM entries WHERE pkg='tool' AND path='usr/share/licenses/tool/LICENSE'"
+    ).fetchone()[0]
+    Path(stored).unlink()
+    with pytest.raises(FileNotFoundError):
+        fedora_archives.copyright_text(w, "tool")
+
+
+def test_arch_directory_fallback_preserves_other_package_notices(notice_workspace):
+    w = notice_workspace
+    w.distro = "arch"
+    w.register(
+        "tool",
+        [
+            ("usr/share/licenses/tool", b"", "missing"),
+            ("usr/share/doc/tool/NOTICE", b"attribution", None),
+        ],
+    )
+    w.register("licenses", [("usr/share/licenses/spdx/MIT.txt", b"MIT license", None)])
+    text = arch_archives.copyright_text(w, "tool")
+    assert "attribution" in text and "MIT license" in text
+
+
+def test_fedora_missing_directory_is_not_hidden_by_readable_notice(notice_workspace):
+    w = notice_workspace
+    w.register(
+        "tool",
+        [
+            ("usr/share/licenses/tool", b"", "missing"),
+            ("usr/share/doc/tool/NOTICE", b"attribution", None),
+        ],
+    )
+    with pytest.raises(MissingSource):
+        fedora_archives.copyright_text(w, "tool")
+
+
+def test_arch_legacy_gnu_names_use_canonical_versions_without_guessing(notice_workspace):
+    w = notice_workspace
+    w.distro = "arch"
+    w.register(
+        "fuse2fs",
+        [("usr/share/licenses/fuse2fs", b"", "e2fsprogs")],
+        license="GPL AND LGPL AND MIT",
+    )
+    w.register(
+        "licenses",
+        [
+            ("usr/share/licenses/spdx/GPL-2.0-only.txt", b"GPL version 2", None),
+            ("usr/share/licenses/spdx/GPL-3.0-or-later.txt", b"GPL version 3 or later", None),
+            ("usr/share/licenses/spdx/LGPL-2.1-only.txt", b"LGPL version 2.1", None),
+            ("usr/share/licenses/spdx/GPL-CC-1.0.txt", b"unrelated cooperation commitment", None),
+        ],
+    )
+    text = arch_archives.copyright_text(w, "fuse2fs")
+    assert "GPL version 2" in text
+    assert "GPL version 3 or later" in text
+    assert "LGPL version 2.1" in text
+    assert "cooperation commitment" not in text
+
+
+def test_notice_in_named_license_directory_is_retained_and_resolved(notice_workspace):
+    w = notice_workspace
+    w.register(
+        "systemd",
+        [
+            ("usr/share/licenses/systemd/MIT-0.txt", b"", "../../doc/systemd/LICENSES/MIT-0.txt"),
+            ("usr/share/doc/systemd/LICENSES/MIT-0.txt", b"MIT zero notice", None),
+        ],
+    )
+    assert fedora_archives.copyright_text(w, "systemd") == "MIT zero notice"
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        "usr/share/texlive/licenses/gpl.txt",
+        "usr/share/kvirc/5.2/license/COPYING",
+        "usr/include/llvm/Support/LICENSE.TXT",
+    ],
+)
+def test_notice_targets_in_archive_license_roots_acquire_the_owner(notice_workspace, target):
+    w = notice_workspace
+    w.register("tool", [("usr/share/licenses/tool/LICENSE", b"", "/" + target)])
+    w.register("shared", [(target, b"shared license", None)], acquired=False)
+    assert fedora_archives.copyright_text(w, "tool") == "shared license"
+    assert w.downloads == ["tool", "shared"]
+
+
+def test_manual_named_license_is_not_a_package_notice():
+    assert not fedora_archives.notice_path("usr/share/man/man1/license.1")
+
+
+def test_arch_versioned_legacy_gnu_alias_does_not_select_other_versions(notice_workspace):
+    w = notice_workspace
+    w.distro = "arch"
+    w.register("tool", [], license="GPL3")
+    w.register(
+        "licenses",
+        [
+            ("usr/share/licenses/spdx/GPL-2.0-only.txt", b"GPL version 2", None),
+            ("usr/share/licenses/spdx/GPL-3.0-or-later.txt", b"GPL version 3", None),
+        ],
+    )
+    assert arch_archives.copyright_text(w, "tool") == "GPL version 3"
+
+
+def test_directory_notice_children_include_non_bmp_filenames(notice_workspace):
+    w = notice_workspace
+    w.register("tool", [("usr/share/licenses/tool", b"", "base")])
+    w.register(
+        "base", [("usr/share/licenses/base/\U0001f4dc.txt", b"full notice", None)], acquired=False
+    )
+    assert fedora_archives.copyright_text(w, "tool") == "full notice"
