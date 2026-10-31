@@ -2,12 +2,16 @@
 // must see a new Convex deploy before it writes. Keep the same values in
 // ingestion/ingestion/convex_client.py. Cross-language alignment lives in
 // ingestion/tests/test_ingest_contract.py (no duplicate version expectation).
-// v7 retains v6 verified promotion-source reads and CAS, adding per-page
-// indexable/popularityScore and declared indexablePageCount to v5 uploads.
-// B2 v8 adds distro-specific acquisition, promotion holds and stored notices.
-// The translation stack follows as v9; clients require this exact version.
+// v6 retains v5 uploads and adds verified promotion-source reads and CAS.
+// v7 is index by demand (#445) and v8 the B2 full extractions (#394).
+// v9 adds content locales (#395): release locale validation, per-locale
+// promotion behind the translated-release hold, and the optional stored-page
+// documentedVersion. Every release-contract request now carries the exact
+// version in INGEST_CONTRACT_HEADER; any other version is rejected.
 
-export const INGEST_CONTRACT_SCHEMA_VERSION = 8;
+export const INGEST_CONTRACT_SCHEMA_VERSION = 9;
+
+export const INGEST_CONTRACT_HEADER = "x-betterman-ingest-contract";
 
 export const INGEST_CONTRACT = {
   schemaVersion: INGEST_CONTRACT_SCHEMA_VERSION,

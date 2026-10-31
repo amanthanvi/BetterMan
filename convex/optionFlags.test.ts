@@ -8,6 +8,7 @@ import { flagTakesArgument, flagArgumentOptional, flagAllowsShortEquals, MAX_OPT
 import { syncFlagCandidates } from "./_flagSearch";
 import { nameEditDistance } from "./_searchTypos";
 import schema from "./schema";
+import { INGEST_CONTRACT } from "./ingestContract";
 
 const modules = import.meta.glob("./**/*.ts");
 type Harness = TestConvex<typeof schema>;
@@ -175,7 +176,7 @@ async function seeded(pages: Array<ReturnType<typeof page>>, documentsRead?: num
   });
   const response = await t.fetch("/ingest/pages/storage", {
     method: "POST",
-    headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
+    headers: { authorization: "Bearer test-secret", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
     body: JSON.stringify({ datasetReleaseId: "options", pages }),
   });
   expect(response.status).toBe(200);

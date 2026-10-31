@@ -309,3 +309,34 @@ man page uses **four calls, 26 documents and one storage read**, meeting the
 requested target. The existing `perf-budgets.json` ceiling remains **five calls,
 29 documents and one storage read**; it is an allowance, not the current measured
 cost. Analytics changes no Convex reads.
+## Translated page cases
+
+B3 (#395) adds `manTranslated` (`/man/bash/1?lang=de`) and
+`manTranslationFallback` (`/man/bash/1?lang=fr`) from the same corpus plus a
+German release with bash(1) and a French release without it. Each must render
+cold through the proxy: the German page with `lang="de"`, its note and its
+`hreflang` set; the fallback as English with the missing-translation note and
+`noindex`. Both measure 4 calls and 1 storage read, at 17 and 29 documents.
+The German page carries a finished drift build and note. Its 17 documents
+include the drift read (the English pointer, the note and the build), within
+the tightened ceiling of 17 (previously 18). The
+fixture hash changed for these rows only; every existing baseline and
+tolerance is unchanged.
+
+The translated-language miss serving English (`manTranslationFallback`) measured
+**4 calls / 29 documents / 1 storage read** through the production proxy and
+renderer. Removing the translation sitemap pipeline adds no page-view reads.
+
+Fixture **v16** combines main/#465’s saturated bare-cluster scenarios
+(`searchClusterBare` and `searchClusterBareShort`) with B3’s translated and
+missing-translation browser scenarios. Main’s existing metric policies are
+retained, alongside B3’s existing 50-byte search gzip allowance. Only the
+translated scenario baselines are re-recorded; every tolerance and unrelated
+baseline remains unchanged. Without drift, the translated case measures
+**4 calls / 14 documents / 1 storage read**; the English fallback is **4 / 29 / 1**.
+
+At the #474 tip, v16’s combined fixture includes the finished translation drift
+build and note. Its recorded translated case is **4 / 17 / 1**, with zero
+tolerance on calls, documents, and storage reads; fallback remains **4 / 29 / 1**.
+Both bare-cluster cases measure **1 / 38 / 0**, within the unchanged **1 / 40 / 0**
+budgets. The combined drift-fixture SHA-256 is `de81e551eeed9da7a3b6a894ba2f5da1c32c8e7190a3cb8529cff99e19745462`.

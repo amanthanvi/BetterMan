@@ -236,6 +236,18 @@ when the import switch is off. Held Debian logs a clear skip; other distros
 continue. Non-`1` values, including an explicitly empty value, warn and stay off;
 raw values are never printed.
 
+### Translated manuals (#395)
+
+`--debian-translation <de|fr|es|pt-BR|ja|ru>` runs the same archive pipeline
+over one language root (`usr/share/man/<lang>/`) and publishes it as that
+locale's Debian release, to staging only. It is off by default: the separate
+`update-translations` workflow needs `BETTERMAN_DEBIAN_TRANSLATIONS=1` or its
+`debian_translations` input, and promotion needs its own authorization plus the
+Convex translated-release hold. `scripts/check_debian_translations.py` counts
+every translated path in Contents and measures a bounded sample, optionally
+uploading it to this worktree's loopback deployment. Details and measurements:
+`docs/roadmap/b3-translations.md`.
+
 `data/debian-trixie.json` pins snapshot, suite/component/architecture and the
 Release SHA256. Verified Release SHA256/size entries bind Contents-all,
 Contents-amd64 and Packages.xz, which bind every archive filename/version/size/SHA256.

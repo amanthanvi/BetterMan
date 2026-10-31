@@ -104,6 +104,7 @@ def sample_packages(packages: list[Package], limit: int | None, distro="debian")
 
 
 class Workspace:
+    localized_roots: frozenset[str] = frozenset()
     distro = "debian"
     pins = {}
 
@@ -111,7 +112,7 @@ class Workspace:
         self.distro = distro
         if distro not in {"debian", "ubuntu", "fedora", "arch", "alpine"}:
             raise ValueError("Unsupported deb archive distro")
-        pins_path = (
+        self.pins_path = pins_path = (
             PINS
             if distro == "debian"
             else PINS.with_name(
@@ -153,24 +154,8 @@ class Workspace:
         if marker.exists() and marker.read_text() != fingerprint:
             raise ValueError("Workspace belongs to different archive pins")
         marker.write_text(fingerprint)
-        if distro in {"fedora", "arch", "alpine"}:
-            if distro == "fedora":
-                from ingestion.fedora_archives import catalog as archive_catalog
-            elif distro == "arch":
-                from ingestion.arch_archives import catalog as archive_catalog
-            else:
-                from ingestion.alpine_archives import catalog as archive_catalog
-
-            self.pins, self.all_manual_packages, self.available = archive_catalog(
-                self.root / "indexes", pins_path
-            )
-            self.registrations = {"packages": {}}
-        else:
-            self.pins, self.all_manual_packages = (
-                catalog(self.root / "indexes")
-                if distro == "debian"
-                else catalog(self.root / "indexes", pins_path)
-            )
+        self.pins, self.all_manual_packages = self._catalog()
+        if distro in {"debian", "ubuntu"}:
             self.registrations = (
                 private_registrations(PINS.parent / self.pins["privateManuals"])
                 if self.pins.get("privateManuals")
@@ -185,7 +170,7 @@ class Workspace:
         ):
             raise ValueError("Pinned source targets name unknown packages: " + ", ".join(unknown))
         self.all_manual_packages = [p for p in self.all_manual_packages if p.name not in exclusions]
-        self.packages = sample_packages(self.all_manual_packages, limit, distro)
+        self.packages = self._sample(self.all_manual_packages, limit)
         selection_path = self.root / "selection.json"
         if selection_path.exists():
             selection = json.loads(selection_path.read_text())
@@ -198,25 +183,12 @@ class Workspace:
             selection_path.write_text(
                 json.dumps({"limit": limit, "packages": [p.name for p in self.packages]})
             )
-        # Retain the original curated pass, including runtime packages such as
-        # vim-tiny whose manual slaves live in vim-common. Their postinst data
-        # supplies alternatives; they are never installed.
-        selected_names = {p.name for p in self.packages}
         # Curated names and the packages that own their command pages (git -> git-man).
         self.require_allowed_packages(
             set(FULL_PACKAGE_SET_BY_DISTRO[distro])
             | set(_COMMAND_PAGE_OWNERS.get(distro, {}).values())
         )
-        self.curated_packages = [
-            self.available[n]
-            # G++ and vim-tiny have alternatives but no manual-owned archive
-            # paths. Their control scripts still participate in a full election.
-            for n in sorted(
-                set(FULL_PACKAGE_SET_BY_DISTRO[distro])
-                | ({"g++", "vim-tiny"} if distro in {"debian", "ubuntu"} else set())
-            )
-            if n in self.available and n not in selected_names
-        ]
+        self.curated_packages = self._curated()
         if distro == "alpine":
             from ingestion.alpine_archives import require_sha256_pin
 
@@ -285,6 +257,48 @@ class Workspace:
         self._reserved = 0
         self._inflight = set()
         self.missing: list[dict] = []
+
+    def _catalog(self):
+        distro = self.distro
+        pins_path = self.pins_path
+        if distro in {"fedora", "arch", "alpine"}:
+            if distro == "fedora":
+                from ingestion.fedora_archives import catalog as archive_catalog
+            elif distro == "arch":
+                from ingestion.arch_archives import catalog as archive_catalog
+            else:
+                from ingestion.alpine_archives import catalog as archive_catalog
+
+            self.pins, self.all_manual_packages, self.available = archive_catalog(
+                self.root / "indexes", pins_path
+            )
+            self.registrations = {"packages": {}}
+        else:
+            self.pins, self.all_manual_packages = (
+                catalog(self.root / "indexes")
+                if distro == "debian"
+                else catalog(self.root / "indexes", pins_path)
+            )
+        return self.pins, self.all_manual_packages
+
+    def _sample(self, packages, limit):
+        return sample_packages(packages, limit, self.distro)
+
+    def _curated(self):
+        # Retain the original curated pass, including runtime packages such as
+        # vim-tiny whose manual slaves live in vim-common. Their postinst data
+        # supplies alternatives; they are never installed.
+        selected_names = {p.name for p in self.packages}
+        return [
+            self.available[n]
+            # G++ and vim-tiny have alternatives but no manual-owned archive
+            # paths. Their control scripts still participate in a full election.
+            for n in sorted(
+                set(FULL_PACKAGE_SET_BY_DISTRO[self.distro])
+                | ({"g++", "vim-tiny"} if self.distro in {"debian", "ubuntu"} else set())
+            )
+            if n in self.available and n not in selected_names
+        ]
 
     def require_allowed_packages(self, names):
         for name in names:
@@ -358,6 +372,7 @@ class Workspace:
                 self.root,
                 quota=self.extracted_quota,
                 registrations=getattr(self, "registrations", None),
+                **({"localized_roots": self.localized_roots} if self.localized_roots else {}),
             )
             extracted = time.monotonic()
         finally:

@@ -2,11 +2,14 @@ import type { PageDerivedResponse } from '../../../convex/_derivedEncoding'
 
 import type { SectionPage } from '../../lib/api'
 import { conceptsForPage } from '../../lib/concepts'
-import { DISTRO_LABEL, type Distro } from '../../lib/distro'
+import { DISTRO_LABEL, manPageHref, type Distro } from '../../lib/distro'
 import type { ManPage, ManPageBrief, ManPageContent, ManPageResponse, ManPageVariant } from '../../lib/docModel'
 import { extractExamples } from '../../lib/examples'
 import type { Lang } from '../../lib/i18n/locales'
 import type { ServerT } from '../../lib/i18n/server'
+import { LANG_NAMES, setLang } from '../../lib/i18n/locales'
+import { langSwitchHref } from '../../lib/i18n/switch'
+import type { TranslationOutcome } from '../../lib/manLookup'
 import { briefView, modeAnchors } from '../../lib/manBrief'
 import { ChevronDownIcon } from '../icons'
 import { defaultCodeLanguage } from '../doc/CodeBlock'
@@ -44,6 +47,8 @@ export function ManPageDocument({
   reportHref,
   urlLang,
   t,
+  translation,
+  drift,
 }: {
   page: ManPage
   content: ManPageContent
@@ -65,6 +70,10 @@ export function ManPageDocument({
   reportHref: string
   urlLang: Lang | null
   t: ServerT
+  /** `?lang=` (#395): the translation itself, or English because the language lacks the page. */
+  translation?: TranslationOutcome
+  /** How the translation lags English (#395); shown only on a translated page. */
+  drift?: ManPageResponse['translationDrift']
 }) {
   const inBrief = briefView({
     brief,
@@ -85,6 +94,14 @@ export function ManPageDocument({
   const edition = page.sourcePackage
     ? `${page.sourcePackage}${page.sourcePackageVersion ? ` ${page.sourcePackageVersion}` : ''}`
     : DISTRO_LABEL[servedDistro]
+
+  const manualLang = translation?.state === 'translated' ? translation.lang : undefined
+  // The English original is linked only when English has the route.
+  // The English original is linked only when English has the page itself. Through B9's switch: a bare
+  // URL would send a reader with a remembered language straight back to this one.
+  const englishHref = translation?.state === 'translated' && translation.englishHasRoute
+    ? langSwitchHref('en', setLang(manPageHref(page.name, page.section, urlDistro), null))
+    : null
 
   return (
     <div data-bm-manual data-bm-page-name={page.name} data-bm-page-section={page.section} data-bm-page-description={page.description || page.title}>
@@ -120,12 +137,32 @@ export function ManPageDocument({
         ) : null}
 
         <div className="mx-auto w-full min-w-0 max-w-[var(--bm-reading-column-width)] lg:mx-0">
-          <ManPageHeaderCard page={page} synopsis={content.synopsis} variants={variants} providers={providers} distro={servedDistro} hasToc={hasToc} urlLang={urlLang} t={t} />
+          {translation ? (
+            <p data-bm-translation={translation.state} className="mb-4 text-xs text-ink-3">
+              {translation.state === 'translated' ? (
+                <>
+                  {page.sourcePackage
+                    ? t('{language} translation shipped by {distro} in {package}.', { language: LANG_NAMES[translation.lang], distro: DISTRO_LABEL[servedDistro], package: page.sourcePackage })
+                    : t('{language} translation shipped by {distro}.', { language: LANG_NAMES[translation.lang], distro: DISTRO_LABEL[servedDistro] })}
+                  {englishHref ? <>{' '}<a href={englishHref} hrefLang="en" className="underline">{t('English original')}</a></> : null}
+                  {drift ? <TranslationDriftNote drift={drift} t={t} /> : null}
+                </>
+              ) : translation.noRelease ? (
+                t('BetterMan has no {language} manuals for {distro} yet; this is the English page.', { language: LANG_NAMES[translation.lang], distro: DISTRO_LABEL[servedDistro] })
+              ) : (
+                t('{distro} ships no {language} translation of {citation}; this is the English page.', { language: LANG_NAMES[translation.lang], distro: DISTRO_LABEL[servedDistro], citation: `${page.name}(${page.section})` })
+              )}
+            </p>
+          ) : null}
 
+          <ManPageHeaderCard page={page} synopsis={content.synopsis} variants={variants} providers={providers} distro={servedDistro} hasToc={hasToc} urlLang={urlLang} t={t} contentLang={manualLang} />
+
+          {/* `lang` marks the manual's own text only; BetterMan's labels keep the page's UI language (#395). */}
           <article className="mt-10">
             {inBrief ? <ManPageBriefSection view={inBrief} t={t} /> : null}
 
             <ManPageOptionsSection
+              contentLang={manualLang}
               portability={derived ? { portability: derived.portability, stale: derived.stale } : undefined}
               newIn={derived?.newIn}
               portabilityMode={portabilityMode}
@@ -137,7 +174,13 @@ export function ManPageDocument({
               t={t}
             />
 
-            <DocRenderer blocks={body.blocks} urlDistro={urlDistro} urlLang={urlLang} codeLanguage={codeLanguage} sectionNumbers={numbers} t={t} />
+            {manualLang ? (
+              <div lang={manualLang} data-bm-manual-text>
+                <DocRenderer blocks={body.blocks} urlDistro={urlDistro} urlLang={urlLang} codeLanguage={codeLanguage} sectionNumbers={numbers} t={t} />
+              </div>
+            ) : (
+              <DocRenderer blocks={body.blocks} urlDistro={urlDistro} urlLang={urlLang} codeLanguage={codeLanguage} sectionNumbers={numbers} t={t} />
+            )}
 
             <ManPageFooterSections
               reportHref={reportHref}
@@ -158,5 +201,29 @@ export function ManPageDocument({
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * One line on how a translation lags English (#395): an older documented
+ * release, and the options English has that it lacks. Computed after activation.
+ */
+function TranslationDriftNote({ drift, t }: { drift: NonNullable<ManPageResponse['translationDrift']>; t: ServerT }) {
+  const more = drift.missingCount - drift.missingFlags.length
+  return (
+    <span data-bm-translation-drift className="block">
+      {drift.older && drift.documented && drift.english
+        ? <>{t('This translation documents {documented}; English documents {english}.', { documented: drift.documented, english: drift.english })}{' '}</>
+        : null}
+      {drift.missingCount ? (
+        <>
+          {t('Not in this translation:')}{' '}
+          {drift.missingFlags.map((flag, index) => (
+            <span key={flag}>{index ? ', ' : ''}<code className="font-mono">{flag}</code></span>
+          ))}
+          {more > 0 ? <>{' '}{t('{count, plural, other {and # more}}', { count: more })}</> : null}.
+        </>
+      ) : null}
+    </span>
   )
 }

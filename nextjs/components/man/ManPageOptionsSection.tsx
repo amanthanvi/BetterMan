@@ -25,6 +25,7 @@ export function ManPageOptionsSection({
   portabilityToggleHref,
   modes,
   t,
+  contentLang,
 }: {
   options?: OptionItem[] | null
   rowIds: ReadonlyMap<string, string>
@@ -35,6 +36,8 @@ export function ManPageOptionsSection({
   portabilityToggleHref?: string
   modes?: ReadonlySet<string>
   t: ServerT
+  /** A translated manual's language (#395), for its option descriptions. */
+  contentLang?: string
 }) {
   const allOptions = options ?? []
   const optionsCount = allOptions.length
@@ -55,6 +58,7 @@ export function ManPageOptionsSection({
       newIn={newIn}
       modes={modes}
       t={t}
+      contentLang={contentLang}
     />
   )
 

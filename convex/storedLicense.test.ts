@@ -4,6 +4,7 @@ import { expect, it, vi } from "vitest";
 import { internal, api } from "./_generated/api";
 import { LICENSE_CONTENT_TYPE, MANIFEST_ORPHAN_MIN_AGE_MS } from "./_manifestStorage";
 import schema from "./schema";
+import { INGEST_CONTRACT } from "./ingestContract";
 
 const modules = import.meta.glob("./**/*.ts");
 
@@ -19,7 +20,7 @@ it("preserves large license bytes, replay counts, failed-upload cleanup and rele
     });
     const text = "copyright notice\n".repeat(280000);
     const upload = (packageName = "large") => t.fetch("/ingest/licenses", {
-      method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
+      method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
       body: JSON.stringify({ datasetReleaseId: "licenses", licenses: [{ packageName, licenseId: "pkg:large", licenseName: "large", licenseText: text, sourceUrl: null }] }),
     });
     const rejected = await upload("undeclared");

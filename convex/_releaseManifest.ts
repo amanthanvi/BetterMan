@@ -35,6 +35,13 @@ export function fullDebianPromotionHeld(release: Doc<"datasetReleases">, stage: 
   return stage === "prod" && release.distro === "debian" && release.acquisition === "deb-extraction" && allowFullDebian !== true;
 }
 
+// Translated releases add Convex storage per language, so prod needs explicit
+// authorization (owner sign-off on measured cost). This is independent of the
+// full-Debian hold: an archive-extracted translation needs both.
+export function translatedPromotionHeld(release: Doc<"datasetReleases">, stage: "prod" | "staging", allowTranslations?: boolean): boolean {
+  return stage === "prod" && release.locale !== "en" && allowTranslations !== true;
+}
+
 export function validManifestCount(value: number): boolean {
   return Number.isSafeInteger(value) && value >= 0;
 }

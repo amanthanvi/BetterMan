@@ -12,6 +12,8 @@ export type ManHeadData = {
   share?: { title: string; description: string }
   /** The printed running head (left, centre, right) and foot (left, centre); the page number ends the foot. */
   print?: { head: [string, string, string]; foot: [string, string] }
+  /** hreflang alternates (#395): a translated page names itself, English and x-default. */
+  alternates?: Array<{ hrefLang: string; href: string }>
 }
 
 /** A CSS string literal that cannot end the string, the rule or the <style> element. */
@@ -43,7 +45,7 @@ export function missingManHead(t: ServerT): ManHeadData {
  * carry no framework attributes. JSON-LD is a data block, not a script the
  * browser runs, so it needs no nonce: the HTML is cached at the edge.
  */
-export function ManHeadTags({ title, description, canonical, ogImage, jsonLd, noindex, share, print }: ManHeadData) {
+export function ManHeadTags({ title, description, canonical, ogImage, jsonLd, noindex, share, print, alternates }: ManHeadData) {
   const shareTitle = share?.title ?? title
   const shareDescription = share?.description ?? description
   return (
@@ -52,6 +54,7 @@ export function ManHeadTags({ title, description, canonical, ogImage, jsonLd, no
       {description ? <meta name="description" content={description} /> : null}
       {noindex ? <meta name="robots" content="noindex" /> : null}
       {canonical ? <link rel="canonical" href={canonical} /> : null}
+      {alternates?.map(({ hrefLang, href }) => <link key={hrefLang} rel="alternate" hrefLang={hrefLang} href={href} />)}
       <meta property="og:title" content={shareTitle} />
       {shareDescription ? <meta property="og:description" content={shareDescription} /> : null}
       <meta property="og:type" content={ogImage ? 'article' : 'website'} />
