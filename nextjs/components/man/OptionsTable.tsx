@@ -25,6 +25,7 @@ export function OptionsTable({
   newIn,
   modes,
   t,
+  contentLang,
 }: {
   options: OptionItem[]
   /** Row anchor per `anchorId`, distinct from the body definition's id. */
@@ -40,6 +41,8 @@ export function OptionsTable({
   /** Options defined under the page's modes heading, for the composer's conflict warning. */
   modes?: ReadonlySet<string>
   t: ServerT
+  /** A translated manual's language (#395): its option descriptions only, never BetterMan's labels. */
+  contentLang?: string
 }) {
   const portabilityByAnchor = new Map(portability?.rows ?? [])
   const newInByAnchor = new Map((newIn ?? []).map((mark) => [mark.anchorId, mark]))
@@ -111,7 +114,7 @@ export function OptionsTable({
                   </span>
                 ) : null}
               </td>
-              <td data-bm-option-description className="py-1 pr-4 align-baseline text-sm text-ink-2">{opt.description}</td>
+              <td data-bm-option-description lang={contentLang} className="py-1 pr-4 align-baseline text-sm text-ink-2">{opt.description}</td>
               <td className="w-10 py-1 text-right align-baseline font-serif text-sm text-ink-3 oldstyle-nums">
                 {locators?.get(opt.anchorId)}
               </td>

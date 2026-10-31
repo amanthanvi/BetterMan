@@ -32,6 +32,8 @@ App Router HTML is rendered per request: the proxy issues a fresh CSP nonce, Nex
 - **Keyed per release.** The proxy reads the active release for the URL's distro (`nextjs/lib/manRelease.ts`, one Convex query per distro per instance per minute) and rewrites the request with `__bm_release=<id>`, so a promotion changes the cache key. It forwards the release to the renderer (`x-bm-release`) for the footer and the data-cache keys. Every man lookup outcome names the release that answered it (a page's metadata; `datasetReleaseId` beside aliases, misses and name resolutions). A result from any other release than the key's, which happens within the proxy's minute after a promotion or rollback, is stored neither in the data cache nor at the edge. The same holds for the secondary reads a page or miss shows: related links, 404 suggestions and the distros that have the page (whose read spans every distro's active release, so it counts only when the key's release was among them). Loopback hosts skip the URL key, because Next normalises them in middleware rewrites.
 - **Cache headers.** Pages and redirects send `CDN-Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400` (misses: 600/3600), and browsers get `Cache-Control: public, max-age=0, must-revalidate`. Rate-limited misses and responses without a release key are `private, no-store`.
 
+- **Languages (#395).** `?lang=<code>` serves that language's translated release for the same route, or English with a note and `noindex` when the language lacks it. The proxy adds the language's release to the key (`__bm_release=<english>~<lang>:<release|none>`) and forwards it in `x-bm-translation-release`, trusted only beside the release token. Search takes the language and falls back to English. Translated URLs remain noindex and add no sitemap entries or reads. See [B3](roadmap/b3-translations.md#serving).
+
 Caching one layer down still applies everywhere: `nextjs/lib/api.ts` wraps each Convex read, including sitemap pages, in `unstable_cache`, and the man page reads include the release in their keys.
 
 ## Data
@@ -42,7 +44,7 @@ A `.so` include stub is recorded as an alias rather than a page; its URL permane
 
 A release is one distro at one point in time. Before uploading, ingestion declares its page count, per-section totals, alias count, and license count with the package identities that require license text. Activation verifies these declarations against completed uploads before sealing, hydrating related metadata, and atomically changing the `staging` pointer. Promotion copies only manifest-verified, sealed, complete release pointers to `prod`. New rows cannot be appended after sealing, and pruning marks a release ineligible for activation before deleting any children. Superseded releases are removed by the manual `prune-releases` workflow, which keeps the newest verified inactive release per distro as a rollback target, never deletes active or recently created declared releases, and leaves unsealed drafts alone unless an operator opts in.
 
-Ingest contract v7 retains the v2 storage/batch protocol and v3/v4 extractor,
+Ingest contract v9 retains the v2 storage/batch protocol and v3/v4 extractor,
 signature, symbol and optional-argument fields, adding real and alias package
 providers from v5, adding an authenticated fixed-staging promotion-source read
 and per-distro `expectedDatasetReleaseId` compare-and-swap. A mismatch aborts
@@ -57,13 +59,24 @@ generated layer advertises its own independent v3 contract.
 Contract v8 (B2, #394) adds full-archive acquisition identities for the other
 distro families, starting with Ubuntu's `ubuntu-deb-extraction`. Each is held
 from prod server-side (`FULL_<DISTRO>_PROMOTION_HELD`) until its own promotion
-authorization; clients reject v7 and v9 servers before any write.
+authorization; clients reject any other contract version before any write.
 
 B4 adds per-page demand scores and indexable membership, plus a declared tier
 count verified through existing upload shards. Scored releases filter their
 sitemaps and serve the long tail with noindex. Unscored releases keep main's
 all-page indexing and sitemaps. Full-Debian releases without a tier cannot
 enter prod (`FULL_DEBIAN_TIER_REQUIRED`), even with owner authorization. See the [B4 policy and rollout](roadmap/b4-index-by-demand.md).
+
+Contract v9 (after #445's v7 and B2's v8) adds content locales (#395): each translated language is its own release
+per distro (`locale` on the release and its `(stage, locale, distro)` pointer),
+promotion moves one locale per request, and a translated release reaches prod
+only with `allowTranslations` (`TRANSLATED_PROMOTION_HELD` otherwise; archive
+translations keep the full-Debian hold as well). Stored pages may carry the
+translation's `documentedVersion`. Versions match exactly, both ways: every
+release-contract request names its version in `X-BetterMan-Ingest-Contract` and
+any other is rejected with 409 `INGEST_CONTRACT_MISMATCH` before any read or
+write, while the client rejects any other advertised version or contract shape. See [B3](roadmap/b3-translations.md).
+
 Large package provenance is stored in Convex file storage via a
 `releaseManifests` row. The release document contains counts, digests and lifecycle
 state. Digest-bound package batches populate `licensePackages` in transactions of

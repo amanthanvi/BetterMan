@@ -4,6 +4,9 @@ import {
   fetchManDistros,
   fetchManResolve,
   fetchRelated,
+  fetchTranslatedMan,
+  translationAnsweredBy,
+  nameResolutionAnsweredBy,
   suggest,
   withDistroFallback,
   answeredBy,
@@ -15,6 +18,8 @@ import {
 } from './api'
 import type { Distro } from './distro'
 import type { ManPageResponse } from './docModel'
+import type { TranslatedLang } from './i18n/locales'
+import type { TranslationInfo } from './manRelease'
 import { isRateLimited } from './rateLimit'
 import { isManName } from './shortUrl'
 
@@ -29,18 +34,27 @@ import { isManName } from './shortUrl'
  * route can share it under the proxy's release key only when the two agree.
  */
 type Served = { servedRelease: string | null }
+/**
+ * With `?lang=` (#395): the language's own page (with the route's languages and
+ * whether English has it, for hreflang and the English link), or English
+ * because the language confirmed it lacks the route.
+ */
+export type TranslationOutcome =
+  | { lang: TranslatedLang; state: 'translated'; englishHasRoute: boolean; englishIndexable: boolean; languages: string[] }
+  /** `noRelease`: BetterMan has no release in the language for this distro, which says nothing about the distro. */
+  | { lang: TranslatedLang; state: 'missing'; noRelease: boolean }
 export type ManPageLookup =
-  | ({ kind: 'page'; distro: Distro; data: ManPageResponse; related: RelatedResponse['items'] } & Served)
-  | ({ distro: Distro } & ManAlias & Served)
+  | ({ kind: 'page'; distro: Distro; data: ManPageResponse; related: RelatedResponse['items']; translation?: TranslationOutcome } & Served)
+  | ({ distro: Distro; lang?: TranslatedLang } & ManAlias & Served)
   | ({ kind: 'miss' } & Served)
 
-type Missing = { missing: true; servedRelease: string | null }
+type Missing = { missing: true; servedRelease: string | null; translatedReleaseId?: string | null }
 
 async function orMissing<T>(lookup: Promise<T>): Promise<T | Missing> {
   try {
     return await lookup
   } catch (err) {
-    if (err instanceof FastApiError && err.status === 404) return { missing: true, servedRelease: err.datasetReleaseId ?? null }
+    if (err instanceof FastApiError && err.status === 404) return { missing: true, servedRelease: err.datasetReleaseId ?? null, ...(err.translatedReleaseId !== undefined ? { translatedReleaseId: err.translatedReleaseId } : {}) }
     throw err
   }
 }
@@ -49,8 +63,54 @@ function isMissing(value: unknown): value is Missing {
   return Boolean(value && typeof value === 'object' && (value as Missing).missing === true)
 }
 
-/** A page, the alias target when the URL is a `.so` stub, or a miss. */
+/**
+ * With `?lang=` (#395), the language's own page or `.so` alias first, for the
+ * URL's distro only. When the language lacks the route, English answers with
+ * `translation.state = 'missing'`. A translated answer is shared under the
+ * proxy's key only when the key's translated release gave it; the route still
+ * compares `servedRelease` with the English key, which the cache key also holds.
+ */
 export async function lookupManPage(opts: {
+  name: string
+  section: string
+  distro: Distro
+  pkg?: string
+  release?: string
+  translation?: TranslationInfo | null
+}): Promise<ManPageLookup> {
+  const { translation } = opts
+  if (!translation || opts.pkg) return await lookupEnglishPage(opts)
+  const english = opts.release ?? null
+  const { name, section } = opts
+  const lang = translation.lang
+  // One read answers both cases. Without a known key, or on an error, English
+  // renders privately and claims nothing about the language.
+  const result = english && translation.known
+    ? await fetchTranslatedMan({ distro: opts.distro, name, section, lang, english, translated: translation.datasetReleaseId }).catch(() => null)
+    : null
+  if (!result) {
+    const fallback = await lookupEnglishPage(opts)
+    return { ...fallback, servedRelease: null }
+  }
+  const keyed = translationAnsweredBy(result, english, translation.datasetReleaseId)
+  const served = keyed ? english : null
+  if (result.kind === 'not_found') return { kind: 'miss', servedRelease: served }
+  if (result.kind === 'alias') return { ...result, distro: opts.distro, lang, servedRelease: served }
+  const pageRelease = servedRelease(result)
+  const related = await fetchRelated({ distro: opts.distro, name, section, lang, ...(pageRelease ? { release: pageRelease } : {}) })
+    .catch((): RelatedResponse => ({ items: [] }))
+  const answer = result.translation
+  return {
+    kind: 'page', distro: opts.distro, data: result.data, related: related.items,
+    translation: answer.state === 'translated'
+      ? { lang, state: 'translated', englishHasRoute: answer.englishHasRoute === true, englishIndexable: answer.englishIndexable === true, languages: answer.languages ?? [lang] }
+      : { lang, state: 'missing', noRelease: answer.translatedReleaseId === null },
+    servedRelease: keyed && servedRelease(related) === pageRelease ? served : null,
+  }
+}
+
+/** A page, the alias target when the URL is a `.so` stub, or a miss. */
+async function lookupEnglishPage(opts: {
   name: string
   section: string
   distro: Distro
@@ -83,14 +143,22 @@ export async function lookupManPage(opts: {
 export type ResolvedManName = ({ distro: Distro; result: ManResolveResult } | { result: null }) & Served
 
 /** A name's only section, alias target or section picker; `result: null` for a miss. */
-export async function resolveManName(name: string, distro: Distro, release?: string): Promise<ResolvedManName> {
+export async function resolveManName(name: string, distro: Distro, release?: string, translation?: TranslationInfo | null): Promise<ResolvedManName> {
+  // `?lang=` (#395) resolves in the language first, then English. Its answer
+  // fallback must confirm a miss in the key's translated release; otherwise it is private.
+  const lang = translation?.known && release ? { lang: translation.lang, translated: translation.datasetReleaseId } : undefined
   const resolved = await orMissing(
     withDistroFallback(distro, (activeDistro) =>
-      fetchManResolve({ distro: activeDistro, name: name.toLowerCase(), ...(release ? { release } : {}) }),
+      fetchManResolve({ distro: activeDistro, name: name.toLowerCase(), ...(release ? { release } : {}), ...(lang ? { lang } : {}) }),
     ),
   )
-  if (isMissing(resolved)) return { result: null, servedRelease: resolved.servedRelease }
-  return { distro: resolved.distro, result: resolved.data, servedRelease: servedRelease(resolved.data) }
+  const value = isMissing(resolved)
+    ? { datasetReleaseId: resolved.servedRelease, translatedReleaseId: resolved.translatedReleaseId }
+    : resolved.data
+  const served = !translation ? servedRelease(value)
+    : lang && nameResolutionAnsweredBy(value, release ?? null, lang.translated) ? release ?? null : null
+  if (isMissing(resolved)) return { result: null, servedRelease: served }
+  return { distro: resolved.distro, result: resolved.data, servedRelease: served }
 }
 
 export type ManMiss = {

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fixture": "scripts/perf-fixture.ts v15: saturated two- and three-letter bare clusters, all-letter recall and full brief",
+  "fixture": "scripts/perf-fixture.ts v16: saturated bare clusters plus translated/manual fallback scenarios",
   "profile": "Chromium, 1280x800, device scale 1, light, reduced motion, 4x CPU, no network throttle, cold browser, warm data cache; median of 5; 5s observation after network idle",
   "metrics": {
     "home.htmlBytes": {
@@ -117,7 +117,7 @@
       "absolute": 0
     },
     "search.jsGzipBytes": {
-      "baseline": 171890,
+      "baseline": 171940,
       "relative": 0.02,
       "absolute": 0
     },
@@ -721,16 +721,76 @@
       "baseline": 0,
       "relative": 0,
       "absolute": 0
+    },
+    "manTranslated.htmlBytes": {
+      "baseline": 53620,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "manTranslated.calls": {
+      "baseline": 4,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manTranslated.documents": {
+      "baseline": 17,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manTranslated.storageReads": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manTranslated.jsBytes": {
+      "baseline": 65327,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "manTranslated.jsGzipBytes": {
+      "baseline": 21638,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "manTranslationFallback.htmlBytes": {
+      "baseline": 56457,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "manTranslationFallback.calls": {
+      "baseline": 4,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manTranslationFallback.documents": {
+      "baseline": 29,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manTranslationFallback.storageReads": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manTranslationFallback.jsBytes": {
+      "baseline": 65506,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "manTranslationFallback.jsGzipBytes": {
+      "baseline": 21644,
+      "relative": 0.02,
+      "absolute": 0
     }
   },
-  "sourceHead": "a67c36ed74fa210f84ea5425132285990ed5cb5e",
+  "sourceHead": "aaca3bd519ed73a86fbcc5718ade7f09a52e4c37",
   "toolchain": {
-    "next": "16.4.2",
+    "next": "16.4.3",
     "playwright": "1.64.1",
     "convex": "1.48.0",
     "convexTest": "0.0.60"
   },
-  "fixtureSha256": "391ff0ce498a6bcbafe4170882d80a4406afbbb771421e56e7b17e9f0d23efa9",
+  "fixtureSha256": "de81e551eeed9da7a3b6a894ba2f5da1c32c8e7190a3cb8529cff99e19745462",
   "labBaseline": {
     "platform": "linux",
     "samplesPerRoute": 3,

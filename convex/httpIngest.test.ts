@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { internal } from "./_generated/api";
 import { ingestClientError } from "./_ingestErrors";
 import schema from "./schema";
+import { INGEST_CONTRACT } from "./ingestContract";
 
 const modules = import.meta.glob("./**/*.ts");
 type Harness = TestConvex<typeof schema>;
@@ -21,7 +22,7 @@ const page = {
 function post(t: Harness, path: string, body: string) {
   return t.fetch(path, {
     method: "POST",
-    headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
+    headers: { authorization: "Bearer test-secret", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
     body,
   });
 }

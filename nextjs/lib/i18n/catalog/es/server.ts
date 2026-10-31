@@ -233,4 +233,12 @@ export const server: Record<ServerKey, string> = {
   '{link} with this explainer on GitHub.': '{link} con esta explicación en GitHub.',
   'Kernel Interfaces': 'Interfaces del núcleo',
   'Miscellaneous Information': 'Información miscelánea',
+  '{language} translation shipped by {distro} in {package}.': 'Traducción ({language}) distribuida por {distro} en {package}.',
+  '{language} translation shipped by {distro}.': 'Traducción ({language}) distribuida por {distro}.',
+  'English original': 'Original en inglés',
+  '{distro} ships no {language} translation of {citation}; this is the English page.': '{distro} no incluye una traducción ({language}) de {citation}; esta es la página en inglés.',
+  'BetterMan has no {language} manuals for {distro} yet; this is the English page.': 'BetterMan aún no tiene páginas de manual ({language}) para {distro}; esta es la página en inglés.',
+  'This translation documents {documented}; English documents {english}.': 'Esta traducción documenta la versión {documented}; la página en inglés documenta la versión {english}.',
+  'Not in this translation:': 'Opciones que faltan en esta traducción:',
+  '{count, plural, other {and # more}}': '{count, plural, one {y # más} other {y # más}}',
 }

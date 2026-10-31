@@ -110,10 +110,12 @@ print(json.dumps({
 }))
 PY
 
+# Every release-contract route needs the deployed contract's exact version
+# (GET /ingest/contract); any other version is 409 INGEST_CONTRACT_MISMATCH.
 curl -fsS \
   -H "Authorization: Bearer ${CONVEX_INGEST_SECRET}" \
   -H "Content-Type: application/json" \
-  -H "X-BetterMan-Ingest-Contract: 7" \
+  -H "X-BetterMan-Ingest-Contract: 9" \
   --data @promote.json \
   "${CONVEX_HTTP_URL%/}/ingest/promote"
 ```

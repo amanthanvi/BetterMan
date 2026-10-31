@@ -253,6 +253,17 @@ export const server = [
   'Kernel Interfaces',
   // Translator note: BSD manuals title section 7 "Miscellaneous Information" rather than "Miscellany".
   'Miscellaneous Information',
+  // Translator note: B3 (#395). {language} is a language's own name (e.g. Deutsch); {distro} and {package} are names. The page itself is the translated manual.
+  '{language} translation shipped by {distro} in {package}.',
+  '{language} translation shipped by {distro}.',
+  'English original',
+  '{distro} ships no {language} translation of {citation}; this is the English page.',
+  'BetterMan has no {language} manuals for {distro} yet; this is the English page.',
+  // Translator note: B3 drift note (#395). {documented} and {english} are release numbers such as 1.34.
+  'This translation documents {documented}; English documents {english}.',
+  // Translator note: followed by a list of command-line flags.
+  'Not in this translation:',
+  '{count, plural, other {and # more}}',
 ] as const
 
 export type ServerKey = (typeof server)[number]

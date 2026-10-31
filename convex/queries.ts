@@ -12,6 +12,7 @@ import { nameEditDistance } from "./_searchTypos";
 import { query, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { distroValidator, publicStageCompatibilityValidator } from "./schema";
+import { DEFAULT_LOCALE, isContentLocale } from "./_locales";
 import {
   deterministicSnippet,
   DISTRO_ORDER,
@@ -26,6 +27,7 @@ import {
   sectionSortKey,
 } from "./lib";
 import {
+  activePointer,
   activeRelease,
   pageByNameAndSection,
   requireActiveRelease,
@@ -94,13 +96,22 @@ export const getInfo = query({
   args: {
     stage: publicStageCompatibilityValidator,
     distro: distroValidator,
+    // A content language (#395): adds `translation`, that language's release (null without one).
+    locale: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // English always; with a translated `locale` (#395) the language's release
+    // too, so a translated page view costs this one call.
+    const locale = args.locale ?? DEFAULT_LOCALE;
+    const translation = locale !== DEFAULT_LOCALE && isContentLocale(locale)
+      ? { translation: { locale, datasetReleaseId: (await activePointer(ctx, { stage: PUBLIC_DATASET_STAGE, distro: args.distro, locale }))?.datasetReleaseId ?? null } }
+      : {};
     const release = await activeRelease(ctx, { stage: PUBLIC_DATASET_STAGE, distro: args.distro });
     if (!release) {
       return {
+        ...translation,
         datasetReleaseId: "uninitialized",
-        locale: "en",
+        locale: DEFAULT_LOCALE,
         distro: args.distro,
         pageCount: 0,
         lastUpdated: new Date().toISOString(),
@@ -108,6 +119,7 @@ export const getInfo = query({
     }
 
     return {
+      ...translation,
       datasetReleaseId: release.datasetReleaseId,
       locale: release.locale,
       distro: release.distro,
@@ -229,6 +241,8 @@ export const resolveManByName = query({
   args: {
     distro: distroValidator,
     name: v.string(),
+    // `?lang=` (#395): the language's sections first, then English's.
+    locale: v.optional(v.string()),
   },
   returns: v.union(
     v.object({
@@ -238,17 +252,34 @@ export const resolveManByName = query({
       title: v.string(),
       description: v.string(),
       datasetReleaseId: v.string(),
+      translatedReleaseId: v.optional(v.union(v.string(), v.null())),
     }),
     v.object({
       kind: v.literal("ambiguous"),
       indexable: v.boolean(),
       options: v.array(v.object({ section: v.string(), title: v.string(), description: v.string() })),
       datasetReleaseId: v.string(),
+      translatedReleaseId: v.optional(v.union(v.string(), v.null())),
     }),
-    v.object({ kind: v.literal("alias"), name: v.string(), section: v.string(), pkg: v.optional(v.string()), datasetReleaseId: v.string() }),
-    v.object({ kind: v.literal("not_found"), datasetReleaseId: v.string() }),
+    v.object({ kind: v.literal("alias"), name: v.string(), section: v.string(), pkg: v.optional(v.string()), datasetReleaseId: v.string(), translatedReleaseId: v.optional(v.union(v.string(), v.null())) }),
+    v.object({ kind: v.literal("not_found"), datasetReleaseId: v.string(), translatedReleaseId: v.optional(v.union(v.string(), v.null())) }),
   ),
   handler: async (ctx, args) => {
+    const name = normalizeName(args.name);
+    const translated = args.locale && args.locale !== DEFAULT_LOCALE && isContentLocale(args.locale)
+      ? await activePointer(ctx, { stage: PUBLIC_DATASET_STAGE, distro: args.distro, locale: args.locale })
+      : null;
+    if (translated) {
+      const translatedRelease = await ctx.db.get(translated.releaseId);
+      if (!translatedRelease) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
+      const found = await resolvePageByName(ctx, { release: translatedRelease, name });
+      if (found.kind !== "not_found") {
+        const datasetReleaseId = translated.datasetReleaseId;
+        if (found.kind !== "page") return { ...found, ...(found.kind === "ambiguous" ? { indexable: false } : {}), datasetReleaseId };
+        const { section, title, description } = found.page;
+        return { kind: "page" as const, name: found.page.name, section, title, description, datasetReleaseId };
+      }
+    }
     const release = await requireActiveRelease(ctx, {
       stage: PUBLIC_DATASET_STAGE,
       distro: args.distro,
@@ -256,9 +287,10 @@ export const resolveManByName = query({
     const result = await resolvePageByName(ctx, { release, name: normalizeName(args.name) });
     // The release this answer comes from, so a caller caching it under an expected release can check.
     const { datasetReleaseId } = release;
-    if (result.kind !== "page") return { ...result, datasetReleaseId };
-    const { name, section, title, description } = result.page;
-    return { kind: "page" as const, name, section, title, description, datasetReleaseId };
+    const provenance = args.locale !== undefined ? { translatedReleaseId: translated?.datasetReleaseId ?? null } : {};
+    if (result.kind !== "page") return { ...result, datasetReleaseId, ...provenance };
+    const { section, title, description } = result.page;
+    return { kind: "page" as const, name: result.page.name, section, title, description, datasetReleaseId, ...provenance };
   },
 });
 
@@ -392,15 +424,22 @@ export const getRelated = query({
     section: v.string(),
     /** A missing page answers `{ items: [], found: false, datasetReleaseId }` instead of null. */
     reportRelease: v.optional(v.boolean()),
+    /** A translated release's links (#395); English when absent. */
+    locale: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const name = normalizeName(args.name);
     const section = normalizeSection(args.section);
-    const release = await requireActiveRelease(ctx, {
+    const locale = args.locale ?? DEFAULT_LOCALE;
+    if (!isContentLocale(locale)) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
+    // `?lang=` (#395): the translated page's links, else English's, as the page itself resolves.
+    const translated = locale === DEFAULT_LOCALE ? null : await activePointer(ctx, { stage: PUBLIC_DATASET_STAGE, distro: args.distro, locale });
+    const translatedPage = translated ? await pageByNameAndSection(ctx, { releaseId: translated.releaseId, name, section }) : null;
+    const release = translatedPage ? { _id: translated!.releaseId, datasetReleaseId: translated!.datasetReleaseId } : await requireActiveRelease(ctx, {
       stage: PUBLIC_DATASET_STAGE,
       distro: args.distro,
     });
-    const page = await pageByNameAndSection(ctx, {
+    const page = translatedPage ?? await pageByNameAndSection(ctx, {
       releaseId: release._id,
       name,
       section,
@@ -864,6 +903,11 @@ async function topHit(ctx: QueryCtx, pageId: Id<"manPages">) {
   return { name: page.name, section: page.section, example, flags, package: page.sourcePackage ?? null };
 }
 
+
+type SearchArgs = {
+  distro: Distro; q: string; section: string | null; limit: number; offset: number; brief?: boolean; locale?: string;
+};
+
 export const search = query({
   args: {
     stage: publicStageCompatibilityValidator,
@@ -874,6 +918,8 @@ export const search = query({
     offset: v.number(),
     // The search page and home ask for the first hit's brief; type-ahead does not.
     brief: v.optional(v.boolean()),
+    // The reader's content language (#395): its translated pages first, then English.
+    locale: v.optional(v.string()),
   },
   returns: v.object({
     query: v.string(),
@@ -882,13 +928,73 @@ export const search = query({
       highlights: v.array(v.string()),
       match: v.optional(v.union(v.literal("option"), v.literal("task"))), anchorId: v.optional(v.string()), symbolKind: v.optional(symbolInput.fields.kind),
       taskPhrase: v.optional(v.string()),
+      // Set on hits from a translated release; English hits omit it.
+      locale: v.optional(v.string()),
     })),
     suggestions: v.array(v.string()),
     correctedQuery: v.optional(v.string()),
     hasMore: v.boolean(), nextOffset: v.union(v.number(), v.null()),
     top: v.optional(topHitValidator),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<LocalizedSearchResponse> => {
+    if (!args.q.trim()) return { query: "", results: [], suggestions: [], hasMore: false, nextOffset: null };
+    const locale = args.locale ?? DEFAULT_LOCALE;
+    const english = await requireActiveRelease(ctx, { stage: PUBLIC_DATASET_STAGE, distro: args.distro });
+    const translated = locale !== DEFAULT_LOCALE && isContentLocale(locale)
+      ? await activeRelease(ctx, { stage: PUBLIC_DATASET_STAGE, distro: args.distro, locale })
+      : null;
+    if (!translated) return await searchRelease(ctx, args, english);
+    return await searchWithFallback(ctx, args, translated, english);
+  },
+});
+
+type SearchResponse = Awaited<ReturnType<typeof searchRelease>>;
+type LocalizedHit = SearchResponse["results"][number] & { locale?: string };
+type LocalizedSearchResponse = Omit<Extract<SearchResponse, { top?: unknown }>, "results"> & { results: LocalizedHit[] };
+
+/**
+ * Translated hits first, then English for every route the translation lacks
+ * (#395). The first page holds at most `limit - 1` translated hits, so English
+ * always advances and later offsets page through English alone, skipping the
+ * routes the translation answered. Reads: one translated search plus English's.
+ */
+async function searchWithFallback(
+  ctx: QueryCtx, args: SearchArgs, translated: Doc<"datasetReleases">, english: Doc<"datasetReleases">,
+): Promise<LocalizedSearchResponse> {
+  const limit = boundedInt(args.limit, 1, MAX_SEARCH_LIMIT);
+  const offset = boundedInt(args.offset, 0, MAX_SEARCH_OFFSET);
+  const local = await searchRelease(ctx, { ...args, offset: 0, limit: Math.max(1, limit - 1), brief: false }, translated);
+  // English's top hit leads only when the language has no hit on this page.
+  const englishLeads = offset > 0 || local.results.length === 0;
+  const fallback = await searchRelease(ctx, { ...args, offset, limit, brief: Boolean(args.brief) && englishLeads }, english);
+  const key = (hit: { name: string; section: string }) => `${hit.name}\u0000${hit.section}`;
+  const answered = new Set(local.results.map(key));
+  const results: LocalizedHit[] = offset === 0
+    ? local.results.slice(0, Math.max(1, limit - 1)).map((hit) => ({ ...hit, locale: translated.locale }))
+    : [];
+  let consumed = 0;
+  for (const hit of fallback.results) {
+    if (results.length >= limit) break;
+    consumed++;
+    if (!answered.has(key(hit))) results.push(hit);
+  }
+  const moreEnglish = consumed < fallback.results.length || fallback.hasMore;
+  const nextOffset = moreEnglish && offset + consumed < MAX_SEARCH_OFFSET
+    ? Math.min(offset + Math.max(consumed, 1), MAX_SEARCH_OFFSET) : null;
+  const suggestions = results.length ? [] : fallback.suggestions;
+  const englishFirst = results[0] && results[0].locale === undefined;
+  return {
+    query: fallback.query,
+    results,
+    suggestions,
+    ...(suggestions.length && fallback.correctedQuery ? { correctedQuery: fallback.correctedQuery } : {}),
+    hasMore: nextOffset !== null,
+    nextOffset,
+    ...(args.brief ? { top: englishFirst ? fallback.top ?? null : null } : {}),
+  };
+}
+
+async function searchRelease(ctx: QueryCtx, args: SearchArgs, release: Doc<"datasetReleases">) {
     const queryText = args.q.trim().replace(/\s+/g, " ").slice(0, 120).trim();
     if (!queryText) {
       return { query: queryText, results: [], suggestions: [], hasMore: false, nextOffset: null };
@@ -897,10 +1003,6 @@ export const search = query({
     const section = citation ? normalizeSection(citation[2]) : args.section ? normalizeSection(args.section) : null;
     const limit = boundedInt(args.limit, 1, MAX_SEARCH_LIMIT);
     const offset = boundedInt(args.offset, 0, MAX_SEARCH_OFFSET);
-    const release = await requireActiveRelease(ctx, {
-      stage: PUBLIC_DATASET_STAGE,
-      distro: args.distro,
-    });
     const takeCount = Math.min(offset + limit + 5, MAX_SEARCH_OFFSET + MAX_SEARCH_LIMIT);
 
     // Single flags retain the existing 43-read first page / 303-read maximum.
@@ -1026,8 +1128,7 @@ export const search = query({
       nextOffset,
       ...(args.brief ? { top } : {}),
     };
-  },
-});
+}
 
 export const suggest = query({
   args: {

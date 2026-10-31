@@ -5,13 +5,14 @@ import { internal } from "./_generated/api";
 import { decodeOptions } from "./_derivedEncoding";
 import { hydrateCachedSignature, persistOptionSignature, persistPackedSignature } from "./_derivedInputs";
 import schema from "./schema";
+import { INGEST_CONTRACT } from "./ingestContract";
 const modules = import.meta.glob("./**/*.ts");
 afterEach(() => vi.unstubAllEnvs());
 it("persists all upload-time signature options and extractor provenance independently of the search cap", async () => {
   vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
   const t = convexTest(schema, modules);
   await t.mutation(internal.ingest.createRelease, { datasetReleaseId: "upload-signature", distro: "debian", locale: "en", imageRef: "test", imageDigest: "test", ingestedAt: "2026-10-28T00:00:00Z", pageCount: 1, aliasCount: 0, licenseCount: 0, sectionTotals: [{ section: "1", total: 1 }], licensePackages: [], packageManifest: null });
-  const response = await t.fetch("/ingest/pages/storage", { method: "POST", headers: { authorization: "Bearer test-secret", "Content-Type": "application/json" }, body: JSON.stringify({ datasetReleaseId: "upload-signature", pages: [{ externalId: "large", name: "large", section: "1", sitemapPage: 0, title: "large", description: "signature fixture", sourcePath: "large.1", sourcePackage: "large", sourcePackageVersion: "1", contentSha256: "source", hasParseWarnings: false, extractorVersion: 1, doc: { blocks: [], toc: [] }, synopsis: null, options: Array.from({ length: 450 }, (_, i) => ({ anchorId: `f${i}`, flags: `--flag-${i}`, description: "option" })), seeAlso: null, searchText: "", snippetText: "", links: [] }] }) });
+  const response = await t.fetch("/ingest/pages/storage", { method: "POST", headers: { authorization: "Bearer test-secret", "Content-Type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) }, body: JSON.stringify({ datasetReleaseId: "upload-signature", pages: [{ externalId: "large", name: "large", section: "1", sitemapPage: 0, title: "large", description: "signature fixture", sourcePath: "large.1", sourcePackage: "large", sourcePackageVersion: "1", contentSha256: "source", hasParseWarnings: false, extractorVersion: 1, doc: { blocks: [], toc: [] }, synopsis: null, options: Array.from({ length: 450 }, (_, i) => ({ anchorId: `f${i}`, flags: `--flag-${i}`, description: "option" })), seeAlso: null, searchText: "", snippetText: "", links: [] }] }) });
   expect(response.status).toBe(200);
   await t.run(async (ctx) => {
     const pages = await ctx.db.query("manPages").take(1);
@@ -31,7 +32,7 @@ it.each(["/ingest/pages", "/ingest/pages/storage"])("isolates invalid and oversi
   const datasetReleaseId = "signature-failures";
   await t.mutation(internal.ingest.createRelease, { datasetReleaseId, distro: "debian", locale: "en", imageRef: "test", imageDigest: "test", ingestedAt: "2026-10-28T00:00:00Z", pageCount: 3, aliasCount: 0, licenseCount: 0, sectionTotals: [{ section: "1", total: 3 }], licensePackages: [], packageManifest: null });
   const page = (name: string, options: unknown) => ({ externalId: name, name, section: "1", sitemapPage: 0, title: name, description: "signature fixture", sourcePath: `${name}.1`, sourcePackage: "fixture", sourcePackageVersion: "1", contentSha256: name, hasParseWarnings: false, extractorVersion: 1, doc: { blocks: [], toc: [] }, synopsis: null, options, seeAlso: null, searchText: "", snippetText: "", links: [] });
-  const response = await t.fetch(route, { method: "POST", headers: { authorization: "Bearer test-secret", "Content-Type": "application/json" }, body: JSON.stringify({ datasetReleaseId, pages: [
+  const response = await t.fetch(route, { method: "POST", headers: { authorization: "Bearer test-secret", "Content-Type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) }, body: JSON.stringify({ datasetReleaseId, pages: [
     page("good", [{ anchorId: "f", flags: "--flag", description: "valid option" }]),
     page("invalid", { not: "an option array" }),
     page("oversized", Array.from({ length: 1800 }, (_, i) => ({ anchorId: `f${i}${"x".repeat(400)}`, flags: `--flag-${i}`, description: "valid, unusually long anchor" }))),
