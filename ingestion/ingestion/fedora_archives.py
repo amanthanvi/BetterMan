@@ -173,10 +173,20 @@ def catalog(root: Path, pins_path: Path):
 def notice_path(path):
     uncompressed = re.sub(r"\.(?:gz|xz|bz2|zst)$", "", path, flags=re.I)
     if re.search(
-        r"\.(?:py[coi]?|[cm]?[jt]sx?|c|cc|cpp|cxx|h|hh|hpp|hxx|go|rs|rb|pl|"
-        r"pm|sh|bash|zsh|fish|lua|php|java|class|jar|o|a|so(?:\.[0-9]+)*|"
-        r"dll|exe|bin|wasm|mo|json|ya?ml|toml|pdf|png|jpe?g|gif|ico|svg|"
-        r"woff2?|[ot]tf|zip|tar)$",
+        r"\.(?:py[coi]|class|jar|o|a|so(?:\.[0-9]+)*|dll|exe|bin|wasm|mo|pdf|png|"
+        r"jpe?g|gif|ico|svg|woff2?|[ot]tf|zip|tar)$",
+        uncompressed,
+        re.I,
+    ):
+        return False
+    # Upstream notices are named in capitals (LICENSE.CC, COPYING.LUA); there the suffix
+    # names the license, not a language. Lower-case code such as license.py stays out.
+    named_notice = re.search(
+        r"(?:^|/)(?:COPYING|COPYRIGHT|LICEN[CS]ES?|NOTICES?)\.[^/]+$", uncompressed
+    )
+    if not named_notice and re.search(
+        r"\.(?:py|[cm]?[jt]sx?|c|cc|cpp|cxx|h|hh|hpp|hxx|go|rs|rb|pl|"
+        r"pm|sh|bash|zsh|fish|lua|php|java|json|ya?ml|toml)$",
         uncompressed,
         re.I,
     ):
@@ -206,7 +216,7 @@ def notice_path(path):
             )
             and bool(
                 re.search(
-                    r"(?:^|/)(?:copying|copyright|licen[cs]e|notice)(?:[._-][^/]*)?$",
+                    r"(?:^|/)(?:copying|copyright|licen[cs]es?|notices?)(?:[._-][^/]*)?$",
                     path,
                     re.I,
                 )

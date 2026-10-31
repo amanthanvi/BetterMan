@@ -547,3 +547,21 @@ def test_directory_notice_fanout_has_a_cumulative_visit_limit(notice_workspace, 
 )
 def test_notice_predicate_rejects_binary_documents_and_shell_code(path):
     assert not fedora_archives.notice_path(path)
+
+
+@pytest.mark.parametrize(
+    "path,expected",
+    [
+        ("usr/share/licenses/bluebird-gtk2-theme/LICENSE.CC", True),
+        ("usr/share/doc/scummvm/COPYING.LUA", True),
+        ("usr/share/doc/hxtools/LICENSES.txt", True),
+        ("usr/share/doc/librdkafka/LICENSES-en.txt", True),
+        ("usr/lib/python3.14/site-packages/pip/_internal/license.py", False),
+        ("usr/share/reuse/resources/licenses.json", False),
+        ("usr/lib/python3.14/site-packages/hatchling/licenses/parse.py", False),
+    ],
+)
+def test_capitalised_notice_names_keep_their_license_suffix(path, expected):
+    from ingestion.fedora_archives import notice_path
+
+    assert notice_path(path) is expected
