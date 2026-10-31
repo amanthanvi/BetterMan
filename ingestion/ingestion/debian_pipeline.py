@@ -30,6 +30,7 @@ from ingestion.debian_indexes import (
     debian_cdn_enabled,
     download,
     popularity,
+    private_registrations,
 )
 from ingestion.debian_licenses import copyright_text
 from ingestion.ingest_runner import (
@@ -44,7 +45,7 @@ from ingestion.ingest_runner import (
 )
 from ingestion.man_scan import ManSource
 from ingestion.mandoc_parser import is_so_stub
-from ingestion.package_set import FULL_PACKAGE_SET_DEBIAN
+from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO, FULL_PACKAGE_SET_DEBIAN
 from ingestion.util import sha256_hex
 
 log = logging.getLogger("betterman.ingestion")
@@ -100,15 +101,30 @@ def sample_packages(packages: list[Package], limit: int | None) -> list[Package]
 
 
 class Workspace:
-    def __init__(self, root: Path, *, limit: int | None = None):
+    distro = "debian"
+
+    def __init__(self, root: Path, *, limit: int | None = None, distro="debian"):
+        self.distro = distro
+        if distro not in {"debian", "ubuntu"}:
+            raise ValueError("Unsupported deb archive distro")
+        pins_path = PINS if distro == "debian" else PINS.with_name("ubuntu-noble.json")
         self.root = root.resolve()
         self.root.mkdir(parents=True, exist_ok=True)
-        fingerprint = sha256_hex(PINS.read_bytes())
+        fingerprint = sha256_hex(pins_path.read_bytes())
         marker = self.root / "pins.sha256"
         if marker.exists() and marker.read_text() != fingerprint:
             raise ValueError("Workspace belongs to different archive pins")
         marker.write_text(fingerprint)
-        self.pins, self.all_manual_packages = catalog(self.root / "indexes")
+        self.pins, self.all_manual_packages = (
+            catalog(self.root / "indexes")
+            if distro == "debian"
+            else catalog(self.root / "indexes", pins_path)
+        )
+        self.registrations = (
+            private_registrations(PINS.parent / self.pins["privateManuals"])
+            if self.pins.get("privateManuals")
+            else private_registrations()
+        )
         self.packages = sample_packages(self.all_manual_packages, limit)
         selection_path = self.root / "selection.json"
         if selection_path.exists():
@@ -130,10 +146,10 @@ class Workspace:
             self.available[n]
             # G++ and vim-tiny have alternatives but no manual-owned archive
             # paths. Their control scripts still participate in a full election.
-            for n in sorted(set(FULL_PACKAGE_SET_DEBIAN) | {"g++", "vim-tiny"})
+            for n in sorted(set(FULL_PACKAGE_SET_BY_DISTRO[distro]) | {"g++", "vim-tiny"})
             if n in self.available and n not in selected_names
         ]
-        self.store = ArchiveStore(self.root)
+        self.store = ArchiveStore(self.root, registrations=self.registrations)
         self.owners = sqlite3.connect(self.root / "indexes" / "owners.sqlite3")
         self.acquired = {p.name for p in self.available.values() if self.store.complete(p)}
         # Never resolve through stale/incomplete extraction records. Keep the
@@ -151,15 +167,19 @@ class Workspace:
         self.downloaded = 0
         self.archive_fallbacks = 0
         self.cache = Path(
-            os.environ.get("BETTERMAN_DEBIAN_CACHE_DIR", str(self.root.parent / "archives"))
+            os.environ.get(
+                f"BETTERMAN_{distro.upper()}_CACHE_DIR", str(self.root.parent / "archives")
+            )
         ).resolve()
         self.cache.mkdir(parents=True, exist_ok=True)
-        self.cache_limit = int(os.environ.get("BETTERMAN_DEBIAN_CACHE_MAX_BYTES", str(2 * 1024**3)))
+        self.cache_limit = int(
+            os.environ.get(f"BETTERMAN_{distro.upper()}_CACHE_MAX_BYTES", str(2 * 1024**3))
+        )
         if not 1024**3 <= self.cache_limit <= 2 * 1024**3:
             raise ValueError("Archive cache limit must be between 1 GiB and 2 GiB")
 
         extracted_limit = int(
-            os.environ.get("BETTERMAN_DEBIAN_EXTRACTED_MAX_BYTES", str(4 * 1024**3))
+            os.environ.get(f"BETTERMAN_{distro.upper()}_EXTRACTED_MAX_BYTES", str(4 * 1024**3))
         )
         if not 16 * 1024**2 <= extracted_limit <= 4 * 1024**3:
             raise ValueError("Extracted-file disk limit must be between 16 MiB and 4 GiB")
@@ -173,7 +193,8 @@ class Workspace:
         if package.size > 1024 * 1024 * 1024:
             raise ValueError("Package exceeds 1 GiB archive budget")
         require_job_budget("acquisition")
-        cdn = debian_cdn_enabled()
+        cdn = debian_cdn_enabled() if self.distro == "debian" else True
+        cdn_base = self.pins.get("cdn", "https://deb.debian.org/debian")
         snapshot_url = f"{self.pins['mirror']}/{package.filename}"
         fallbacks = []
         with self._disk_lock:
@@ -188,7 +209,7 @@ class Workspace:
         try:
             started = time.monotonic()
             size = download(
-                f"https://deb.debian.org/debian/{package.filename}" if cdn else snapshot_url,
+                f"{cdn_base}/{package.filename}" if cdn else snapshot_url,
                 archive,
                 package.sha256,
                 package.size,
@@ -197,7 +218,13 @@ class Workspace:
             )
             downloaded = time.monotonic()
             archive.touch()
-            entries = extract(archive, package, self.root, quota=self.extracted_quota)
+            entries = extract(
+                archive,
+                package,
+                self.root,
+                quota=self.extracted_quota,
+                registrations=getattr(self, "registrations", None),
+            )
             extracted = time.monotonic()
         finally:
             with self._disk_lock:
@@ -283,7 +310,11 @@ class Workspace:
             try:
                 return self.store.resolve(package, path, **kwargs)
             except MissingSource as exc:
-                repair = SOURCE_TARGETS.get(exc.path)
+                repair = (
+                    SOURCE_TARGETS
+                    if self.distro == "debian"
+                    else self.pins.get("sourceTargets", {})
+                ).get(exc.path)
                 if repair:
                     owner, target = repair
                     if owner not in self.acquired:
@@ -367,28 +398,25 @@ class Workspace:
             package,
         )
 
-    def require_command_owners(self):
+    def command_owner_allowances(self):
         from ingestion.ingest_runner import _COMMAND_PAGE_EXCLUSIONS, _COMMAND_PAGES
 
         providers = {}
         for package in self.available.values():
             for name in package.provides:
                 providers.setdefault(name, set()).add(package.name)
-        actual = {}
-        # Use the finalized publication map, including elected alias targets.
-        for (name, section), owner in sorted(
-            self.published_route_owners.items(),
-            key=lambda row: (row[0][0], len(row[0][1]), row[0][1]),
-        ):
-            actual.setdefault((name, section[:1]), owner)
         result = {}
-        for requested in FULL_PACKAGE_SET_DEBIAN:
-            if requested not in _COMMAND_PAGES or requested in _COMMAND_PAGE_EXCLUSIONS["debian"]:
+        for requested in FULL_PACKAGE_SET_BY_DISTRO[self.distro]:
+            if requested not in _COMMAND_PAGES or requested in _COMMAND_PAGE_EXCLUSIONS.get(
+                self.distro, {}
+            ):
                 continue
             name, section = _COMMAND_PAGES[requested]
-            if (name, section) not in actual:
-                continue  # The existing missing-page gate reports absent routes.
-            expected_package = ARCHIVE_COMMAND_PACKAGES.get(requested, requested)
+            expected_package = (
+                ARCHIVE_COMMAND_PACKAGES.get(requested, requested)
+                if self.distro == "debian"
+                else requested
+            )
             allowed, pending = set(), [expected_package]
             # Match apt_install's explicit companion request; mount is not a util-linux dependency.
             if requested == "util-linux":
@@ -404,7 +432,27 @@ class Workspace:
                     # Only a virtual name is satisfied by its providers; a real
                     # package (make) is not by another that Provides it (make-guile).
                     pending.extend(providers.get(current, ()))
-            owner = actual[(name, section)]
+            result[requested] = ((name, section), expected_package, allowed)
+        return result
+
+    def require_command_owners(self):
+        actual = {}
+        # Use the finalized publication map, including elected alias targets.
+        for (name, section), owner in sorted(
+            self.published_route_owners.items(),
+            key=lambda row: (row[0][0], len(row[0][1]), row[0][1]),
+        ):
+            actual.setdefault((name, section[:1]), owner)
+        result = {}
+        for requested, (
+            route,
+            expected_package,
+            allowed,
+        ) in self.command_owner_allowances().items():
+            if route not in actual:
+                continue  # The existing missing-page gate reports absent routes.
+            name, section = route
+            owner = actual[route]
             if owner not in allowed:
                 raise RuntimeError(
                     f"publish blocked: wrong command-page owner for {name}({section}): "
@@ -414,6 +462,14 @@ class Workspace:
         return result
 
     def sources(self):
+        curated_owners = (
+            {}
+            if self.distro == "debian"
+            else {
+                route: allowed
+                for route, _expected, allowed in self.command_owner_allowances().values()
+            }
+        )
         selected = {p.name for p in self.packages} | {
             p.name for p in getattr(self, "curated_packages", [])
         }
@@ -548,6 +604,7 @@ class Workspace:
                     name,
                     section,
                     spelling != name,
+                    pkg not in curated_owners.get((name, section[:1]), {pkg}),
                     priority is not None,
                     *(
                         self.alternative_rank(pkg, priority, name, section)
@@ -577,6 +634,7 @@ class Workspace:
                 name,
                 section,
                 MAN_PATH.fullmatch(path)[1] != name,
+                pkg not in curated_owners.get((name, section[:1]), {pkg}),
                 False,
                 False,
                 -self.available[pkg].installed,
@@ -630,18 +688,19 @@ class ArchiveParseInput:
     section: str
     raw: bytes
     version: str
+    distro: str = "debian"
 
 
 def parse_archive_source(item: ArchiveParseInput) -> _PageRow:
     page = _parse_source(
         ManSource(Path(item.path), item.name, item.section),
         item.raw,
-        _ParseContext("debian", "amd64", {}, {}),
+        _ParseContext(item.distro, "amd64", {}, {}),
     )
     return dataclasses.replace(
         page,
         page_id=sha256_hex(
-            f"debian/{item.package}/{item.path}/{item.name}/{item.section}".encode()
+            f"{item.distro}/{item.package}/{item.path}/{item.name}/{item.section}".encode()
         )[:32],
         source_package=item.package,
         source_package_version=item.version,
@@ -654,7 +713,9 @@ def parse_workspace(workspace: Workspace, spool: _PageSpool, *, workers=4):
             require_job_budget("parsing")
             if alias:
                 continue
-            yield ArchiveParseInput(pkg, path, name, section, raw, workspace.available[pkg].version)
+            yield ArchiveParseInput(
+                pkg, path, name, section, raw, workspace.available[pkg].version, workspace.distro
+            )
 
     providers = set()
     seen_routes = set()
@@ -719,9 +780,9 @@ def parse_workspace(workspace: Workspace, spool: _PageSpool, *, workers=4):
     return providers, failed
 
 
-def benchmark(root: Path, *, limit=2000, workers=4) -> dict:
+def benchmark(root: Path, *, limit=2000, workers=4, distro="debian") -> dict:
     started = time.monotonic()
-    workspace = Workspace(root, limit=limit)
+    workspace = Workspace(root, limit=limit, distro=distro)
     indexed = time.monotonic()
     workspace.acquire(workers=workers)
     acquired = time.monotonic()

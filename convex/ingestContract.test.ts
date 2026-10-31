@@ -25,7 +25,8 @@ it("advertises the ingest contract only when the ingest secret matches", async (
   });
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({
-    schemaVersion: INGEST_CONTRACT.schemaVersion,
+    schemaVersion: 8,
+    acquisitions: [...INGEST_CONTRACT.acquisitions],
     functions: [...INGEST_CONTRACT.functions],
     declarationCounts: [...INGEST_CONTRACT.declarationCounts],
     activatePending: INGEST_CONTRACT.activatePending,
@@ -42,7 +43,7 @@ it("does not advertise the ingest contract when the secret is unset", async () =
   expect(response.status).toBe(503);
 });
 
-it.each([undefined, "5", "6", "8"])("rejects promotion from a workflow with contract header %s before touching pointers", async (version) => {
+it.each([undefined, "5", "6", "7", "9"])("rejects promotion from a workflow with contract header %s before touching pointers", async (version) => {
   vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
   const t = convexTest(schema, modules);
   const response = await t.fetch("/ingest/promote", {
@@ -67,7 +68,7 @@ it("accepts the deployed promotion contract while keeping CAS optional for manua
   expect(await response.json()).toEqual({ promoted: [] });
 });
 
-it("combines package batches, symbols, signatures, optional arguments and providers and demand policy in one v7 sealed release", async () => {
+it("combines package batches, symbols, signatures, optional arguments and providers and demand policy in one v8 sealed release", async () => {
   vi.useFakeTimers();
   vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
   try {

@@ -250,6 +250,14 @@ def test_require_deployed_contract_accepts_extra_functions(monkeypatch):
     ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
 
 
+@pytest.mark.parametrize("version", [7, 9])
+def test_b2_rejects_v7_and_v9_even_with_all_required_capabilities(monkeypatch, version):
+    body = _contract_body(schemaVersion=version)
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(return_value=BytesIO(body)))
+    with pytest.raises(ConvexContractError, match=f"schemaVersion {version} != 8"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
 @pytest.mark.parametrize(
     ("payload", "match"),
     [

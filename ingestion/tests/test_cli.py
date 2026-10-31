@@ -336,3 +336,20 @@ def test_default_debian_keeps_curated_docker_path(monkeypatch):
     monkeypatch.setattr(cli, "run_ingest_container", lambda **kw: calls.append(kw) or 0)
     assert cli.main(["ingest", "--distro", "debian"]) == 0
     assert calls == [{"sample": False, "activate": True, "distro": "debian"}]
+
+
+@pytest.mark.parametrize("extra", [[], ["--sample"], ["--no-activate"], ["--in-container"]])
+def test_ubuntu_full_cannot_target_prod(monkeypatch, extra):
+    monkeypatch.setenv("BETTERMAN_DATASET_STAGE", "prod")
+    monkeypatch.setattr(cli, "_run_ingest", lambda **kw: pytest.fail("must fail before work"))
+    assert cli.main(["ingest", "--distro", "ubuntu", "--ubuntu-full", *extra]) == 2
+
+
+def test_ubuntu_full_selects_native_archive_pipeline(monkeypatch):
+    monkeypatch.setenv("BETTERMAN_DATASET_STAGE", "staging")
+    calls = []
+    monkeypatch.setattr(cli, "_run_ingest", lambda **kw: calls.append(kw) or 0)
+    assert cli.main(["ingest", "--distro", "ubuntu", "--ubuntu-full"]) == 0
+    assert calls[0]["archive_mode"] and calls[0]["distro"] == "ubuntu"
+    with pytest.raises(SystemExit):
+        cli.main(["ingest", "--distro", "fedora", "--ubuntu-full"])

@@ -37,23 +37,25 @@ MAN_PATH = re.compile(
 
 
 @cache
-def private_registrations():
-    document = json.loads(PRIVATE_MANUALS_PATH.read_text())
+def private_registrations(path=PRIVATE_MANUALS_PATH):
+    document = json.loads(path.read_text())
     for entry in document["packages"].values():
         entry["paths"] = frozenset(entry["paths"])
     return document
 
 
-def manual_registered(package: str, path: str) -> bool:
+def manual_registered(package: str, path: str, registrations=None) -> bool:
     if not MAN_PATH.fullmatch(path):
         return False
     if path.startswith(("usr/share/man/", "usr/lib/jvm/")):
         return True
-    return path in private_registrations()["packages"].get(package, {}).get("paths", ())
+    registrations = private_registrations() if registrations is None else registrations
+    return path in registrations["packages"].get(package, {}).get("paths", ())
 
 
-def require_private_package(package):
-    registration = private_registrations()["packages"].get(package.name)
+def require_private_package(package, registrations=None):
+    registrations = private_registrations() if registrations is None else registrations
+    registration = registrations["packages"].get(package.name)
     if registration and package.sha256 != registration["archiveSha256"]:
         raise ValueError("Private-manual registrations do not match pinned package SHA256")
 
@@ -69,7 +71,13 @@ class DebianRedirects(HTTPRedirectHandler):
         if (
             after.scheme != "https"
             or after.hostname != before.hostname
-            or after.hostname not in {"deb.debian.org", "snapshot.debian.org"}
+            or after.hostname
+            not in {
+                "deb.debian.org",
+                "snapshot.debian.org",
+                "archive.ubuntu.com",
+                "snapshot.ubuntu.com",
+            }
             or after.netloc not in {before.hostname, f"{before.hostname}:443"}
         ):
             raise HTTPError(req.full_url, code, "HTTPS redirect policy rejected", None, None)
@@ -108,7 +116,9 @@ class Package:
     def __post_init__(self):
         if not re.fullmatch(r"[a-z0-9][a-z0-9+.-]*", self.name) or not self.version.strip():
             raise ValueError("Invalid Debian package identity")
-        if safe_path(self.filename) != self.filename or not self.filename.startswith("pool/main/"):
+        if safe_path(self.filename) != self.filename or not self.filename.startswith(
+            ("pool/main/", "pool/universe/")
+        ):
             raise ValueError("Invalid Debian pool path")
         if not re.fullmatch(r"[a-f0-9]{64}", self.sha256) or self.size <= 0:
             raise ValueError("Invalid Debian package digest/size")
@@ -141,9 +151,7 @@ def _download_once(url: str, destination: Path, digest: str, size: int | None = 
             urlopen(
                 Request(
                     url,
-                    headers={
-                        "User-Agent": "BetterMan-ingestion/1 (+mailto:aman_thanvi@outlook.com)"
-                    },
+                    headers={"User-Agent": "BetterMan-ingestion/1"},
                 ),
                 timeout=90,
             ) as response,
@@ -286,8 +294,19 @@ def popularity(pins: dict) -> dict[str, int]:
         return {name: int(count) for name, count in (line.split() for line in stream)}
 
 
-def catalog(root: Path) -> tuple[dict, list[Package]]:
-    pins = json.loads(PINS.read_text())
+def catalog(root: Path, pins_path=None) -> tuple[dict, list[Package]]:
+    pins = json.loads((pins_path or PINS).read_text())
+    if (
+        pins.get("privateManualsSha256")
+        and hashlib.sha256((PINS.parent / pins["privateManuals"]).read_bytes()).hexdigest()
+        != pins["privateManualsSha256"]
+    ):
+        raise ValueError("Pinned private-manual audit checksum mismatch")
+    registrations = (
+        private_registrations(PINS.parent / pins["privateManuals"])
+        if pins.get("privateManuals")
+        else private_registrations()
+    )
     mirror = pins["mirror"].rstrip("/")
     suite = f"dists/{pins['suite']}"
     release = root / "Release"
@@ -296,7 +315,7 @@ def catalog(root: Path) -> tuple[dict, list[Package]]:
     selected = set()
     owners = sqlite3.connect(root / "owners.sqlite3")
     owners.execute("CREATE TABLE IF NOT EXISTS owners(path TEXT,pkg TEXT,PRIMARY KEY(path,pkg))")
-    for name in ["main/Contents-all.gz", "main/Contents-amd64.gz"]:
+    for name in pins.get("contents", ["main/Contents-all.gz", "main/Contents-amd64.gz"]):
         digest, size = checksums[name]
         path = root / name.replace("/", "-")
         download(f"{mirror}/{suite}/{name}", path, digest, size)
@@ -306,7 +325,7 @@ def catalog(root: Path) -> tuple[dict, list[Package]]:
                 if len(fields) == 2 and MAN_PATH.fullmatch(fields[0]):
                     if (
                         not fields[0].startswith(("usr/share/man/", "usr/lib/jvm/"))
-                        and pins["releaseSha256"] != private_registrations()["releaseSha256"]
+                        and pins["releaseSha256"] != registrations["releaseSha256"]
                     ):
                         raise ValueError(
                             "Private-manual registrations need an audit for this Release"
@@ -314,7 +333,7 @@ def catalog(root: Path) -> tuple[dict, list[Package]]:
                     selected.update(
                         owner.rsplit("/", 1)[-1]
                         for owner in fields[1].split(",")
-                        if manual_registered(owner.rsplit("/", 1)[-1], fields[0])
+                        if manual_registered(owner.rsplit("/", 1)[-1], fields[0], registrations)
                     )
                 if len(fields) == 2 and (
                     MAN_PATH.fullmatch(fields[0])
@@ -330,10 +349,24 @@ def catalog(root: Path) -> tuple[dict, list[Package]]:
                     )
         owners.commit()
     owners.close()
-    name = "main/binary-amd64/Packages.xz"
-    digest, size = checksums[name]
     path = root / "Packages.xz"
-    download(f"{mirror}/{suite}/{name}", path, digest, size)
+    components = pins.get("components", ["main"])
+    if components == ["main"]:
+        name = "main/binary-amd64/Packages.xz"
+        digest, size = checksums[name]
+        download(f"{mirror}/{suite}/{name}", path, digest, size)
+    else:
+        # Concatenated xz streams preserve each Release-verified component.
+        import shutil
+
+        with path.open("wb") as output:
+            for component in components:
+                name = f"{component}/binary-amd64/Packages.xz"
+                digest, size = checksums[name]
+                part = root / f"{component}-Packages.xz"
+                download(f"{mirror}/{suite}/{name}", part, digest, size)
+                with part.open("rb") as source:
+                    shutil.copyfileobj(source, output)
     counts = popularity(pins)
     packages = []
     with lzma.open(path, "rt") as lines:
@@ -341,7 +374,9 @@ def catalog(root: Path) -> tuple[dict, list[Package]]:
             if record["Package"] not in selected:
                 continue
             filename = safe_path(record["Filename"])
-            if not filename.startswith("pool/main/") or not filename.endswith(".deb"):
+            if not filename.startswith(
+                tuple(f"pool/{c}/" for c in components)
+            ) or not filename.endswith(".deb"):
                 raise ValueError("Unexpected package pool path")
             packages.append(
                 Package(
@@ -355,8 +390,13 @@ def catalog(root: Path) -> tuple[dict, list[Package]]:
                 )
             )
     for package in packages:
-        require_private_package(package)
+        require_private_package(package, registrations)
     missing = selected - {package.name for package in packages}
+    # Ubuntu's unified Contents includes restricted/multiverse, deliberately
+    # outside this free-component lock. Only selected-component owners apply.
+    if pins.get("distro") == "ubuntu":
+        available = available_packages(root, counts)
+        missing.intersection_update(available)
     if missing:
         raise ValueError(f"Contents packages missing from Packages: {sorted(missing)[:10]}")
     return pins, sorted(packages, key=lambda package: (-package.installed, package.name))

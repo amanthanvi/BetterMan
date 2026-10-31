@@ -73,7 +73,7 @@ waits in the concurrency queue; omitting it only captures staging at job time.
 The partial map pins Debian; the other six distros still capture current
 verified staging unless you supply their inspected IDs too.
 
-The workflow checks contract v7, reads and verifies the staging ID through the
+The workflow checks contract v8, reads and verifies the staging ID through the
 authenticated promotion-source endpoint, fails the distro job if it differs
 from the supplied saved ID, and passes that saved ID as
 `expectedDatasetReleaseId: {"debian": "<saved-rollback-id>"}` with the required
@@ -91,6 +91,13 @@ The derived scheduler is called without force so failed derived work can resume
 while healthy completed work is deduplicated. An unready full-Debian source
 reports its readiness error before the hold check; wait for completed staging
 activation before retrying the pinned dispatch.
+
+A full Ubuntu release (`acquisition: "ubuntu-deb-extraction"`) rolls back the
+same way: prod activation refuses it with `409 FULL_UBUNTU_PROMOTION_HELD`, and
+the promotion dispatch uses `-f ubuntu_full_promote=true` with
+`expected_release_ids` pinning `ubuntu`. Each later full-archive family follows
+the same form (`FULL_<DISTRO>_PROMOTION_HELD`, `<distro>_full_promote`), and
+Debian's authorization never releases another distro's hold.
 `409 INGEST_CONTRACT_MISMATCH` requires matching workflow/Convex versions, never
 an unconditional retry. See [deploy recovery](multi-distro-ops.md#deploy-and-activation-recovery).
 

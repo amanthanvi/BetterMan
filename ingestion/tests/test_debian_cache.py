@@ -320,7 +320,7 @@ def test_redirect_policy_rejects_downgrades_unexpected_hosts_and_credentials(tar
         )
 
 
-def test_snapshot_same_host_https_redirect_and_contact_header(tmp_path, monkeypatch):
+def test_snapshot_same_host_https_redirect_and_neutral_header(tmp_path, monkeypatch):
     from urllib.request import Request
 
     target = "https://snapshot.debian.org/file/" + "a" * 40
@@ -335,7 +335,7 @@ def test_snapshot_same_host_https_redirect_and_contact_header(tmp_path, monkeypa
     assert request.full_url == target
 
     def fetch(req, **_kwargs):
-        assert "mailto:aman_thanvi@outlook.com" in req.get_header("User-agent")
+        assert req.get_header("User-agent") == "BetterMan-ingestion/1"
         return io.BytesIO(b"x")
 
     monkeypatch.setattr(indexes, "urlopen", fetch)

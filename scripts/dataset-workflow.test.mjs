@@ -141,6 +141,50 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(rows, [])
         self.assertEqual((values['ingest'],values['promote']), ('false','false'))
 
+    def test_ubuntu_promotion_argument_requires_advertised_capability(self):
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        for distro in ['ubuntu', 'arch']:
+            for advertised in [False, True]:
+                self.contract.return_value['acquisitions'] = ['ubuntu-deb-extraction'] if advertised else []
+                def response(request, **kwargs):
+                    payload = json.loads(request.data)
+                    self.assertEqual('allowFullUbuntu' in payload, advertised)
+                    if advertised:
+                        self.assertFalse(payload['allowFullUbuntu'])
+                    return io.BytesIO(json.dumps({'promoted': [{'distro': distro, 'datasetReleaseId': 'release-' + distro}]}).encode())
+                with self.post_mock(response):
+                    self.assertEqual(w.promote(distro), 0)
+        os.environ['BETTERMAN_UBUNTU_FULL_PROMOTE_INPUT'] = 'true'
+        self.contract.return_value['acquisitions'] = []
+        with self.post_mock(lambda *a, **kw: self.fail('Unsupported authorization must not write')) as http:
+            self.assertEqual(w.promote('ubuntu'), 1)
+        http.assert_not_called()
+        self.assertIn('acquisition support', w.load('ubuntu')['error'])
+
+    def test_ubuntu_full_gates_are_independent_and_fail_closed(self):
+        self.contract.return_value['acquisitions'] = ['ubuntu-deb-extraction']
+        for event in ['schedule', 'workflow_dispatch']:
+            for enabled in [False, True]:
+                for allowed in [False, True]:
+                    _, rows = self.plan(BETTERMAN_WORKFLOW_EVENT=event,
+                        BETTERMAN_UBUNTU_FULL='1' if enabled else '',
+                        BETTERMAN_UBUNTU_FULL_INPUT='true' if enabled else 'false',
+                        BETTERMAN_UBUNTU_FULL_PROMOTE='1' if allowed else '',
+                        BETTERMAN_UBUNTU_FULL_PROMOTE_INPUT='false',
+                        BETTERMAN_DEBIAN_FULL='1', BETTERMAN_DEBIAN_FULL_INPUT='true',
+                        BETTERMAN_DEBIAN_FULL_PROMOTE='', BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT='false')
+                    row = next(r for r in rows if r['distro'] == 'ubuntu')
+                    self.assertEqual(row['full_ubuntu'], enabled)
+                    self.assertEqual(row['promote'], not enabled or allowed)
+                    self.assertFalse(next(r for r in rows if r['distro'] == 'debian')['promote'])
+        _, rows = self.plan(BETTERMAN_INGEST_SAMPLE='true', BETTERMAN_UBUNTU_FULL='1', BETTERMAN_UBUNTU_FULL_INPUT='true')
+        self.assertTrue(all(not r['full_ubuntu'] and not r['promote'] for r in rows))
+        self.plan(BETTERMAN_INGEST_SAMPLE='false', BETTERMAN_INGEST_ENABLED='false')
+        for reason in ['FULL_UBUNTU_PROMOTION_HELD', 'FULL_UBUNTU_TIER_REQUIRED']:
+            for returned_distro, release in [('ubuntu', 'release-ubuntu'), ('debian', 'release-ubuntu'), ('ubuntu', 'different')]:
+                with self.post_mock(lambda request, **kwargs: io.BytesIO(json.dumps({'promoted': [], 'skipped': [{'distro': returned_distro, 'datasetReleaseId': release, 'reason': reason}]}).encode())):
+                    self.assertEqual(w.promote('ubuntu'), 0 if returned_distro == 'ubuntu' and release == 'release-ubuntu' else 1)
+
     def test_full_debian_promotion_hold_and_explicit_recovery(self):
         os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
         self.source_ids['debian'] = 'full'
@@ -633,6 +677,12 @@ function assertWorkflowWiring(workflow) {
   assert.ok(!JSON.stringify(download).includes('secrets.'))
   assert.ok(!JSON.stringify(download).includes('--local-upload'))
   assert.match(download.steps.find(s => s.name === 'Acquire only; never create a Convex client').run, /--download-only$/)
+  for (const distro of ['ubuntu']) {
+    assert.equal(workflow.on.workflow_dispatch.inputs[`${distro}_full`].default, false)
+    assert.equal(workflow.on.workflow_dispatch.inputs[`${distro}_full_promote`].default, false)
+    assert.equal(workflow.env[`BETTERMAN_${distro.toUpperCase()}_FULL`], '${{ vars.BETTERMAN_' + distro.toUpperCase() + '_FULL }}')
+  }
+  assert.ok(Object.keys(workflow.on.workflow_dispatch.inputs).length <= 25)
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_full.default, false)
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_download_only.default, false)
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_full_promote.default, false)

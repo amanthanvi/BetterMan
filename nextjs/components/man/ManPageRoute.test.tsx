@@ -417,6 +417,20 @@ describe('UI language (docs/i18n.md)', () => {
     expect(explicit.head.noindex).toBe(false)
   })
 
+  it.each([true, false])('keeps localized page and picker canonicals behind indexability (%s)', async indexable => {
+    lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data: { ...data, page: { ...page, indexable } }, related: [], servedRelease: release.datasetReleaseId })
+    lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'ambiguous', indexable, options: [{ section: '1', description: 'command' }, { section: '3', description: 'library' }] }, servedRelease: release.datasetReleaseId })
+    for (const result of [
+      await pageProps(context({ name: 'tar', section: '1' }, { lang: 'de' }).ctx),
+      await nameProps(context({ name: 'tar' }, { lang: 'de' }).ctx),
+    ]) {
+      const { head } = propsOf(result) as { head: ManHeadData }
+      expect(head.noindex).toBe(true)
+      expect(head.canonical === null).toBe(!indexable)
+      if (head.canonical) expect(head.canonical).not.toContain('lang=')
+    }
+  })
+
   it('shows the switch with all six languages in production, where nothing is previewed', async () => {
     vi.stubEnv('BM_I18N_PREVIEW', '')
     const html = render(propsOf(await pageProps(context({ name: 'tar', section: '1' }).ctx)))
