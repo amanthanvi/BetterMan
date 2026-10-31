@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- FreeBSD ingestion: install the interpreter's `py3XX-sqlite3` package in the VM bootstrap. FreeBSD ships the sqlite3 module separately, and ingestion spools to SQLite since #431, so FreeBSD runs failed at import.
 - Analytics: production deploys build in GitHub Actions and upload prebuilt output, so they never received the Web Analytics configuration Vercel injects on its own builders, and the tracker stayed off after #480. The deploy script now passes the documented `/_vercel/insights` routes and `VERCEL_ENV=production` to the build.
 - Replace the paid browser analytics integration from #421 with production-only Vercel Web Analytics, sanitize absolute URLs before loading the tracker in a nonce/hash-authorized head bootstrap, preserve typed custom events and strict CSP, and remove the event relay and optional traffic export. C7 (#409) evidence restarts at this deploy; B4 tiers use popcon alone.
 - Operations (#388): Vercel Firewall bypass rules for anonymous GET/HEAD on plain-text manuals, `robots.txt`, the OpenSearch descriptor and suggestions are live; HTML stays challenged. The launch drafts now say `curl -L betterman.sh/tar.txt`, because the short URL redirects.
