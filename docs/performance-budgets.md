@@ -303,6 +303,10 @@ cold through the proxy: the German page with `lang="de"`, its note and its
 `noindex`. Both measure 4 calls and 1 storage read, at 17 and 29 documents.
 The German page carries a finished drift build and note. Its 17 documents
 include the drift read (the English pointer, the note and the build), within
-the existing ceiling of 18. The
+the tightened ceiling of 17 (previously 18). The
 fixture hash changed for these rows only; every existing baseline and
 tolerance is unchanged.
+
+The translated-language miss serving English (`manTranslationFallback`) measured
+**4 calls / 29 documents / 1 storage read** through the production proxy and
+renderer. Removing the translation sitemap pipeline adds no page-view reads.

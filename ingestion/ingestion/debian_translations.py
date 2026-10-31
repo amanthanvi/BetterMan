@@ -62,10 +62,6 @@ from ingestion.ingest_runner import (
 from ingestion.mandoc_parser import is_so_stub
 from ingestion.util import sha256_hex
 
-# Translated sitemap entries carry every language version of their route, so a
-# file holds fewer pages than English's 10,000: the web app serves one file per
-# sitemap page (`/sitemap-translations-<distro>.<lang>.<page>.xml`).
-TRANSLATION_SITEMAP_PAGE = 1000
 CONFLICT_POLICY = "most popcon installs, then package name, then path; others dropped"
 _COPYRIGHT_PATH = re.compile(r"^usr/share/doc/[^/]+/copyright(?:\.gz)?$")
 _TH = re.compile(rb"^[.']\s*TH[ \t]+(.*)$", re.MULTILINE)
@@ -260,12 +256,6 @@ class TranslationWorkspace(Workspace):
                 self.missing.append({"package": pkg, "path": path, "error": str(exc)})
 
 
-def translation_sitemap_pages(pages) -> dict[str, int]:
-    """Sitemap page per translated page, by name and section, 1,000 to a page."""
-    ordered = sorted(pages, key=lambda p: (p.name, p.section))
-    return {p.page_id: index // TRANSLATION_SITEMAP_PAGE + 1 for index, p in enumerate(ordered)}
-
-
 def _page_id(pkg: str, path: str, name: str, section: str) -> str:
     # Same formula as parse_archive_source; the path carries the language root.
     return sha256_hex(f"debian/{pkg}/{path}/{name}/{section}".encode())[:32]
@@ -434,7 +424,7 @@ def publish_translation(
                 "/ingest/license-packages",
                 {"datasetReleaseId": release_id, "batchIndex": index, "packages": batch},
             )
-        sitemap = translation_sitemap_pages(refs)
+        sitemap = dict.fromkeys((page.page_id for page in refs), 0)
 
         def payloads():
             for payload in _resolved_page_payloads(spool, refs, sitemap):

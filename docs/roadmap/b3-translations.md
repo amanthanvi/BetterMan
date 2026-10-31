@@ -148,7 +148,7 @@ are never alternate targets or advertised sitemaps.
 | `/man/gtar/1?lang=de` (a German `.so` alias) | Redirect to `/man/tar/1?lang=de`. Name-only URLs keep `?lang=` too. |
 | `?distro=ubuntu&lang=de` | English Ubuntu with "BetterMan has no Deutsch manuals for Ubuntu yet": no claim about what Ubuntu ships. The same wording shows on Debian until the German release is promoted. |
 | `/man/nur-de?lang=de` (name only) | Resolved in German first, then English, and redirected with `?lang=` kept. |
-| `/man/tar/1` | Unchanged. No alternates in the HTML (see sitemaps). |
+| `/man/tar/1` | Unchanged. No alternates in the HTML. |
 
 **One read.** The proxy's `getInfo` with `locale` returns English and the
 language's release in one call (cached per distro and language for a minute,
@@ -162,7 +162,10 @@ indexable, and the eligible English alternate. `getRelated` with `locale`
 resolves the same way. The data cache stores a translated answer only when the
 key's releases gave it: the language's release for its own page, and English
 plus the same confirmed miss for the fallback, so a release mismatch renders
-privately as it does for English.
+privately as it does for English. Name-only English fallbacks additionally name
+the translated pointer that confirmed the miss (`translatedReleaseId`, null
+when absent). Both data and CDN caches require that pointer to match their key;
+the name-resolution data-cache namespace is v2 to discard earlier unproven answers.
 
 **Search.** `search` takes `locale`. The language's hits come first (at most
 `limit − 1` on the first page, marked `locale`, linking to `?lang=`), then
@@ -171,13 +174,9 @@ through English by the server's `nextOffset`. English computes its top hit only
 when no translated hit can lead. A language without a release, or an unknown
 code, searches English unchanged.
 
-**Sitemaps.** Translated URLs are noindex. New translated releases declare zero
-indexable pages and put every page on sitemap page zero, so no translated
-sitemap is advertised. Legacy translated releases also advertise zero sitemap
-pages. The bounded legacy chunk reader remains available, but the public
-sitemap route returns 404 for an unadvertised page. The defensive XML serializer
-emits only confirmed indexable English URLs and English/x-default links, never
-localized URLs or an English route that does not exist.
+Translated URLs remain noindex and add nothing to sitemaps. Translation
+sitemap queries, reads, routes, rewrites, and XML generation have been removed.
+The sitemap index reads only the existing English releases and concepts.
 
 ### Read budget
 
@@ -186,7 +185,7 @@ localized URLs or an English route that does not exist.
 | Page view | Calls | Documents | Storage reads |
 | --- | ---: | ---: | ---: |
 | English man page (unchanged) | 4 | 26 | 1 |
-| Translated page with its drift note (`manTranslated`) | 4 | 18 | 1 |
+| Translated page with its drift note (`manTranslated`) | 4 | 17 | 1 |
 | Missing translation, English fallback (`manTranslationFallback`) | 4 | 29 | 1 |
 
 A translated page reads no derived summary or generated brief (both are
@@ -242,5 +241,5 @@ The owner signs off on measured staging cost first. The lead dispatches
 each language's staging release (`maintenance:measureReleaseBatch` per table),
 then authorize a promotion-only dispatch for that one language with
 `debian_translations_promote`, `debian_full_promote` and the signed-off
-`expected_release_id`, which Convex checks as the compare-and-swap expectation. Serving (`?lang=`, search, sitemaps, hreflang) and
+`expected_release_id`, which Convex checks as the compare-and-swap expectation. Serving (`?lang=`, search, hreflang) and
 the drift note are documented above.

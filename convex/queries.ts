@@ -11,7 +11,7 @@ import { nameEditDistance } from "./_searchTypos";
 import { query, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { distroValidator, publicStageCompatibilityValidator } from "./schema";
-import { CONTENT_LOCALES, DEFAULT_LOCALE, isContentLocale } from "./_locales";
+import { DEFAULT_LOCALE, isContentLocale } from "./_locales";
 import {
   deterministicSnippet,
   DISTRO_ORDER,
@@ -239,15 +239,17 @@ export const resolveManByName = query({
       title: v.string(),
       description: v.string(),
       datasetReleaseId: v.string(),
+      translatedReleaseId: v.optional(v.union(v.string(), v.null())),
     }),
     v.object({
       kind: v.literal("ambiguous"),
       indexable: v.boolean(),
       options: v.array(v.object({ section: v.string(), title: v.string(), description: v.string() })),
       datasetReleaseId: v.string(),
+      translatedReleaseId: v.optional(v.union(v.string(), v.null())),
     }),
-    v.object({ kind: v.literal("alias"), name: v.string(), section: v.string(), pkg: v.optional(v.string()), datasetReleaseId: v.string() }),
-    v.object({ kind: v.literal("not_found"), datasetReleaseId: v.string() }),
+    v.object({ kind: v.literal("alias"), name: v.string(), section: v.string(), pkg: v.optional(v.string()), datasetReleaseId: v.string(), translatedReleaseId: v.optional(v.union(v.string(), v.null())) }),
+    v.object({ kind: v.literal("not_found"), datasetReleaseId: v.string(), translatedReleaseId: v.optional(v.union(v.string(), v.null())) }),
   ),
   handler: async (ctx, args) => {
     const name = normalizeName(args.name);
@@ -272,9 +274,10 @@ export const resolveManByName = query({
     const result = await resolvePageByName(ctx, { release, name: normalizeName(args.name) });
     // The release this answer comes from, so a caller caching it under an expected release can check.
     const { datasetReleaseId } = release;
-    if (result.kind !== "page") return { ...result, datasetReleaseId };
+    const provenance = args.locale !== undefined ? { translatedReleaseId: translated?.datasetReleaseId ?? null } : {};
+    if (result.kind !== "page") return { ...result, datasetReleaseId, ...provenance };
     const { section, title, description } = result.page;
-    return { kind: "page" as const, name: result.page.name, section, title, description, datasetReleaseId };
+    return { kind: "page" as const, name: result.page.name, section, title, description, datasetReleaseId, ...provenance };
   },
 });
 
@@ -1242,80 +1245,6 @@ export const listSitemapPageChunk = query({
       datasetReleaseId: release.datasetReleaseId,
       items: result.page.filter((page) => pageIsIndexable(release, page)).map((page) => ({ name: page.name, section: page.section })),
       page: args.page,
-      isDone: result.isDone,
-      continueCursor: result.continueCursor,
-    };
-  },
-});
-
-// Translated sitemaps (#395): one file set per active translated release.
-const TRANSLATION_SITEMAP_ITEMS = 200;
-
-export const listTranslationSeoReleases = query({
-  args: {},
-  handler: async (ctx) => {
-    const items = [];
-    for (const distro of DISTROS) {
-      for (const locale of CONTENT_LOCALES) {
-        if (locale === DEFAULT_LOCALE) continue;
-        const release = await activeRelease(ctx, { stage: PUBLIC_DATASET_STAGE, distro, locale });
-        if (!release) continue;
-        // Localized URLs are noindex, so do not advertise translated sitemaps.
-        items.push({ distro, locale, datasetReleaseId: release.datasetReleaseId, ingestedAt: release.ingestedAt, pageCount: release.pageCount, sitemapPages: 0 });
-      }
-    }
-    return { items };
-  },
-});
-
-/**
- * One language's translated pages in name order, each with every language that
- * has the route in the same distro, English included, so the sitemap can list
- * each page's complete hreflang set. A 200-page chunk reads at most 14 release
- * documents, 200 pages and 6 lookups per page: about 1,400 documents.
- */
-export const listTranslationSitemapChunk = query({
-  args: {
-    distro: distroValidator,
-    locale: v.string(),
-    // The sitemap page (one file each); absent reads every page, in name order.
-    page: v.optional(v.number()),
-    paginationOpts: paginationOptsValidator,
-  },
-  handler: async (ctx, args) => {
-    if (!isContentLocale(args.locale) || args.locale === DEFAULT_LOCALE) return null;
-    const releases: Array<{ locale: string; release: Doc<"datasetReleases"> }> = [];
-    for (const locale of CONTENT_LOCALES) {
-      const release = await activeRelease(ctx, { stage: PUBLIC_DATASET_STAGE, distro: args.distro, locale });
-      if (release) releases.push({ locale, release });
-    }
-    const own = releases.find((item) => item.locale === args.locale)?.release;
-    if (!own) return null;
-    const paginationOpts = { ...args.paginationOpts, numItems: boundedInt(args.paginationOpts.numItems, 1, TRANSLATION_SITEMAP_ITEMS) };
-    const result = args.page === undefined
-      ? await ctx.db.query("manPages").withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", own._id)).paginate(paginationOpts)
-      : await ctx.db.query("manPages").withIndex("by_releaseId_and_sitemapPage_and_name", (q) => q.eq("releaseId", own._id).eq("sitemapPage", args.page!)).paginate(paginationOpts);
-    const items = [];
-    for (const page of result.page) {
-      const locales: string[] = [];
-      let englishIndexable = false;
-      for (const { locale, release } of releases) {
-        if (release._id === own._id) {
-          locales.push(locale);
-          continue;
-        }
-        const other = await pageByNameAndSection(ctx, { releaseId: release._id, name: page.name, section: page.section });
-        if (!other) continue;
-        locales.push(locale);
-        // Index by demand (#445) marks long-tail English pages noindex; never annotate those.
-        if (locale === DEFAULT_LOCALE) englishIndexable = pageIsIndexable(release, other);
-      }
-      items.push({ name: page.name, section: page.section, locales, englishIndexable });
-    }
-    return {
-      datasetReleaseId: own.datasetReleaseId,
-      releases: releases.map(({ locale, release }) => ({ locale, datasetReleaseId: release.datasetReleaseId })),
-      items,
       isDone: result.isDone,
       continueCursor: result.continueCursor,
     };

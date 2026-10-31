@@ -8,6 +8,7 @@ vi.mock('./api', async (importOriginal) => {
     FastApiError: actual.FastApiError,
     withDistroFallback: actual.withDistroFallback,
     servedRelease: actual.servedRelease,
+    nameResolutionAnsweredBy: actual.nameResolutionAnsweredBy,
     answeredBy: actual.answeredBy,
     translationAnsweredBy: actual.translationAnsweredBy,
     fetchTranslatedMan: mocks.fetchTranslatedMan,
@@ -22,7 +23,6 @@ vi.mock('./api', async (importOriginal) => {
 import { setLang, translatedLang } from './i18n/locales'
 import { MAN_LANGUAGES } from './manQuery'
 import { lookupManPage } from './manLookup'
-import { translationUrlset } from './translationSitemap'
 
 const page = (release: string, locale = 'en') => ({ kind: 'page', data: { page: { name: 'tar', section: '1', locale, datasetReleaseId: release } } })
 
@@ -96,25 +96,5 @@ describe('translated lookups', () => {
   it('keeps the language on a translated alias', async () => {
     mocks.fetchTranslatedMan.mockResolvedValue({ kind: 'alias', name: 'tar', section: '1', datasetReleaseId: 'de1', translation: { state: 'translated', locale: 'de', englishReleaseId: 'en1' } })
     expect(await lookup({ name: 'gtar' })).toMatchObject({ kind: 'alias', name: 'tar', lang: 'de', servedRelease: 'en1' })
-  })
-})
-
-describe('translation sitemaps', () => {
-  it('emits only confirmed indexable English URLs and never localized noindex URLs', () => {
-    const item = { name: 'tar', section: '1', locales: ['en', 'de', 'fr'], englishIndexable: true }
-    const xml = translationUrlset('https://betterman.sh', 'ubuntu', 'de', [item])
-    expect(xml).toContain('<loc>https://betterman.sh/man/tar/1?distro=ubuntu</loc>')
-    expect(xml).toContain('hreflang="en"')
-    expect(xml).toContain('hreflang="x-default"')
-    expect(xml).not.toContain('?lang=')
-    for (const blocked of [
-      { ...item, englishIndexable: false },
-      { ...item, englishIndexable: undefined },
-      { ...item, locales: ['de'] },
-    ]) {
-      const empty = translationUrlset('https://betterman.sh', 'debian', 'de', [blocked])
-      expect(empty).not.toContain('<loc>')
-      expect(empty).not.toContain('hreflang=')
-    }
   })
 })
