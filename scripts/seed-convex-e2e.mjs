@@ -52,7 +52,9 @@ function page({
     externalId: crypto.randomUUID(),
     name,
     section,
-    sitemapPage: 1,
+    sitemapPage: section === '3pm' ? 0 : 1,
+    indexable: section !== '3pm',
+    popularityScore: 0,
     title,
     description,
     sourcePath: `/e2e/${name}.${section}`,
@@ -305,6 +307,15 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
       { type: 'table', headers: ['Oct', 'Dec', 'Hex', 'Char'], rows: asciiRows },
     ],
   }))
+
+  // Retain one real legacy release shape to exercise rolling-deploy serving.
+  if (distro === 'macos') {
+    for (const page of pages) {
+      delete page.indexable
+      delete page.popularityScore
+      page.sitemapPage = 1
+    }
+  }
   const datasetReleaseId = `e2e-${distro}-${Date.now()}`
   const sectionTotals = Object.entries(
     pages.reduce((acc, p) => {
@@ -322,6 +333,7 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     ingestedAt: now,
     packageManifest: { packages: [] },
     pageCount: pages.length,
+    ...(distro === 'macos' ? {} : { indexablePageCount: pages.filter(p => p.indexable).length }),
     providerCount: 5,
     packageBatches: [],
     aliasCount: 3,

@@ -129,17 +129,27 @@ export const listCandidates = internalQuery({
   args: {
     stage: datasetStageValidator,
     distro: distroValidator,
-    section: v.string(),
+    section: v.union(v.string(), v.null()),
     cursor: v.union(v.string(), v.null()),
     limit: v.number(),
   },
+  returns: v.object({
+    items: v.array(v.object({
+      name: v.string(), section: v.string(), contentSha256: v.string(),
+      sourcePackage: v.union(v.string(), v.null()), indexable: v.union(v.boolean(), v.null()), popularityScore: v.number(),
+      hasRecord: v.boolean(), promptVersion: v.union(v.string(), v.null()),
+      tldrCommit: v.union(v.string(), v.null()), suppressed: v.array(generatedPartNameValidator),
+      flagUsageCurrent: v.boolean(),
+    })),
+    continueCursor: v.string(), isDone: v.boolean(),
+  }),
   handler: async (ctx, args) => {
     const release = await requireActiveRelease(ctx, args);
     const numItems = Math.max(1, Math.min(Math.floor(args.limit), GENERATED_LIMITS.candidatesPerPage));
     const result = await ctx.db
       .query("manPages")
       .withIndex("by_releaseId_and_section_and_name", (q) =>
-        q.eq("releaseId", release._id).eq("section", args.section),
+        args.section === null ? q.eq("releaseId", release._id) : q.eq("releaseId", release._id).eq("section", args.section),
       )
       .paginate({ cursor: args.cursor, numItems });
     const items = await Promise.all(result.page.map(async (page) => {
@@ -152,6 +162,8 @@ export const listCandidates = internalQuery({
         section: page.section,
         contentSha256: page.contentSha256,
         sourcePackage: page.sourcePackage ?? null,
+        indexable: release.indexablePageCount === undefined ? null : page.indexable === true,
+        popularityScore: page.popularityScore ?? 0,
         hasRecord: row !== null,
         promptVersion: row?.generated?.promptVersion ?? null,
         tldrCommit: row?.tldrCommit ?? row?.tldr?.commit ?? null,

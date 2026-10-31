@@ -28,7 +28,7 @@ it('preserves case-specific requests through metadata and content cache argument
 })
 
 
-it('uses v5 to discard cached responses without provider identity and robots data', async () => {
+it('uses v7 to discard cached responses without combined demand/provider robots data', async () => {
   await fetchManByNameAndSectionOrAlias({ distro: 'debian', name: 'tar', section: '1' })
-  expect(mocks.keys.at(-1)).toContain('v5')
+  expect(mocks.keys.at(-1)).toContain('v7')
 })

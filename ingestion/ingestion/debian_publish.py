@@ -26,6 +26,7 @@ from ingestion.ingest_runner import (
     _upload_worker_count,
 )
 from ingestion.package_set import FULL_PACKAGE_SET_DEBIAN
+from ingestion.popularity import PopularityPolicy
 
 
 def ingest_debian(
@@ -107,7 +108,10 @@ def publish_workspace(
         for package in published_packages:
             require_job_budget("copyright collection")
             licenses[package.name] = copyright_text(workspace, package.name)
+        policy = PopularityPolicy.load()
+        sitemap = _build_sitemap_page_map(pages=canonical, policy=policy)
         manifest = {
+            "indexPolicy": policy.provenance(),
             "acquisition": workspace.pins["acquisition"],
             "imageRef": workspace.pins["mirror"],
             "imageDigest": workspace.pins["releaseSha256"],
@@ -159,6 +163,7 @@ def publish_workspace(
                 "ingestedAt": iso_utc_now(),
                 "packageManifest": manifest,
                 "pageCount": len(canonical),
+                "indexablePageCount": sum(value > 0 for value in sitemap.values()),
                 "providerCount": len(providers) + len(workspace.alias_providers),
                 "aliasCount": len(workspace.aliases),
                 "licenseCount": len(licenses),
@@ -182,16 +187,16 @@ def publish_workspace(
                 "/ingest/license-packages",
                 {"datasetReleaseId": release_id, "batchIndex": index, "packages": batch},
             )
-        sitemap = _build_sitemap_page_map(pages=canonical)
-        sitemap.update({page_id: 1 for page_id in providers})
+        sitemap.update({page_id: 0 for page_id in providers})
         workspace.timings["declarationSeconds"] = time.monotonic() - declaration_started
         _log("deb_declarations_complete", seconds=workspace.timings["declarationSeconds"])
 
         def payloads():
-            for payload in _resolved_page_payloads(spool, canonical, sitemap):
+            for payload in _resolved_page_payloads(spool, canonical, sitemap, policy=policy):
                 require_job_budget("page upload")
                 if payload["externalId"] in providers:
                     payload["providerOnly"] = True
+                    payload["indexable"] = False
                 yield payload
 
         upload_started = time.monotonic()

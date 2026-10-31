@@ -530,3 +530,15 @@ it('passes explicit package selection through the page API', async () => {
   expect(response.status).toBe(200)
   expect(apiMocks.fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'shared', section: '1', pkg: 'alternate' })
 })
+
+it.each([true, false, undefined])('keeps legacy JSON indexing and marks only explicit long-tail payloads noindex: %s', async indexable => {
+  apiMocks.fetchManByNameAndSectionOrAlias.mockResolvedValue({ kind: 'page', data: { page: { indexable }, content: {}, variants: [] } })
+  apiMocks.fetchManMetaByNameAndSection.mockResolvedValue({ page: { indexable } })
+  for (const handler of [GET, HEAD]) {
+    for (const path of [['v1', 'man', 'tail', '3'], ['v1', 'man', 'tail', '3', 'meta']]) {
+      const res = await handler(request(`/api/${path.join('/')}`), context(path))
+      expect(res.status).toBe(200)
+      expect(res.headers.get('x-robots-tag')).toBe(indexable === false ? 'noindex' : null)
+    }
+  }
+})

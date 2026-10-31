@@ -9,6 +9,7 @@ import ManNameRoute, { getServerSideProps as nameProps } from '../../pages/man/[
 import ManPageRoute, { config, getServerSideProps as pageProps } from '../../pages/man/[name]/[section]'
 import { holdBack, releaseHeld } from '../../lib/i18n/testing'
 import { encodeReleaseHeader } from '../../lib/manRelease'
+import { ManHeadTags, type ManHeadData } from './ManHead'
 
 process.env.BM_RELEASE_TOKEN = 'test-release-token'
 
@@ -157,6 +158,20 @@ it('turns off the Next runtime, so the page is plain HTML', () => {
   expect(config).toMatchObject({ unstable_runtimeJS: false })
 })
 
+it.each([undefined, true, false])('renders robots from the existing page tier (%s) without another lookup', async (indexable) => {
+  lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data: { ...data, page: { ...page, indexable } }, related: [], servedRelease: release.datasetReleaseId })
+  const { ctx, res } = context({ name: 'tar', section: '1' })
+  const result = await pageProps(ctx)
+  const { head } = propsOf(result) as { head: ManHeadData }
+  const html = renderToStaticMarkup(<ManHeadTags {...head} />)
+  expect(html.includes('<meta name="robots" content="noindex"/>')).toBe(indexable === false)
+  expect(res.headers['x-robots-tag']).toBe(indexable === false ? 'noindex' : undefined)
+  expect(html.includes('<link rel="canonical" href="http://localhost:3000/man/tar/1"/>')).toBe(indexable !== false)
+  expect(lookup.lookupManPage).toHaveBeenCalledTimes(1)
+  expect(lookup.manMiss).not.toHaveBeenCalled()
+  expect(res.headers['cdn-cache-control']).toBe('public, s-maxage=3600, stale-while-revalidate=86400')
+})
+
 describe('/man/<name>/<section>', () => {
   it('renders from the URL and the release only: a cookie changes nothing', async () => {
     const plain = context({ name: 'tar', section: '1' })
@@ -187,9 +202,10 @@ describe('/man/<name>/<section>', () => {
   })
 
   it('does not share a page served from another release than its key', async () => {
-    lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data: { ...data, page: { ...page, datasetReleaseId: '2026-10-29+debian' } }, related: [], servedRelease: '2026-10-29+debian' })
+    lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data: { ...data, page: { ...page, datasetReleaseId: '2026-10-29+debian', indexable: false } }, related: [], servedRelease: '2026-10-29+debian' })
     const { ctx, res } = context({ name: 'tar', section: '1' })
-    await pageProps(ctx)
+    const result = await pageProps(ctx)
+    expect(propsOf(result)).toMatchObject({ head: { noindex: true } })
     expect(res.headers['cache-control']).toBe('private, no-store')
   })
 
@@ -211,6 +227,8 @@ describe('/man/<name>/<section>', () => {
     const html = renderToStaticMarkup(ManPageRoute(propsOf(result) as Parameters<typeof ManPageRoute>[0]))
     expect(html).toContain('No manual entry for ta in section 9')
     expect(html).not.toContain('data-bm-manual')
+    const { head } = propsOf(result) as { head: ManHeadData }
+    expect(renderToStaticMarkup(<ManHeadTags {...head} />)).toContain('<meta name="robots" content="noindex"/>')
 
     lookup.manMiss.mockImplementation(async (opts: object) => ({ ...opts, suggestions: [], distros: [], limited: true, answeredByKey: true }))
     const limited = context({ name: 'ta', section: '9' })
@@ -271,6 +289,16 @@ describe('answers from another release than the proxy key', () => {
 })
 
 describe('/man/<name>', () => {
+  it.each([undefined, true, false])('renders picker robots from the existing name resolution (%s)', async indexable => {
+    lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'ambiguous', indexable, options: [{ section: '3', description: 'library' }, { section: '3pm', description: 'module' }] }, servedRelease: release.datasetReleaseId })
+    const result = await nameProps(context({ name: 'library' }).ctx)
+    const { head } = propsOf(result) as { head: ManHeadData }
+    expect(renderToStaticMarkup(<ManHeadTags {...head} />).includes('<meta name="robots" content="noindex"/>')).toBe(indexable === false)
+    expect(head.canonical === null).toBe(indexable === false)
+    expect(lookup.resolveManName).toHaveBeenCalledTimes(1)
+    expect(lookup.lookupManPage).not.toHaveBeenCalled()
+  })
+
   it('redirects to the only section and renders a picker for several', async () => {
     lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' }, servedRelease: '2026-10-28+debian' })
     await expect(nameProps(context({ name: 'tar' }, { distro: 'ubuntu' }).ctx)).resolves.toEqual({ redirect: { destination: '/man/tar/1?distro=ubuntu', permanent: false } })
@@ -302,13 +330,13 @@ describe('/man/<name>', () => {
 })
 
 
-it('renders package choices and canonicalizes distinct providers without discarding the index tier', async () => {
+it('renders package choices without canonical declarations for noindex pages', async () => {
   const providers = { packages: ['alternate', 'tar'], defaultPackage: 'tar', policy: 'debian' }
   for (const [pkg, expected] of [['alternate', '?distro=ubuntu&pkg=alternate'], ['tar', '?distro=ubuntu']]) {
     lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'ubuntu', data: { ...data, providers, page: { ...page, sourcePackage: pkg, indexable: false } }, related: [], servedRelease: release.datasetReleaseId })
     const { ctx, res } = context({ name: 'tar', section: '1' }, { distro: 'ubuntu', pkg })
     const result = await pageProps(ctx)
-    expect(propsOf(result)).toMatchObject({ head: { canonical: `http://localhost:3000/man/tar/1${expected}`, noindex: true } })
+    expect(propsOf(result)).toMatchObject({ head: { canonical: null, noindex: true, ogImage: { url: `http://localhost:3000/man/tar/1/og${expected}` } } })
     expect(res.headers['cdn-cache-control']).toContain('public')
     const html = renderToStaticMarkup(ManPageRoute(propsOf(result) as Parameters<typeof ManPageRoute>[0]))
     expect(html).toContain('Provided by')

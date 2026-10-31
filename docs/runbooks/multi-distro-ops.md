@@ -157,20 +157,21 @@ In BetterMan, the Arch ingest path handles this automatically (see `ingestion/in
 ## Deploy and activation recovery
 
 Do not deploy Convex during an `update-docs` / `update-dataset` run. Wait for all
-isolated distro matrix legs to finish before deploying. Contract **v6** retains
-v5 uploads and adds verified-source reads and CAS promotion. Both ingestion and
+isolated distro matrix legs to finish before deploying. Contract **v7** retains
+v5 uploads, v6 verified-source reads and CAS promotion, adding B4 demand fields.
+Both ingestion and
 every promotion path call `require_deployed_contract()` and reject either an
 older or newer version before writes. Promotion additionally requires
-`X-BetterMan-Ingest-Contract: 6`: new Convex rejects old in-flight workflow calls
+`X-BetterMan-Ingest-Contract: 7`: new Convex rejects old in-flight workflow calls
 without the header as `409 INGEST_CONTRACT_MISMATCH`, before moving pointers.
 New workflow code against v5 fails its preflight; if Convex rolls back between
 preflight and POST, v5's validator rejects the unknown CAS field as an invalid
 payload before any mutation writes. There is no unconditional fallback.
 Vercel can lag the Convex deploy because this exchange goes directly to Convex.
 An old ingest already past its preflight may finish compatible uploads or
-staging activation, but cannot promote through the v6 HTTP fence. Do not deploy
+staging activation, but cannot promote through the v7 HTTP fence. Do not deploy
 during the live full-Debian run (including run `40957721036`); let it finish,
-deploy Convex v6, then use a fresh matching promotion-only dispatch if needed.
+deploy Convex v7, then use a fresh matching promotion-only dispatch if needed.
 Once the workflow and deployment
 have settled, use the matching client. If upload was incomplete, re-ingest under
 a new release ID; if upload and sealing completed, resume activation of that ID
@@ -299,6 +300,66 @@ new VMs only reuse retained cached archives, not an entire extracted full corpus
 The existing 300-minute Linux job deadline includes setup/download/parse/upload.
 Activation uses only the remaining budget, capped at 45 minutes, and can resume
 without another import. Never deploy Convex during a dataset run. Merge B7 v3,
-then B5 v4, then archive providers v5, then promotion CAS v6 with the combined
+then B5 v4, then archive providers v5, then promotion CAS v6 and demand indexing
+v7 with the combined
 contract, symbols, derived state, lease fence and all child tables. No switch, billing
 setting or shared dataset was changed for the local evidence.
+
+## B4 tier gate and legacy serving
+
+Unscored prod releases keep main's behavior: all pages remain indexable and all
+existing sitemap URLs remain listed. Only scored releases filter the long tail.
+No seven-distro re-ingestion is required merely to deploy B4.
+
+A Debian release with persisted `acquisition: "deb-extraction"` and no
+`indexablePageCount` cannot enter prod. Both direct activation and stage promotion
+check this in the prod-pointer transaction, even with `allowFullDebian: true`.
+Direct activation returns `FULL_DEBIAN_TIER_REQUIRED` (HTTP 409); stage
+promotion returns HTTP 200 with that reason in its per-distro `skipped` array
+and can promote other eligible distros. No Debian pointer is written. The
+in-flight v5 full-Debian ingest can finish staging but needs a fresh scored
+replacement before promotion. A scored full-Debian release still needs the
+existing separate owner authorization. See the
+[B4 policy and dependency checklist](../roadmap/b4-index-by-demand.md); B4 now
+uses ingest v7, preserving #443's CAS request, fixed-source read, header fence
+and dispatch pins, plus #442's generated-layer fixes. This runbook does not
+authorize promotion.
+
+### B4 rollout order and tier inspection
+
+Merge B4 **after the November 1, 2026 05:00 UTC monthly run** completes; that run
+promotes today's unscored curated releases as usual. After deployment, the lead
+runs all seven distros with `ingest=true`, `promote=false` and no sample, inspects
+each staging release's declared `indexablePageCount`, then promotes with
+`ingest=false`, `promote=true` and #443's `expected_release_ids` JSON map pinning
+**all seven inspected IDs**. Retain separate full-Debian opt-ins/owner review.
+This documents the lead's sequence; no dispatch is authorized by this task.
+
+Only Debian has measured tier numbers. Other package priors are exact-name
+proxies; macOS has no package ownership and gets sections 1/5/7/8 only with the
+current popcon-only input (optional future route traffic may promote others).
+Do not assume Debian's 100% curated ratio applies to other distros.
+
+No existing programmatic read-only path exposes staging `indexablePageCount`
+without a deploy key: public SEO reads prod only, and #443's authenticated
+`/ingest/promotion-source` returns the verified staging ID, not its tier count.
+Inspect each corresponding `datasetReleases` row in the Convex dashboard using
+normal account/data access, or existing privileged read access. If unavailable,
+there is no supported keyless API command for this inspection. The ingestion
+declaration is not currently retained as a result artifact.
+
+A promote-only job that encounters `FULL_DEBIAN_TIER_REQUIRED` records a clean
+skip with "scored full-Debian replacement required"; sibling distro records are
+unaffected. The server still refuses the Debian pointer write. The workflow validates the
+skipped distro/release ID against its verified source before recording success;
+a mismatched operator pin remains a failure.
+
+Man HTML/page data now retain #449's release keys and private/no-store mismatch
+checks, with the proxy's 60-second release TTL. The tier adds no page-path reads.
+Accepted cache limit: metadata/JSON robots can lag a release switch by one hour,
+and OG robots by about eight days (one day fresh plus seven days stale).
+Sitemaps may switch before those signals; no invalidation change is included.
+The `.txt` path retains #462's release keys, authenticated unknown marker/null
+key and private mismatch responses. B10 provider alternates remain noindex even
+on unscored releases. Noindex HTML/text omit canonical declarations; canonical
+paths and share images retain `manCanonicalPath`.

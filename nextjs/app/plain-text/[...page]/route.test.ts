@@ -93,7 +93,7 @@ it('falls back only for an unavailable release and uses its canonical distro', a
 })
 
 it('offers explicit text URLs for ambiguous names', async () => {
-  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'ambiguous', options: [{ section: '3', title: 'printf(3)', description: 'format' }], datasetReleaseId: 'r1' })
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'ambiguous', indexable: true, options: [{ section: '3', title: 'printf(3)', description: 'format' }], datasetReleaseId: 'r1' })
   const res = await GET(req('?distro=ubuntu'), ctx(['printf']))
   expect(res.status).toBe(409)
   expect(await res.text()).toContain('/man/printf/3.txt?distro=ubuntu')
@@ -108,7 +108,7 @@ it('keeps only the request distro in redirects and choices, Debian included, aft
   const explicitDebian = await GET(req('?distro=debian'), ctx(['TAR']))
   expect(explicitDebian.headers.get('location')).toBe('/man/tar/1.txt?distro=debian')
 
-  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'ambiguous', options: [{ section: '3', title: 'printf(3)', description: 'format' }], datasetReleaseId: 'r1' })
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'ambiguous', indexable: true, options: [{ section: '3', title: 'printf(3)', description: 'format' }], datasetReleaseId: 'r1' })
   expect(await (await GET(req(), ctx(['printf']))).text()).toContain('/man/printf/3.txt\n')
 })
 
@@ -168,7 +168,7 @@ it('selects an explicit package provider and preserves it through short-route re
   vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'page', data: { ...manual, page: { ...manual.page, indexable: false }, providers: { packages: ['tar', 'alternate'], defaultPackage: 'tar', policy: 'curated', sameAsDefault: false } } })
   const res = await GET(req('?pkg=alternate'), ctx())
   expect(res.status).toBe(200)
-  expect(res.headers.get('link')).toBe('<https://betterman.sh/man/tar/1?pkg=alternate>; rel="canonical"')
+  expect(res.headers.get('link')).toBeNull()
   expect(res.headers.get('x-robots-tag')).toBe('noindex')
   expect(fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'tar', section: '1', pkg: 'alternate', release: 'test' })
   const redirect = await GET(req('?pkg=alternate'), ctx(['tar']))
@@ -185,15 +185,25 @@ it('does not share a response when the proxy release is absent or does not match
 })
 
 
-it('keeps alternate canonical and robots headers on a release-mismatched private answer', async () => {
+it('keeps alternate robots and omits a noindex canonical on a release-mismatched private answer', async () => {
   vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'page', data: {
     ...manual, page: { ...manual.page, datasetReleaseId: 'other', sourcePackage: 'alternate', indexable: false },
     providers: { packages: ['tar', 'alternate'], defaultPackage: 'tar', policy: 'curated', sameAsDefault: false },
   } })
   const res = await GET(req('?pkg=alternate'), ctx())
   expect(res.headers.get('cache-control')).toBe('private, no-store')
-  expect(res.headers.get('link')).toBe('<https://betterman.sh/man/tar/1?pkg=alternate>; rel="canonical"')
+  expect(res.headers.get('link')).toBeNull()
   expect(res.headers.get('x-robots-tag')).toBe('noindex')
+})
+
+it.each([true, false, undefined])('carries tier robots on text GET and HEAD: %s', async indexable => {
+  vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'page', data: { ...manual, page: { ...manual.page, indexable } } })
+  for (const method of [GET, HEAD]) {
+    const res = await method(req(), ctx())
+    expect(res.status).toBe(200)
+    expect(res.headers.get('x-robots-tag')).toBe(indexable === false ? 'noindex' : null)
+    expect(res.headers.get('link')).toBe(indexable === false ? null : '<https://betterman.sh/man/tar/1>; rel="canonical"')
+  }
 })
 
 it.each(['?zz=1', '?distro=ubuntu&distro=fedora', '?pkg=Bad_Name'])('answers a query the proxy would have redirected (%s) privately', async (query) => {

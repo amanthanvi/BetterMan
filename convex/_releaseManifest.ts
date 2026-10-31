@@ -11,6 +11,11 @@ export function releaseAcquisition(manifest: unknown): "deb-extraction" | undefi
   return acquisition;
 }
 
+// An owner authorization may lift the spend hold, never the required B4 tier.
+export function fullDebianTierMissing(release: Doc<"datasetReleases">, stage: "prod" | "staging"): boolean {
+  return stage === "prod" && release.distro === "debian" && release.acquisition === "deb-extraction" && release.indexablePageCount === undefined;
+}
+
 export function fullDebianPromotionHeld(release: Doc<"datasetReleases">, stage: "prod" | "staging", allowFullDebian?: boolean): boolean {
   return stage === "prod" && release.distro === "debian" && release.acquisition === "deb-extraction" && allowFullDebian !== true;
 }
@@ -65,14 +70,16 @@ export async function pageUploadProgress(ctx: QueryCtx | MutationCtx, release: D
     .withIndex("by_releaseId_and_bucket", (q) => q.eq("releaseId", release._id)).take(PAGE_UPLOAD_SHARDS + 1);
   if (shards.length > PAGE_UPLOAD_SHARDS) throw new Error("INVALID_RELEASE_MANIFEST");
   let pageCount = 0;
+  let indexablePageCount = 0;
   for (const shard of shards) {
     pageCount += shard.pageCount;
+    indexablePageCount += shard.indexablePageCount ?? 0;
     for (const stat of shard.sections) sections.set(stat.section, (sections.get(stat.section) ?? 0) + stat.uploaded);
   }
-  return { pageCount, sections };
+  return { pageCount, indexablePageCount, sections };
 }
 
-export async function recordPageUploads(ctx: MutationCtx, release: Doc<"datasetReleases">, bySection: Map<string, number>, batchKey: string): Promise<void> {
+export async function recordPageUploads(ctx: MutationCtx, release: Doc<"datasetReleases">, bySection: Map<string, number>, batchKey: string, indexed = 0): Promise<void> {
   if (release.manifestBasis !== "declared" || release.uploadedPageCount === undefined) throw new Error("RELEASE_MANIFEST_UNDECLARED");
   if (release.shardedPageUploads) {
     let hash = 0;
@@ -91,7 +98,7 @@ export async function recordPageUploads(ctx: MutationCtx, release: Doc<"datasetR
       sections.set(section, uploaded);
       added += count;
     }
-    const payload = { releaseId: release._id, bucket, pageCount: (shard?.pageCount ?? 0) + added,
+    const payload = { releaseId: release._id, bucket, indexablePageCount: (shard?.indexablePageCount ?? 0) + indexed, pageCount: (shard?.pageCount ?? 0) + added,
       sections: [...sections].map(([section, uploaded]) => ({ section, uploaded })) };
     if (shard) await ctx.db.replace(shard._id, payload);
     else await ctx.db.insert("releasePageUploadShards", payload);
@@ -129,6 +136,9 @@ export async function verifyDeclaredManifest(ctx: MutationCtx, release: Doc<"dat
     .withIndex("by_releaseId_and_section", (q) => q.eq("releaseId", release._id)).take(MAX_MANIFEST_SECTIONS + 1);
   validateManifestSections(release.pageCount, stats);
   const progress = await pageUploadProgress(ctx, release);
+  if (release.indexablePageCount !== undefined && progress.indexablePageCount !== release.indexablePageCount) {
+    throw new Error("RELEASE_MANIFEST_INCOMPLETE");
+  }
   if (release.providerCount !== undefined) {
     const shards = await ctx.db.query("releaseProviderUploadShards")
       .withIndex("by_releaseId_and_bucket", q => q.eq("releaseId", release._id)).take(PAGE_UPLOAD_SHARDS + 1);

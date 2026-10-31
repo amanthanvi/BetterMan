@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import { afterEach, expect, it, vi } from "vitest";
+import { INGEST_CONTRACT } from "./ingestContract";
 import { internal } from "./_generated/api";
 import schema from "./schema";
 import debianManifest from "../ingestion/data/debian-trixie.json";
@@ -8,14 +9,14 @@ import debianManifest from "../ingestion/data/debian-trixie.json";
 const modules = import.meta.glob("./**/*.ts");
 afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); });
 
-it("derives the persistent full-Debian hold from the manifest and refuses HTTP prod activation", async () => {
+it.each([false, true])("rejects HTTP full-Debian prod activation without bypassing tier/owner gates (scored: %s)", async (scored) => {
   vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
   const t = convexTest(schema, modules);
   const headers = { authorization: "Bearer test-secret", "content-type": "application/json" };
   const response = await t.fetch("/ingest/release", { method: "POST", headers, body: JSON.stringify({
     datasetReleaseId: "archive", locale: "en", distro: "debian", imageRef: "https://changed-mirror.example",
     imageDigest: "test", ingestedAt: "now", packageManifest: debianManifest,
-    pageCount: 1, aliasCount: 0, licenseCount: 0, sectionTotals: [{ section: "1", total: 1 }], licensePackages: [],
+    pageCount: 1, ...(scored ? { indexablePageCount: 1 } : {}), aliasCount: 0, licenseCount: 0, sectionTotals: [{ section: "1", total: 1 }], licensePackages: [],
   }) });
   expect(response.status).toBe(200);
   const release = await t.run(ctx => ctx.db.query("datasetReleases").withIndex("by_datasetReleaseId", q => q.eq("datasetReleaseId", "archive")).unique());
@@ -25,7 +26,7 @@ it("derives the persistent full-Debian hold from the manifest and refuses HTTP p
       datasetReleaseId: "archive", stage: "prod", activatedAt: "now", ...override,
     }) });
     expect(held.status).toBe(409);
-    expect(await held.json()).toMatchObject({ error: { code: "FULL_DEBIAN_PROMOTION_HELD" } });
+    expect(await held.json()).toMatchObject({ error: { code: scored ? "FULL_DEBIAN_PROMOTION_HELD" : "FULL_DEBIAN_TIER_REQUIRED" } });
   }
   expect(await t.run(ctx => ctx.db.query("activeReleases").take(1))).toEqual([]);
   expect((await t.run(ctx => ctx.db.get(release!._id)))?.sealed).not.toBe(true);
@@ -92,4 +93,27 @@ it("cleans up storage uploaded by a rejected late batch without altering the sea
   expect(remaining.map((item) => item._id)).toEqual([existingStorage]);
   expect(await t.run((ctx) => ctx.db.query("manPages").take(1))).toEqual([]);
   expect(await t.run((ctx) => ctx.db.get(releaseId))).toMatchObject({ sealed: true, relatedMetadataCompletedVersion: 0 });
+});
+
+it("HTTP promotion cannot authorize an unscored full-Debian pointer", async () => {
+  vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
+  const t = convexTest(schema, modules);
+  const { releaseId } = await t.mutation(internal.ingest.createRelease, {
+    datasetReleaseId: "unscored-full", locale: "en", distro: "debian", imageRef: "other-mirror",
+    imageDigest: "test", ingestedAt: "now", packageManifest: debianManifest,
+    pageCount: 1, aliasCount: 0, licenseCount: 0, sectionTotals: [{ section: "1", total: 1 }], licensePackages: [],
+  });
+  await t.run(async ctx => {
+    await ctx.db.patch(releaseId, { sealed: true, manifestVerified: true, relatedMetadataCompletedVersion: 0 });
+    await ctx.db.insert("activeReleases", { releaseId, datasetReleaseId: "unscored-full", locale: "en", distro: "debian", stage: "staging", activatedAt: "now" });
+  });
+  for (const allowFullDebian of [false, true]) {
+    const response = await t.fetch("/ingest/promote", {
+      method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
+      body: JSON.stringify({ fromStage: "staging", toStage: "prod", distros: ["debian"], activatedAt: "now", allowFullDebian, expectedDatasetReleaseId: { debian: "unscored-full" } }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ promoted: [], skipped: [{ distro: "debian", datasetReleaseId: "unscored-full", reason: "FULL_DEBIAN_TIER_REQUIRED" }] });
+  }
+  expect(await t.run(ctx => ctx.db.query("activeReleases").withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "prod")).take(1))).toEqual([]);
 });

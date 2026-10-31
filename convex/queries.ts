@@ -1,3 +1,4 @@
+import { pageIsIndexable, sitemapPageCount } from "./_indexPolicy";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { MAX_MANIFEST_SECTIONS } from "./_releaseManifest";
@@ -146,6 +147,7 @@ export const getManMetaByNameAndSection = query({
         description: v.string(),
         sourcePackage: v.union(v.string(), v.null()),
         sourcePackageVersion: v.union(v.string(), v.null()),
+        indexable: v.boolean(),
         datasetReleaseId: v.string(),
       }),
     }),
@@ -176,6 +178,7 @@ export const getManMetaByNameAndSection = query({
         description: page.description,
         sourcePackage: page.sourcePackage ?? null,
         sourcePackageVersion: page.sourcePackageVersion ?? null,
+        indexable: pageIsIndexable(release, page),
         datasetReleaseId: release.datasetReleaseId,
       },
     };
@@ -199,6 +202,7 @@ export const resolveManByName = query({
     }),
     v.object({
       kind: v.literal("ambiguous"),
+      indexable: v.boolean(),
       options: v.array(v.object({ section: v.string(), title: v.string(), description: v.string() })),
       datasetReleaseId: v.string(),
     }),
@@ -210,7 +214,7 @@ export const resolveManByName = query({
       stage: PUBLIC_DATASET_STAGE,
       distro: args.distro,
     });
-    const result = await resolvePageByName(ctx, { releaseId: release._id, name: normalizeName(args.name) });
+    const result = await resolvePageByName(ctx, { release, name: normalizeName(args.name) });
     // The release this answer comes from, so a caller caching it under an expected release can check.
     const { datasetReleaseId } = release;
     if (result.kind !== "page") return { ...result, datasetReleaseId };
@@ -1052,6 +1056,10 @@ export const listSeoReleases = query({
   args: {
     stage: publicStageCompatibilityValidator,
   },
+  returns: v.object({
+    urlsPerFile: v.number(),
+    items: v.array(v.object({ distro: distroValidator, datasetReleaseId: v.string(), ingestedAt: v.string(), pageCount: v.number() })),
+  }),
   handler: async (ctx) => {
     const releases = await Promise.all(
       DISTROS.map(async (distro) => {
@@ -1061,7 +1069,7 @@ export const listSeoReleases = query({
           distro,
           datasetReleaseId: release.datasetReleaseId,
           ingestedAt: release.ingestedAt,
-          pageCount: release.pageCount,
+          pageCount: sitemapPageCount(release),
         };
       }),
     );
@@ -1080,12 +1088,18 @@ export const listSitemapPageChunk = query({
     page: v.number(),
     paginationOpts: paginationOptsValidator,
   },
+  returns: v.union(v.null(), v.object({
+    datasetReleaseId: v.string(), items: v.array(v.object({ name: v.string(), section: v.string() })),
+    page: v.number(), isDone: v.boolean(), continueCursor: v.string(),
+  })),
   handler: async (ctx, args) => {
     const release = await activeRelease(ctx, {
       stage: PUBLIC_DATASET_STAGE,
       distro: args.distro,
     });
     if (!release) return null;
+    if (!Number.isSafeInteger(args.page) || args.page < 1 ||
+        args.page > Math.ceil(sitemapPageCount(release) / SITEMAP_URLS_PER_FILE)) return null;
     const paginationOpts = {
       ...args.paginationOpts,
       numItems: boundedInt(args.paginationOpts.numItems, 1, SITEMAP_CHUNK_ITEMS),
@@ -1099,7 +1113,7 @@ export const listSitemapPageChunk = query({
     if (!result.page.length && args.paginationOpts.cursor === null) return null;
     return {
       datasetReleaseId: release.datasetReleaseId,
-      items: result.page.map((page) => ({ name: page.name, section: page.section })),
+      items: result.page.filter((page) => pageIsIndexable(release, page)).map((page) => ({ name: page.name, section: page.section })),
       page: args.page,
       isDone: result.isDone,
       continueCursor: result.continueCursor,

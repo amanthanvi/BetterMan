@@ -16,7 +16,7 @@ Optional: `BETTERMAN_INGEST_WORKERS` sets the number of parse processes, clamped
 
 ## Large releases and recovery
 
-Ingest contract **5** must be deployed before this client writes. Release
+Ingest contract **7** must be deployed before this client writes. Release
 provenance is a JSON file in Convex storage, referenced from `releaseManifests`;
 page views read only the small release row. Page-upload counters use 16 shards;
 sealing folds their per-section counts in one bounded verification transaction,
@@ -442,12 +442,12 @@ It is prepared for an owner-authorized runner measurement and **was not run**:
 runner measurements count as shared execution. The [evidence document](../docs/roadmap/b1-debian-evidence.md)
 contains local results, audit dispositions and projections.
 
-Contract **v6** retains the merged v4 license batches, extractor provenance,
+Contract **v7** retains the merged v4 license batches, extractor provenance,
 packed signatures, symbols and optional-argument metadata with real/alias
-provider declarations from v5, adding verified staging-source reads and CAS
-promotion. Promotion requires the matching v6 header; optional dispatch
+provider declarations from v5, verified staging-source reads and CAS promotion
+from v6, adding B4 demand fields. Promotion requires the matching v7 header; optional dispatch
 `expected_release_ids` pins inspected releases through queue waits. The generated
-layer keeps its separate **v2** contract.
+layer keeps its separate **v3** contract.
 The single TS/Python alignment test and bidirectional mismatch tests guard deploy
 ordering. All provider and symbol tables are in the schema-checked release-child
 registry; derived dependency pins protect pruning. Deploy the combined Convex
@@ -457,3 +457,18 @@ Alternate reads retain their own content-hash generated brief, without borrowing
 canonical portability/history. Alias redirects preserve the target package,
 including name-only redirects. Shared full-Debian switches remain explicit and
 were not enabled during integration.
+
+## Index-by-demand
+
+Every release computes demand scores and tier membership from pinned popcon
+and page sections. See the [B4 runbook](../docs/roadmap/b4-index-by-demand.md)
+for thresholds, monthly evaluation, deployment ordering and the required fresh v7 ingestion before full-Debian promotion.
+
+Existing unscored prod releases retain all-page indexing and sitemaps. Full-Debian
+releases without a tier may activate staging but cannot enter prod, including
+with owner authorization. Direct prod activation returns HTTP 409
+`FULL_DEBIAN_TIER_REQUIRED`; promotion skips Debian with that reason while
+allowing eligible siblings to promote. The in-flight
+v5 full-Debian release needs a fresh scored replacement. B4 uses ingest v7,
+retaining #443's CAS request, fixed-source read, header fence and dispatch pins
+alongside demand fields.

@@ -4,23 +4,23 @@ test('package providers: default and explicit HTML, API, text, OG, and misses', 
   const route = '/man/foo%3A%3Abar/3pm'
   await page.goto(`${route}?pkg=alternate-perl`)
   await expect(page.getByText('Alternate provider documentation.', { exact: true })).toBeVisible()
-  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/man\/foo%3A%3Abar\/3pm\?pkg=alternate-perl$/)
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(0)
   await page.goto(route)
   await expect(page.getByText('Perl module documentation.', { exact: true })).toBeVisible()
   for (const pkg of ['', '?pkg=alternate-perl']) {
     const api = await request.get(`/api/v1/man/foo%3A%3Abar/3pm${pkg}`)
     expect(api.status()).toBe(200)
-    expect(api.headers()['x-robots-tag']).toBe(pkg ? 'noindex' : undefined)
+    expect(api.headers()['x-robots-tag']).toBe('noindex')
     const result = await api.json()
     expect(result.page.description).toBe(pkg ? 'Alternate package provider' : 'Perl module route fixture')
     const text = await request.get(`${route}.txt${pkg}`)
     expect(text.status()).toBe(200)
-    expect(text.headers()['link']).toContain(`${route}${pkg}>; rel="canonical"`)
+    expect(text.headers()['link']).toBeUndefined()
     expect(await text.text()).toContain(pkg ? 'Alternate provider documentation.' : 'Perl module documentation.')
-    expect(text.headers()['x-robots-tag']).toBe(pkg ? 'noindex' : undefined)
+    expect(text.headers()['x-robots-tag']).toBe('noindex')
     const og = await request.get(`${route}/og${pkg}`)
     expect(og.status()).toBe(200)
-    expect(og.headers()['x-robots-tag']).toBe(pkg ? 'noindex' : undefined)
+    expect(og.headers()['x-robots-tag']).toBe('noindex')
     expect(og.headers()['content-type']).toContain('image/png')
   }
   const invalid = await request.get('/api/v1/man/foo%3A%3Abar/3pm?pkg=bad%2Fpackage')
@@ -86,7 +86,7 @@ test('provided by works with keyboard and no JavaScript, keeps distro, and omits
   await expect(alternate).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(page.getByText('Alternate provider documentation.', { exact: true })).toBeVisible()
-  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\?distro=ubuntu&pkg=alternate-perl$/)
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(0)
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
   await page.locator('[data-bm-providers] summary').click()
   await expect(page.getByRole('link', { name: 'alternate-perl', exact: true })).toHaveAttribute('aria-current', 'page')
@@ -94,31 +94,49 @@ test('provided by works with keyboard and no JavaScript, keeps distro, and omits
   await expect(defaultLink).toHaveAttribute('href', '/man/foo%3A%3Abar/3pm?distro=ubuntu')
   await defaultLink.click()
   await expect(page.getByText('Perl module documentation.', { exact: true })).toBeVisible()
-  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/3pm\?distro=ubuntu$/)
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(0)
   await page.goto('/man/tar/1')
   await expect(page.locator('[data-bm-providers]')).toHaveCount(0)
   await context.close()
 })
 
 
-test('provider robots and canonicals distinguish winner, identical and different content', async ({ page, request }) => {
+test('provider robots combine demand with provider identity and never canonicalize to noindex pages', async ({ page, request }) => {
   const route = '/man/foo%3A%3Abar/3pm'
-  for (const [pkg, self, noindex] of [['perl', false, false], ['same-perl', false, true], ['alternate-perl', true, true]] as const) {
-    await page.goto(`${route}?pkg=${pkg}`)
-    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', new RegExp(`/3pm${self ? '\\?pkg=alternate-perl' : ''}$`))
-    if (noindex) await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
-    else await expect(page.locator('meta[name="robots"]')).toHaveCount(0)
-    for (const suffix of ['.txt', '/og']) {
-      const response = await request.get(`${route}${suffix}?pkg=${pkg}`)
-      expect(response.status()).toBe(200)
-      expect(response.headers()['x-robots-tag']).toBe(noindex ? 'noindex' : undefined)
-      if (suffix === '.txt') expect(response.headers()['link']).toContain(`${route}${self ? '?pkg=alternate-perl' : ''}>; rel="canonical"`)
+  for (const distro of ['debian', 'macos']) {
+    for (const pkg of ['perl', 'same-perl', 'alternate-perl']) {
+      const query = `?distro=${distro}&pkg=${pkg}`
+      const noindex = distro === 'debian' || pkg !== 'perl'
+      await page.goto(`${route}${query}`)
+      if (noindex) {
+        await expect(page.locator('link[rel="canonical"]')).toHaveCount(0)
+        await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
+      } else {
+        await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `${new URL(page.url()).origin}${route}?distro=macos`)
+        await expect(page.locator('meta[name="robots"]')).toHaveCount(0)
+      }
+      for (const suffix of ['.txt', '/og']) {
+        const response = await request.get(`${route}${suffix}${query}`)
+        expect(response.status()).toBe(200)
+        expect(response.headers()['x-robots-tag']).toBe(noindex ? 'noindex' : undefined)
+        if (suffix === '.txt') {
+          if (noindex) expect(response.headers()['link']).toBeUndefined()
+          else expect(response.headers()['link']).toContain(`${route}?distro=macos>; rel="canonical"`)
+        }
+      }
+      for (const suffix of ['', '/meta']) {
+        const response = await request.get(`/api/v1/man/foo%3A%3Abar/3pm${suffix}${query}`)
+        expect(response.status()).toBe(200)
+        expect(response.headers()['x-robots-tag']).toBe(noindex ? 'noindex' : undefined)
+      }
     }
-    for (const suffix of ['', '/meta']) {
-      const response = await request.get(`/api/v1/man/foo%3A%3Abar/3pm${suffix}?pkg=${pkg}`)
-      expect(response.status()).toBe(200)
-      expect(response.headers()['x-robots-tag']).toBe(noindex ? 'noindex' : undefined)
-    }
+  }
+  // B9's localized UI is noindex too; it keeps an English canonical only where that page is indexable.
+  for (const [pkg, canonical] of [['alternate-perl', null], ['perl', `${route}?distro=macos`]] as const) {
+    await page.goto(`${route}?distro=macos&pkg=${pkg}&lang=de`)
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
+    if (canonical) await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `${new URL(page.url()).origin}${canonical}`)
+    else await expect(page.locator('link[rel="canonical"]')).toHaveCount(0)
   }
   const sitemap = await request.get('/sitemap-debian-1.xml')
   expect(await sitemap.text()).not.toContain('pkg=')
