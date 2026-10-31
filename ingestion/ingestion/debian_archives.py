@@ -361,9 +361,14 @@ class ArchiveStore:
         # Use the same syntax state as the final guard: a `.so` after `.cc |`
         # is text, while `|so` is a real request. Resolve verified archive includes
         # before mandoc sees them; never consult the host filesystem.
-        from ingestion.mandoc import checked_source
+        from ingestion.mandoc import RoffSourceError, checked_source
 
-        data = checked_source(data, include=include)
+        try:
+            data = checked_source(data, include=include)
+        except RoffSourceError as exc:
+            # One refused page counts against the archive parse gate; it does not stop
+            # the distro. Other errors (e.g. an excluded package) still propagate.
+            raise ValueError(f"{owner}:{path}: {exc}") from exc
         return (owner, path, data) if details else data
 
     def manuals(self):

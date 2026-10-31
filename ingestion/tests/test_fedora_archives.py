@@ -89,6 +89,57 @@ def test_symlink_targets_stop_at_the_archive_root_and_stay_data(tmp_path):
     store.db.close()
 
 
+@pytest.mark.parametrize("request_line", [b".so man1/part.1 extra\n", b".so\n"])
+def test_unsupported_include_fails_only_that_page(tmp_path, request_line):
+    # Arch and Alpine full imports stopped on one such page; it is now a per-page
+    # failure that names the page, counted by the archive parse gate.
+    entries = extract_payload(
+        payload(
+            [
+                ("usr/share/man/man1/odd.1", b".TH ODD 1\n" + request_line, None),
+                ("usr/share/man/man1/fine.1", b".TH FINE 1\n.SH NAME\nfine - ok\n", None),
+                ("usr/share/man/man1/part.1", b"part\n", None),
+            ]
+        ),
+        package(),
+        tmp_path,
+        quota=ExtractedQuota(tmp_path / "files"),
+    )
+    store = ArchiveStore(tmp_path, registrations={"packages": {}})
+    store.add(package(), entries)
+    with pytest.raises(ValueError, match="fixture:usr/share/man/man1/odd.1: Unsupported roff"):
+        store.resolve("fixture", "usr/share/man/man1/odd.1")
+    assert b"fine - ok" in store.resolve("fixture", "usr/share/man/man1/fine.1")
+    store.db.close()
+
+
+def test_other_include_errors_still_stop_the_import(tmp_path):
+    entries = extract_payload(
+        payload(
+            [
+                ("usr/share/man/man1/a.1", b".TH A 1\n.so man1/b.1\n", None),
+                ("usr/share/man/man1/b.1", b"b\n", None),
+            ]
+        ),
+        package(),
+        tmp_path,
+        quota=ExtractedQuota(tmp_path / "files"),
+    )
+    store = ArchiveStore(tmp_path, registrations={"packages": {}})
+    store.add(package(), entries)
+    resolve = store.resolve
+
+    def refusing(pkg, path, *args, **kwargs):
+        if path.endswith("/b.1"):
+            raise RuntimeError("Archive dependency requires excluded package b")
+        return resolve(pkg, path, *args, **kwargs)
+
+    store.resolve = refusing
+    with pytest.raises(RuntimeError, match="excluded package"):
+        resolve("fixture", "usr/share/man/man1/a.1")
+    store.db.close()
+
+
 def test_retained_source_limit_is_shared_across_payloads(tmp_path):
     quota = ExtractedQuota(tmp_path / "files", limit=4)
     with pytest.raises(RuntimeError, match="disk limit"):
