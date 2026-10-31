@@ -252,7 +252,7 @@ http.route({
   method: "POST",
   handler: ingestAction(async (ctx, body) => {
     // Full-Debian production authorization belongs to the gated promote path.
-    const result = await ctx.runMutation(internal.ingest.activateRelease, { ...body as object, allowFullDebian: false, allowFullUbuntu: false, allowFullFedora: false } as never);
+    const result = await ctx.runMutation(internal.ingest.activateRelease, { ...body as object, allowFullDebian: false, allowFullUbuntu: false, allowFullFedora: false, allowFullArch: false } as never);
     return jsonResponse(result, result.pending ? 409 : 200);
   }),
 });

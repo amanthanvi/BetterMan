@@ -23,7 +23,7 @@ export const datasetStageValidator = v.union(
   v.literal("prod"),
 );
 
-export const acquisitionValidator = v.union(v.literal("deb-extraction"), v.literal("ubuntu-deb-extraction"), v.literal("fedora-rpm-extraction"));
+export const acquisitionValidator = v.union(v.literal("deb-extraction"), v.literal("ubuntu-deb-extraction"), v.literal("fedora-rpm-extraction"), v.literal("arch-pkg-extraction"));
 
 // Convex functions deploy before the frontend. Keep accepting the legacy field
 // so the previous frontend and historical rollbacks remain compatible; public

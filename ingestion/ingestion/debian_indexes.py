@@ -79,6 +79,8 @@ class DebianRedirects(HTTPRedirectHandler):
                 "snapshot.ubuntu.com",
                 "dl.fedoraproject.org",
                 "archives.fedoraproject.org",
+                "archive.archlinux.org",
+                "geo.mirror.pkgbuild.com",
             }
             or after.netloc not in {before.hostname, f"{before.hostname}:443"}
         ):

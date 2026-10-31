@@ -25,12 +25,19 @@ class ArchivePackage(Package):
     source: str = ""
 
     def __post_init__(self):
-        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9+_.-]*", self.name) or not self.version.strip():
-            raise ValueError("Invalid archive package identity")
-        if safe_path(self.filename) != self.filename or not self.filename.endswith(".rpm"):
-            raise ValueError("Invalid RPM archive path")
-        if not re.fullmatch(r"[a-f0-9]{64}", self.sha256) or self.size <= 0:
-            raise ValueError("Invalid archive package checksum/size")
+        validate_package(self, (".rpm",))
+
+
+def validate_package(package, suffixes):
+    if (
+        not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9+_.-]*", package.name)
+        or not package.version.strip()
+    ):
+        raise ValueError("Invalid archive package identity")
+    if safe_path(package.filename) != package.filename or not package.filename.endswith(suffixes):
+        raise ValueError("Invalid package archive path")
+    if not re.fullmatch(r"[a-f0-9]{64}", package.sha256) or package.size <= 0:
+        raise ValueError("Invalid archive package checksum/size")
 
 
 def catalog(root: Path, pins_path: Path):

@@ -46,10 +46,14 @@ def ingest_debian(
         raise RuntimeError("Full archive ingestion requires Python 3.14 and mandoc")
     client = ConvexIngestClient(convex_url, ingest_secret)
     contract = client.require_deployed_contract()  # Before acquisition or any writes.
-    identities = {"ubuntu": "ubuntu-deb-extraction", "fedora": "fedora-rpm-extraction"}
+    identities = {
+        "ubuntu": "ubuntu-deb-extraction",
+        "fedora": "fedora-rpm-extraction",
+        "arch": "arch-pkg-extraction",
+    }
     if distro in identities and identities[distro] not in contract.get("acquisitions", []):
         raise RuntimeError(f"Deploy B2's v8 {distro} acquisition support before full ingestion")
-    if distro == "fedora" and contract.get("storedLicenseText") is not True:
+    if distro in {"fedora", "arch"} and contract.get("storedLicenseText") is not True:
         raise RuntimeError("Deploy stored-license support before full Fedora ingestion")
     import os
 
@@ -63,7 +67,13 @@ def ingest_debian(
     pins = (
         PINS
         if distro == "debian"
-        else PINS.with_name({"ubuntu": "ubuntu-noble.json", "fedora": "fedora-44.json"}[distro])
+        else PINS.with_name(
+            {
+                "ubuntu": "ubuntu-noble.json",
+                "fedora": "fedora-44.json",
+                "arch": "arch-20261001.json",
+            }[distro]
+        )
     )
     # A different lock cannot reuse extracted state, even in the same runner path.
     root = root / sha256_hex(pins.read_bytes())
@@ -89,6 +99,8 @@ def publish_workspace(
     notice_text = copyright_text
     if distro == "fedora":
         from ingestion.fedora_archives import copyright_text as notice_text
+    elif distro == "arch":
+        from ingestion.arch_archives import copyright_text as notice_text
     workspace.timings = {}
     started = time.monotonic()
     with (
@@ -149,8 +161,11 @@ def publish_workspace(
                     "sha256": p.sha256,
                     "installed": p.installed,
                     **(
-                        {"licenseExpression": p.license, "sourceRpm": p.source}
-                        if distro == "fedora"
+                        {
+                            "licenseExpression": p.license,
+                            ("sourceRpm" if distro == "fedora" else "packageBase"): p.source,
+                        }
+                        if distro in {"fedora", "arch"}
                         else {}
                     ),
                 }
@@ -168,7 +183,7 @@ def publish_workspace(
             licenses=licenses,
             distro=distro,
             dataset_release_id=release_id,
-            stored=distro == "fedora",
+            stored=distro in {"fedora", "arch"},
         ):
             pass
         workspace.timings["metadataSeconds"] = (
@@ -257,7 +272,7 @@ def publish_workspace(
             licenses=licenses,
             distro=distro,
             dataset_release_id=release_id,
-            stored=distro == "fedora",
+            stored=distro in {"fedora", "arch"},
         ):
             require_job_budget("license upload")
             if pending and (

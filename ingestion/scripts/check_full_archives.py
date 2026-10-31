@@ -22,12 +22,18 @@ from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
 from ingestion.util import sha256_hex
 
 
-def measure(root, distro, limit, curated=False):
+def measure(root, distro, limit, curated=False, largest=False):
     notice_text = copyright_text
     if distro == "fedora":
         from ingestion.fedora_archives import copyright_text as notice_text
+    elif distro == "arch":
+        from ingestion.arch_archives import copyright_text as notice_text
     started = time.monotonic()
     workspace = Workspace(root, limit=limit, distro=distro)
+    if largest:
+        workspace.packages = sorted(workspace.all_manual_packages, key=lambda p: (-p.size, p.name))[
+            :limit
+        ]
     if curated:
         requested = FULL_PACKAGE_SET_BY_DISTRO[distro]
         routes = {_COMMAND_PAGES[p] for p in requested if p in _COMMAND_PAGES}
@@ -71,7 +77,7 @@ def measure(root, distro, limit, curated=False):
             licenses=notices,
             distro=distro,
             dataset_release_id="b2-local-audit",
-            stored=distro == "fedora",
+            stored=distro in {"fedora", "arch"},
         ):
             pass
         rss_factor = 1 if sys.platform == "darwin" else 1024
@@ -84,7 +90,11 @@ def measure(root, distro, limit, curated=False):
                 (
                     Path(__file__).resolve().parents[1]
                     / "data"
-                    / {"ubuntu": "ubuntu-noble.json", "fedora": "fedora-44.json"}[distro]
+                    / {
+                        "ubuntu": "ubuntu-noble.json",
+                        "fedora": "fedora-44.json",
+                        "arch": "arch-20261001.json",
+                    }[distro]
                 ).read_bytes()
             ),
             "fullPackages": len(workspace.all_manual_packages),
@@ -93,6 +103,7 @@ def measure(root, distro, limit, curated=False):
             "samplePackages": len(workspace.packages),
             "acquiredPackages": len(workspace.acquired),
             "downloadedBytes": workspace.downloaded,
+            "archiveFallbacks": workspace.archive_fallbacks,
             "indexSeconds": indexed - started,
             "acquireSeconds": acquired - indexed,
             "parseSeconds": parsed - acquired,
@@ -132,12 +143,14 @@ def measure(root, distro, limit, curated=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--distro", choices=["ubuntu", "fedora"], required=True)
+    parser.add_argument("--distro", choices=["ubuntu", "fedora", "arch"], required=True)
     parser.add_argument("--workdir", type=Path, required=True)
     parser.add_argument("--packages", type=int, default=50)
-    parser.add_argument("--curated", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--curated", action="store_true")
+    mode.add_argument("--largest", action="store_true", help="Bounded largest-archive rehearsal")
     args = parser.parse_args()
-    report = measure(args.workdir.resolve(), args.distro, args.packages, args.curated)
+    report = measure(args.workdir.resolve(), args.distro, args.packages, args.curated, args.largest)
     print(json.dumps({k: v for k, v in report.items() if k != "packages"}, indent=2))
     if report["parseFailures"] or report["unresolved"]:
         raise SystemExit(1)

@@ -339,7 +339,7 @@ def test_default_debian_keeps_curated_docker_path(monkeypatch):
 
 
 @pytest.mark.parametrize("extra", [[], ["--sample"], ["--no-activate"], ["--in-container"]])
-@pytest.mark.parametrize("distro", ["ubuntu", "fedora"])
+@pytest.mark.parametrize("distro", ["ubuntu", "fedora", "arch"])
 def test_full_family_cannot_target_prod(monkeypatch, extra, distro):
     monkeypatch.setenv("BETTERMAN_DATASET_STAGE", "prod")
     monkeypatch.setattr(cli, "_run_ingest", lambda **kw: pytest.fail("must fail before work"))

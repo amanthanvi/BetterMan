@@ -1,0 +1,46 @@
+{
+  "acquisition": "arch-pkg-extraction",
+  "mirror": "https://archive.archlinux.org/repos/2026/10/01",
+  "cdn": "https://geo.mirror.pkgbuild.com",
+  "architecture": "x86_64",
+  "releaseSha256": "0769988b76ab1bb2f7a52fd6865eab8e452a4533d8e131297bc36617f110911b",
+  "popcon": {
+    "url": "https://popcon.debian.org/by_inst",
+    "acquiredAt": "2026-10-29",
+    "sourceSha256": "60d469b43fbb00fed5a1e1c67d9136bb3b6590bec64dd47cc9321616f1cb8a91",
+    "file": "popcon-by-inst.tsv.gz",
+    "sha256": "8e2cc98280beacff1ac62b434380a00d5ebbc79800cf51845f1fc46d6db1750a",
+    "format": "package tab installed-count; normalized from rank/name/inst columns of by_inst"
+  },
+  "distro": "arch",
+  "archiveSuffix": ".pkg",
+  "repositories": [
+    {
+      "name": "core",
+      "sha256": "4956529120674a9f445677bd424067fe730a95f1683d35aa5bfbc41d0201b36a",
+      "size": 1531681
+    },
+    {
+      "name": "extra",
+      "sha256": "efb2b35884936fea654fb5e3dd04128db13ac4a5a4b08f9b6a5969ee6a642b59",
+      "size": 51190721
+    },
+    {
+      "name": "multilib",
+      "sha256": "73689608ac767214019d974c2832a3ad800ffc6a6f612e7f2906385b484d0c3c",
+      "size": 109292
+    }
+  ],
+  "popularitySource": "Debian by_inst exact-name proxy; no Arch installation counts",
+  "alternatives": "archive-owned symlinks only; .INSTALL scripts never execute",
+  "sourceTargets": {
+    "usr/share/man/man1/doc/memoize-clean.1": [
+      "texlive-doc",
+      "usr/share/man/man1/memoize-clean.1"
+    ],
+    "usr/share/man/man1/doc/memoize-extract.1": [
+      "texlive-doc",
+      "usr/share/man/man1/memoize-extract.1"
+    ]
+  }
+}
