@@ -15,8 +15,8 @@ from pathlib import Path
 
 from ingestion.debian_archives import MAX_SOURCE_BYTES, ExtractedQuota
 from ingestion.debian_indexes import DownloadIntegrityError, popularity, safe_path
+from ingestion.fedora_archives import _notice_texts, extract_payload, notice_path
 from ingestion.fedora_archives import copyright_text as package_notice
-from ingestion.fedora_archives import extract_payload, notice_path
 
 
 @dataclass(frozen=True)
@@ -253,9 +253,52 @@ def extract(archive, package, root, *, quota=None, **_kwargs):
 
 
 def copyright_text(workspace, package):
-    text = package_notice(workspace, package)
+    text = package_notice(
+        workspace,
+        package,
+        directory_fallback=lambda owner, path, remaining: directory_notice(
+            workspace, package, owner, path, remaining
+        ),
+    )
     if text:
         return text
+    return spdx_notice(workspace, package)
+
+
+def directory_notice(workspace, package, owner, path, remaining):
+    # APKINDEX has no paths: probe only exact origins/dependencies and declared
+    # capability providers, then establish ownership from verified archive entries.
+    sources = {package, owner}
+    sources.update(workspace.available[n].source for n in tuple(sources))
+    sources &= workspace.available.keys()
+    dependencies = {d for n in sources for d in workspace.available[n].depends}
+    candidates = sources | {
+        n
+        for n, p in workspace.available.items()
+        if n in dependencies or dependencies.intersection(p.provides)
+    }
+    for name in sorted(candidates, key=lambda n: (n not in sources, n)):
+        if name not in workspace.acquired:
+            workspace.acquire([workspace.available[name]], workers=1)
+        if workspace.store.db.execute(
+            "SELECT 1 FROM entries WHERE path=? OR (path>=? AND path<?) LIMIT 1",
+            (path, path + "/", path + "0"),
+        ).fetchone():
+            return "\n\n".join(
+                _notice_texts(
+                    workspace,
+                    owner,
+                    path,
+                    directory_fallback=lambda _owner, _path, _remaining: spdx_notice(
+                        workspace, package
+                    ),
+                    remaining=remaining,
+                )
+            )
+    return spdx_notice(workspace, package)
+
+
+def spdx_notice(workspace, package):
     owner = "spdx-licenses-text"
     if owner not in workspace.available:
         return ""
@@ -266,7 +309,7 @@ def copyright_text(workspace, package):
     )
     texts = []
     for (path,) in workspace.store.db.execute(
-        "SELECT path FROM entries WHERE pkg=? AND kind IN ('file','link')", (owner,)
+        "SELECT path FROM entries WHERE pkg=? AND kind IN ('file','link','blocked')", (owner,)
     ):
         if Path(path).name.removesuffix(".txt") in identifiers and notice_path(path):
             texts.append(workspace.resolve(owner, path).decode("utf-8", errors="replace"))

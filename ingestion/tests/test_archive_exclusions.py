@@ -64,8 +64,10 @@ def pinned_workspace(tmp_path, monkeypatch):
     monkeypatch.setattr(indexes, "PINS", pinfile)
     monkeypatch.setenv("BETTERMAN_INGEST_WORKERS", "1")
 
-    def create(*, distro="debian", exclusions=...):
+    def create(*, distro="debian", exclusions=..., source_targets=None):
         pins["excludedPackages"] = {"provider-high": REASON} if exclusions is ... else exclusions
+        if source_targets is not None:
+            pins["sourceTargets"] = source_targets
         target = pinfile if distro == "debian" else pinfile.with_name("ubuntu-noble.json")
         target.write_text(json.dumps(pins))
         return pipeline.Workspace(tmp_path / "workspace", distro=distro), downloaded
@@ -230,6 +232,70 @@ def test_unlisted_package_missing_copyright_still_fails(pinned_workspace):
                 git_sha="test",
                 sample=True,
             )
+    finally:
+        workspace.store.db.close()
+        workspace.owners.close()
+
+
+@pytest.mark.parametrize(
+    "targets",
+    [
+        {"usr/share/man/man1/missing.1": ["unknown-owner", "usr/share/man/man1/shared.1"]},
+        {"../missing": ["provider-low", "usr/share/man/man1/shared.1"]},
+        {"usr/share/man/man1/missing.1": ["provider-low", "../outside"]},
+        {"usr/share/man/man1/missing.1": ["provider-low"]},
+        {"usr/share/man/man1/missing.1": "provider-low"},
+    ],
+)
+def test_source_target_pins_reject_unknown_owners_and_malformed_paths(pinned_workspace, targets):
+    with pytest.raises(ValueError):
+        pinned_workspace(source_targets=targets)
+
+
+def test_manifest_exposes_partial_license_identifiers_and_zero_text_declarations(
+    pinned_workspace, monkeypatch
+):
+    from ingestion import debian_publish
+
+    workspace, _ = pinned_workspace()
+    calls = []
+
+    class Client:
+        def post(self, path, payload):
+            calls.append((path, payload))
+            if path == "/ingest/pages/storage":
+                return {"inserted": len(payload["pages"]), "skipped": 0}
+            return {}
+
+    try:
+        workspace.acquire()
+        workspace.unmatched_license_identifiers = {"provider-low": ["MIT"]}
+        monkeypatch.setattr(
+            debian_publish,
+            "copyright_text",
+            lambda _w, name: "GPL text" if name == "provider-low" else "",
+        )
+        publish_workspace(
+            workspace,
+            Client(),
+            activate=False,
+            dataset_stage="staging",
+            git_sha="test",
+            sample=True,
+        )
+        release = next(payload for path, payload in calls if path == "/ingest/release")
+        packages = {p["name"]: p for p in release["packageManifest"]["packages"]}
+        assert packages["provider-low"]["unmatchedLicenseIdentifiers"] == ["MIT"]
+        declarations = [
+            p
+            for path, payload in calls
+            if path == "/ingest/license-packages"
+            for p in payload["packages"]
+        ]
+        assert {p["name"]: p["hasLicenseText"] for p in declarations} == {
+            "provider-low": True,
+            "gawk": False,
+        }
     finally:
         workspace.store.db.close()
         workspace.owners.close()

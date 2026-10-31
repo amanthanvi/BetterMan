@@ -4,6 +4,9 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Keep code, bytecode and data files out of archive license notices; expose unmatched Arch fallback identifiers in the release manifest, deduplicate identical shared texts, cap cumulative directory visits, and reject invalid source-target pins (#394).
+- Alpine full imports resolve license-directory aliases through verified metadata-related owners or the existing SPDX-text fallback, including Qt's absent `qt5-base` directory; no-upload rehearsals check selected packages even when they contain no manuals (#394).
+- Full archive imports read notices through license-directory links and retain nested license texts, including Fedora's shared TeX Live notices; Arch's verified SPDX fallback handles legacy GNU license names. Repair dnsconfd's dangling notice against its pinned RPM's complete MIT text and exclude Fedora's malcontent/malcontent-tools, whose LGPL notices are absent, without ignoring missing or blocked notices (#394).
 - Bind English name-resolution fallbacks to the translated release that confirmed the miss, and remove the unused translated-sitemap pipeline (#395).
 
 - Reject translated inline includes whose symlinks resolve outside their language root, and verify Python/workflow language copies against B9 (#395).

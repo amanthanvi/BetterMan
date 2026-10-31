@@ -40,7 +40,7 @@ DOC_ROOTS = (
     "usr/share/librarian-puppet/",
     "usr/share/scala-",
 )
-EXTRACTOR_VERSION = 5
+EXTRACTOR_VERSION = 7
 
 
 class ExtractedQuota:

@@ -13,6 +13,10 @@
   },
   "distro": "fedora",
   "archiveSuffix": ".rpm",
+  "excludedPackages": {
+    "malcontent": "Pinned malcontent-0.14.0-1.fc44 has a dangling COPYING -> LICENSES/LGPL-2.1-or-later.txt; no source sibling contains the missing LGPL notice (only COPYING-DOCS is readable).",
+    "malcontent-tools": "Pinned malcontent-tools-0.14.0-1.fc44 has only a dangling COPYING -> LICENSES/LGPL-2.1-or-later.txt; no source sibling contains the missing LGPL notice."
+  },
   "popularitySource": "Debian by_inst exact-name proxy; no Fedora installation counts",
   "alternatives": "RPM scriptlets read as data with B1 static alternatives election; no execution",
   "extractor": "rpm-payload-and-static-alternatives-v3",
@@ -21,5 +25,11 @@
     "rubygem-power_assert": "0:3.0.1-32.fc44",
     "rubygem-rake": "0:13.3.1-32.fc44"
   },
-  "fallbackMirror": "https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/44/Everything/x86_64/os"
+  "fallbackMirror": "https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/44/Everything/x86_64/os",
+  "sourceTargets": {
+    "usr/share/licenses/dnsconfd/distribution/LICENSE": [
+      "dnsconfd",
+      "usr/lib/python3.14/site-packages/dnsconfd-1.7.5.dist-info/licenses/LICENSE"
+    ]
+  }
 }

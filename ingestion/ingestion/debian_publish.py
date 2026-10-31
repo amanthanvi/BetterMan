@@ -175,6 +175,15 @@ def publish_workspace(
                     "sha256": p.sha256,
                     "installed": p.installed,
                     **(
+                        {"unmatchedLicenseIdentifiers": unmatched}
+                        if (
+                            unmatched := getattr(
+                                workspace, "unmatched_license_identifiers", {}
+                            ).get(p.name)
+                        )
+                        else {}
+                    ),
+                    **(
                         {
                             "licenseExpression": p.license,
                             (

@@ -32,6 +32,7 @@ from ingestion.debian_indexes import (
     download,
     popularity,
     private_registrations,
+    safe_path,
 )
 from ingestion.debian_licenses import copyright_text
 from ingestion.ingest_runner import (
@@ -126,7 +127,8 @@ class Workspace:
         self.root = root.resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         # Exclusions are reviewed pins, bound to the same workspace hash as the indexes.
-        exclusions = json.loads(pins_path.read_text()).get("excludedPackages", {})
+        pins = json.loads(pins_path.read_text())
+        exclusions = pins.get("excludedPackages", {})
         if not isinstance(exclusions, dict) or any(
             not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9+_.-]*", name)
             or not isinstance(reason, str)
@@ -134,6 +136,19 @@ class Workspace:
             for name, reason in exclusions.items()
         ):
             raise ValueError("Invalid pinned package exclusions")
+        source_targets = pins.get("sourceTargets", {})
+        if not isinstance(source_targets, dict) or any(
+            not isinstance(path, str)
+            or path == "."
+            or safe_path(path) != path
+            or not isinstance(target, list)
+            or len(target) != 2
+            or not all(isinstance(value, str) for value in target)
+            or target[1] == "."
+            or safe_path(target[1]) != target[1]
+            for path, target in source_targets.items()
+        ):
+            raise ValueError("Invalid pinned source targets")
         fingerprint = sha256_hex(pins_path.read_bytes())
         marker = self.root / "pins.sha256"
         if marker.exists() and marker.read_text() != fingerprint:
@@ -150,6 +165,10 @@ class Workspace:
         if unknown := sorted(set(exclusions) - self.available.keys()):
             # A reviewed exclusion must name a real package, or the audit entry misleads.
             raise ValueError("Pinned exclusions name unknown packages: " + ", ".join(unknown))
+        if unknown := sorted(
+            {target[0] for target in source_targets.values()} - self.available.keys()
+        ):
+            raise ValueError("Pinned source targets name unknown packages: " + ", ".join(unknown))
         self.all_manual_packages = [p for p in self.all_manual_packages if p.name not in exclusions]
         self.packages = self._sample(self.all_manual_packages, limit)
         selection_path = self.root / "selection.json"
