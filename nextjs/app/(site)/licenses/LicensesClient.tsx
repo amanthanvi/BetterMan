@@ -171,20 +171,27 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
               {error}
             </div>
           ) : license ? (
-            <div>
-              <div className="flex flex-wrap items-baseline justify-between gap-3">
-                <h2 className="font-mono text-sm font-bold">{license.package}</h2>
-                <div className="font-mono text-xs text-ink-3">{license.licenseId}</div>
-              </div>
-              <pre tabIndex={0} role="group" aria-label={t('License text for {name}', { name: license.package })} className="mt-3 max-h-[70vh] overflow-auto text-xs leading-relaxed text-ink-2">
-                {license.text}
-              </pre>
-            </div>
+            <LicenseEntry license={license} />
           ) : (
             <p className="py-2 text-sm text-ink-3">{t('No license text.')}</p>
           )}
         </section>
       </div>
+    </div>
+  )
+}
+
+export function LicenseEntry({ license }: { license: LicenseTextResponse }) {
+  const t = useT()
+  return (
+    <div>
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h2 className="font-mono text-sm font-bold">{license.package}</h2>
+        <div className="font-mono text-xs text-ink-3">{license.licenseId}</div>
+      </div>
+      <pre tabIndex={0} role="group" aria-label={t('License text for {name}', { name: license.package })} className="mt-3 max-h-[70vh] overflow-auto text-xs leading-relaxed text-ink-2">
+        {license.text}
+      </pre>
     </div>
   )
 }

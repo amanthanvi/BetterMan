@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Fedora, Arch and Alpine attach clearly labelled standard texts for declared licenses when no package/source notice exists, filling partial distro-shared texts from checksum-pinned SPDX v3.29.0; record and display remaining identifiers or expression errors without changing ingest contract v8. Debian and Ubuntu retain their copyright requirement.
 - Keep code, bytecode and data files out of archive license notices; expose unmatched Arch fallback identifiers in the release manifest, deduplicate identical shared texts, cap cumulative directory visits, and reject invalid source-target pins (#394).
 - Alpine full imports resolve license-directory aliases through verified metadata-related owners or the existing SPDX-text fallback, including Qt's absent `qt5-base` directory; no-upload rehearsals check selected packages even when they contain no manuals (#394).
 - Full archive imports read notices through license-directory links and retain nested license texts, including Fedora's shared TeX Live notices; Arch's verified SPDX fallback handles legacy GNU license names. Repair dnsconfd's dangling notice against its pinned RPM's complete MIT text and exclude Fedora's malcontent/malcontent-tools, whose LGPL notices are absent, without ignoring missing or blocked notices (#394).

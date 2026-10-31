@@ -339,6 +339,8 @@ def _notice_texts(
                 and exc.path.count("/") == 3
             ):
                 text = directory_fallback(exc.package, exc.path, remaining)
+                if text is None:
+                    return
                 if text.strip():
                     logging.warning(
                         json.dumps(

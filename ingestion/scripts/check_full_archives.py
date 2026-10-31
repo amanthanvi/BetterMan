@@ -24,12 +24,8 @@ from ingestion.util import sha256_hex
 
 def measure(root, distro, limit, curated=False, largest=False):
     notice_text = copyright_text
-    if distro == "fedora":
-        from ingestion.fedora_archives import copyright_text as notice_text
-    elif distro == "arch":
-        from ingestion.arch_archives import copyright_text as notice_text
-    elif distro == "alpine":
-        from ingestion.alpine_archives import copyright_text as notice_text
+    if distro in {"fedora", "arch", "alpine"}:
+        from ingestion.standard_licenses import license_text as notice_text
     started = time.monotonic()
     workspace = Workspace(root, limit=limit, distro=distro)
     if largest:
@@ -142,6 +138,8 @@ def measure(root, distro, limit, curated=False, largest=False):
                 m for m in workspace.missing if m["error"] == "Unsupported route name"
             ],
             "verifiedLicenses": len(notices),
+            "standardLicenseMetadata": getattr(workspace, "standard_license_metadata", {}),
+            "standardLicenseTextSource": getattr(workspace, "standard_license_provenance", None),
             "maxLicenseBytes": max((len(notices[p].encode()) for p in notices), default=0),
             "packagesWithoutLicenseText": sorted(used - set(notices)),
             "packages": [
