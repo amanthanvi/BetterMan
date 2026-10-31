@@ -353,6 +353,13 @@ satisfy only virtual names absent from the real Packages catalog; make-guile's
 precedence over suffixes such as `ls(1plan9)`. Wrong ownership blocks before any
 upload and is not covered by the missing-page escape hatch.
 
+Archive pins may declare `excludedPackages`, a reviewed package-name-to-reason
+map bound to the workspace's whole-pin-file hash and recorded in the release
+manifest. Excluded packages are never selected or acquired; dependencies on their
+files and curated requests fail closed. Ubuntu noble excludes `bcc` and `bin86`
+because linux86 0.16.17-3.5build1 ships no copyright notice in the pinned archive.
+There is no runtime exclusion override; unlisted missing notices still fail.
+
 The curated apt package pass requests netcat-openbsd, but the full archive corpus
 contains netcat-traditional too. Its `standard` Priority wins the default-installed
 group under the existing election policy; the OpenBSD preference breaks only
