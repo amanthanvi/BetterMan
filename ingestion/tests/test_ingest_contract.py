@@ -1,9 +1,11 @@
 """Single cross-language ingest contract merge/alignment check.
 
 Resolve protocol changes in convex/ingestContract.ts and convex_client.py together.
-Contract v8 retains verified promotion-source reads, compare-and-swap, package
-batches, extractor provenance, signatures, symbols and providers, adding demand
-scores and indexable counts, adding B2 acquisition identities and stored notices.
+Contract v6 retains package batches, derived extractor provenance and packed
+signatures, stored-page symbols/optional arguments, and real/alias providers,
+adding verified promotion-source reads and compare-and-swap promotion.
+Contract v9 (after v7 #445 and v8 B2) adds content locales and the translated-release
+promotion hold, and requires the exact version both ways.
 Never resolve overlap by taking one branch's functions or payload fields.
 """
 
@@ -29,7 +31,7 @@ def test_required_contract_matches_convex_source():
     assert functions is not None
     assert counts is not None
     assert pending is not None
-    assert int(version.group(1)) == REQUIRED_SCHEMA_VERSION == 8
+    assert int(version.group(1)) == REQUIRED_SCHEMA_VERSION == 9
     assert re.findall(r'"([^"]+)"', functions.group(1)) == list(REQUIRED_FUNCTIONS)
     assert re.findall(r'"([^"]+)"', counts.group(1)) == list(REQUIRED_DECLARATION_COUNTS)
     assert pending.group(1) == "true"

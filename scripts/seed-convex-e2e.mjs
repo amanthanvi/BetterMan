@@ -20,6 +20,9 @@ function httpUrl(value) {
 
 const baseUrl = httpUrl(rawUrl)
 
+// Release-contract writes name the exact contract version; the seed follows the deployment it seeds.
+const contractVersion = String((await (await fetch(`${baseUrl}/ingest/contract`, { headers: { Authorization: `Bearer ${secret}` } })).json()).schemaVersion)
+
 async function post(path, payload) {
   const res = await fetch(`${baseUrl}/${path.replace(/^\//, '')}`, {
     method: 'POST',
@@ -27,6 +30,7 @@ async function post(path, payload) {
       Authorization: `Bearer ${secret}`,
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      'X-BetterMan-Ingest-Contract': contractVersion,
     },
     body: JSON.stringify(payload),
   })
