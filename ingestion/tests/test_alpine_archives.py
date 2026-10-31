@@ -142,8 +142,6 @@ def test_native_download_fallback_and_cache_replay_verify_control_and_data(tmp_p
 def test_native_workspace_resume_restores_observed_hashes_without_redownloading(
     tmp_path, monkeypatch
 ):
-    import sqlite3
-
     from ingestion.debian_pipeline import Workspace
 
     archive, package, _, _ = fixture(tmp_path)
