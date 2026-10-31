@@ -310,7 +310,10 @@ def ingest_debian_translation(
     if sys.version_info < (3, 14) or not shutil.which("mandoc"):
         raise RuntimeError("Debian archive ingestion requires Python 3.14 and mandoc")
     client = ConvexIngestClient(convex_url, ingest_secret)
-    client.require_deployed_contract()  # Before acquisition or any writes.
+    contract = client.require_deployed_contract()  # Before acquisition or any writes.
+    # Notices over Convex's 1 MiB document limit upload as stored files, as in debian_publish.
+    if contract.get("storedLicenseText") is not True:
+        raise RuntimeError("Deploy stored-license support before translated ingestion")
     base = Path(__file__).resolve().parents[2] / ".cache" / "debian"
     root = Path(os.environ.get("BETTERMAN_DEBIAN_WORKDIR", str(base / "workspaces")))
     root = root / sha256_hex(PINS.read_bytes()) / "translations" / TRANSLATION_ROOTS[locale]
@@ -386,7 +389,7 @@ def publish_translation(
         )
         batches = [declarations[i : i + 200] for i in range(0, len(declarations), 200)]
         for _item in _iter_license_items(
-            licenses=licenses, distro="debian", dataset_release_id=release_id
+            licenses=licenses, distro="debian", dataset_release_id=release_id, stored=True
         ):
             pass  # Check every notice before creating the release; never truncate.
         require_job_budget("release creation")
@@ -462,7 +465,7 @@ def publish_translation(
             )
         pending = []
         for notice in _iter_license_items(
-            licenses=licenses, distro="debian", dataset_release_id=release_id
+            licenses=licenses, distro="debian", dataset_release_id=release_id, stored=True
         ):
             require_job_budget("license upload")
             if pending and (

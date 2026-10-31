@@ -323,6 +323,54 @@ def test_publish_declares_a_staging_translation_with_documented_versions(tmp_pat
     assert result.published
 
 
+def test_publish_uploads_translated_package_notices_over_one_mib_whole(tmp_path, monkeypatch):
+    # Same stored-notice path as the archive publisher: Debian notices can exceed 1 MiB.
+    obj = workspace(tmp_path, {"manpages-de": ({"usr/share/man/de/man1/tar.1.gz": TAR_DE}, 10)})
+    notice = "L" * (2200 * 1024)
+    monkeypatch.setattr(l10n, "copyright_text", lambda *_args: notice)
+    monkeypatch.setenv("BETTERMAN_INGEST_WORKERS", "1")
+    monkeypatch.setenv("BETTERMAN_INGEST_UPLOAD_WORKERS", "1")
+    calls = []
+
+    class Client:
+        def post(self, path, payload):
+            calls.append((path, payload))
+            if path == "/ingest/pages/storage":
+                return {"inserted": len(payload["pages"]), "skipped": 0}
+            return {}
+
+    l10n.publish_translation(
+        obj, "de", Client(), activate=False, dataset_stage="staging", git_sha="fixture"
+    )
+    texts = [
+        license["licenseText"]
+        for path, payload in calls
+        if path == "/ingest/licenses"
+        for license in payload["licenses"]
+    ]
+    assert texts and all(text == notice for text in texts)
+
+
+def test_translation_ingest_requires_deployed_stored_notice_support(monkeypatch):
+    class Client:
+        def require_deployed_contract(self):
+            return {"storedLicenseText": False}
+
+    monkeypatch.setattr(l10n, "ConvexIngestClient", lambda *_: Client())
+    monkeypatch.setattr(
+        l10n, "TranslationWorkspace", lambda *_a, **_k: pytest.fail("no acquisition")
+    )
+    with pytest.raises(RuntimeError, match="stored-license support"):
+        l10n.ingest_debian_translation(
+            locale="de",
+            activate=False,
+            convex_url="http://127.0.0.1:1",
+            ingest_secret="local",
+            dataset_stage="staging",
+            git_sha="test",
+        )
+
+
 def test_ingest_refuses_prod_before_the_contract_or_any_network(monkeypatch):
     monkeypatch.setattr(l10n, "ConvexIngestClient", lambda *_: pytest.fail("no client for prod"))
     with pytest.raises(ValueError, match="staging"):
