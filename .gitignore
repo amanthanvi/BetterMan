@@ -6,7 +6,6 @@ dist/
 .vite/
 .next/
 .perf-results/
-.plausible-counts.json
 
 # Python
 __pycache__/
