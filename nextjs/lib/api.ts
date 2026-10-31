@@ -92,6 +92,7 @@ export class FastApiError extends Error {
   bodyText?: string
   /** For a miss: the release that answered it, when Convex says (see servedRelease). */
   datasetReleaseId?: string
+  translatedReleaseId?: string | null
 
   constructor(status: number, code: string, message: string, bodyText?: string) {
     super(message)
@@ -140,6 +141,14 @@ export function servedRelease(value: unknown): string | null {
   const v = value as { datasetReleaseId?: unknown; data?: { page?: { datasetReleaseId?: unknown } } } | null
   const served = v?.datasetReleaseId ?? v?.data?.page?.datasetReleaseId
   return typeof served === 'string' && served ? served : null
+}
+
+/** A translated hit, or English after a miss in precisely the keyed translation release. */
+export function nameResolutionAnsweredBy(value: unknown, english: string | null, translated: string | null): boolean {
+  const served = servedRelease(value)
+  const fallback = value as { translatedReleaseId?: unknown } | null
+  return english !== null && served !== null &&
+    (served === translated || (served === english && fallback?.translatedReleaseId === translated))
 }
 
 /**
@@ -275,11 +284,10 @@ async function providersFor(opts: { distro: Distro; name: string; section: strin
 const cachedResolveManByNameIn = unstable_cache(
   async (distro: Distro, name: string, lang: string, english: string, translated: string | null) => {
     const value = await convex().query(api.queries.resolveManByName, { distro, name, locale: lang })
-    const served = servedRelease(value)
-    if (!served || (served !== english && served !== translated)) throw new UncacheableManPage(value)
+    if (!nameResolutionAnsweredBy(value, english, translated)) throw new UncacheableManPage(value)
     return cacheableManPage(value)
   },
-  ['betterman', 'convex', 'resolve-man-by-name-lang'],
+  ['betterman', 'convex', 'resolve-man-by-name-lang', 'v2'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -495,7 +503,11 @@ export async function fetchManResolve(opts: { distro: Distro; name: string; rele
   const result = await mapConvexError(() => lang && opts.release
     ? cachedResolveManByNameIn(opts.distro, opts.name, lang.lang, opts.release, lang.translated)
     : cachedResolveManByName(opts.distro, opts.name, opts.release ?? null))
-  if (result.kind === 'not_found') throw pageNotFound(servedRelease(result))
+  if (result.kind === 'not_found') {
+    const error = pageNotFound(servedRelease(result))
+    error.translatedReleaseId = result.translatedReleaseId
+    throw error
+  }
   return result
 }
 
@@ -698,68 +710,6 @@ export async function fetchSeoSitemapPage(opts: { distro: string; page: number }
     return await cachedSeoSitemapPage(opts.distro, release.datasetReleaseId, opts.page)
   } catch (err) {
     if (err instanceof SitemapReleaseMismatch) return err.data
-    throw err
-  }
-}
-
-export type TranslationSeoRelease = FunctionReturnType<typeof api.queries.listTranslationSeoReleases>['items'][number]
-export type TranslationSitemapItem = { name: string; section: string; locales: string[]; englishIndexable?: boolean }
-
-const cachedTranslationSeoReleases = unstable_cache(
-  async () => await convex().query(api.queries.listTranslationSeoReleases, {}),
-  ['betterman', 'convex', 'seo-translation-releases'],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
-)
-
-/** Active translated releases (#395); none until a language is promoted. */
-export async function fetchTranslationSeoReleases(): Promise<TranslationSeoRelease[]> {
-  return (await mapConvexError(() => cachedTranslationSeoReleases())).items
-}
-
-type TranslationSitemap = { datasetReleaseId: string; items: TranslationSitemapItem[] }
-
-async function loadTranslationSitemap(distro: Distro, lang: string, page: number): Promise<TranslationSitemap> {
-  const items: TranslationSitemapItem[] = []
-  let cursor: string | null = null
-  let datasetReleaseId: string | null = null
-  for (let chunk = 0; chunk < MAX_SITEMAP_CHUNKS; chunk += 1) {
-    const result: FunctionReturnType<typeof api.queries.listTranslationSitemapChunk> = await convex().query(
-      api.queries.listTranslationSitemapChunk,
-      { distro, locale: lang, page, paginationOpts: { numItems: 200, cursor } },
-    )
-    if (!result || (datasetReleaseId !== null && result.datasetReleaseId !== datasetReleaseId)) {
-      throw apiError(404, 'SITEMAP_PAGE_NOT_FOUND', 'Sitemap page not found')
-    }
-    datasetReleaseId = result.datasetReleaseId
-    items.push(...result.items)
-    if (result.isDone) return { datasetReleaseId, items }
-    cursor = result.continueCursor
-  }
-  throw apiError(503, 'SITEMAP_PAGE_TOO_LARGE', 'Sitemap page is too large')
-}
-
-// Keyed by the listed release, like the English sitemap pages: another release's read is served, not stored.
-const cachedTranslationSitemap = unstable_cache(
-  async (distro: Distro, lang: string, datasetReleaseId: string, page: number): Promise<TranslationSitemap> => {
-    const data = await loadTranslationSitemap(distro, lang, page)
-    if (data.datasetReleaseId !== datasetReleaseId) throw new UncacheableManPage(data)
-    return data
-  },
-  ['betterman', 'convex', 'seo-translation-sitemap'],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
-)
-
-/**
- * One sitemap page of a language's translated pages, each with every language
- * that has the route. Ingestion puts 1,000 pages on a sitemap page: 5 chunks.
- */
-export async function fetchTranslationSitemap(opts: { distro: Distro; lang: string; page: number }): Promise<TranslationSitemap> {
-  const release = (await fetchTranslationSeoReleases()).find((item) => item.distro === opts.distro && item.locale === opts.lang)
-  if (!release || opts.page > release.sitemapPages) throw apiError(404, 'SITEMAP_PAGE_NOT_FOUND', 'Sitemap page not found')
-  try {
-    return await cachedTranslationSitemap(opts.distro, opts.lang, release.datasetReleaseId, opts.page)
-  } catch (err) {
-    if (err instanceof UncacheableManPage) return err.value as TranslationSitemap
     throw err
   }
 }

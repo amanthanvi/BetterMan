@@ -4,6 +4,8 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Bind English name-resolution fallbacks to the translated release that confirmed the miss, and remove the unused translated-sitemap pipeline (#395).
+
 - Reject translated inline includes whose symlinks resolve outside their language root, and verify Python/workflow language copies against B9 (#395).
 
 - Prove package selectors with cached provider metadata instead of reading default content; remove the extra HTML limiter and retain bounded provider caches within the 5-call/13-document/1-storage-read alternate budget (#394).

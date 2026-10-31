@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 
-import { fetchSeoReleases, fetchTranslationSeoReleases } from '../../lib/api'
+import { fetchSeoReleases } from '../../lib/api'
 import { approvedConcepts } from '../../lib/concepts'
 import { getPublicOrigin } from '../../lib/public-origin'
 
@@ -20,8 +20,6 @@ function weakEtag(parts: string[]): string {
 export async function GET(request: Request) {
   const origin = getPublicOrigin(request)
   const releases = await fetchSeoReleases()
-  // Translated releases (#395); a failed read must not drop the English sitemaps.
-  const translations = await fetchTranslationSeoReleases().catch(() => [])
 
   const concepts = approvedConcepts()
   const etag = weakEtag([
@@ -33,7 +31,6 @@ export async function GET(request: Request) {
       r.ingestedAt,
       String(r.pageCount),
     ]),
-    ...translations.flatMap((r) => [r.distro, r.locale, r.datasetReleaseId, String(r.sitemapPages)]),
   ])
   const ifNoneMatch = request.headers.get('if-none-match')
   if (ifNoneMatch && ifNoneMatch === etag) {
@@ -56,14 +53,6 @@ export async function GET(request: Request) {
       return `  <sitemap>\n    <loc>${loc}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}\n  </sitemap>`
     })
     .concat(concepts.length ? [`  <sitemap>\n    <loc>${origin}/sitemap-concepts.xml</loc>\n  </sitemap>`] : [])
-    .concat(translations.flatMap((r) => {
-      // One file per sitemap page of the language's release (#395).
-      const lastmod = toIsoZ(r.ingestedAt)
-      return Array.from({ length: r.sitemapPages }, (_, i) => {
-        const loc = `${origin}/sitemap-translations-${r.distro}.${r.locale}.${i + 1}.xml`
-        return `  <sitemap>\n    <loc>${loc}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}\n  </sitemap>`
-      })
-    }))
     .join('\n')
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n` +

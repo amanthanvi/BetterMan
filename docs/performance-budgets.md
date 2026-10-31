@@ -303,3 +303,7 @@ eligible English alternates and `noindex`; the fallback as English with the miss
 `noindex`. Both allow 4 calls and 1 storage read, with ceilings of 15 and 29 documents.
 The fixture hash changed for these rows only; every existing baseline and
 tolerance is unchanged.
+
+The translated-language miss serving English (`manTranslationFallback`) measured
+**4 calls / 29 documents / 1 storage read** through the production proxy and
+renderer. Removing the translation sitemap pipeline adds no page-view reads.

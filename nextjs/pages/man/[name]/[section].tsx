@@ -110,9 +110,8 @@ function pageHead(data: ManPageResponse, servedDistro: Distro, pkg: string | nul
 }
 
 /**
- * A translated page's hreflang set (#395): every language with the route, the
- * same set its sitemap entry lists (lib/translationSitemap.ts). English and
- * x-default appear only when English has the page itself and is indexable.
+ * English and x-default appear only when English has an indexable page.
+ * Translated URLs remain noindex and never become hreflang targets.
  */
 function routeAlternates(origin: string, english: string, translation: Extract<TranslationOutcome, { state: 'translated' }>) {
   const withEnglish = translation.englishHasRoute && translation.englishIndexable

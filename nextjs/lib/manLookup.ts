@@ -6,6 +6,7 @@ import {
   fetchRelated,
   fetchTranslatedMan,
   translationAnsweredBy,
+  nameResolutionAnsweredBy,
   suggest,
   withDistroFallback,
   answeredBy,
@@ -47,13 +48,13 @@ export type ManPageLookup =
   | ({ distro: Distro; lang?: TranslatedLang } & ManAlias & Served)
   | ({ kind: 'miss' } & Served)
 
-type Missing = { missing: true; servedRelease: string | null }
+type Missing = { missing: true; servedRelease: string | null; translatedReleaseId?: string | null }
 
 async function orMissing<T>(lookup: Promise<T>): Promise<T | Missing> {
   try {
     return await lookup
   } catch (err) {
-    if (err instanceof FastApiError && err.status === 404) return { missing: true, servedRelease: err.datasetReleaseId ?? null }
+    if (err instanceof FastApiError && err.status === 404) return { missing: true, servedRelease: err.datasetReleaseId ?? null, ...(err.translatedReleaseId !== undefined ? { translatedReleaseId: err.translatedReleaseId } : {}) }
     throw err
   }
 }
@@ -144,17 +145,20 @@ export type ResolvedManName = ({ distro: Distro; result: ManResolveResult } | { 
 /** A name's only section, alias target or section picker; `result: null` for a miss. */
 export async function resolveManName(name: string, distro: Distro, release?: string, translation?: TranslationInfo | null): Promise<ResolvedManName> {
   // `?lang=` (#395) resolves in the language first, then English. Its answer
-  // counts as the key's when either key release gave it; without a known key it is private.
+  // fallback must confirm a miss in the key's translated release; otherwise it is private.
   const lang = translation?.known && release ? { lang: translation.lang, translated: translation.datasetReleaseId } : undefined
   const resolved = await orMissing(
     withDistroFallback(distro, (activeDistro) =>
       fetchManResolve({ distro: activeDistro, name: name.toLowerCase(), ...(release ? { release } : {}), ...(lang ? { lang } : {}) }),
     ),
   )
-  const served = (value: string | null) =>
-    !translation ? value : lang && value !== null && (value === release || value === lang.translated) ? release ?? null : null
-  if (isMissing(resolved)) return { result: null, servedRelease: served(resolved.servedRelease) }
-  return { distro: resolved.distro, result: resolved.data, servedRelease: served(servedRelease(resolved.data)) }
+  const value = isMissing(resolved)
+    ? { datasetReleaseId: resolved.servedRelease, translatedReleaseId: resolved.translatedReleaseId }
+    : resolved.data
+  const served = !translation ? servedRelease(value)
+    : lang && nameResolutionAnsweredBy(value, release ?? null, lang.translated) ? release ?? null : null
+  if (isMissing(resolved)) return { result: null, servedRelease: served }
+  return { distro: resolved.distro, result: resolved.data, servedRelease: served }
 }
 
 export type ManMiss = {

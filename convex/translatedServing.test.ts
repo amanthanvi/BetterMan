@@ -150,27 +150,6 @@ describe("translated pages (#395)", () => {
     expect(rest.hasMore).toBe(false);
   });
 
-  it("lists every language version of each translated route for the sitemap", async () => {
-    const t = convexTest(schema, modules);
-    await corpus(t);
-    expect(await t.query(api.queries.listTranslationSeoReleases, {})).toEqual({
-      items: [
-        { distro: "debian", locale: "de", datasetReleaseId: "debian-de", ingestedAt: "2026-10-30T00:00:00Z", pageCount: 2, sitemapPages: 0 },
-        { distro: "debian", locale: "fr", datasetReleaseId: "debian-fr", ingestedAt: "2026-10-30T00:00:00Z", pageCount: 2, sitemapPages: 0 },
-      ],
-    });
-    const chunk = await t.query(api.queries.listTranslationSitemapChunk, { distro: "debian", locale: "fr", paginationOpts: { numItems: 50, cursor: null } });
-    expect(chunk?.items).toEqual([
-      { name: "tail", section: "1", locales: ["en", "fr"], englishIndexable: true },
-      { name: "tar", section: "1", locales: ["en", "de", "fr"], englishIndexable: true },
-    ]);
-    const de = await t.query(api.queries.listTranslationSitemapChunk, { distro: "debian", locale: "de", paginationOpts: { numItems: 50, cursor: null } });
-    expect(de?.items[0]).toEqual({ name: "nur-de", section: "1", locales: ["de"], englishIndexable: false });
-    expect(chunk?.isDone).toBe(true);
-    expect(await t.query(api.queries.listTranslationSitemapChunk, { distro: "debian", locale: "en", paginationOpts: { numItems: 50, cursor: null } })).toBeNull();
-    expect(await t.query(api.queries.listTranslationSitemapChunk, { distro: "ubuntu", locale: "de", paginationOpts: { numItems: 50, cursor: null } })).toBeNull();
-  });
-
   it("bounds the documents a translated page and an English fallback read", async () => {
     const t = convexTest(schema, modules);
     await corpus(t);
@@ -190,37 +169,6 @@ describe("translated pages (#395)", () => {
     expect(fallback.documents).toBeLessThanOrEqual(english.documents + 2);
 });
 
-  it("splits a translation of more than 2,000 pages into sitemap pages, one file each", async () => {
-    const t = convexTest(schema, modules);
-    await corpus(t);
-    await t.run(async (ctx) => {
-      const pointer = (await ctx.db.query("activeReleases").withIndex("by_stage_and_locale_and_distro", (q) => q.eq("stage", "prod").eq("locale", "de").eq("distro", "debian")).unique())!;
-      for (let i = 0; i < 2101; i++) {
-        await ctx.db.insert("manPages", {
-          releaseId: pointer.releaseId, datasetReleaseId: pointer.datasetReleaseId, externalId: `bulk-${i}`, locale: "de", distro: "debian",
-          name: `bulk${String(i).padStart(5, "0")}`, section: "1", sitemapPage: Math.floor(i / 1000) + 1, title: "x", description: "x",
-          sourcePath: "x", contentSha256: `bulk-${i}`, hasParseWarnings: false,
-        });
-      }
-    });
-    const releases = await t.query(api.queries.listTranslationSeoReleases, {});
-    expect(releases.items.find((item) => item.locale === "de")).toMatchObject({ sitemapPages: 0 });
-    const read = async (page: number) => {
-      const items = [];
-      let cursor: string | null = null;
-      for (;;) {
-        const chunk: { items: Array<{ name: string }>; isDone: boolean; continueCursor: string } | null = await t.query(api.queries.listTranslationSitemapChunk, { distro: "debian", locale: "de", page, paginationOpts: { numItems: 200, cursor } });
-        items.push(...chunk!.items);
-        if (chunk!.isDone) return items;
-        cursor = chunk!.continueCursor;
-      }
-    };
-    // The two corpus pages sit on page 1 too (sitemapPage 1).
-    expect((await read(1)).length).toBe(1002);
-    expect((await read(2)).length).toBe(1000);
-    expect((await read(3)).map((item) => item.name)).toEqual(["bulk02000", "bulk02001", "bulk02002", "bulk02003", "bulk02004", "bulk02005", "bulk02006", "bulk02007", "bulk02008", "bulk02009", "bulk02010", "bulk02011", "bulk02012", "bulk02013", "bulk02014", "bulk02015", "bulk02016", "bulk02017", "bulk02018", "bulk02019", "bulk02020", "bulk02021", "bulk02022", "bulk02023", "bulk02024", "bulk02025", "bulk02026", "bulk02027", "bulk02028", "bulk02029", "bulk02030", "bulk02031", "bulk02032", "bulk02033", "bulk02034", "bulk02035", "bulk02036", "bulk02037", "bulk02038", "bulk02039", "bulk02040", "bulk02041", "bulk02042", "bulk02043", "bulk02044", "bulk02045", "bulk02046", "bulk02047", "bulk02048", "bulk02049", "bulk02050", "bulk02051", "bulk02052", "bulk02053", "bulk02054", "bulk02055", "bulk02056", "bulk02057", "bulk02058", "bulk02059", "bulk02060", "bulk02061", "bulk02062", "bulk02063", "bulk02064", "bulk02065", "bulk02066", "bulk02067", "bulk02068", "bulk02069", "bulk02070", "bulk02071", "bulk02072", "bulk02073", "bulk02074", "bulk02075", "bulk02076", "bulk02077", "bulk02078", "bulk02079", "bulk02080", "bulk02081", "bulk02082", "bulk02083", "bulk02084", "bulk02085", "bulk02086", "bulk02087", "bulk02088", "bulk02089", "bulk02090", "bulk02091", "bulk02092", "bulk02093", "bulk02094", "bulk02095", "bulk02096", "bulk02097", "bulk02098", "bulk02099", "bulk02100"]);
-  }, 60_000);
-
   it("counts English only when it has the page itself, not an alias", async () => {
     const t = convexTest(schema, modules);
     await corpus(t);
@@ -231,8 +179,7 @@ describe("translated pages (#395)", () => {
     });
     const answer = await t.query(internal.content.getManByNameAndSectionReadModel, { stage: "prod", distro: "debian", name: "nur-de", section: "1", locale: "de" });
     expect(answer).toMatchObject({ translation: { state: "translated", englishHasRoute: false, englishIndexable: false, languages: [] } });
-    const sitemap = await t.query(api.queries.listTranslationSitemapChunk, { distro: "debian", locale: "de", paginationOpts: { numItems: 50, cursor: null } });
-    expect(sitemap?.items.find((item) => item.name === "nur-de")).toEqual({ name: "nur-de", section: "1", locales: ["de"], englishIndexable: false });
+
   });
 
   it.each([
@@ -262,6 +209,30 @@ describe("translated pages (#395)", () => {
     });
     expect(await t.query(api.queries.resolveManByName, { distro: "debian", name: "nur-de", locale: "de" })).toMatchObject({ kind: "ambiguous", indexable: false });
     expect(await t.query(api.queries.resolveManByName, { distro: "debian", name: "nur-de" })).toMatchObject({ kind: "not_found" });
+  });
+
+  it("names the translated release checked by every English name fallback", async () => {
+    const t = convexTest(schema, modules);
+    await corpus(t);
+    await t.run(async ctx => {
+      const english = (await ctx.db.query("activeReleases").withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "prod").eq("locale", "en").eq("distro", "debian")).unique())!;
+      await ctx.db.insert("manPageAliases", { releaseId: english.releaseId, datasetReleaseId: english.datasetReleaseId, name: "english-alias", section: "1", targetName: "tar", targetSection: "1" });
+      for (const section of ["1", "3"]) await ctx.db.insert("manPages", {
+        releaseId: english.releaseId, datasetReleaseId: english.datasetReleaseId, externalId: `multi-${section}`, locale: "en", distro: "debian",
+        name: "multi", section, sitemapPage: 0, title: "multi", description: "multi", sourcePath: "multi", contentSha256: "multi", hasParseWarnings: false,
+      });
+    });
+    for (const translatedReleaseId of ["debian-de", null]) {
+      if (translatedReleaseId === null) await t.run(async ctx => {
+        const pointer = (await ctx.db.query("activeReleases").withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "prod").eq("locale", "de").eq("distro", "debian")).unique())!;
+        await ctx.db.delete(pointer._id);
+      });
+      for (const [name, kind] of [["tail", "page"], ["english-alias", "alias"], ["multi", "ambiguous"], ["absent", "not_found"]]) {
+        expect(await t.query(api.queries.resolveManByName, { distro: "debian", name, locale: "de" }))
+          .toMatchObject({ kind, datasetReleaseId: "debian-en", translatedReleaseId });
+      }
+    }
+    expect(await t.query(api.queries.resolveManByName, { distro: "debian", name: "tail" })).not.toHaveProperty("translatedReleaseId");
   });
 
   it("resolves a name-only URL in the language first, then English", async () => {
