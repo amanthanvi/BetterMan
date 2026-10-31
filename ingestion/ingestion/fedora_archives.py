@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import io
 import json
-import posixpath
 import re
 import sqlite3
 import subprocess
@@ -15,7 +14,15 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ingestion.debian_archives import MAX_SOURCE_BYTES, ExtractedQuota
-from ingestion.debian_indexes import BINARY_PATH, MAN_PATH, Package, download, popularity, safe_path
+from ingestion.debian_indexes import (
+    BINARY_PATH,
+    MAN_PATH,
+    Package,
+    download,
+    link_target,
+    popularity,
+    safe_path,
+)
 from ingestion.util import sha256_hex
 
 
@@ -187,12 +194,7 @@ def extract_payload(stream, package, root, *, quota):
                 continue
             path = safe_path(path)
             if member.issym() or member.islnk():
-                target = member.linkname
-                if target.startswith("/"):
-                    target = target.lstrip("/")
-                elif member.issym():
-                    target = posixpath.join(posixpath.dirname(path), target)
-                target = safe_path(posixpath.normpath(target))
+                target = link_target(path, member.linkname, symbolic=member.issym())
                 allowed = (
                     BINARY_PATH.fullmatch(target)
                     if binary
