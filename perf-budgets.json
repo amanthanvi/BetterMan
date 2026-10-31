@@ -723,7 +723,7 @@
       "absolute": 0
     },
     "manTranslated.htmlBytes": {
-      "baseline": 53411,
+      "baseline": 53356,
       "relative": 0.02,
       "absolute": 0
     },
@@ -733,7 +733,7 @@
       "absolute": 0
     },
     "manTranslated.documents": {
-      "baseline": 15,
+      "baseline": 14,
       "relative": 0,
       "absolute": 0
     },
@@ -748,7 +748,7 @@
       "absolute": 0
     },
     "manTranslated.jsGzipBytes": {
-      "baseline": 21635,
+      "baseline": 21638,
       "relative": 0.02,
       "absolute": 0
     },
@@ -778,19 +778,19 @@
       "absolute": 0
     },
     "manTranslationFallback.jsGzipBytes": {
-      "baseline": 21639,
+      "baseline": 21644,
       "relative": 0.02,
       "absolute": 0
     }
   },
-  "sourceHead": "a67c36ed74fa210f84ea5425132285990ed5cb5e",
+  "sourceHead": "37e65b2b914e41253aa199752f86b23a1f0dd741",
   "toolchain": {
-    "next": "16.4.2",
+    "next": "16.4.3",
     "playwright": "1.64.1",
     "convex": "1.48.0",
     "convexTest": "0.0.60"
   },
-  "fixtureSha256": "391ff0ce498a6bcbafe4170882d80a4406afbbb771421e56e7b17e9f0d23efa9",
+  "fixtureSha256": "4107e32b8678b5c5316906f0d4892753c29b17be2a62d0a52ea6cf9bd893bee3",
   "labBaseline": {
     "platform": "linux",
     "samplesPerRoute": 3,

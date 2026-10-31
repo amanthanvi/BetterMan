@@ -185,7 +185,7 @@ The sitemap index reads only the existing English releases and concepts.
 | Page view | Calls | Documents | Storage reads |
 | --- | ---: | ---: | ---: |
 | English man page (unchanged) | 4 | 26 | 1 |
-| Translated page (`manTranslated`) | 4 | 15 | 1 |
+| Translated page (`manTranslated`) | 4 | 14 | 1 |
 | Missing translation, English fallback (`manTranslationFallback`) | 4 | 29 | 1 |
 
 A translated page reads no derived summary or generated brief (both are

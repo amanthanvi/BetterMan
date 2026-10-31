@@ -323,3 +323,11 @@ tolerance is unchanged.
 The translated-language miss serving English (`manTranslationFallback`) measured
 **4 calls / 29 documents / 1 storage read** through the production proxy and
 renderer. Removing the translation sitemap pipeline adds no page-view reads.
+
+Fixture **v16** combines main/#465’s saturated bare-cluster scenarios
+(`searchClusterBare` and `searchClusterBareShort`) with B3’s translated and
+missing-translation browser scenarios. Main’s existing metric policies are
+retained, alongside B3’s existing 50-byte search gzip allowance. Only the
+translated scenario baselines are re-recorded; every tolerance and unrelated
+baseline remains unchanged. Without drift, the translated case measures
+**4 calls / 14 documents / 1 storage read**; the English fallback is **4 / 29 / 1**.
