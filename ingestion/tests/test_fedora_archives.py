@@ -48,22 +48,45 @@ def test_rpm_payload_keeps_only_docs_and_never_creates_links_or_runs_scripts(tmp
     store.db.close()
 
 
-@pytest.mark.parametrize(
-    "name,target",
-    [
-        ("usr/share/man/../../escape", None),
-        ("usr/share/man/man1/escape.1", "../../../../../etc/passwd"),
-    ],
-)
-def test_retained_paths_reject_traversal(tmp_path, name, target):
+def test_retained_member_names_reject_traversal(tmp_path):
+    # Member names decide where files are written, so ".." is never allowed there.
     with pytest.raises(ValueError, match="Unsafe"):
         extract_payload(
-            payload([(name, b"x", target)]),
+            payload([("usr/share/man/../../escape", b"x", None)]),
             package(),
             tmp_path,
             quota=ExtractedQuota(tmp_path / "files"),
         )
     assert not (tmp_path / "escape").exists()
+
+
+def test_symlink_targets_stop_at_the_archive_root_and_stay_data(tmp_path):
+    # Fedora's llvm12 links /usr/bin entries with one ".." too many; the kernel stops
+    # ".." at /, and so does extraction. Targets name archive paths and are never
+    # created on disk or read from the host; ones outside allowed roots stay blocked.
+    entries = extract_payload(
+        payload(
+            [
+                ("usr/bin/bugpoint-12", b"", "../../usr/lib64/llvm12/bin/bugpoint"),
+                ("usr/bin/clang-12", b"", "../../../../usr/bin/clang"),
+                ("usr/share/man/man1/escape.1", b"", "../../../../../etc/passwd"),
+            ]
+        ),
+        package(),
+        tmp_path,
+        quota=ExtractedQuota(tmp_path / "files"),
+    )
+    links = {path: (kind, target) for _pkg, path, kind, target, _digest in entries}
+    assert links["usr/bin/bugpoint-12"] == ("blocked", "usr/lib64/llvm12/bin/bugpoint")
+    assert links["usr/bin/clang-12"] == ("binary-link", "usr/bin/clang")
+    assert links["usr/share/man/man1/escape.1"] == ("blocked", "etc/passwd")
+    assert all(not p.is_symlink() for p in tmp_path.rglob("*"))
+    assert not (tmp_path / "etc").exists()
+    store = ArchiveStore(tmp_path, registrations={"packages": {}})
+    store.add(package(), entries)
+    with pytest.raises(ValueError, match="leaves archive documentation roots"):
+        store.resolve("fixture", "usr/share/man/man1/escape.1")
+    store.db.close()
 
 
 @pytest.mark.parametrize("request_line", [b".so man1/part.1 extra\n", b".so\n"])
