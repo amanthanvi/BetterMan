@@ -65,9 +65,7 @@ def pinned_workspace(tmp_path, monkeypatch):
     monkeypatch.setenv("BETTERMAN_INGEST_WORKERS", "1")
 
     def create(*, distro="debian", exclusions=...):
-        pins["excludedPackages"] = (
-            {"provider-high": REASON} if exclusions is ... else exclusions
-        )
+        pins["excludedPackages"] = {"provider-high": REASON} if exclusions is ... else exclusions
         target = pinfile if distro == "debian" else pinfile.with_name("ubuntu-noble.json")
         target.write_text(json.dumps(pins))
         return pipeline.Workspace(tmp_path / "workspace", distro=distro), downloaded
@@ -164,6 +162,18 @@ def test_dependency_on_excluded_package_fails_closed(pinned_workspace, kind, tmp
 def test_curated_package_cannot_be_excluded(pinned_workspace):
     with pytest.raises(RuntimeError, match="requires excluded package gawk"):
         pinned_workspace(exclusions={"gawk": REASON})
+
+
+def test_exclusions_must_name_packages_in_the_archive(pinned_workspace):
+    with pytest.raises(ValueError, match="unknown packages: bcc-typo"):
+        pinned_workspace(exclusions={"bcc-typo": REASON})
+
+
+def test_command_page_owner_cannot_be_excluded(pinned_workspace, monkeypatch):
+    # git(1) ships in git-man, not git: excluding the owner would drop a curated page.
+    monkeypatch.setattr(pipeline, "_COMMAND_PAGE_OWNERS", {"debian": {"gawk": "provider-low"}})
+    with pytest.raises(RuntimeError, match="requires excluded package provider-low"):
+        pinned_workspace(exclusions={"provider-low": REASON})
 
 
 def test_changing_exclusions_invalidates_workspace(pinned_workspace):

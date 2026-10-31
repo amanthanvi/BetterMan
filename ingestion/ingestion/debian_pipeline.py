@@ -35,6 +35,7 @@ from ingestion.debian_indexes import (
 )
 from ingestion.debian_licenses import copyright_text
 from ingestion.ingest_runner import (
+    _COMMAND_PAGE_OWNERS,
     _NAME_RE,
     _AliasRow,
     _bounded_futures,
@@ -161,6 +162,9 @@ class Workspace:
                 else private_registrations()
             )
             self.available = available_packages(self.root / "indexes", popularity(self.pins))
+        if unknown := sorted(set(exclusions) - self.available.keys()):
+            # A reviewed exclusion must name a real package, or the audit entry misleads.
+            raise ValueError("Pinned exclusions name unknown packages: " + ", ".join(unknown))
         self.all_manual_packages = [p for p in self.all_manual_packages if p.name not in exclusions]
         self.packages = sample_packages(self.all_manual_packages, limit, distro)
         selection_path = self.root / "selection.json"
@@ -179,7 +183,11 @@ class Workspace:
         # vim-tiny whose manual slaves live in vim-common. Their postinst data
         # supplies alternatives; they are never installed.
         selected_names = {p.name for p in self.packages}
-        self.require_allowed_packages(FULL_PACKAGE_SET_BY_DISTRO[distro])
+        # Curated names and the packages that own their command pages (git -> git-man).
+        self.require_allowed_packages(
+            set(FULL_PACKAGE_SET_BY_DISTRO[distro])
+            | set(_COMMAND_PAGE_OWNERS.get(distro, {}).values())
+        )
         self.curated_packages = [
             self.available[n]
             # G++ and vim-tiny have alternatives but no manual-owned archive
@@ -361,13 +369,7 @@ class Workspace:
         packages = self.packages + self.curated_packages if packages is None else list(packages)
         self.require_allowed_packages(p.name for p in packages)
         workers = min(2, max(1, workers))
-        pending = list(
-            {
-                p.name: p
-                for p in packages
-                if p.name not in self.acquired
-            }.values()
-        )
+        pending = list({p.name: p for p in packages if p.name not in self.acquired}.values())
         if workers > 1 and any(p.size > 1024**3 for p in pending):
             self.acquire([p for p in pending if p.size <= 1024**3], workers=workers)
             self.acquire([p for p in pending if p.size > 1024**3], workers=1)
