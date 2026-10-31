@@ -70,6 +70,7 @@ const storageStatsTableValidator = v.union(
   v.literal("manPageSymbols"),
   v.literal("manPageTaskPhrases"),
   v.literal("taskPhraseBackfills"),
+  v.literal("flagSearchCandidates"),
   v.literal("manPageOptionFlags"),
   v.literal("manPageSearchDocuments"),
   v.literal("manPages"),
@@ -114,6 +115,7 @@ export const STORAGE_STATS_FIELDS: { [T in StorageStatsTable]: Array<Extract<key
   manPageSymbols: ["term", "termNorm", "anchorId", "excerpt"],
   manPageTaskPhrases: ["name", "section", "title", "description", "taskText", "contentSha256"],
   taskPhraseBackfills: ["cursor"],
+  flagSearchCandidates: ["flag"],
   manPageOptionFlags: ["nameNorm", "section", "flag", "anchorId", "flags"],
   manPageSearchDocuments: ["searchText", "snippetText", "description", "title", "name"],
   manPages: [
