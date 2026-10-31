@@ -299,7 +299,7 @@ B3 (#395) adds `manTranslated` (`/man/bash/1?lang=de`) and
 `manTranslationFallback` (`/man/bash/1?lang=fr`) from the same corpus plus a
 German release with bash(1) and a French release without it. Each must render
 cold through the proxy: the German page with `lang="de"`, its note and its
-`hreflang` set; the fallback as English with the missing-translation note and
-`noindex`. Both measure 4 calls and 1 storage read, at 15 and 29 documents.
+eligible English alternates and `noindex`; the fallback as English with the missing-translation note and
+`noindex`. Both allow 4 calls and 1 storage read, with ceilings of 15 and 29 documents.
 The fixture hash changed for these rows only; every existing baseline and
 tolerance is unchanged.
