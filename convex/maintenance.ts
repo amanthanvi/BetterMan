@@ -72,6 +72,7 @@ const storageStatsTableValidator = v.union(
   v.literal("taskPhraseBackfills"),
   v.literal("manPageTranslationDrift"),
   v.literal("translationDriftBuilds"),
+  v.literal("flagSearchCandidates"),
   v.literal("manPageOptionFlags"),
   v.literal("manPageSearchDocuments"),
   v.literal("manPages"),
@@ -118,6 +119,7 @@ export const STORAGE_STATS_FIELDS: { [T in StorageStatsTable]: Array<Extract<key
   taskPhraseBackfills: ["cursor"],
   manPageTranslationDrift: ["documented", "english", "missingFlags"],
   translationDriftBuilds: ["cursor"],
+  flagSearchCandidates: ["flag"],
   manPageOptionFlags: ["nameNorm", "section", "flag", "anchorId", "flags"],
   manPageSearchDocuments: ["searchText", "snippetText", "description", "title", "name"],
   manPages: [

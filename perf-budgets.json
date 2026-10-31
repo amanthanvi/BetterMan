@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fixture": "scripts/perf-fixture.ts v14: cached package providers and translated releases with a drift note (#395) alongside unchanged browser corpus",
+  "fixture": "scripts/perf-fixture.ts v16: saturated bare clusters plus translated/manual fallback scenarios",
   "profile": "Chromium, 1280x800, device scale 1, light, reduced motion, 4x CPU, no network throttle, cold browser, warm data cache; median of 5; 5s observation after network idle",
   "metrics": {
     "home.htmlBytes": {
@@ -692,6 +692,36 @@
       "relative": 0.02,
       "absolute": 0
     },
+    "searchClusterBare.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "searchClusterBare.documents": {
+      "baseline": 40,
+      "relative": 0,
+      "absolute": 0
+    },
+    "searchClusterBare.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "searchClusterBareShort.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "searchClusterBareShort.documents": {
+      "baseline": 40,
+      "relative": 0,
+      "absolute": 0
+    },
+    "searchClusterBareShort.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
     "manTranslated.htmlBytes": {
       "baseline": 53651,
       "relative": 0.02,
@@ -718,7 +748,7 @@
       "absolute": 0
     },
     "manTranslated.jsGzipBytes": {
-      "baseline": 21635,
+      "baseline": 21638,
       "relative": 0.02,
       "absolute": 0
     },
@@ -748,19 +778,19 @@
       "absolute": 0
     },
     "manTranslationFallback.jsGzipBytes": {
-      "baseline": 21639,
+      "baseline": 21644,
       "relative": 0.02,
       "absolute": 0
     }
   },
-  "sourceHead": "a67c36ed74fa210f84ea5425132285990ed5cb5e",
+  "sourceHead": "37e65b2b914e41253aa199752f86b23a1f0dd741",
   "toolchain": {
-    "next": "16.4.2",
+    "next": "16.4.3",
     "playwright": "1.64.1",
     "convex": "1.48.0",
     "convexTest": "0.0.60"
   },
-  "fixtureSha256": "d2be45ac36d7e81c91d6b74d6e069c88891d6cb8434f3570b1bee9e81e6d0eae",
+  "fixtureSha256": "4107e32b8678b5c5316906f0d4892753c29b17be2a62d0a52ea6cf9bd893bee3",
   "labBaseline": {
     "platform": "linux",
     "samplesPerRoute": 3,

@@ -457,12 +457,54 @@ def test_inline_include_symlink_cannot_inline_english_bytes(tmp_path, include):
     assert any(row["path"].endswith("/foo.1.gz") for row in obj.missing)
 
 
+@pytest.mark.parametrize(
+    "files",
+    [
+        {  # chained: the German name links to another German name that leaves the root
+            "usr/share/man/de/man1/part.1.gz": "mid.1.gz",
+            "usr/share/man/de/man1/mid.1.gz": "../../man1/part.1.gz",
+        },
+        {  # nested: a German include that itself includes a cross-root link
+            "usr/share/man/de/man1/part.1.gz": b"Innerer Text\n.so man1/inner.1\n",
+            "usr/share/man/de/man1/inner.1.gz": "../../man1/part.1.gz",
+        },
+        {  # nested and chained
+            "usr/share/man/de/man1/part.1.gz": b"Innerer Text\n.so man1/inner.1\n",
+            "usr/share/man/de/man1/inner.1.gz": "mid.1.gz",
+            "usr/share/man/de/man1/mid.1.gz": "../../man1/part.1.gz",
+        },
+    ],
+)
+def test_chained_and_nested_include_links_cannot_inline_english_bytes(tmp_path, files):
+    obj = workspace(
+        tmp_path,
+        {
+            "manpages-de": (
+                {
+                    "usr/share/man/de/man1/foo.1.gz": (
+                        b".TH FOO 1\n.SH BEZEICHNUNG\nfoo \\- Beschreibung\n.so man1/part.1\n"
+                    ),
+                    **files,
+                    "usr/share/man/man1/part.1.gz": b"ENGLISH-ONLY-TEXT\n",
+                },
+                1,
+            )
+        },
+    )
+    sources = list(obj.translated_sources("de"))
+    assert all(b"ENGLISH-ONLY-TEXT" not in row[-1] for row in sources)
+    assert not any(row[2] == "foo" for row in sources)
+
+
 def test_all_translation_language_copies_match_b9():
     repo = Path(__file__).resolve().parents[2]
     source = (repo / "nextjs/lib/i18n/locales.ts").read_text()
     langs = ast.literal_eval(re.search(r"export const LANGS = (\[[^\]]+\]) as const", source)[1])
     expected = set(langs) - {"en"}
     assert set(TRANSLATION_ROOTS) == expected
+    for root in TRANSLATION_ROOTS.values():
+        assert LOCALIZED_MAN_PATH.fullmatch(f"usr/share/man/{root}/man1/ls.1.gz")
+    assert not LOCALIZED_MAN_PATH.fullmatch("usr/share/man/it/man1/ls.1.gz")
     calls = ast.walk(ast.parse((repo / "ingestion/ingestion/cli.py").read_text()))
     choice = next(
         node

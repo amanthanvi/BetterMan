@@ -41,7 +41,7 @@ MAN_PATH = re.compile(
 # duplicates (fr.UTF-8, de.UTF-8, ja.UTF-8) hold 2-10 pages and are not read.
 TRANSLATION_ROOTS = {"de": "de", "fr": "fr", "es": "es", "pt-BR": "pt_BR", "ja": "ja", "ru": "ru"}
 LOCALIZED_MAN_PATH = re.compile(
-    r"^usr/share/man/(de|fr|es|pt_BR|ja|ru)"
+    r"^usr/share/man/(" + "|".join(map(re.escape, TRANSLATION_ROOTS.values())) + r")"
     r"/man[1-9][a-z0-9]*/([^/]+)\.([1-9][a-z0-9]*)(?i:\.(?:gz|xz|bz2|zst))?$"
 )
 
