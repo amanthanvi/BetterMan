@@ -14,6 +14,7 @@ import type * as _derivedInputs from "../_derivedInputs.js";
 import type * as _derivedModel from "../_derivedModel.js";
 import type * as _destructive from "../_destructive.js";
 import type * as _explainBounds from "../_explainBounds.js";
+import type * as _flagSearch from "../_flagSearch.js";
 import type * as _generatedLayer from "../_generatedLayer.js";
 import type * as _indexPolicy from "../_indexPolicy.js";
 import type * as _ingestErrors from "../_ingestErrors.js";
@@ -65,6 +66,7 @@ declare const fullApi: ApiFromModules<{
   _derivedModel: typeof _derivedModel;
   _destructive: typeof _destructive;
   _explainBounds: typeof _explainBounds;
+  _flagSearch: typeof _flagSearch;
   _generatedLayer: typeof _generatedLayer;
   _indexPolicy: typeof _indexPolicy;
   _ingestErrors: typeof _ingestErrors;

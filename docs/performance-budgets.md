@@ -283,6 +283,22 @@ contain both links; the alternate must render its own content and noindex
 metadata. Their cold function/document/blob, HTML and client-byte metrics are
 budgeted separately. Existing metric policies and baselines are preserved.
 
+The `searchClusterBare` and `searchClusterBareShort` scenarios measure `-xzf`
+and `-xf`, including all twelve brief lookups and candidate rows for every
+letter. Nine fully covering commands and six partial competitors saturate the
+runtime ceilings: five pages for three-letter clusters, seven for two letters.
+Both require tar first and enforce one call, at most forty document reads and
+zero blob reads. The implementation reserves the full brief for every cluster
+length, so a short cluster cannot exceed the same forty-read ceiling. Search
+regression queries use runtime syscall accounting to enforce that ceiling even
+when their fixture mutations require Convex's normal transaction limits.
+
+The new two-letter measurement and updated fixture hash require the existing
+`perf-budget-change` label and Budget explanation. Other workload descriptors
+and tolerances remain unchanged; ordinary search still measures two calls and
+thirty documents. Candidate source rebuilds run in debounced, generation-buffered
+background passes and do not replace the completed snapshot during measurement.
+
 ## Analytics migration
 
 Vercel Web Analytics uses platform same-origin intake, removing one BetterMan
