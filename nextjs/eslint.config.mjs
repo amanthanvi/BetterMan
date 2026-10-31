@@ -26,6 +26,6 @@ export default defineConfig([
     files: ['man-client/**'],
     rules: { '@next/next/no-location-assign-relative-destination': 'off' },
   },
-  // Unmodified, hash-pinned upstream tracker; provenance and behavior have separate tests.
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'public/assets/site.js', 'public/_bm/**']),
+  // Generated framework output and content-hashed man-client bundles.
+  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'public/_bm/**']),
 ])

@@ -462,9 +462,8 @@ were not enabled during integration.
 ## Index-by-demand
 
 Every release computes demand scores and tier membership from pinned popcon
-and optional aggregate pageviews. See the [B4 runbook](../docs/roadmap/b4-index-by-demand.md)
-for thresholds, monthly evaluation, `BETTERMAN_PLAUSIBLE_COUNTS`, deployment
-ordering and the required fresh v7 ingestion before full-Debian promotion.
+and page sections. See the [B4 runbook](../docs/roadmap/b4-index-by-demand.md)
+for thresholds, monthly evaluation, deployment ordering and the required fresh v7 ingestion before full-Debian promotion.
 
 Existing unscored prod releases retain all-page indexing and sitemaps. Full-Debian
 releases without a tier may activate staging but cannot enter prod, including

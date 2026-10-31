@@ -273,6 +273,5 @@ to distinguish healthy completion from partial unavailable pages.
 ## Index-by-demand (B4)
 
 [The B4 policy and runbook](roadmap/b4-index-by-demand.md) define the shared
-ingest-time score, indexable tier, monthly refresh, optional Plausible input,
-legacy rollout and full-Debian projection. These scalars live on existing page
+ingest-time score, indexable tier, monthly refresh, legacy rollout and full-Debian projection. These scalars live on existing page
 metadata; page reads do not query analytics or a separate derived table.
