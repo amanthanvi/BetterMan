@@ -10,6 +10,7 @@ import logging
 import lzma
 import math
 import os
+import posixpath
 import random
 import re
 import sqlite3
@@ -136,6 +137,21 @@ def safe_path(value: str) -> str:
     if path.is_absolute() or ".." in path.parts or "\\" in value or any(ord(c) < 32 for c in value):
         raise ValueError(f"Unsafe archive path: {value!r}")
     return str(path)
+
+
+def link_target(path: str, linkname: str, *, symbolic: bool) -> str:
+    """Resolve an archive link target to an archive-relative path.
+
+    Symlinks resolve like the kernel does: relative to the link's directory,
+    with ".." stopping at the root (Fedora's llvm12 links /usr/bin entries
+    via one ".." too many). The result names a path inside the archive's own
+    namespace; extraction never creates links and never reads the host.
+    Hard links keep naming an archive member exactly.
+    """
+    if symbolic:
+        base = linkname if linkname.startswith("/") else f"/{posixpath.dirname(path)}/{linkname}"
+        return safe_path(posixpath.normpath(base).lstrip("/"))
+    return safe_path(posixpath.normpath(linkname.lstrip("/")))
 
 
 def _download_once(
