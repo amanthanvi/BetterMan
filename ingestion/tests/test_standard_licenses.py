@@ -5,6 +5,42 @@ import pytest
 from tests.test_archive_notices import notice_workspace as notice_workspace
 
 
+def test_every_reviewed_alias_target_exists_in_pinned_spdx_inventory():
+    import json
+    from pathlib import Path
+
+    from ingestion.standard_licenses import LEGACY, PINS, parse_expression
+
+    # Identifier fixture derived from the checksum-verified official archive.
+    inventory = json.loads(
+        (Path(__file__).parent / "fixtures/spdx-3.29.0-identifiers.json").read_text()
+    )
+    pins = json.loads(PINS.read_text())
+    assert (inventory["release"], inventory["archiveSha256"]) == (pins["release"], pins["sha256"])
+    for aliases in json.loads(LEGACY.read_text()).values():
+        for target in aliases.values():
+            for name, kind in parse_expression(target):
+                assert name in inventory[kind], (target, name, kind)
+
+
+@pytest.mark.parametrize(
+    ("alias", "family", "versions", "suffixes"),
+    [
+        ("GPL", "GPL", ["1.0", "2.0", "3.0"], ["only", "or-later"]),
+        ("LGPL", "LGPL", ["2.0", "2.1", "3.0"], ["only", "or-later"]),
+        ("AGPL", "AGPL", ["1.0", "3.0"], ["only", "or-later"]),
+        ("LGPL2", "LGPL", ["2.0", "2.1"], ["only", "or-later"]),
+        ("LGPL2+", "LGPL", ["2.0", "2.1"], ["or-later"]),
+    ],
+)
+def test_ambiguous_gnu_aliases_keep_every_version(alias, family, versions, suffixes):
+    from ingestion.standard_licenses import declared_identifiers
+
+    assert set(declared_identifiers(alias, "arch")) == {
+        (f"{family}-{version}-{suffix}", "license") for version in versions for suffix in suffixes
+    }
+
+
 def test_expression_parser_preserves_and_or_with_and_exception():
     from ingestion.standard_licenses import parse_expression
 
@@ -84,6 +120,80 @@ def test_unknown_identifier_and_invalid_expression_are_recorded_and_shown(worksp
     assert w.standard_license_metadata["broken"]["licenseExpressionError"]
 
 
+def test_case_matching_does_not_invent_legacy_aliases(workspace):
+    from ingestion.standard_licenses import standard_text
+
+    w = workspace
+    w.canonical_license_texts = {
+        "license": {"Ruby": "Ruby text", "BSD-3-Clause": "BSD text", "MIT": "MIT text"},
+        "exception": {},
+    }
+    w.register("names", [], license="RUBY OR Ruby OR bsd-3-clause OR MIT")
+    text = standard_text(w, "names")
+    assert "Ruby text" in text and "BSD text" in text and "MIT text" in text
+    assert w.standard_license_metadata["names"]["missingLicenseIdentifiers"] == ["RUBY"]
+
+
+@pytest.mark.parametrize("expression", ["Public-Domain", "custom:vendor"])
+def test_nonstandard_names_remain_visible_gaps(workspace, expression):
+    from ingestion.standard_licenses import standard_text
+
+    workspace.register("unknown", [], license=expression)
+    text = standard_text(workspace, "unknown")
+    assert text.splitlines()[0] == "No license text is available for this package."
+    assert expression in text
+    assert workspace.standard_license_metadata["unknown"]["missingLicenseIdentifiers"] == [
+        expression
+    ]
+
+
+def test_declared_expression_cannot_forge_display_headings(workspace):
+    from ingestion.standard_licenses import standard_text
+
+    workspace.register("multiline", [], license="MIT\n\nSource:\t Forged\r\n heading")
+    text = standard_text(workspace, "multiline")
+    assert "Declared license expression: MIT Source: Forged heading" in text
+    assert "\nSource:" not in text
+
+
+def test_plus_and_deprecated_identifiers_keep_their_exact_versions(workspace):
+    from ingestion.standard_licenses import standard_text
+
+    w = workspace
+    w.canonical_license_texts = {
+        "license": {"GPL-2.0": "deprecated text", "GPL-2.0-or-later": "later text"},
+        "exception": {},
+    }
+    w.register("old", [], license="GPL-2.0 AND GPL-2.0+")
+    text = standard_text(w, "old")
+    assert "deprecated text" in text and "later text" in text
+    assert w.standard_license_metadata["old"]["standardLicenseIdentifiers"] == [
+        "GPL-2.0",
+        "GPL-2.0-or-later",
+    ]
+
+
+def test_mixed_own_notice_and_missing_directory_keeps_old_shared_fallback(workspace):
+    from ingestion.standard_licenses import license_text
+
+    w = workspace
+    w.distro = "arch"
+    w.register(
+        "mixed",
+        [
+            ("usr/share/licenses/mixed/NOTICE", b"own notice", None),
+            ("usr/share/licenses/alias", b"", "absent"),
+        ],
+        license="GPL AND MIT",
+    )
+    w.register(
+        "licenses", [("usr/share/licenses/spdx/GPL-2.0-only.txt", b"old shared GNU text", None)]
+    )
+    assert license_text(w, "mixed") == "old shared GNU text\n\nown notice"
+    assert w.unmatched_license_identifiers["mixed"] == ["MIT"]
+    assert "mixed" not in getattr(w, "standard_license_metadata", {})
+
+
 def test_own_notice_is_returned_unchanged_without_loading_spdx(workspace, monkeypatch):
     from ingestion import standard_licenses
 
@@ -116,6 +226,7 @@ def test_checksum_pin_failure_prevents_archive_use(tmp_path, monkeypatch):
     import hashlib
     import io
     import json
+    import tarfile
 
     from ingestion import debian_indexes, standard_licenses
     from ingestion.debian_indexes import DownloadIntegrityError
@@ -155,11 +266,20 @@ def test_checksum_pin_failure_prevents_archive_use(tmp_path, monkeypatch):
             (prefix + "text/Nokia-Qt-exception-1.1.txt", b"deprecated exception text"),
         ]
     )
+    with_comment = io.BytesIO()
+    with (
+        tarfile.open(fileobj=io.BytesIO(body)) as original,
+        tarfile.open(fileobj=with_comment, mode="w:gz", pax_headers={"comment": "a" * 40}) as archive,
+    ):
+        for member in original:
+            archive.addfile(member, original.extractfile(member))
+    body = with_comment.getvalue()
     pinfile = tmp_path / "pins.json"
     pinfile.write_text(
         json.dumps(
             {
                 "release": "v3.29.0",
+                "commit": "a" * 40,
                 "url": "https://codeload.github.com/spdx/license-list-data/tar.gz/refs/tags/v3.29.0",
                 "sha256": hashlib.sha256(body).hexdigest(),
                 "size": len(body),
@@ -177,6 +297,10 @@ def test_checksum_pin_failure_prevents_archive_use(tmp_path, monkeypatch):
     assert texts["license"]["MIT"] == "official test text"
     assert texts["license"]["GPL-2.0"] == "deprecated license text"
     assert texts["exception"]["Nokia-Qt-exception-1.1"] == "deprecated exception text"
+    pins = json.loads(pinfile.read_text())
+    pinfile.write_text(json.dumps(pins | {"commit": "b" * 40}))
+    with pytest.raises(ValueError, match="commit mismatch"):
+        standard_licenses.load_texts(tmp_path)
 
 
 def test_standard_entry_attaches_all_or_alternatives_and_with_exception(workspace):
@@ -335,3 +459,36 @@ def test_publisher_records_standard_provenance_and_remaining_gaps_without_contra
     finally:
         w.store.db.close()
         w.owners.close()
+
+
+def test_no_upload_benchmark_counts_warning_only_entries_as_gaps(tmp_path, monkeypatch):
+    import dataclasses
+    import io
+
+    from ingestion import debian_indexes, standard_licenses
+    from scripts.check_full_archives import measure
+    from tests.test_alpine_archives import fixture, mock_catalog
+
+    archive, package, _, _ = fixture(tmp_path, notice=b"")
+    package = dataclasses.replace(package, license="Public-Domain")
+    mock_catalog(
+        monkeypatch,
+        package,
+        {
+            "mirror": "https://dl-cdn.alpinelinux.org",
+            "archiveSuffix": ".apk",
+            "releaseSha256": "a" * 64,
+            "acquisition": "alpine-apk-extraction",
+        },
+    )
+    raw = archive.read_bytes()
+    monkeypatch.setattr(debian_indexes, "urlopen", lambda *a, **kw: io.BytesIO(raw))
+    monkeypatch.setattr(
+        standard_licenses, "load_texts", lambda _root: {"license": {}, "exception": {}}
+    )
+    report = measure(tmp_path / "workspace", "alpine", 1)
+    assert report["verifiedLicenses"] == 0
+    assert report["packagesWithoutLicenseText"] == ["fixture"]
+    assert report["standardLicenseMetadata"]["fixture"]["missingLicenseIdentifiers"] == [
+        "Public-Domain"
+    ]

@@ -19,6 +19,7 @@ from ingestion.ingest_runner import (
     _require_command_pages,
 )
 from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
+from ingestion.standard_licenses import NO_LICENSE_TEXT
 from ingestion.util import sha256_hex
 
 
@@ -74,6 +75,7 @@ def measure(root, distro, limit, curated=False, largest=False):
                 sample=False,
             )
         notices = _LicenseSpool(spool.connection)
+        packages_with_text = set()
         used = (
             {p.name for p in workspace.packages}
             | {p.source_package for p in spool.refs()}
@@ -83,6 +85,8 @@ def measure(root, distro, limit, curated=False, largest=False):
             text = notice_text(workspace, pkg)
             if text.strip():
                 notices[pkg] = text
+                if text.splitlines()[0] != NO_LICENSE_TEXT:
+                    packages_with_text.add(pkg)
         for _ in _iter_license_items(
             licenses=notices,
             distro=distro,
@@ -137,11 +141,11 @@ def measure(root, distro, limit, curated=False, largest=False):
             "unsupportedRoutes": [
                 m for m in workspace.missing if m["error"] == "Unsupported route name"
             ],
-            "verifiedLicenses": len(notices),
+            "verifiedLicenses": len(packages_with_text),
             "standardLicenseMetadata": getattr(workspace, "standard_license_metadata", {}),
             "standardLicenseTextSource": getattr(workspace, "standard_license_provenance", None),
             "maxLicenseBytes": max((len(notices[p].encode()) for p in notices), default=0),
-            "packagesWithoutLicenseText": sorted(used - set(notices)),
+            "packagesWithoutLicenseText": sorted(used - packages_with_text),
             "packages": [
                 {"name": p.name, "sha256": workspace.available[p.name].sha256, "bytes": p.size}
                 for p in workspace.packages

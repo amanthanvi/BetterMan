@@ -456,3 +456,68 @@ unsupported bash route names were reported separately. Command:
 (the workdir's selection.json names those three packages). Browser E2E and a
 complete distro publication replay were not run; no backend, workflow,
 deployment, env or secret changes were made.
+
+### #489 independent-review corrections
+
+The review identified that `LGPL2` must not choose LGPL 2.0 over 2.1. It now
+expands to all four 2.0/2.1 only/later identifiers; ambiguous `LGPL2+` likewise
+retains both 2.0-later and 2.1-later texts. The complete table was audited:
+unversioned GPL/LGPL/AGPL include every version; GPL1/2/3, LGPL3 and AGPL1/3
+have no other minor version in their named major family. Explicit LGPL2.1 and
+fully versioned `*-2.0+` forms retain their specified version. The Artistic
+aliases identify exact licenses. Tests check GNU supersets and every alias
+target against a fixture of all 740 license and 86 exception IDs, derived from
+the checksum-verified v3.29.0 archive and bound to the same release/SHA pin.
+
+Case folding now applies only to hyphenated SPDX-shaped tokens. Simple names
+must be exact canonical IDs or explicit reviewed table entries: `Ruby` is
+canonical, `RUBY` remains a gap, and `bsd-3-clause` normalizes to `BSD-3-Clause`.
+No new legacy-name mappings were added. Displayed declarations collapse all
+whitespace to one space, so metadata newlines cannot forge headings; the raw
+manifest declaration and exact-expression parser remain unchanged.
+
+Warning-only entries now begin with the fixed marker “No license text is
+available for this package.” Python and TypeScript regressions pin that literal.
+The Next license-list adapter projects zero-attached-ID packages from the opaque
+manifest as a presentation warning. These rows are dimmed and say “No license
+text.” before selection, while their explanatory detail remains accessible.
+For B2 this requires reading the detached manifest on the server; large
+manifests still stay out of HTML/API data, and only the per-package warning is
+projected. Debian/Ubuntu's existing large-manifest behavior is unchanged. No
+Convex query, schema or ingest contract changes are made for this distinction:
+the stored-entry `hasLicenseText` flag must remain true for upload integrity.
+The no-upload benchmark now excludes warning-only entries from
+`verifiedLicenses` and includes them in `packagesWithoutLicenseText`.
+License text uses `whitespace-pre-wrap` and remains escaped React text.
+
+The mixed case is intentionally unchanged: when a package has an own notice
+plus a missing top-level directory, the old distro collector returns the own
+notice and its existing unlabelled shared fallback. It records missing IDs only
+in `unmatchedLicenseIdentifiers`; canonical completion and the new standard-text
+labels do not apply to that package. A regression locks down this compatibility
+choice. Additional tests cover `+`, deprecated SPDX IDs, `Public-Domain` and
+`custom:*` gaps. These compatibility cases already passed before this round;
+the actual behavior defects were observed red and then green.
+
+The generated GitHub tag-archive URL remains pinned by exact size/SHA256.
+Its global PAX comment was cheaply verified to equal the pinned commit
+`31ba1a50e5397e00a304dbadc76531740e89ee48`, and the loader now rejects a mismatch
+after checksum verification. GitHub does not guarantee that generated archive
+bytes stay stable: regeneration can still fail the checksum for the same
+commit. Recovery requires reviewing and re-pinning the archive checksum/size;
+there is no unpinned retry or checksum bypass.
+
+Re-evaluating the same verified fallback sets with the reviewed mappings and
+case policy gives the following current counts (packages / manual paths):
+
+| Scope | Any standard texts | New pinned SPDX fill | Remaining gaps/errors | Warning-only |
+| --- | ---: | ---: | ---: | ---: |
+| Fedora | 1,683 / 18,212 | 1,683 / 18,212 | 98 / 3,280 | 74 / 173 |
+| Arch | 2,199 / 21,644 | 30 / 370 | 24 / 166 | 18 / 73 |
+| Alpine verified subset | 3,082 / 18,139 | 18 / 220 | 93 / 681 | 65 / 447 |
+
+Arch gif2png (`ZLIB`, one manual path) is now an explicit gap rather than an
+implicit case-derived Zlib mapping. Fedora ppp retains other standard texts
+and existing custom gaps, and additionally records its simple lowercase
+`zlib`/`xlock` names as unresolved. No other package coverage totals changed.
+The same metadata-positive notice-content and 557-larger-Alpine-APK limits apply.

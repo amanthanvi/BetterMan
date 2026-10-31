@@ -1,4 +1,5 @@
 import { packageName } from './packageName'
+import { NO_LICENSE_TEXT } from './licenseText'
 import { api } from '../../convex/_generated/api'
 import { unstable_cache } from 'next/cache'
 import type { FunctionReturnType } from 'convex/server'
@@ -70,7 +71,7 @@ export type SuggestResponse = { query: string; suggestions: Suggestion[]; datase
 /** `distro` is where the suggestions came from: Debian when the requested distro has no active release. */
 export type SuggestApiResponse = SuggestResponse & { distro: Distro }
 
-export type LicensePackage = { name: string; version: string; hasLicenseText: boolean }
+export type LicensePackage = { name: string; version: string; hasLicenseText: boolean; licenseWarning?: string }
 
 export type LicensesResponse = {
   datasetReleaseId: string
@@ -343,12 +344,23 @@ async function licensesForRelease(distro: Distro, fresh: boolean) {
     cursor = page.nextCursor
   }
   let packageManifest = first.packageManifest
-  if (first.packageManifestUrl && (first.packageManifestBytes ?? 0) <= 64 * 1024) {
+  const inlineManifest = (first.packageManifestBytes ?? 0) <= 64 * 1024
+  // B2 coverage lives in opaque provenance; project only warning names into HTML.
+  if (first.packageManifestUrl && (inlineManifest || ['fedora', 'arch', 'alpine'].includes(distro))) {
     const response = await fetch(first.packageManifestUrl)
     if (!response.ok) throw new Error('Failed to load package manifest')
     packageManifest = await response.json()
   }
-  return { ...first, packageManifest, packages }
+  const warningOnly = new Set<string>()
+  if (Array.isArray(packageManifest?.packages)) {
+    for (const entry of packageManifest.packages) {
+      if (typeof entry?.name === 'string' && Array.isArray(entry.standardLicenseIdentifiers) && entry.standardLicenseIdentifiers.length === 0) {
+        warningOnly.add(entry.name)
+      }
+    }
+  }
+  return { ...first, packageManifest: inlineManifest ? packageManifest : first.packageManifest,
+    packages: packages.map(p => warningOnly.has(p.name) ? { ...p, licenseWarning: NO_LICENSE_TEXT } : p) }
 }
 
 const cachedLicenseText = unstable_cache(

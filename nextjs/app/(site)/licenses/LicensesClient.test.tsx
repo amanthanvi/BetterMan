@@ -54,3 +54,20 @@ it('shows an unavailable-expression record without rendering it as HTML', () => 
   expect(html).toContain('No standard license text could be attached.')
   expect(html).not.toContain('<script>')
 })
+
+it('dims warning-only packages and marks no license text while retaining the detail button', () => {
+  const input = data(1)
+  input.packages[0] = { ...input.packages[0], licenseWarning: 'No license text is available for this package.' }
+  const html = renderToStaticMarkup(<LicensesClient distro="fedora" data={input} />)
+  expect(html).toContain('opacity-50')
+  expect(html).toContain('No license text.')
+  expect(html).not.toContain('disabled=""')
+})
+
+it('wraps long standard text lines and keeps the fixed warning marker escaped', () => {
+  const text = 'No license text is available for this package.\n\nDeclared license expression: <script>'
+  const html = renderToStaticMarkup(<LicenseEntry license={{ package: 'gap', licenseId: 'pkg:gap', licenseName: 'gap', text }} />)
+  expect(html).toContain('whitespace-pre-wrap')
+  expect(html).toContain('No license text is available for this package.')
+  expect(html).toContain('&lt;script&gt;')
+})

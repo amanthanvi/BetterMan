@@ -13,6 +13,7 @@ from ingestion.util import sha256_hex
 
 PINS = Path(__file__).resolve().parents[1] / "data/spdx-license-list.json"
 LEGACY = PINS.with_name("license-expression-aliases.json")
+NO_LICENSE_TEXT = "No license text is available for this package."
 
 
 def parse_expression(expression):
@@ -75,6 +76,8 @@ def load_texts(root):
     prefix = f"license-list-data-{pins['release'].removeprefix('v')}/"
     indexes, bodies = {}, {}
     with tarfile.open(archive, mode="r|gz") as stream:
+        if pins.get("commit") and stream.pax_headers.get("comment") != pins["commit"]:
+            raise ValueError("SPDX archive commit mismatch")
         for member in stream:
             path = member.name.removeprefix(prefix)
             if member.name == path:
@@ -147,7 +150,11 @@ def standard_text(workspace, package):
     except ValueError as exc:
         terms = []
         metadata["licenseExpressionError"] = str(exc)
-    terms = [(canonical[kind].get(name.casefold(), name), kind) for name, kind in terms]
+    # Simple legacy names require exact IDs or a reviewed alias, never case guessing.
+    terms = [
+        (canonical[kind].get(name.casefold(), name) if "-" in name else name, kind)
+        for name, kind in terms
+    ]
     shared = {}
     if owner in workspace.acquired:
         wanted = {name for name, _kind in terms}
@@ -186,7 +193,7 @@ def standard_text(workspace, package):
     workspace.standard_license_provenance = pins | {
         "legacyMappingsSha256": sha256_hex(LEGACY.read_bytes())
     }
-    parts = [f"Declared license expression: {expression}"]
+    parts = [f"Declared license expression: {' '.join(expression.split())}"]
     if missing:
         parts.append(
             "Missing license identifiers after shared and SPDX sources: " + ", ".join(missing)
@@ -194,9 +201,8 @@ def standard_text(workspace, package):
     if "licenseExpressionError" in metadata:
         parts.append("Unparseable license expression: " + metadata["licenseExpressionError"])
     if not groups:
-        parts.append(
-            "No standard license text could be attached. This package ships no license file."
-        )
+        parts.insert(0, NO_LICENSE_TEXT)
+        parts.append("This package ships no license file.")
     for text, (ids, source) in groups.items():
         name, kind = ids[0]
         heading = (

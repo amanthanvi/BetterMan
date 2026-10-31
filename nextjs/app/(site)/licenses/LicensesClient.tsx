@@ -130,7 +130,7 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
                   <li key={p.name} className="border-b border-rule last:border-b-0">
                     <button
                       type="button"
-                      className={`w-full py-1.5 text-left transition-colors ${p.hasLicenseText ? 'hover:text-accent' : 'opacity-50'}`}
+                      className={`w-full py-1.5 text-left transition-colors ${p.hasLicenseText && !p.licenseWarning ? 'hover:text-accent' : 'opacity-50'}`}
                       aria-current={isSelected ? 'true' : undefined}
                       onClick={() => setSelected(p.hasLicenseText ? p.name : null)}
                       disabled={!p.hasLicenseText}
@@ -142,6 +142,9 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
                           }`}
                         >
                           {p.name}
+                          {!p.hasLicenseText || p.licenseWarning ? (
+                            <span className="ml-2 font-sans text-xs font-normal text-ink-3">{t('No license text.')}</span>
+                          ) : null}
                         </div>
                         <div className="shrink-0 font-mono text-xs text-ink-3">{p.version}</div>
                       </div>
@@ -189,7 +192,7 @@ export function LicenseEntry({ license }: { license: LicenseTextResponse }) {
         <h2 className="font-mono text-sm font-bold">{license.package}</h2>
         <div className="font-mono text-xs text-ink-3">{license.licenseId}</div>
       </div>
-      <pre tabIndex={0} role="group" aria-label={t('License text for {name}', { name: license.package })} className="mt-3 max-h-[70vh] overflow-auto text-xs leading-relaxed text-ink-2">
+      <pre tabIndex={0} role="group" aria-label={t('License text for {name}', { name: license.package })} className="mt-3 max-h-[70vh] overflow-auto whitespace-pre-wrap text-xs leading-relaxed text-ink-2">
         {license.text}
       </pre>
     </div>

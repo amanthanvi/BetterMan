@@ -49,6 +49,22 @@ it('keeps a large manifest as a separate download instead of embedding it in HTM
   expect(fetch).not.toHaveBeenCalled()
 })
 
+it('projects warning-only coverage from detached B2 manifests without embedding the manifest', async () => {
+  mocks.query.mockResolvedValue({ ...first, packages: [pkg('gap'), pkg('partial'), pkg('own')], packageManifestUrl: 'https://files.example/large', packageManifestBytes: 2_000_000 })
+  const manifest = { packages: [
+    { name: 'gap', standardLicenseIdentifiers: [], missingLicenseIdentifiers: ['Public-Domain'] },
+    { name: 'partial', standardLicenseIdentifiers: ['MIT'], missingLicenseIdentifiers: ['custom:x'] },
+    { name: 'own' },
+  ] }
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => manifest }))
+  const result = await fetchLicenses({ distro: 'fedora' })
+  expect(result.packageManifest).toBeNull()
+  expect(result.packages).toEqual([
+    { ...pkg('gap'), licenseWarning: 'No license text is available for this package.' },
+    pkg('partial'), pkg('own'),
+  ])
+})
+
 
 it('restarts at the new release after promotion without mixing package generations', async () => {
   mocks.query.mockResolvedValueOnce({ ...first, nextCursor: 'a' })
