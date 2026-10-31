@@ -49,7 +49,7 @@ Hi HN. BetterMan is a web reader for Unix manual pages. I've been working on it 
 - Portability compares distros, not versions of a distro.
 - Explain covers a defined shell grammar. It will refuse some valid lines.
 - Generated summaries can be wrong or flat. Every page has a *report a problem* link that opens a prefilled GitHub issue.
-- {{INDEXING_POLICY}} (Planned: sections 1, 5, 7, 8 and popular packages indexable, the long tail served and searchable but `noindex` until real traffic promotes it, to avoid 100k thin pages. That is B4, #396, and was not built when this was drafted: `nextjs/lib/manRobots.ts` indexes every page that carries no `indexable` flag. Describe what production does, and delete this line if you'd rather not discuss it.)
+- {{INDEXING_POLICY}} (Planned: sections 1, 5, 7, 8 and popular packages indexable, the long tail served and searchable but `noindex`, to avoid 100k thin pages. That is B4, #396, and was not built when this was drafted: `nextjs/lib/manRobots.ts` indexes every page that carries no `indexable` flag. Describe what production does, and delete this line if you'd rather not discuss it.)
 - Parsing man pages is messy. Pages that mandoc warned about carry a note, and some will still render badly.
 - No CLI, API or editor extension for now. `/api/` is disallowed for crawlers.
 

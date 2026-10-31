@@ -700,6 +700,14 @@ test('workflow wiring tests reject unsafe promotion, FreeBSD and summary mutatio
   }
 })
 
+test('FreeBSD VM ingest imports checkout sources so B4 policy pins are present', () => {
+  // pip installs ./ingestion without its sibling data/ directory; PopularityPolicy.load() reads the pins from there.
+  const script = readWorkflow().jobs.ingest.steps.find(step => step.id === 'freebsd').with.run
+  const exportAt = script.indexOf('export PYTHONPATH="$GITHUB_WORKSPACE/ingestion${PYTHONPATH:+:$PYTHONPATH}"')
+  assert.ok(exportAt > script.indexOf('pip install ./ingestion'))
+  assert.ok(exportAt < script.indexOf('run freebsd ingest'))
+})
+
 test('FreeBSD VM script copies failure evidence back and host rejects it', () => {
   const vm = readWorkflow().jobs.ingest.steps.find(step => step.id === 'freebsd')
   const script = vm.with.run

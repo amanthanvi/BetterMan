@@ -121,9 +121,8 @@ C7 ([#409](https://github.com/amanthanvi/BetterMan/issues/409)) evidence restart
 from the deploy that introduces this integration: record that deploy date rather
 than joining counts across providers. B4's optional traffic signal and page-count
 export are gone; **popcon alone drives the tier**. No analytics counts are consumed
-by the dataset workflow on main. The lead removes the old workflow export added
-by the still-unmerged [#445](https://github.com/amanthanvi/BetterMan/pull/445) after
-it merges; this migration does not modify that branch.
+by the dataset workflow; [#445](https://github.com/amanthanvi/BetterMan/pull/445)
+dropped its planned export before merging.
 
 References: [quickstart](https://vercel.com/docs/analytics/quickstart),
 [package and HTML beforeSend](https://vercel.com/docs/analytics/package),

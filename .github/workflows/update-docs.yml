@@ -309,6 +309,8 @@ jobs:
             if [ "${BETTERMAN_INGEST_SAMPLE}" = "true" ]; then
               set -- --sample --no-activate
             fi
+            # Run checkout sources so B4's checksum-pinned data accompanies the module.
+            export PYTHONPATH="$GITHUB_WORKSPACE/ingestion${PYTHONPATH:+:$PYTHONPATH}"
             $py scripts/dataset-workflow.py run freebsd ingest $py -m ingestion.cli ingest --distro freebsd "$@"
         env:
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
