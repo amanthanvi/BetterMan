@@ -12,15 +12,13 @@ while implementing this PR. Independent review and deployment remain with the le
 
 - `installed` is the binary package's installed count from the **checksum-verified,
   pinned popcon by_inst** snapshot in `ingestion/data/debian-trixie.json`.
-- `views` is the route's aggregate pageviews over the exporter's last 30 complete
-  UTC days, or zero without a snapshot.
-- `popularityScore = round(1000 × log10(1 + installed) + 2000 × log10(1 + views))`.
+- `popularityScore = round(1000 × log10(1 + installed))`.
 - `indexable` is true when the primary section is **1, 5, 7 or 8** (including
-  suffixes such as 1p), **installed ≥10,000**, or **views ≥100**.
+  suffixes such as 1p) or **installed ≥10,000**.
 
 These are explicit initial thresholds, not fitted predictions of search quality.
-The logarithms give generation a stable priority without letting large packages
-or traffic counts dominate linearly. Membership uses the raw counts, avoiding
+The logarithm gives generation a stable priority without letting large packages
+dominate linearly. Membership uses the raw counts, avoiding
 rounding at thresholds. All pages remain in browsing, search and direct reads.
 No score is computed during a page view, and this change does not modify search ranking.
 
@@ -28,22 +26,19 @@ Only Debian has measured tier numbers. Ubuntu, Fedora, Arch, Alpine and FreeBSD
 use exact package-name matches to Debian popcon as proxies, stripping only a
 Debian multiarch suffix. No tier-size claim is made for those systems. macOS has
 no package ownership and therefore gets sections 1/5/7/8 only with today's
-popcon-only input; optional route traffic could later promote other sections. Package renames (e.g. `openssh-clients` vs `openssh-client`),
+popcon-only input. Package renames (e.g. `openssh-clients` vs `openssh-client`),
 base-system pages without package ownership and `-devel`/`-dev` differences get
-zero package prior; they still get the section rule and measured route demand.
+zero package prior; they still get the section rule.
 This proxy is useful for common command packages, weak for libraries and other
 systems' package splits, and is not a measure of their installed populations.
 There is no fuzzy name matching or guessed mapping.
 
-A8 deliberately removes distro/query parameters from analytics. Demand for
-`/man/name/section` therefore applies to every distro edition of that route.
-It cannot establish which edition was used. Encoded names and query variants
-collapse to one route; search, API and short-name paths do not promote a page.
+Page analytics are not an input. The owner dropped the planned Plausible
+pageview signal on 2026-10-30, before rollout, and site analytics moved to Vercel
+Web Analytics ([analytics.md](../analytics.md)). Popcon and sections drive the tier.
 
-The release's storage-backed provenance manifest records policy version,
-thresholds, popcon digest, traffic snapshot digest, generation timestamp and route
-count. The source snapshot is an aggregate-only local file. It is not uploaded
-as an array into Convex or read by Next.js.
+The release's storage-backed provenance manifest records the policy version,
+the installation threshold and the popcon digest.
 
 ## Storage, sitemap and representation contracts
 
@@ -114,13 +109,14 @@ a scored page's stored false membership.
 ## Monthly re-evaluation and owner runbook
 
 The existing dataset workflow retains exactly **`0 5 1 * *`**, 05:00 UTC on the
-1st. Each new release recomputes every page's score/tier before uploading. Pages
-can promote at 100 views and demote below it if neither package nor section
-qualifies; the active immutable release does not change between refreshes.
+1st. Each new release recomputes every page's score/tier from the pinned popcon
+snapshot before uploading; the active immutable release does not change between
+refreshes.
 Full-Debian opt-in and its separate owner authorization remain required.
 
-1. **Merge only after the November 1, 2026 05:00 UTC monthly run completes.**
-   That run uses today's code and promotes unscored curated releases as usual.
+1. **Originally gated on the November 1, 2026 05:00 UTC monthly run.** On
+   2026-10-31 the owner asked to run the rollout early, so B4 merges first and
+   that cron runs on v7 code like any later refresh.
    #443 is integrated in contract v7; its CAS pins and header fence remain intact.
    Once B4 is deployed, the lead runs an **all-distro staging-only ingest**
    (`ingest=true`, `promote=false`, not a sample), inspects each distro's declared
@@ -145,31 +141,7 @@ Full-Debian opt-in and its separate owner authorization remain required.
    reach prod; ingest a fresh scored release to replace it. There is no mutable
    backfill of a sealed release. A scored full-Debian release still requires
    owner authorization to lift `FULL_DEBIAN_PROMOTION_HELD`.
-3. Optional: create a Plausible **Stats API read key** for the `betterman.sh`
-   site/account with API access. Put it in the GitHub **production environment
-   secret `PLAUSIBLE_API_KEY`** used by `update-docs.yml`. It belongs only to
-   the export step, never Convex, Vercel runtime or a `NEXT_PUBLIC_*` variable.
-   Use the narrowest site access supported by the account. No key exists today;
-   absence is a successful popcon-only run. No owner configuration is performed
-   by this change.
-4. One dedicated `demand` job runs `pnpm analytics:counts` for the workflow,
-   with at most three attempts (2 s then 4 s backoff). It exports only aggregate
-   pageviews and uploads one `page-demand` artifact for all distro jobs. Each
-   manifest records the digest of those same bytes. No key means no artifact
-   and popcon-only scoring everywhere. Exhausted retries fail the shared job
-   before any distro ingests, rather than mixing partial snapshots. A
-   promote-only dispatch does not export analytics. The artifact is retained
-   for 14 days; Linux receives a read-only file mount, hosts receive its path,
-   and FreeBSD receives the checkout file. No API key enters ingestion.
-5. For an authorized local/operator run, export with `PLAUSIBLE_API_KEY`,
-   `PLAUSIBLE_SITE_ID=betterman.sh` and `PLAUSIBLE_COUNTS_OUTPUT=<absolute-path>`
-   using `pnpm analytics:counts`, then set
-   `BETTERMAN_PLAUSIBLE_COUNTS=<same-absolute-path>` for `pnpm ingest:run`.
-   Omit the variable for popcon only. A supplied missing/malformed snapshot
-   fails before release creation. Use a fresh export; manual paths are explicit
-   snapshots, not live analytics connections. The exporter preserves an old
-   file when a key is absent, so do not explicitly reuse that path by accident.
-6. Before the lead promotes, inspect the release manifest's `indexPolicy`, the
+3. Before the lead promotes, inspect the release manifest's `indexPolicy`, the
    declared tier count, the sitemap's count/URLs, an indexed HTML page and a
    long-tail HTML/text/JSON/OG page. Review tier growth and staging costs.
    Re-evaluation does not authorize a spend increase or a full-Debian promotion.
@@ -220,7 +192,7 @@ pnpm ingest:popularity-report --indexes ../.cache/debian/b4-indexes --output ../
 
 It uses B1's catalog downloader and digest checks, downloads metadata only and
 never reads/writes Convex or downloads package archives. With the checked-in
-popcon pin and **no Plausible input**, this run measured:
+popcon pin, this run measured:
 
 | Corpus | Indexable | Total | Interpretation |
 | --- | ---: | ---: | --- |
@@ -233,8 +205,7 @@ It is not the live ~4,700-page release: dependencies and extracted aliases diffe
 The full estimate elects the most-installed package for collisions. B1's actual
 election, alias concentration and parse rejections can change the canonical
 ratio, so inspect the actual scored declaration before promotion. This is not an
-SEO quality guarantee or a cloud billing benchmark. Traffic promotion is tested
-with synthetic aggregates; no real Stats API secret or live Stats query was used.
+SEO quality guarantee or a cloud billing benchmark.
 A separate 115,000-page synthetic test yields 38,334 tier members with dense
 10,000/10,000/10,000/8,334 leaf assignments and 76,666 zero assignments.
 
@@ -280,11 +251,10 @@ for pages, aliases, misses and name resolution. No deleted App Router man page
 is restored. #450 and #451 are retained with their fixtures; robots and cache
 isolation remain intact. The B1 ingestion/packaging fixes, Next.js 16.4.3,
 #457 generated-code guard, #462 text isolation and #463 provider switch are retained.
-Do not merge this PR as part of this task. The post-November-1-run merge gate
-remains in force.
+The owner lifted the post-November-1-run merge gate on 2026-10-31.
 
 Implementation and tests cover scoring, raw-count thresholds, section suffixes,
-exact package proxies, traffic promotion, generated selection, sitemap filtering,
+exact package proxies, generated selection, sitemap filtering,
 HTML robots and alternate headers. Required checks and final head/PR evidence
 are reported in the PR; independent review, CI completion and merge belong to
 the lead. Production configuration/data were not changed and no workflows were
