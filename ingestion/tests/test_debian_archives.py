@@ -110,6 +110,41 @@ def test_archive_pages_use_existing_mandoc_parser_and_stable_provider_ids(
     assert pipeline.parse_archive_source(job).page_id == row.page_id
 
 
+def test_oversized_page_is_recorded_before_archive_parse_gate(archive_workspace, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+
+    from ingestion import debian_publish, ingest_runner
+
+    w = archive_workspace
+    source = w.root / "oversized"
+    source.write_bytes(b".TH SALT 7\n.SH NAME\nsalt - large\n.SH BODY\n" + b"long text " * 2000)
+    w.store.db.execute(
+        "INSERT INTO entries VALUES (?,?,?,?,?)",
+        ("provider-low", "usr/share/man/man7/salt.7", "file", None, str(source)),
+    )
+    monkeypatch.setattr(ingest_runner, "MAX_STORED_PAGE_BYTES", 10_000)
+    monkeypatch.setattr(pipeline, "ProcessPoolExecutor", ThreadPoolExecutor)
+    monkeypatch.setattr(debian_publish, "_ingest_worker_count", lambda: 1)
+    sources = w.sources
+    w.sources = lambda: (item for item in sources() if item[2] in {"salt", "shared"})
+
+    class NoUpload:
+        def post(self, *args):
+            pytest.fail("parse gate must run before any upload")
+
+    with pytest.raises(RuntimeError, match="Archive parse gate failed: 1/"):
+        debian_publish.publish_workspace(
+            w, NoUpload(), activate=False, dataset_stage="staging", git_sha="test", sample=True
+        )
+    with ingest_runner._PageSpool(w.root / "test-pages.sqlite3") as spool:
+        _, failures = pipeline.parse_workspace(w, spool, workers=1)
+        assert len(failures) == 1
+        assert failures[0]["package"] == "provider-low"
+        assert failures[0]["path"] == "usr/share/man/man7/salt.7"
+        assert "salt(7): stored page payload" in failures[0]["error"]
+        assert all(page.name != "salt" for page in spool.refs())
+
+
 def test_cycles_and_host_file_includes_fail_closed(archive_workspace, tmp_path):
     obj = archive_workspace
     with obj.store.db:

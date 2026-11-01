@@ -120,6 +120,96 @@ def test_unknown_identifier_and_invalid_expression_are_recorded_and_shown(worksp
     assert w.standard_license_metadata["broken"]["licenseExpressionError"]
 
 
+@pytest.mark.parametrize("distro", ["fedora", "arch", "alpine"])
+@pytest.mark.parametrize("other_notice", [False, True])
+def test_blocked_cross_package_target_is_recorded_and_uses_notice_or_standard(
+    workspace, distro, other_notice
+):
+    from ingestion.standard_licenses import license_text
+
+    w = workspace
+    w.distro = distro
+    members = [("usr/share/licenses/tool/LICENSE", b"", "/opt/shared/legal.txt")]
+    if other_notice:
+        members.append(("usr/share/licenses/tool/NOTICE", b"actual notice", None))
+    w.register("tool", members, license="MIT AND LicenseRef-Private")
+    w.register("unrelated", [("usr/share/licenses/unrelated/LICENSE", b"must not use", None)])
+    w.store.db.execute(
+        "INSERT INTO entries SELECT pkg,?,'file',NULL,file FROM entries "
+        "WHERE pkg='unrelated' AND kind='file'",
+        ("opt/shared/legal.txt",),
+    )
+    text = license_text(w, "tool")
+    assert "must not use" not in text
+    assert ("actual notice" if other_notice else "canonical MIT text") in text
+    gap = w.notice_link_gaps["tool"][0]
+    assert gap["package"] == "tool"
+    assert gap["path"] == "usr/share/licenses/tool/LICENSE"
+    assert gap["target"] == "opt/shared/legal.txt"
+    assert "tool:usr/share/licenses/tool/LICENSE -> opt/shared/legal.txt" in text
+    if not other_notice:
+        assert w.unmatched_license_identifiers["tool"] == ["LicenseRef-Private"]
+
+
+def test_blocked_notice_without_any_standard_text_keeps_recorded_gap_rule(workspace):
+    from ingestion.standard_licenses import NO_LICENSE_TEXT, license_text
+
+    w = workspace
+    w.register(
+        "private",
+        [("usr/share/licenses/private/LICENSE", b"", "/missing")],
+        license="LicenseRef-Private",
+    )
+    text = license_text(w, "private")
+    assert text.startswith(NO_LICENSE_TEXT)
+    assert w.unmatched_license_identifiers["private"] == ["LicenseRef-Private"]
+    assert w.notice_link_gaps["private"][0]["target"] == "missing"
+    assert "private:usr/share/licenses/private/LICENSE -> missing" in text
+
+
+def test_same_package_target_is_upstream_notice_not_standard_substitution(workspace):
+    from ingestion.standard_licenses import license_text
+
+    w = workspace
+    w.register(
+        "tool",
+        [
+            ("opt/tool/legal.txt", b"upstream notice", None),
+            ("usr/share/licenses/tool/LICENSE", b"", "/opt/tool/legal.txt"),
+        ],
+    )
+    assert license_text(w, "tool") == "upstream notice"
+    assert "tool" not in getattr(w, "standard_license_metadata", {})
+    assert not getattr(w, "notice_link_gaps", {})
+
+
+@pytest.mark.parametrize("body", [b"\x1f\x8b", b"\xfd7zXZ\0broken", b"\x28\xb5\x2f\xfdbroken"])
+def test_unreadable_compressed_same_package_target_is_a_gap(workspace, body):
+    from ingestion.standard_licenses import license_text
+
+    w = workspace
+    w.register(
+        "tool",
+        [
+            ("opt/tool/legal", body, None),
+            ("usr/share/licenses/tool/LICENSE", b"", "/opt/tool/legal"),
+        ],
+    )
+    assert "canonical MIT text" in license_text(w, "tool")
+    assert w.notice_link_gaps["tool"][0]["target"] == "opt/tool/legal"
+
+
+def test_standard_distro_text_keeps_strict_utf8_validation(workspace):
+    from ingestion.standard_licenses import license_text
+
+    w = workspace
+    w.distro = "arch"
+    w.register("tool", [])
+    w.register("licenses", [("usr/share/licenses/spdx/MIT.txt", b"\xff", None)])
+    with pytest.raises(UnicodeDecodeError):
+        license_text(w, "tool")
+
+
 def test_case_matching_does_not_invent_legacy_aliases(workspace):
     from ingestion.standard_licenses import standard_text
 
@@ -383,15 +473,18 @@ def test_alpine_verified_metadata_owner_notice_precedes_standard_policy(workspac
     assert p.name not in getattr(w, "standard_license_metadata", {})
 
 
-def test_blocked_shared_text_cannot_be_replaced_by_canonical_copy(workspace):
+def test_blocked_shared_text_is_recorded_before_canonical_fallback(workspace):
     from ingestion.standard_licenses import license_text
 
     w = workspace
     w.distro = "arch"
     w.register("tool", [], license="MIT")
     w.register("licenses", [("usr/share/licenses/spdx/MIT.txt", b"", "/etc/passwd")])
-    with pytest.raises(ValueError, match="leaves archive documentation roots"):
-        license_text(w, "tool")
+    text = license_text(w, "tool")
+    assert "canonical MIT text" in text
+    assert w.notice_link_gaps["tool"] == [
+        {"package": "licenses", "path": "usr/share/licenses/spdx/MIT.txt", "target": "etc/passwd"}
+    ]
 
 
 def test_publisher_records_standard_provenance_and_remaining_gaps_without_contract_change(
@@ -431,6 +524,16 @@ def test_publisher_records_standard_provenance_and_remaining_gaps_without_contra
     w = Workspace(tmp_path / "workspace", distro="alpine")
     try:
         w.acquire()
+        with w.store.db:
+            w.store.db.execute(
+                "INSERT INTO entries VALUES (?,?,?,?,NULL)",
+                (
+                    package.name,
+                    "usr/share/licenses/fixture/BLOCKED",
+                    "blocked",
+                    "etc/shared-license",
+                ),
+            )
         result = debian_publish.publish_workspace(
             w, Client(), activate=False, dataset_stage="staging", git_sha="test", sample=True
         )
@@ -443,6 +546,13 @@ def test_publisher_records_standard_provenance_and_remaining_gaps_without_contra
         assert entry["spdxLicenseIdentifiers"] == ["MIT"]
         assert entry["missingLicenseIdentifiers"] == ["LicenseRef-Private"]
         assert entry["unmatchedLicenseIdentifiers"] == ["LicenseRef-Private"]
+        assert entry["noticeLinkGaps"] == [
+            {
+                "package": "fixture",
+                "path": "usr/share/licenses/fixture/BLOCKED",
+                "target": "etc/shared-license",
+            }
+        ]
         assert manifest["standardLicenseTextSource"]["release"] == "v3.29.0"
         assert len(manifest["standardLicenseTextSource"]["legacyMappingsSha256"]) == 64
         declaration = next(
@@ -458,6 +568,7 @@ def test_publisher_records_standard_provenance_and_remaining_gaps_without_contra
         assert (
             "Missing license identifiers after shared and SPDX sources: LicenseRef-Private" in text
         )
+        assert "fixture:usr/share/licenses/fixture/BLOCKED -> etc/shared-license" in text
     finally:
         w.store.db.close()
         w.owners.close()

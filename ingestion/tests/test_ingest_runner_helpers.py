@@ -343,6 +343,30 @@ def _page(name: str, section: str) -> _PageRow:
     )
 
 
+def test_oversized_stored_page_is_a_named_parse_failure(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+
+    # Escaping the document into the stored blob can exceed the cap even when
+    # its source/inner JSON fits. Exercise the shared parser, before spooling.
+    monkeypatch.setattr(ingest_runner, "MAX_STORED_PAGE_BYTES", 1024, raising=False)
+    parsed = parse_mandoc_html('<div class="manual-text"><p>salt - fixture</p></div>')
+    parsed = replace(parsed, synopsis=['"' * 600])
+    monkeypatch.setattr(
+        ingest_runner, "render_html", lambda _raw: SimpleNamespace(html="", warnings=None)
+    )
+    monkeypatch.setattr(ingest_runner, "parse_mandoc_html", lambda _html: parsed)
+    parsed.doc.blocks = []
+    parsed.doc.toc = []
+    path = tmp_path / "salt.7"
+    path.write_bytes(b".TH SALT 7\n")
+    source = ManSource(path, "salt", "7")
+    result = ingest_runner._parse_one(source, _ParseContext("alpine", "x86_64", {}, {}))
+    assert result.page is None
+    assert "salt(7)" in result.error
+    assert "stored page payload" in result.error
+    assert "1024" in result.error
+
+
 def _alias(name: str, target: str) -> _AliasRow:
     return _AliasRow(
         name=name,

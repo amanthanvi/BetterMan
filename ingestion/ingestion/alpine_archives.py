@@ -15,7 +15,13 @@ from pathlib import Path
 
 from ingestion.debian_archives import MAX_SOURCE_BYTES, ExtractedQuota
 from ingestion.debian_indexes import DownloadIntegrityError, popularity, safe_path
-from ingestion.fedora_archives import _notice_texts, extract_payload, notice_path
+from ingestion.fedora_archives import (
+    _notice_texts,
+    extract_payload,
+    notice_path,
+    notice_targets,
+    retain_notice_targets,
+)
 from ingestion.fedora_archives import copyright_text as package_notice
 
 
@@ -247,9 +253,14 @@ def verify(archive, package):
 def extract(archive, package, root, *, quota=None, **_kwargs):
     if not package.sha256 or not package.data_offset:
         raise ValueError("APK must pass native verification before extraction")
+    quota = quota or ExtractedQuota(root / "files")
     with archive.open("rb") as stream:
         stream.seek(package.data_offset)
-        return extract_payload(stream, package, root, quota=quota or ExtractedQuota(root / "files"))
+        entries = extract_payload(stream, package, root, quota=quota)
+        if notice_targets(entries):
+            stream.seek(package.data_offset)
+            entries = retain_notice_targets(stream, package, root, entries, quota=quota)
+        return entries
 
 
 def copyright_text(workspace, package):
@@ -299,6 +310,7 @@ def directory_notice(workspace, package, owner, path, remaining):
                     workspace, package
                 ),
                 remaining=remaining,
+                gap_package=package,
             )
         )
     return spdx_notice(workspace, package)
@@ -315,8 +327,9 @@ def spdx_notice(workspace, package):
     )
     texts = []
     for (path,) in workspace.store.db.execute(
-        "SELECT path FROM entries WHERE pkg=? AND kind IN ('file','link','blocked')", (owner,)
+        "SELECT path FROM entries WHERE pkg=? AND kind IN ('file','link','blocked','notice-file')",
+        (owner,),
     ):
         if Path(path).name.removesuffix(".txt") in identifiers and notice_path(path):
-            texts.append(workspace.resolve(owner, path).decode("utf-8", errors="replace"))
+            texts.extend(_notice_texts(workspace, owner, path, gap_package=package))
     return "\n\n".join(texts)
