@@ -45,7 +45,7 @@
 		"convex-test": "0.0.60",
 		"sigstore": "5.0.0",
 		"typescript": "6.0.3",
-		"vercel": "58.4.4",
+		"vercel": "65.8.0",
 		"vite": "8.3.5",
 		"vitest": "5.0.5"
 	}
