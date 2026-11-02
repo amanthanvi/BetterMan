@@ -31,16 +31,26 @@ describe('Sentry envelopes (installed SDK, in-memory transport)', () => {
   })
 
   it('carry no cmd or q value from a client error, a navigation breadcrumb, a fetch breadcrumb, a span or the envelope header', async () => {
-    Sentry.init({
-      dsn: 'https://public@sentry.example.invalid/1',
-      defaultIntegrations: false,
-      tracesSampleRate: 1,
-      ...SENTRY_PRIVACY_HOOKS,
-      transport: (options: Parameters<typeof Sentry.createTransport>[0]) => Sentry.createTransport(options, async (request) => {
-        bodies.push(typeof request.body === 'string' ? request.body : new TextDecoder().decode(request.body))
-        return { statusCode: 200 }
-      }),
-    })
+    const warnings: string[] = []
+    const originalWarn = console.warn
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args.map((arg) => String(arg)).join(' '))
+    }
+    try {
+      Sentry.init({
+        dsn: 'https://public@sentry.example.invalid/1',
+        defaultIntegrations: false,
+        tracesSampleRate: 1,
+        ...SENTRY_PRIVACY_HOOKS,
+        transport: (options: Parameters<typeof Sentry.createTransport>[0]) => Sentry.createTransport(options, async (request) => {
+          bodies.push(typeof request.body === 'string' ? request.body : new TextDecoder().decode(request.body))
+          return { statusCode: 200 }
+        }),
+      })
+    } finally {
+      console.warn = originalWarn
+    }
+    expect(warnings.join('\n')).not.toContain('beforeSendTransaction')
     // What the browser's HttpContext integration adds to every client event.
     Sentry.addEventProcessor((event) => ({
       ...event,
