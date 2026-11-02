@@ -27,6 +27,70 @@ def payload(members):
     return io.BytesIO(raw.getvalue())
 
 
+def test_blocked_error_names_package_link_and_target(tmp_path):
+    entries = extract_payload(
+        payload([("usr/share/licenses/fixture/LICENSE", b"", "/etc/license")]),
+        package(),
+        tmp_path,
+        quota=ExtractedQuota(tmp_path / "files"),
+    )
+    store = ArchiveStore(tmp_path)
+    store.add(package(), entries)
+    try:
+        with pytest.raises(
+            ValueError, match="fixture:usr/share/licenses/fixture/LICENSE -> etc/license"
+        ):
+            store.resolve("fixture", "usr/share/licenses/fixture/LICENSE")
+    finally:
+        store.db.close()
+
+
+@pytest.mark.parametrize("target_first", [False, True])
+def test_notice_target_retained_only_from_same_archive_regular_member(tmp_path, target_first):
+    from ingestion.fedora_archives import retain_notice_targets
+
+    members = [
+        ("usr/share/licenses/fixture/LICENSE", b"", "/opt/tool/legal.txt"),
+        ("opt/tool/legal.txt", b"packager selected notice", None),
+    ]
+    stream = payload(members[::-1] if target_first else members)
+    quota = ExtractedQuota(tmp_path / "files")
+    entries = extract_payload(stream, package(), tmp_path, quota=quota)
+    stream.seek(0)
+    entries = retain_notice_targets(stream, package(), tmp_path, entries, quota=quota)
+    store = ArchiveStore(tmp_path)
+    store.add(package(), entries)
+    try:
+        assert store.resolve("fixture", members[0][0]) == b"packager selected notice"
+        assert not any(p.is_symlink() for p in tmp_path.rglob("*"))
+        assert quota.used == len(b"packager selected notice")
+    finally:
+        store.db.close()
+
+
+@pytest.mark.parametrize(
+    "kind", [tarfile.SYMTYPE, tarfile.LNKTYPE, tarfile.FIFOTYPE, tarfile.DIRTYPE]
+)
+def test_special_notice_target_stays_blocked(tmp_path, kind):
+    from ingestion.fedora_archives import retain_notice_targets
+
+    raw = io.BytesIO()
+    with tarfile.open(fileobj=raw, mode="w") as archive:
+        link = tarfile.TarInfo("usr/share/licenses/fixture/LICENSE")
+        link.type, link.linkname = tarfile.SYMTYPE, "/opt/legal"
+        archive.addfile(link)
+        target = tarfile.TarInfo("opt/legal")
+        target.type, target.linkname = kind, "/etc/passwd"
+        archive.addfile(target)
+    stream = io.BytesIO(raw.getvalue())
+    quota = ExtractedQuota(tmp_path / "files")
+    entries = extract_payload(stream, package(), tmp_path, quota=quota)
+    stream.seek(0)
+    assert retain_notice_targets(stream, package(), tmp_path, entries, quota=quota) == entries
+    assert entries[0][2] == "blocked"
+    assert quota.used == 0
+
+
 def test_rpm_payload_keeps_only_docs_and_never_creates_links_or_runs_scripts(tmp_path):
     body = b".TH TOOL 1\n.SH NAME\ntool - fixture\n"
     source = payload(

@@ -4,6 +4,8 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Ingestion: retain blocked notice targets only when they are regular files in the same verified Fedora, Arch or Alpine package; record remaining notice-link gaps, and count oversized stored pages against the archive parse gate before upload.
+
 - Fedora, Arch and Alpine attach clearly labelled standard texts for declared licenses when no package/source notice exists, filling partial distro-shared texts from checksum-pinned SPDX v3.29.0; record and display remaining identifiers or expression errors. Ambiguous LGPL2 includes 2.0 and 2.1, warning-only packages are marked as having no license text, and long text wraps. Debian and Ubuntu retain their copyright requirement.
 - Keep code, bytecode and data files out of archive license notices; expose unmatched Arch fallback identifiers in the release manifest, deduplicate identical shared texts, cap cumulative directory visits, and reject invalid source-target pins (#394).
 - Alpine full imports resolve license-directory aliases through verified metadata-related owners or the existing SPDX-text fallback, including Qt's absent `qt5-base` directory; no-upload rehearsals check selected packages even when they contain no manuals (#394).

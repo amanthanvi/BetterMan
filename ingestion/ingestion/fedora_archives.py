@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 
-from ingestion.debian_archives import MAX_SOURCE_BYTES, ExtractedQuota, MissingSource
+from ingestion.debian_archives import MAX_SOURCE_BYTES, BlockedSource, ExtractedQuota, MissingSource
 from ingestion.debian_indexes import (
     BINARY_PATH,
     MAN_PATH,
@@ -269,8 +269,44 @@ def extract_payload(stream, package, root, *, quota):
     return entries
 
 
-def extract(archive, package, root, *, quota=None, **_kwargs):
-    quota = quota or ExtractedQuota(root / "files")
+def notice_targets(entries):
+    return {
+        target
+        for _pkg, path, kind, target, _file in entries
+        if kind == "blocked" and notice_path(path)
+    }
+
+
+def retain_notice_targets(stream, package, root, entries, *, quota):
+    """Second verified-archive pass: retain only exact regular-file notice targets."""
+    wanted = notice_targets(entries)
+    retained = {}
+    seen = set()
+    with tarfile.open(fileobj=stream, mode="r|*") as archive:
+        for member in archive:
+            path = member.name.removeprefix("./")
+            if path not in wanted:
+                continue
+            safe_path(path)
+            if path in seen:
+                retained.pop(path, None)
+                continue
+            seen.add(path)
+            # Links, directories, devices and oversized targets remain recorded gaps.
+            if not member.isfile() or member.size > MAX_SOURCE_BYTES:
+                continue
+            destination = root / "files" / sha256_hex(f"{package.name}/{path}".encode())
+            quota.write(destination, archive.extractfile(member), member.size)
+            retained[path] = str(destination)
+    return [
+        (pkg, path, "notice-file", target, retained[target])
+        if kind == "blocked" and notice_path(path) and target in retained
+        else (pkg, path, kind, target, file)
+        for pkg, path, kind, target, file in entries
+    ]
+
+
+def _rpm_payload(archive, reader):
     # libarchive reads RPM payloads; converting to a tar stream never installs
     # packages or invokes their scriptlets, and creates no filesystem links.
     with (
@@ -282,11 +318,24 @@ def extract(archive, package, root, *, quota=None, **_kwargs):
         ) as process,
     ):
         try:
-            entries = extract_payload(process.stdout, package, root, quota=quota)
+            entries = reader(process.stdout)
         finally:
             process.stdout.close()
         if process.wait() != 0:
             raise ValueError("libarchive could not read verified RPM payload")
+    return entries
+
+
+def extract(archive, package, root, *, quota=None, **_kwargs):
+    quota = quota or ExtractedQuota(root / "files")
+    entries = _rpm_payload(
+        archive, lambda stream: extract_payload(stream, package, root, quota=quota)
+    )
+    if notice_targets(entries):
+        entries = _rpm_payload(
+            archive,
+            lambda stream: retain_notice_targets(stream, package, root, entries, quota=quota),
+        )
     files = root / "files"
     for tag, script in rpm_scripts(archive):
         path = f"@control/rpm-{tag}"
@@ -297,14 +346,32 @@ def extract(archive, package, root, *, quota=None, **_kwargs):
 
 
 def _notice_texts(
-    workspace, package, path, *, directory_fallback=None, seen=frozenset(), remaining=None
+    workspace,
+    package,
+    path,
+    *,
+    directory_fallback=None,
+    seen=frozenset(),
+    remaining=None,
+    gap_package=None,
+    decode_errors="replace",
 ):
+    gap_package = package if gap_package is None else gap_package
     remaining = [MAX_NOTICE_VISITS] if remaining is None else remaining
     if remaining[0] <= 0:
         raise ValueError("License notice visit limit exceeded")
     remaining[0] -= 1
     try:
-        yield workspace.resolve(package, path).decode("utf-8", errors="replace")
+        yield workspace.resolve(package, path).decode("utf-8", errors=decode_errors)
+    except BlockedSource as exc:
+        if workspace.distro not in {"fedora", "arch", "alpine"}:
+            raise
+        if not hasattr(workspace, "notice_link_gaps"):
+            workspace.notice_link_gaps = {}
+        gap = {"package": exc.package, "path": exc.path, "target": exc.target}
+        gaps = workspace.notice_link_gaps.setdefault(gap_package, [])
+        if gap not in gaps:
+            gaps.append(gap)
     except MissingSource as exc:
         key = (exc.package, exc.path)
         if key in seen or len(seen) >= 64:
@@ -324,7 +391,7 @@ def _notice_texts(
         children = list(
             workspace.store.db.execute(
                 "SELECT pkg,path FROM entries WHERE path>=? AND path<? "
-                "AND kind IN ('file','link','blocked') ORDER BY path,pkg",
+                "AND kind IN ('file','link','blocked','notice-file') ORDER BY path,pkg",
                 (prefix, exc.path + "0"),
             )
         )
@@ -339,7 +406,13 @@ def _notice_texts(
                 and exc.path.count("/") == 3
             ):
                 text = directory_fallback(exc.package, exc.path, remaining)
-                if text is None:
+                if text is None or (
+                    not text.strip()
+                    and any(
+                        gap["path"].startswith(exc.path + "/")
+                        for gap in getattr(workspace, "notice_link_gaps", {}).get(gap_package, [])
+                    )
+                ):
                     return
                 if text.strip():
                     logging.warning(
@@ -364,6 +437,8 @@ def _notice_texts(
                     directory_fallback=directory_fallback,
                     seen=seen | {key},
                     remaining=remaining,
+                    gap_package=gap_package,
+                    decode_errors=decode_errors,
                 )
 
 
@@ -386,7 +461,8 @@ def copyright_text(workspace, package, *, directory_fallback=None):
         workspace.acquire([metadata], workers=1)
     paths = list(
         workspace.store.db.execute(
-            "SELECT pkg,path FROM entries WHERE pkg=? AND kind IN ('file','link','blocked')",
+            "SELECT pkg,path FROM entries WHERE pkg=? "
+            "AND kind IN ('file','link','blocked','notice-file')",
             (package,),
         )
     )
@@ -394,7 +470,12 @@ def copyright_text(workspace, package, *, directory_fallback=None):
     for owner, path in paths:
         if notice_path(path):
             for text in _notice_texts(
-                workspace, owner, path, directory_fallback=directory_fallback, remaining=remaining
+                workspace,
+                owner,
+                path,
+                directory_fallback=directory_fallback,
+                remaining=remaining,
+                gap_package=package,
             ):
                 if text.strip() and text not in texts:
                     texts.append(text)
@@ -403,7 +484,7 @@ def copyright_text(workspace, package, *, directory_fallback=None):
         for owner in sorted(owners - workspace.acquired):
             workspace.acquire([workspace.available[owner]], workers=1)
         for owner, path in workspace.store.db.execute(
-            "SELECT pkg,path FROM entries WHERE kind IN ('file','link','blocked')"
+            "SELECT pkg,path FROM entries WHERE kind IN ('file','link','blocked','notice-file')"
         ):
             if owner in siblings and notice_path(path):
                 for text in _notice_texts(
@@ -412,6 +493,7 @@ def copyright_text(workspace, package, *, directory_fallback=None):
                     path,
                     directory_fallback=directory_fallback,
                     remaining=remaining,
+                    gap_package=package,
                 ):
                     if text.strip() and text not in texts:
                         texts.append(text)
