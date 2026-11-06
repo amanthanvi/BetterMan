@@ -103,6 +103,7 @@ Limits:
 
 - A challenge needs a browser that runs JavaScript, and a solved challenge lasts one hour.
 - A visitor with JavaScript disabled who presents this fingerprint cannot open HTML pages, though the text routes stay open.
+- Challenged API routes work only within a valid session. A visitor on this fingerprint who keeps a tab open past the hour gets a 403 from `/api/v1/search` and the licenses lookup until the page reloads. `/api/v1/suggest` is bypassed.
 - Requests stopped by the challenge incur no CDN Requests or Fast Data Transfer. Requests that pass it count as normal usage.
 - Bot conditions (`bot_name`, `bot_category`, `bot_status`) need a Priority project, and the API answers 402. The User-Agent condition is therefore a deliberate compatibility exemption for the crawlers seen on this fingerprint (DuckDuckBot, ShapBot). It is not identity verification: a scraper that adds `bot` to its User-Agent passes this rule. If app 429s on man pages climb again, re-identify the source.
 - Custom rules run before the managed rulesets, so this challenge applies before Bot Protection's verified-agent allowance. A verified agent on this fingerprint whose User-Agent lacks `bot`, such as Perplexity-User or Lighthouse, is challenged.
