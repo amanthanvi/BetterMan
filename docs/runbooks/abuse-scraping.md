@@ -83,18 +83,37 @@ a verified-bot request, not just a spoofed User-Agent. Finally add BetterMan as 
 search engine in real Chrome and Firefox on production and type `ta`. Local E2E
 proves the HTTP contract, not production exemptions or browser registration.
 
-## Scraper fingerprint challenge (2026-11-06)
+## Chromium fingerprint challenge (2026-11-06, review by 2026-11-20)
 
-The custom rule `Cost guard: scraper TLS fingerprint (JA4 cb7bf5808d99)` (id `rule_probe_ja4_QjDurB`) sits last, after the four #388 bypass rules, so text and OpenSearch reads never reach it. It challenges a request when both conditions hold:
+The custom rule `Cost guard: challenge Chromium JA4 cb7bf5808d99 (review 2026-11-20)` (id `rule_probe_ja4_QjDurB`) sits last, after the four #388 bypass rules. Text and OpenSearch reads therefore never reach it. It **challenges** a request when both conditions hold:
 
 - JA4 digest equals `t13d1517h2_8daaf6152771_cb7bf5808d99`.
 - User-Agent does not contain `bot`.
 
-Why: that fingerprint sent about 500 requests a day until 2026-11-02, then 30K, 61K and 132K on 2026-11-03 to 11-05. That was most of BetterMan's traffic: rotating Chrome 150–154 User-Agents on Windows and macOS, residential ISPs in many countries, and 8 Web Analytics views in two days. 73% of those requests got the app's 429. Each one still cost a proxy invocation, Fluid CPU and a Convex rate-limit call. Challenged requests incur no CDN Requests or Fast Data Transfer and never reach a function. A real browser that shares the fingerprint solves the challenge once and continues.
+That digest is a common Chromium TLS handshake, not a scraper-only signature: FoxIO's JA4 README uses it as its Chrome example. Real Chromium browsers and headless Chromium both present it. Keep the action at challenge. Never deny, and never add a persistent action, because both would block real visitors on shared residential IPs.
 
-Bot conditions (`bot_name`, `bot_category`, `bot_status`) need a Priority project; the API answers 402. The User-Agent condition therefore exempts the verified crawlers seen on this fingerprint (DuckDuckBot, ShapBot). A scraper that adds `bot` to its User-Agent falls to the managed rulesets instead.
+Why challenge it here:
 
-Check the rule under **Firewall → Overview**, grouped by the rule, or with `GET /v1/security/firewall/events?projectId=<id>&ruleId=rule_probe_ja4_QjDurB`. To roll back, set the rule inactive under **Firewall → Configure**, or re-activate an earlier configuration version. If the scraper changes fingerprint, temporarily re-include the project in Observability Plus to find the new one. Look for the top `client_ja4_digest` among unclassified `/man/[name]/[section]` requests that sends almost no `/_vercel/insights/view`. Then exclude the project again.
+- On BetterMan, real browser visits mostly arrive as `t13d1516h2_8daaf6152771_d8a2da3f94cd`: 3,349 of 3,415 Web Analytics beacons on 2026-11-04 and 11-05.
+- `cb7bf5808d99` sent about 500 requests a day until 11-02. It then sent 30K, 61K and 132K on 11-03 to 11-05, with 8 beacons in total.
+- Its User-Agents rotated across Chrome 150–154, from residential ISPs in many countries.
+- 73% of those requests got the app's 429. Each one still cost a proxy invocation, Fluid CPU and a Convex rate-limit call.
+
+Limits:
+
+- A challenge needs a browser that runs JavaScript, and a solved challenge lasts one hour.
+- A visitor with JavaScript disabled who presents this fingerprint cannot open HTML pages, though the text routes stay open.
+- Requests stopped by the challenge incur no CDN Requests or Fast Data Transfer. Requests that pass it count as normal usage.
+- Bot conditions (`bot_name`, `bot_category`, `bot_status`) need a Priority project, and the API answers 402. The User-Agent condition is therefore a deliberate compatibility exemption for the crawlers seen on this fingerprint (DuckDuckBot, ShapBot). It is not identity verification: a scraper that adds `bot` to its User-Agent passes this rule. If app 429s on man pages climb again, re-identify the source.
+
+Checks:
+
+- The Firewall events API returned no data for this project, so watch the rule under **Firewall → Overview**.
+- 24 hours after enabling the challenge, compare Web Analytics events with the 2026-11-05 baseline of 3,280. A clear drop means real visitors are being challenged; set the rule to log.
+- By 2026-11-20, if matches have stayed near the 500-a-day baseline, set the rule inactive.
+- To roll back at any time, set the rule inactive or to log under **Firewall → Configure**, or re-activate an earlier configuration version.
+
+If the scraper changes fingerprint, group allowed traffic by **JA4 Digest** in the Firewall monitoring view (the last 24 hours). Alternatively, briefly re-include the project in Observability Plus and query `client_ja4_digest`. Compare Web Analytics beacons per request rather than raw counts: the busiest fingerprint can be a mainstream browser.
 
 ## Search index cost
 
