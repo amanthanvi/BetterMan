@@ -8,6 +8,7 @@ BetterMan is a Next.js app on Vercel that reads man page data from Convex. A Pyt
 - `DESIGN.md` for the visual grammar and the contracts the E2E tests assert
 - `PRODUCT.md` for who the product is for and what it will not become
 - `convex/_generated/ai/guidelines.md` before touching anything in `convex/`
+- `.agents/skills/verify-betterman/SKILL.md` to launch the local app and run `nextjs/e2e` with evidence kept in that skill
 
 ## Rules
 
