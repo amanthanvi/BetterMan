@@ -3,9 +3,10 @@
 > Drafting notes, delete before publishing.
 >
 > - Voice follows [PRODUCT.md](../../PRODUCT.md) and [DESIGN.md](../../DESIGN.md): quiet, precise, tool-like, no hype. No exclamation marks, no superlatives.
-> - Replace every `{{…}}` (list in [launch-checklist.md](launch-checklist.md#placeholders)). Re-verify each claim on production first (checklist step 6).
-> - The "Other Linux distributions" sentence must say what production actually has. Full Ubuntu, Fedora, Arch and Alpine is B2 (#394), still open when this was drafted.
-> - Word count of the post body below: about 430.
+> - The numbers were filled from production on 2026-11-01 (values in [launch-checklist.md](launch-checklist.md#placeholders)). Only the launch date is left for the owner. Re-verify each claim on production first (checklist step 6).
+> - The coverage sentence in "All of Debian, and more systems" says what production had on 2026-11-01: Ubuntu full, Fedora, Arch and Alpine curated, with full imports in progress (B2, #394). Change it if that moves before launch.
+> - The concept explainers claim comes from `main` (#471), not from a production check; confirm `/concept/signals` loads before publishing.
+> - Word count of the post body below: about 600.
 > - Not published, not posted. The owner publishes.
 
 **Title:** BetterMan 2
@@ -28,21 +29,29 @@ A flag that is missing from some systems, or behaves differently on them, carrie
 
 ## All of Debian, and more systems
 
-BetterMan now serves {{DEBIAN_PAGES}} manuals from {{DEBIAN_PACKAGES}} Debian {{DEBIAN_RELEASE}} packages. Where several packages ship the same page, the most-installed one gets the plain URL and a *provided by* switch lists the others. Ubuntu, Fedora, Arch, Alpine, FreeBSD and macOS are here too. {{OTHER_LINUX_COVERAGE}}
+BetterMan now serves 107,143 manuals from about 17,300 Debian trixie (13) packages, the full main archive. Where several packages ship the same page, the most-installed one gets the plain URL and a *provided by* switch lists the others. Ubuntu, Fedora, Arch, Alpine, FreeBSD and macOS are here too. Ubuntu 24.04 is a full archive import like Debian (104,763 manuals), while Fedora 44, Arch and Alpine 3.23 are curated sets of commonly used packages (about 10,000–13,000 manuals each) for now, with full imports still in progress. FreeBSD 15.1 has 12,096 base-system manuals and macOS 447.
+
+## Translations
+
+Debian's own translations are served in six languages: German, French, Spanish, Brazilian Portuguese, Japanese and Russian. That is 9,552 pages from the manpages-l10n packages, reached with `?lang=`. Each translated page credits its source package and lists the options it lacks compared with the English page. A page with no translation shows in English. The interface is localized into the same six languages.
+
+## Concept explainers
+
+Twenty short explainers cover section 7 topics such as signals, globbing and regular expressions, at `/concept/<slug>`. They are labelled as BetterMan's own text, and the manual they explain is linked first.
 
 ## Short URLs and plain text
 
-`betterman.sh/tar`, `betterman.sh/tar.1` and `betterman.sh/tar/-x` go where you expect. Add `.txt` for plain text: `curl -L betterman.sh/tar.txt`. Browsers can add BetterMan as a search engine, with suggestions.
+`betterman.sh/tar`, `betterman.sh/tar.1` and `betterman.sh/tar/-x` go where you expect. Add `.txt` for plain text: `curl -L betterman.sh/tar.txt`. Text pages start with NAME and list each option once. Browsers can add BetterMan as a search engine, with suggestions.
 
 ## Generated text is labelled
 
-The summaries, the task phrases, and some examples are written by a language model at build time. There is no model call when you load a page. Generated text carries a mark with the model and date. A generated example must be one simple command, and every flag in it is checked against that page's options table. If a flag is not in the table, the example is dropped. Pages for destructive commands such as `rm` and `dd` get no generated text.
+The summaries, the task phrases, and some examples are written by a language model, DeepSeek V4.1 Flash (`deepseek-v4.1-flash`), at build time. There is no model call when you load a page. Generated text carries a mark with the model and date. A generated example must be one simple command, and every flag in it is checked against that page's options table. If a flag is not in the table, the example is dropped. Pages for destructive commands such as `rm` and `dd` get no generated text.
 
 Examples from [tldr-pages](https://github.com/tldr-pages/tldr), under CC BY 4.0, are labelled and link to the exact upstream file. The credit is also on the [licenses page](/licenses).
 
 ## Not there yet
 
-Manuals are English only, and there are no concept explainers (signals, globbing, regular expressions) yet. Both are planned, neither is dated.
+Most manuals have no translation and show in English. Fedora, Arch and Alpine are still curated sets, and full imports are in progress. Neither is dated.
 
 ## Feedback
 
