@@ -11,6 +11,8 @@
 - Request distribution by route.
 - Cache headers present (ETag + Cache-Control) and honored.
 
+The project is excluded from Observability Plus to save cost (see Build cost controls in `vercel-ops.md`). That leaves one day of runtime logs and no Query breakdown by IP, user agent, or route. Start from Firewall events. If you need those breakdowns, re-include the project under **Billing → Observability Plus → Manage projects** for the incident. It bills $1.20 per million events, and BetterMan generates about four events per request.
+
 **Mitigations**
 
 - Tighten rate limits (search stricter than page fetch).
