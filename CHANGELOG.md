@@ -4,6 +4,8 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Firewall: a custom rule challenges the Chromium TLS fingerprint `t13d1517h2_8daaf6152771_cb7bf5808d99`, which sent 132K scraper requests on 2026-11-05 and only 8 Web Analytics beacons across 11-04 and 11-05. It never denies, so a JavaScript browser passes, for one hour per challenge. Text and OpenSearch reads stay exempt. Review it by 2026-11-20. See `docs/runbooks/abuse-scraping.md`.
+- Deployment: the Vercel GitHub integration no longer builds any branch. Every merge to `main` was built twice (an unpromoted Git production build, then the GitHub Actions prebuilt deploy), and every branch push built a preview that, lacking Convex configuration, answered 500 on man pages; together they were most of the cycle's Build CPU minutes. Production still deploys only through `deploy.yml`.
 - Sentry 11.10 streams spans by default and ignores `beforeSendTransaction`, so the privacy hooks no longer pass it. `beforeSendSpan` and the envelope hook still redact `cmd`, `q` and `name`.
 - Fedora, Arch and Alpine attach clearly labelled standard texts for declared licenses when no package/source notice exists, filling partial distro-shared texts from checksum-pinned SPDX v3.29.0; record and display remaining identifiers or expression errors. Ambiguous LGPL2 includes 2.0 and 2.1, warning-only packages are marked as having no license text, and long text wraps. Debian and Ubuntu retain their copyright requirement.
 - Keep code, bytecode and data files out of archive license notices; expose unmatched Arch fallback identifiers in the release manifest, deduplicate identical shared texts, cap cumulative directory visits, and reject invalid source-target pins (#394).
