@@ -94,8 +94,8 @@ That digest is a common Chromium TLS handshake, not a scraper-only signature: Fo
 
 Why challenge it here:
 
-- On BetterMan, real browser visits mostly arrive as `t13d1516h2_8daaf6152771_d8a2da3f94cd`: 3,349 of 3,415 Web Analytics beacons on 2026-11-04 and 11-05.
-- `cb7bf5808d99` sent about 500 requests a day until 11-02. It then sent 30K, 61K and 132K on 11-03 to 11-05, with 8 beacons in total.
+- `cb7bf5808d99` sent about 500 requests a day until 11-02. It then sent 30K, 61K and 132K on 11-03 to 11-05, but only 8 of the 3,415 Web Analytics beacons recorded on 11-04 and 11-05.
+- 3,349 of those beacons came from `t13d1516h2_8daaf6152771_d8a2da3f94cd`. They fell on a day when total beacons jumped from a few hundred to about 3,300, so they are not proof of where real visitors arrive.
 - Its User-Agents rotated across Chrome 150–154, from residential ISPs in many countries.
 - 73% of those requests got the app's 429. Each one still cost a proxy invocation, Fluid CPU and a Convex rate-limit call.
 
@@ -105,11 +105,12 @@ Limits:
 - A visitor with JavaScript disabled who presents this fingerprint cannot open HTML pages, though the text routes stay open.
 - Requests stopped by the challenge incur no CDN Requests or Fast Data Transfer. Requests that pass it count as normal usage.
 - Bot conditions (`bot_name`, `bot_category`, `bot_status`) need a Priority project, and the API answers 402. The User-Agent condition is therefore a deliberate compatibility exemption for the crawlers seen on this fingerprint (DuckDuckBot, ShapBot). It is not identity verification: a scraper that adds `bot` to its User-Agent passes this rule. If app 429s on man pages climb again, re-identify the source.
+- Custom rules run before the managed rulesets, so this challenge applies before Bot Protection's verified-agent allowance. A verified agent on this fingerprint whose User-Agent lacks `bot`, such as Perplexity-User or Lighthouse, is challenged.
 
 Checks:
 
 - The Firewall events API returned no data for this project, so watch the rule under **Firewall → Overview**.
-- 24 hours after enabling the challenge, compare Web Analytics events with the 2026-11-05 baseline of 3,280. A clear drop means real visitors are being challenged; set the rule to log.
+- Total Web Analytics cannot show harm from this rule: the fingerprint sent 8 of 3,415 beacons, and the 2026-11-05 total was a one-day spike. Instead, 24 hours after enabling the challenge, read the rule's challenge outcomes under **Firewall → Overview**. Many solved challenges mean real browsers present this fingerprint here, so set the rule to log. Mostly failed or unanswered challenges mean automation.
 - By 2026-11-20, if matches have stayed near the 500-a-day baseline, set the rule inactive.
 - To roll back at any time, set the rule inactive or to log under **Firewall → Configure**, or re-activate an earlier configuration version.
 
