@@ -83,6 +83,19 @@ a verified-bot request, not just a spoofed User-Agent. Finally add BetterMan as 
 search engine in real Chrome and Firefox on production and type `ta`. Local E2E
 proves the HTTP contract, not production exemptions or browser registration.
 
+## Scraper fingerprint challenge (2026-11-06)
+
+The custom rule `Cost guard: scraper TLS fingerprint (JA4 cb7bf5808d99)` (id `rule_probe_ja4_QjDurB`) sits last, after the four #388 bypass rules, so text and OpenSearch reads never reach it. It challenges a request when both conditions hold:
+
+- JA4 digest equals `t13d1517h2_8daaf6152771_cb7bf5808d99`.
+- User-Agent does not contain `bot`.
+
+Why: that fingerprint sent about 500 requests a day until 2026-11-02, then 30K, 61K and 132K on 2026-11-03 to 11-05. That was most of BetterMan's traffic: rotating Chrome 150–154 User-Agents on Windows and macOS, residential ISPs in many countries, and 8 Web Analytics views in two days. 73% of those requests got the app's 429. Each one still cost a proxy invocation, Fluid CPU and a Convex rate-limit call. Challenged requests incur no CDN Requests or Fast Data Transfer and never reach a function. A real browser that shares the fingerprint solves the challenge once and continues.
+
+Bot conditions (`bot_name`, `bot_category`, `bot_status`) need a Priority project; the API answers 402. The User-Agent condition therefore exempts the verified crawlers seen on this fingerprint (DuckDuckBot, ShapBot). A scraper that adds `bot` to its User-Agent falls to the managed rulesets instead.
+
+Check the rule under **Firewall → Overview**, grouped by the rule, or with `GET /v1/security/firewall/events?projectId=<id>&ruleId=rule_probe_ja4_QjDurB`. To roll back, set the rule inactive under **Firewall → Configure**, or re-activate an earlier configuration version. If the scraper changes fingerprint, temporarily re-include the project in Observability Plus to find the new one. Look for the top `client_ja4_digest` among unclassified `/man/[name]/[section]` requests that sends almost no `/_vercel/insights/view`. Then exclude the project again.
+
 ## Search index cost
 
 `manPageSearchDocuments` has a Convex search index over `descNorm`, the one-line NAME description. It is read only when a query does not fill from the name-prefix indexes. Body full-text search was retired because each query scanned the corpus; descriptions are a few dozen characters, so this index stays bounded. If the Convex dashboard shows `queries:search` reading more bytes per call than `queries:listSection`, drop the `search_desc` index before anything else.
