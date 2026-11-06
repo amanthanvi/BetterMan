@@ -1,0 +1,875 @@
+{
+  "measuredAt": "2026-10-30",
+  "pins": {
+    "suite": "trixie",
+    "releaseSha256": "ed56aac47e7911e65ee63aae8d67e29f20e023f840e49f8ed037043a33de138a"
+  },
+  "method": "check_debian_translations --packages 12 --workers 4 --local-upload against a loopback Convex (staging); footprint = scripts.check_scale.footprint; projection scales the sample footprint by projectedPages/pages",
+  "contentsCensus": {
+    "de": {
+      "paths": 3408,
+      "packages": 174
+    },
+    "fr": {
+      "paths": 3683,
+      "packages": 197
+    },
+    "es": {
+      "paths": 1347,
+      "packages": 117
+    },
+    "pt_BR": {
+      "paths": 604,
+      "packages": 69
+    },
+    "ja": {
+      "paths": 3544,
+      "packages": 73
+    },
+    "ru": {
+      "paths": 2358,
+      "packages": 80
+    }
+  },
+  "excludedEncodedRoots": {
+    "fr.UTF-8": 10,
+    "fr.ISO8859-1": 10,
+    "de.UTF-8": 2,
+    "ja.UTF-8": 2
+  },
+  "languages": {
+    "de": {
+      "allPackages": 174,
+      "allArchiveBytes": 400868704,
+      "sampleArchiveBytes": 23755344,
+      "acquireSeconds": 0.0,
+      "contentsPaths": 3405,
+      "samplePackages": [
+        "amule-utils-gui",
+        "apt-utils",
+        "debhelper",
+        "dvdisaster",
+        "kate-data",
+        "manpages-de",
+        "manpages-de-dev",
+        "net-tools",
+        "qmidiroute",
+        "rkward-data",
+        "whohas",
+        "wxmaxima"
+      ],
+      "samplePaths": 2629,
+      "pages": 1702,
+      "aliases": 924,
+      "droppedCopies": 3,
+      "unresolved": 0,
+      "parseFailures": 0,
+      "withDescription": 1670,
+      "withSynopsis": 1253,
+      "withOptions": 535,
+      "optionRows": 6623,
+      "withDocumentedVersion": 1338,
+      "docJsonBytesPerPage": 17432,
+      "parseSeconds": 6.669,
+      "failures": [],
+      "missing": [],
+      "documentedVersionExamples": [
+        "0.79.7",
+        "1.1.1",
+        "1.68",
+        "10.04.0",
+        "13.24.2",
+        "4.10.1",
+        "6.14",
+        "APT 3.0.3"
+      ],
+      "projectedPages": 2204,
+      "projectedAliases": 1197,
+      "sampleRoutes": 2626,
+      "footprint": {
+        "documents": 28126.0,
+        "jsonBytes": 13737192.0,
+        "storageBytes": 36073799.0,
+        "tables": {
+          "datasetReleases": {
+            "documents": 1.0,
+            "jsonBytes": 831.0,
+            "storageBytes": 0.0
+          },
+          "manPageAliases": {
+            "documents": 924.0,
+            "jsonBytes": 262324.0,
+            "storageBytes": 0.0
+          },
+          "manPages": {
+            "documents": 5106.0,
+            "jsonBytes": 2348773.0,
+            "storageBytes": 36070737.0
+          },
+          "manPageProviders": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "manPageAliasProviders": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "releaseProviderUploadShards": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "manPageSearchDocuments": {
+            "documents": 1702.0,
+            "jsonBytes": 1640434.0,
+            "storageBytes": 0.0
+          },
+          "manPageLinks": {
+            "documents": 11597.0,
+            "jsonBytes": 4837908.0,
+            "storageBytes": 0.0
+          },
+          "manPageOptionFlags": {
+            "documents": 8743.0,
+            "jsonBytes": 3371111.0,
+            "storageBytes": 0.0
+          },
+          "licensePackages": {
+            "documents": 12.0,
+            "jsonBytes": 3339.0,
+            "storageBytes": 0.0
+          },
+          "licenses": {
+            "documents": 12.0,
+            "jsonBytes": 1262902.0,
+            "storageBytes": 0.0
+          },
+          "releaseSectionStats": {
+            "documents": 11.0,
+            "jsonBytes": 2986.0,
+            "storageBytes": 0.0
+          },
+          "releaseManifests": {
+            "documents": 1.0,
+            "jsonBytes": 171.0,
+            "storageBytes": 3062.0
+          },
+          "releasePackageBatches": {
+            "documents": 1.0,
+            "jsonBytes": 240.0,
+            "storageBytes": 0.0
+          },
+          "releasePageUploadShards": {
+            "documents": 16.0,
+            "jsonBytes": 6173.0,
+            "storageBytes": 0.0
+          }
+        }
+      },
+      "projection": {
+        "scale": 1.295,
+        "documents": 36422,
+        "jsonBytes": 17788937,
+        "storageBytes": 46713662
+      }
+    },
+    "fr": {
+      "allPackages": 197,
+      "allArchiveBytes": 267436244,
+      "sampleArchiveBytes": 20797204,
+      "acquireSeconds": 0.0,
+      "contentsPaths": 3681,
+      "samplePackages": [
+        "amule-utils-gui",
+        "apt-utils",
+        "ark",
+        "debhelper",
+        "dgedit",
+        "kate-data",
+        "klick",
+        "manpages-fr",
+        "manpages-fr-dev",
+        "net-tools",
+        "rubber",
+        "synaptic"
+      ],
+      "samplePaths": 3015,
+      "pages": 1652,
+      "aliases": 1361,
+      "droppedCopies": 2,
+      "unresolved": 0,
+      "parseFailures": 0,
+      "withDescription": 1644,
+      "withSynopsis": 1374,
+      "withOptions": 435,
+      "optionRows": 5678,
+      "withDocumentedVersion": 1447,
+      "docJsonBytesPerPage": 17676,
+      "parseSeconds": 6.229,
+      "failures": [],
+      "missing": [],
+      "documentedVersionExamples": [
+        "1.1.1",
+        "10.04.0",
+        "13.24.2",
+        "3.5.0",
+        "4.10.1",
+        "APT 3.0.3",
+        "E2fsprogs version 1.47.2",
+        "GNU Bash 3.1"
+      ],
+      "projectedPages": 2017,
+      "projectedAliases": 1662,
+      "sampleRoutes": 3013,
+      "footprint": {
+        "documents": 28865.0,
+        "jsonBytes": 14013879.0,
+        "storageBytes": 34843730.0,
+        "tables": {
+          "datasetReleases": {
+            "documents": 1.0,
+            "jsonBytes": 833.0,
+            "storageBytes": 0.0
+          },
+          "manPageAliases": {
+            "documents": 1361.0,
+            "jsonBytes": 383152.0,
+            "storageBytes": 0.0
+          },
+          "manPages": {
+            "documents": 4956.0,
+            "jsonBytes": 2297597.0,
+            "storageBytes": 34840815.0
+          },
+          "manPageProviders": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "manPageAliasProviders": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "releaseProviderUploadShards": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "manPageSearchDocuments": {
+            "documents": 1652.0,
+            "jsonBytes": 1603035.0,
+            "storageBytes": 0.0
+          },
+          "manPageLinks": {
+            "documents": 13934.0,
+            "jsonBytes": 5800714.0,
+            "storageBytes": 0.0
+          },
+          "manPageOptionFlags": {
+            "documents": 6907.0,
+            "jsonBytes": 2639764.0,
+            "storageBytes": 0.0
+          },
+          "licensePackages": {
+            "documents": 12.0,
+            "jsonBytes": 3286.0,
+            "storageBytes": 0.0
+          },
+          "licenses": {
+            "documents": 12.0,
+            "jsonBytes": 1275845.0,
+            "storageBytes": 0.0
+          },
+          "releaseSectionStats": {
+            "documents": 12.0,
+            "jsonBytes": 3267.0,
+            "storageBytes": 0.0
+          },
+          "releaseManifests": {
+            "documents": 1.0,
+            "jsonBytes": 171.0,
+            "storageBytes": 2915.0
+          },
+          "releasePackageBatches": {
+            "documents": 1.0,
+            "jsonBytes": 240.0,
+            "storageBytes": 0.0
+          },
+          "releasePageUploadShards": {
+            "documents": 16.0,
+            "jsonBytes": 5975.0,
+            "storageBytes": 0.0
+          }
+        }
+      },
+      "projection": {
+        "scale": 1.221,
+        "documents": 35243,
+        "jsonBytes": 17110166,
+        "storageBytes": 42542254
+      }
+    },
+    "es": {
+      "allPackages": 117,
+      "allArchiveBytes": 201851372,
+      "sampleArchiveBytes": 48757468,
+      "acquireSeconds": 0.0,
+      "contentsPaths": 1345,
+      "samplePackages": [
+        "amule-utils-gui",
+        "apt-utils",
+        "ark",
+        "calibre",
+        "debhelper",
+        "kate-data",
+        "live-boot-doc",
+        "manpages-es",
+        "manpages-es-dev",
+        "neochat",
+        "synaptic",
+        "wesnoth-1.18-server"
+      ],
+      "samplePaths": 1096,
+      "pages": 663,
+      "aliases": 432,
+      "droppedCopies": 1,
+      "unresolved": 0,
+      "parseFailures": 0,
+      "withDescription": 645,
+      "withSynopsis": 509,
+      "withOptions": 218,
+      "optionRows": 2733,
+      "withDocumentedVersion": 598,
+      "docJsonBytesPerPage": 11802,
+      "parseSeconds": 3.418,
+      "failures": [],
+      "missing": [],
+      "documentedVersionExamples": [
+        "13.24.2",
+        "5.0~a5-1",
+        "8.5.0",
+        "APT 3.0.3",
+        "GNU Bash 3.1",
+        "GNU Bash 5.2",
+        "GNU coreutils 9.7",
+        "GNU grep 3.11"
+      ],
+      "projectedPages": 814,
+      "projectedAliases": 530,
+      "sampleRoutes": 1095,
+      "footprint": {
+        "documents": 8457.0,
+        "jsonBytes": 5680677.0,
+        "storageBytes": 9685791.0,
+        "tables": {
+          "datasetReleases": {
+            "documents": 1.0,
+            "jsonBytes": 828.0,
+            "storageBytes": 0.0
+          },
+          "manPageAliases": {
+            "documents": 432.0,
+            "jsonBytes": 120841.0,
+            "storageBytes": 0.0
+          },
+          "manPages": {
+            "documents": 1989.0,
+            "jsonBytes": 918465.0,
+            "storageBytes": 9682950.0
+          },
+          "manPageProviders": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "manPageAliasProviders": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "releaseProviderUploadShards": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "manPageSearchDocuments": {
+            "documents": 663.0,
+            "jsonBytes": 629168.0,
+            "storageBytes": 0.0
+          },
+          "manPageLinks": {
+            "documents": 1926.0,
+            "jsonBytes": 799794.0,
+            "storageBytes": 0.0
+          },
+          "manPageOptionFlags": {
+            "documents": 3396.0,
+            "jsonBytes": 1234079.0,
+            "storageBytes": 0.0
+          },
+          "licensePackages": {
+            "documents": 12.0,
+            "jsonBytes": 3328.0,
+            "storageBytes": 0.0
+          },
+          "licenses": {
+            "documents": 12.0,
+            "jsonBytes": 1966320.0,
+            "storageBytes": 0.0
+          },
+          "releaseSectionStats": {
+            "documents": 8.0,
+            "jsonBytes": 2143.0,
+            "storageBytes": 0.0
+          },
+          "releaseManifests": {
+            "documents": 1.0,
+            "jsonBytes": 171.0,
+            "storageBytes": 2841.0
+          },
+          "releasePackageBatches": {
+            "documents": 1.0,
+            "jsonBytes": 240.0,
+            "storageBytes": 0.0
+          },
+          "releasePageUploadShards": {
+            "documents": 16.0,
+            "jsonBytes": 5300.0,
+            "storageBytes": 0.0
+          }
+        }
+      },
+      "projection": {
+        "scale": 1.228,
+        "documents": 10383,
+        "jsonBytes": 6974466,
+        "storageBytes": 11891755
+      }
+    },
+    "pt-BR": {
+      "allPackages": 69,
+      "allArchiveBytes": 172679580,
+      "sampleArchiveBytes": 45275904,
+      "acquireSeconds": 0.0,
+      "contentsPaths": 604,
+      "samplePackages": [
+        "ark",
+        "calibre",
+        "gpt",
+        "kate-data",
+        "keditbookmarks",
+        "libkf6service-bin",
+        "manpages-pt-br",
+        "manpages-pt-br-dev",
+        "net-tools",
+        "passwd",
+        "synaptic",
+        "wesnoth-1.18-server"
+      ],
+      "samplePaths": 439,
+      "pages": 284,
+      "aliases": 154,
+      "droppedCopies": 1,
+      "unresolved": 0,
+      "parseFailures": 0,
+      "withDescription": 283,
+      "withSynopsis": 207,
+      "withOptions": 78,
+      "optionRows": 1341,
+      "withDocumentedVersion": 264,
+      "docJsonBytesPerPage": 11625,
+      "parseSeconds": 1.338,
+      "failures": [],
+      "missing": [],
+      "documentedVersionExamples": [
+        "8.5.0",
+        "GNU coreutils 9.7",
+        "GNU gettext-runtime 0.23.1",
+        "GNU grep 3.11",
+        "GNU recutils 1.9",
+        "GRUB 2.12-7",
+        "KDE Applications 18.12",
+        "KDE Frameworks Frameworks 5.15"
+      ],
+      "projectedPages": 391,
+      "projectedAliases": 212,
+      "sampleRoutes": 438,
+      "footprint": {
+        "documents": 3922.0,
+        "jsonBytes": 3617238.0,
+        "storageBytes": 4109620.0,
+        "tables": {
+          "datasetReleases": {
+            "documents": 1.0,
+            "jsonBytes": 835.0,
+            "storageBytes": 0.0
+          },
+          "manPageAliases": {
+            "documents": 154.0,
+            "jsonBytes": 43095.0,
+            "storageBytes": 0.0
+          },
+          "manPages": {
+            "documents": 852.0,
+            "jsonBytes": 393550.0,
+            "storageBytes": 4106761.0
+          },
+          "manPageProviders": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "manPageAliasProviders": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "releaseProviderUploadShards": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "manPageSearchDocuments": {
+            "documents": 284.0,
+            "jsonBytes": 267194.0,
+            "storageBytes": 0.0
+          },
+          "manPageLinks": {
+            "documents": 760.0,
+            "jsonBytes": 311025.0,
+            "storageBytes": 0.0
+          },
+          "manPageOptionFlags": {
+            "documents": 1825.0,
+            "jsonBytes": 679195.0,
+            "storageBytes": 0.0
+          },
+          "licensePackages": {
+            "documents": 12.0,
+            "jsonBytes": 3359.0,
+            "storageBytes": 0.0
+          },
+          "licenses": {
+            "documents": 12.0,
+            "jsonBytes": 1912357.0,
+            "storageBytes": 0.0
+          },
+          "releaseSectionStats": {
+            "documents": 8.0,
+            "jsonBytes": 2164.0,
+            "storageBytes": 0.0
+          },
+          "releaseManifests": {
+            "documents": 1.0,
+            "jsonBytes": 171.0,
+            "storageBytes": 2859.0
+          },
+          "releasePackageBatches": {
+            "documents": 1.0,
+            "jsonBytes": 240.0,
+            "storageBytes": 0.0
+          },
+          "releasePageUploadShards": {
+            "documents": 12.0,
+            "jsonBytes": 4053.0,
+            "storageBytes": 0.0
+          }
+        }
+      },
+      "projection": {
+        "scale": 1.377,
+        "documents": 5400,
+        "jsonBytes": 4980071,
+        "storageBytes": 5657963
+      }
+    },
+    "ja": {
+      "allPackages": 73,
+      "allArchiveBytes": 104143812,
+      "sampleArchiveBytes": 43257824,
+      "acquireSeconds": 0.0,
+      "contentsPaths": 3544,
+      "samplePackages": [
+        "apt-utils",
+        "calibre",
+        "debhelper",
+        "help2man",
+        "libguestfs-java",
+        "live-boot-doc",
+        "manpages-ja",
+        "manpages-ja-dev",
+        "passwd",
+        "synaptic",
+        "timidity",
+        "wesnoth-1.18-server"
+      ],
+      "samplePaths": 3149,
+      "pages": 1809,
+      "aliases": 1336,
+      "droppedCopies": 2,
+      "unresolved": 2,
+      "parseFailures": 0,
+      "withDescription": 1803,
+      "withSynopsis": 1582,
+      "withOptions": 625,
+      "optionRows": 8948,
+      "withDocumentedVersion": 272,
+      "docJsonBytesPerPage": 23534,
+      "parseSeconds": 9.868,
+      "failures": [],
+      "missing": [
+        {
+          "package": "manpages-ja",
+          "path": "usr/share/man/ja/man7/url.7.gz",
+          "error": "manpages-ja:usr/share/man/ja/man7/uri.7"
+        },
+        {
+          "package": "manpages-ja",
+          "path": "usr/share/man/ja/man7/urn.7.gz",
+          "error": "manpages-ja:usr/share/man/ja/man7/uri.7"
+        }
+      ],
+      "documentedVersionExamples": [
+        "13.24.2",
+        "2.13.0",
+        "5.0~a5-1",
+        "8.5.0",
+        "APT 3.0.3",
+        "Astron 6.11.00",
+        "Chat Version 1.17",
+        "E2fsprogs version 1.39"
+      ],
+      "projectedPages": 2036,
+      "projectedAliases": 1504,
+      "sampleRoutes": 3145,
+      "footprint": {
+        "documents": 32856.0,
+        "jsonBytes": 16277350.0,
+        "storageBytes": 40589291.0,
+        "tables": {
+          "datasetReleases": {
+            "documents": 1.0,
+            "jsonBytes": 833.0,
+            "storageBytes": 0.0
+          },
+          "manPageAliases": {
+            "documents": 1336.0,
+            "jsonBytes": 375320.0,
+            "storageBytes": 0.0
+          },
+          "manPages": {
+            "documents": 5427.0,
+            "jsonBytes": 2477427.0,
+            "storageBytes": 40586070.0
+          },
+          "manPageProviders": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "manPageAliasProviders": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "releaseProviderUploadShards": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "manPageSearchDocuments": {
+            "documents": 1809.0,
+            "jsonBytes": 2302240.0,
+            "storageBytes": 0.0
+          },
+          "manPageLinks": {
+            "documents": 14183.0,
+            "jsonBytes": 5949286.0,
+            "storageBytes": 0.0
+          },
+          "manPageOptionFlags": {
+            "documents": 10050.0,
+            "jsonBytes": 4455944.0,
+            "storageBytes": 0.0
+          },
+          "licensePackages": {
+            "documents": 12.0,
+            "jsonBytes": 3364.0,
+            "storageBytes": 0.0
+          },
+          "licenses": {
+            "documents": 12.0,
+            "jsonBytes": 704126.0,
+            "storageBytes": 0.0
+          },
+          "releaseSectionStats": {
+            "documents": 8.0,
+            "jsonBytes": 2153.0,
+            "storageBytes": 0.0
+          },
+          "releaseManifests": {
+            "documents": 1.0,
+            "jsonBytes": 171.0,
+            "storageBytes": 3221.0
+          },
+          "releasePackageBatches": {
+            "documents": 1.0,
+            "jsonBytes": 240.0,
+            "storageBytes": 0.0
+          },
+          "releasePageUploadShards": {
+            "documents": 16.0,
+            "jsonBytes": 6246.0,
+            "storageBytes": 0.0
+          }
+        }
+      },
+      "projection": {
+        "scale": 1.125,
+        "documents": 36979,
+        "jsonBytes": 18319892,
+        "storageBytes": 45682585
+      }
+    },
+    "ru": {
+      "allPackages": 80,
+      "allArchiveBytes": 179289484,
+      "sampleArchiveBytes": 56917100,
+      "acquireSeconds": 0.0,
+      "contentsPaths": 2358,
+      "samplePackages": [
+        "amule-daemon",
+        "amule-utils-gui",
+        "calibre",
+        "help2man",
+        "kate-data",
+        "keditbookmarks",
+        "manpages-ru",
+        "manpages-ru-dev",
+        "passwd",
+        "qbittorrent-nox",
+        "synaptic",
+        "wesnoth-1.18-server"
+      ],
+      "samplePaths": 2168,
+      "pages": 1147,
+      "aliases": 1019,
+      "droppedCopies": 2,
+      "unresolved": 0,
+      "parseFailures": 0,
+      "withDescription": 1146,
+      "withSynopsis": 911,
+      "withOptions": 183,
+      "optionRows": 2593,
+      "withDocumentedVersion": 1109,
+      "docJsonBytesPerPage": 29260,
+      "parseSeconds": 6.757,
+      "failures": [],
+      "missing": [],
+      "documentedVersionExamples": [
+        "6.14",
+        "8.5.0",
+        "GNU coreutils 9.7",
+        "GNU grep 3.11",
+        "GNU help2man 1.49.3",
+        "KDE Gear KDE Gear 21.08",
+        "aMuleGUI v2.3.2",
+        "diffutils 3.10"
+      ],
+      "projectedPages": 1248,
+      "projectedAliases": 1108,
+      "sampleRoutes": 2166,
+      "footprint": {
+        "documents": 19165.0,
+        "jsonBytes": 11256116.0,
+        "storageBytes": 24006719.0,
+        "tables": {
+          "datasetReleases": {
+            "documents": 1.0,
+            "jsonBytes": 833.0,
+            "storageBytes": 0.0
+          },
+          "manPageAliases": {
+            "documents": 1019.0,
+            "jsonBytes": 286501.0,
+            "storageBytes": 0.0
+          },
+          "manPages": {
+            "documents": 3441.0,
+            "jsonBytes": 1650974.0,
+            "storageBytes": 24003762.0
+          },
+          "manPageProviders": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "manPageAliasProviders": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "releaseProviderUploadShards": {
+            "documents": 0.0,
+            "jsonBytes": 0.0,
+            "storageBytes": 0.0
+          },
+          "manPageSearchDocuments": {
+            "documents": 1147.0,
+            "jsonBytes": 1462395.0,
+            "storageBytes": 0.0
+          },
+          "manPageLinks": {
+            "documents": 10010.0,
+            "jsonBytes": 4429474.0,
+            "storageBytes": 0.0
+          },
+          "manPageOptionFlags": {
+            "documents": 3496.0,
+            "jsonBytes": 1500982.0,
+            "storageBytes": 0.0
+          },
+          "licensePackages": {
+            "documents": 12.0,
+            "jsonBytes": 3335.0,
+            "storageBytes": 0.0
+          },
+          "licenses": {
+            "documents": 12.0,
+            "jsonBytes": 1913078.0,
+            "storageBytes": 0.0
+          },
+          "releaseSectionStats": {
+            "documents": 9.0,
+            "jsonBytes": 2427.0,
+            "storageBytes": 0.0
+          },
+          "releaseManifests": {
+            "documents": 1.0,
+            "jsonBytes": 171.0,
+            "storageBytes": 2957.0
+          },
+          "releasePackageBatches": {
+            "documents": 1.0,
+            "jsonBytes": 240.0,
+            "storageBytes": 0.0
+          },
+          "releasePageUploadShards": {
+            "documents": 16.0,
+            "jsonBytes": 5706.0,
+            "storageBytes": 0.0
+          }
+        }
+      },
+      "projection": {
+        "scale": 1.088,
+        "documents": 20853,
+        "jsonBytes": 12247282,
+        "storageBytes": 26120650
+      }
+    }
+  }
+}

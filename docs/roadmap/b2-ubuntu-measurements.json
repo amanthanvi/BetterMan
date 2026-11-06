@@ -1,0 +1,313 @@
+{
+  "distro": "ubuntu",
+  "scope": "local, no upload; all curated-route index competitors",
+  "pinsSha256": "ae8cc200a42a219a2c7d324576790d823c79fb66a9a0b6038140d65d8ba48b87",
+  "fullPackages": 18391,
+  "fullArchiveBytes": 37018757148,
+  "samplePackages": 51,
+  "acquiredPackages": 62,
+  "downloadedBytes": 137856328,
+  "indexSeconds": 16.49193970800843,
+  "acquireSeconds": 9.893588499980979,
+  "parseSeconds": 22.85813508403953,
+  "licenseSeconds": 1.578364875051193,
+  "pages": 2617,
+  "providers": 5,
+  "aliases": 1726,
+  "sourceBytes": 10155360,
+  "spoolBytes": 88137728,
+  "parentPeakRssBytes": 283115520,
+  "childPeakRssBytes": 158023680,
+  "commandOwners": {
+    "groff": "groff-base",
+    "bash": "bash",
+    "coreutils": "coreutils",
+    "util-linux": "mount",
+    "findutils": "findutils",
+    "grep": "grep",
+    "sed": "sed",
+    "gawk": "gawk",
+    "curl": "curl",
+    "wget": "wget",
+    "openssh-client": "openssh-client",
+    "rsync": "rsync",
+    "netcat-openbsd": "netcat-openbsd",
+    "tar": "tar",
+    "systemd": "systemd",
+    "vim": "vim-common",
+    "less": "less",
+    "git": "git-man",
+    "make": "make",
+    "gcc": "gcc-13-x86-64-linux-gnu",
+    "gdb": "gdb",
+    "nginx": "nginx",
+    "apache2": "apache2-bin",
+    "openssl": "openssl",
+    "python3": "python3.12-minimal",
+    "perl": "perl-base",
+    "iproute2": "iproute2",
+    "procps": "procps",
+    "postgresql-client": "postgresql-client-16",
+    "default-mysql-client": "mysql-client-core-8.0"
+  },
+  "parseFailures": [],
+  "unresolved": [],
+  "verifiedLicenses": 53,
+  "packages": [
+    {
+      "name": "9base",
+      "sha256": "39e2d4abfc83c2c96afe37e5c6e9a6a39a6287be42aa33672c8145ba271d3c94",
+      "bytes": 768058
+    },
+    {
+      "name": "apache2",
+      "sha256": "c079f0c66392586eb5b6a6a503fb84761e1b3e7a037941c6b6021a0cdfc47253",
+      "bytes": 90240
+    },
+    {
+      "name": "apache2-bin",
+      "sha256": "d5fd0b8dc83d577904fcb5c7abe5e81f8a4ee3dc654d6f0cbb3df9307b18585c",
+      "bytes": 1328188
+    },
+    {
+      "name": "bash",
+      "sha256": "73de311a21e094e29ac01527d2b52226cc87fde0a5b57032902251b426d92c66",
+      "bytes": 794086
+    },
+    {
+      "name": "coreutils",
+      "sha256": "0d19c3e94f04ff1aafde46701fe1783da0a068a4904adc3794c30140f1aaeb8f",
+      "bytes": 1412418
+    },
+    {
+      "name": "curl",
+      "sha256": "af7af42226d21bcbf87cf62a9e158bd5dfbd051ebbde8818ca441dc8085f67af",
+      "bytes": 226572
+    },
+    {
+      "name": "default-mysql-client",
+      "sha256": "94b65d0a969d7aab9399ea186891752d4e6e981ed0854ada868937f31a110fad",
+      "bytes": 2908
+    },
+    {
+      "name": "findutils",
+      "sha256": "96490acdee09245bb47ff4684dc59a7ac3b29619da868ef3e9d8323c61a02ac4",
+      "bytes": 298296
+    },
+    {
+      "name": "gawk",
+      "sha256": "4b662062e90f62ece26ca7adfcd3a33207c7862f3dc77b8df515b5680ee00ca9",
+      "bytes": 462772
+    },
+    {
+      "name": "gcc",
+      "sha256": "0e0bb8b25153ed1c44ab92bc219eed469fcb5820c5c0bc6454b2fd366a33d3ee",
+      "bytes": 5018
+    },
+    {
+      "name": "gdb",
+      "sha256": "af69a5097def0b3a35f01261ffa1412a9cb491f0382aa45e691f5ae4b4d4eb72",
+      "bytes": 4009966
+    },
+    {
+      "name": "git",
+      "sha256": "664e394169ca5f1643b096059cf45169e360ced9e96ed378465dd03d47309074",
+      "bytes": 3673594
+    },
+    {
+      "name": "git-man",
+      "sha256": "e5484c8c3ace3223bc52f9fdd05532ff238c3e97e29f261a232b36c7f6779049",
+      "bytes": 1098204
+    },
+    {
+      "name": "grep",
+      "sha256": "fc0fdc5983ea3d3579ccf335e51dec69684a0dd9bb915734999c5733add9507a",
+      "bytes": 162040
+    },
+    {
+      "name": "groff",
+      "sha256": "fa1a261ddd06e18e265b9d584ea79af35eeb65d139ceeea4e212169338748cf8",
+      "bytes": 11721486
+    },
+    {
+      "name": "groff-base",
+      "sha256": "1cd698c64bb1100a505a71894321716d807dc976c26d488b339f0b6289aad2fc",
+      "bytes": 1019632
+    },
+    {
+      "name": "groovy",
+      "sha256": "22c64f043269125aa233c1cf9216daf7abbb66a5b03c2c89f8d5b6a6548a0834",
+      "bytes": 10779596
+    },
+    {
+      "name": "icedtea-netx",
+      "sha256": "03c70ec939e8221b9b4200247916cd8ce7b336d21d9daccc988a60fe9b33fb39",
+      "bytes": 1539258
+    },
+    {
+      "name": "iproute2",
+      "sha256": "d63efc1b10db5c12c9b544bebbac894d6f0bd5d65bf2fc6acd4fdacb459efa6c",
+      "bytes": 1120372
+    },
+    {
+      "name": "less",
+      "sha256": "e8560662fbf944dd4a4348faa0d8b4652fbc24939e6fe4ac06c0bdf946f9f935",
+      "bytes": 141298
+    },
+    {
+      "name": "librarian-puppet",
+      "sha256": "27dbce81734bff79eb0c99015316a9b126762eacb295a65bc88c50f96bc411f9",
+      "bytes": 16524
+    },
+    {
+      "name": "libssl-dev",
+      "sha256": "7135fe0e6a78b15fe4e30660765b67887ae33b36a7902293c2d7fddc09e13397",
+      "bytes": 2406170
+    },
+    {
+      "name": "make",
+      "sha256": "1fe6a815b56c7b6e9ce4086a363f09444bbd0a0d30e230c453d0b78e44b57a99",
+      "bytes": 179752
+    },
+    {
+      "name": "make-guile",
+      "sha256": "f1520b2d23c212e7a541c0ebb82c1ce7870daead0628f8d98833560017c66f4a",
+      "bytes": 180972
+    },
+    {
+      "name": "manpages",
+      "sha256": "7ad16ea6485d846dc0337f01267acf6c5faf98078ce220b32582d1da78f549fe",
+      "bytes": 1383936
+    },
+    {
+      "name": "manpages-dev",
+      "sha256": "fd5207cf3fdc59e380de1f7becbc74ec4e844d52740eb37ef813691688095496",
+      "bytes": 2012606
+    },
+    {
+      "name": "mariadb-client-core",
+      "sha256": "be7c0781af8433c319ca7ffb49991744c544e4b39de0a84ba1d8d0c657530911",
+      "bytes": 1008924
+    },
+    {
+      "name": "mount",
+      "sha256": "672c86c24a6884d791c95cbd9e159b54e65b15e80cf4b56d476538e22240857a",
+      "bytes": 118262
+    },
+    {
+      "name": "mysql-client-core-8.0",
+      "sha256": "fda22fc012bcbc4e090e71c371aac3fb37c017b4580c4253dcc443e59a9d80cb",
+      "bytes": 2774818
+    },
+    {
+      "name": "netcat-openbsd",
+      "sha256": "b2b837c2f9939aeda64ddb410c47c5ceee3034cf2157939ed7efdee51961aac4",
+      "bytes": 44292
+    },
+    {
+      "name": "nginx",
+      "sha256": "de56297d8b47be0324cf699be438cb58902a26ed1307d129fc4f32aa5e4a5994",
+      "bytes": 520506
+    },
+    {
+      "name": "openssh-client",
+      "sha256": "cb275222577a9b0ac65a9ea6e13096779aa56bf42e48478edb72e866547f7688",
+      "bytes": 904908
+    },
+    {
+      "name": "openssl",
+      "sha256": "9c79333ab21bce0fb8dd92304cd76b3b1c427b0f2fedc897257fb5cced37c39e",
+      "bytes": 1001730
+    },
+    {
+      "name": "perl",
+      "sha256": "a59f3d152ed767cf3be0924890e64d1f9424ac75f4124672ba6830d2ac587e03",
+      "bytes": 231370
+    },
+    {
+      "name": "perl-base",
+      "sha256": "82a75783b5b63b92d83c3f022e98dba9542e30d3a228b3e381d9c302b14df095",
+      "bytes": 1822564
+    },
+    {
+      "name": "postgresql-16",
+      "sha256": "7f25383e8f39ca99f4886b7b2cbb31c62534ac924e3a61da3f0e8e6456091e69",
+      "bytes": 15452168
+    },
+    {
+      "name": "postgresql-client",
+      "sha256": "3a1916c4e853e3215b9bd070a11e4db9b244d23a98560886c7b749935da5899e",
+      "bytes": 11504
+    },
+    {
+      "name": "postgresql-client-16",
+      "sha256": "d9f308ba17d9ac027d3a44fd07e5464e3d69407fb609a7d3ecd6e81937e5282d",
+      "bytes": 1268708
+    },
+    {
+      "name": "postgresql-doc-16",
+      "sha256": "46068e3daa109977cfc8571d99f3e2bb3de93deae015b07a590aff6743b99572",
+      "bytes": 2091774
+    },
+    {
+      "name": "procps",
+      "sha256": "11b24860c6f0567772634209afd94167da2bac3fd195cf4e62db7c7f6fb91cb6",
+      "bytes": 707630
+    },
+    {
+      "name": "python3",
+      "sha256": "4e0327510491374556c3a1af16af1cbf27eb94d228c9391efe116a8b84261f44",
+      "bytes": 24100
+    },
+    {
+      "name": "python3-minimal",
+      "sha256": "3eff923ca78fc71fd332f9e0c1e8e46eac4ee6cb8e4cc9d8c34e33271aed3871",
+      "bytes": 27216
+    },
+    {
+      "name": "rsync",
+      "sha256": "2b4e1375f190700fd0811f65356a8fa7b044915b964e84c4c55dce81b83c8423",
+      "bytes": 434824
+    },
+    {
+      "name": "scala",
+      "sha256": "a3951e57c68c3918c7085bc77f5c956c46e0c42135c53f0451325ba6ae16ee68",
+      "bytes": 14234124
+    },
+    {
+      "name": "sed",
+      "sha256": "a09b856849cf36190f8cd39da33486b14bcaf81b592530b2f3236da17daaad2f",
+      "bytes": 193410
+    },
+    {
+      "name": "systemd",
+      "sha256": "2c5932214476d783f27df85cc866b8859232dfbd38a73f780fc4693ea9886e70",
+      "bytes": 3470734
+    },
+    {
+      "name": "tar",
+      "sha256": "015b65ef176021c1846ec8b6152167d5d266c1949ec30ee3367e95fa2b2ead27",
+      "bytes": 253398
+    },
+    {
+      "name": "util-linux",
+      "sha256": "adce7d9699a70bfdc28f0e0785459c97e7ea7b4755316a83d0b4f29a2e22f404",
+      "bytes": 1127346
+    },
+    {
+      "name": "vim",
+      "sha256": "73f885e8afad2f41667399706f496ae8f5ad550dffbe74566954bb602f59297f",
+      "bytes": 1880364
+    },
+    {
+      "name": "vim-common",
+      "sha256": "7f4ebb6ba4a412fd7a4b659186ea0f57cad65839635a251562301efba9f0b82b",
+      "bytes": 384936
+    },
+    {
+      "name": "wget",
+      "sha256": "1d078bf2a22c2c6da84788818ebf055a10f5f6b5ea629f1dd0dd11660b51def6",
+      "bytes": 333234
+    }
+  ]
+}

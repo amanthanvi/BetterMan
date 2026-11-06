@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 
 import { search, withDistroFallback } from '../../lib/api'
 import { matchConcepts } from '../../lib/concepts'
+import { translatedLang } from '../../lib/i18n/locales'
 import { sectionLabel } from '../../components/man/RunningHead'
 import type { Distro } from '../../lib/distro'
 import type { Lang } from '../../lib/i18n/locales'
@@ -45,9 +46,10 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
   const q = getFirst(sp.q)?.trim().slice(0, 120) ?? ''
   const section = getFirst(sp.section)?.trim() || ''
+  const lang = translatedLang(getFirst(sp.lang))
 
   const { distro, data: initial } = await withDistroFallback(requestedDistro, async (activeDistro) =>
-    q ? search({ distro: activeDistro, q, section: section || undefined, limit: 20, offset: 0, brief: true }) : null,
+    q ? search({ distro: activeDistro, q, section: section || undefined, limit: 20, offset: 0, brief: true, ...(lang ? { lang } : {}) }) : null,
   )
   const urlDistro = explicitDistro(sp)
   // The nine manual sections, without a per-view listing read; an empty one simply finds nothing.
@@ -92,7 +94,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         ))}
       </nav>
 
-      <SearchResultsClient distro={distro} q={q} section={section} initial={initial} concepts={q ? matchConcepts(q) : []} />
+      <SearchResultsClient distro={distro} q={q} section={section} initial={initial} concepts={q ? matchConcepts(q) : []} lang={lang} />
     </div>
   )
 }

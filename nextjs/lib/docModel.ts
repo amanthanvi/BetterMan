@@ -46,7 +46,6 @@ export type OptionItem = { anchorId: string; flags: string; argument?: string | 
 export type SeeAlsoRef = { name: string; section?: string | null; resolvedPageId?: string | null }
 
 export type ManPage = {
-  indexable?: boolean
   id: string
   datasetReleaseId: string
   locale: string
@@ -57,6 +56,9 @@ export type ManPage = {
   description: string
   sourcePackage?: string | null
   sourcePackageVersion?: string | null
+  /** Demand tier AND default provider. Unscored canonical pages retain legacy indexing. */
+  indexable?: boolean
+  popularityScore?: number
   hasParseWarnings?: boolean
 }
 
@@ -100,6 +102,10 @@ export type ManPageResponse = {
   derived?: import('../../convex/_derivedEncoding').PageDerivedResponse
   brief?: ManPageBrief | null
   providers?: import('../../convex/lib').ManProviders | null
+  /** Translated pages (#395): how the translation lags its English page, computed after activation. */
+  translationDrift?: import('../../convex/translationDrift').PageTranslationDrift
+  /** The drift build for the current English release is unfinished: cache this page briefly. */
+  translationDriftPending?: true
 }
 
 export type ErrorDetail = { code: string; message: string }

@@ -126,6 +126,7 @@ jobs:
         with:
           ref: ${{ needs.resolve_revision.outputs.sha }}
           path: app
+          fetch-depth: 2
           persist-credentials: false
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -164,6 +165,14 @@ jobs:
             exit 1
           fi
 
+      - name: Require confirmation for large-table index changes
+        if: needs.resolve_revision.outputs.require_current_main == 'true'
+        env:
+          BETTERMAN_CONFIRM_LARGE_INDEXES: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_large_indexes }}
+        run: |
+          set -euo pipefail
+          node "$GITHUB_WORKSPACE/tooling/scripts/check-convex-indexes.mjs"
+
       - name: Deploy current Convex functions
         if: needs.resolve_revision.outputs.require_current_main == 'true'
         shell: bash
@@ -177,8 +186,8 @@ jobs:
             echo "CONVEX_DEPLOY_KEY is required in the protected production environment." >&2
             exit 1
           fi
-          # Convex stops a push that creates indexes on large tables. Only a manual
-          # deploy may confirm one; automatic deploys keep the check.
+          # The preceding syntax preflight fails closed even if Convex's schema
+          # evaluation is unavailable. Only a manual current-main deploy may confirm.
           large_indexes=""
           if [[ "$BETTERMAN_CONFIRM_LARGE_INDEXES" == "true" ]]; then
             large_indexes="--skip-large-indexes-check"

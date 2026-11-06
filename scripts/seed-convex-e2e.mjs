@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import { setTimeout as sleep } from 'node:timers/promises'
 
 const stage = process.env.BETTERMAN_DATASET_STAGE || 'prod'
+const unscored = process.env.BETTERMAN_E2E_UNSCORED === '1'
 const secret = process.env.CONVEX_INGEST_SECRET
 const rawUrl = process.env.CONVEX_HTTP_URL || process.env.CONVEX_SITE_URL || process.env.CONVEX_URL
 
@@ -19,6 +20,9 @@ function httpUrl(value) {
 
 const baseUrl = httpUrl(rawUrl)
 
+// Release-contract writes name the exact contract version; the seed follows the deployment it seeds.
+const contractVersion = String((await (await fetch(`${baseUrl}/ingest/contract`, { headers: { Authorization: `Bearer ${secret}` } })).json()).schemaVersion)
+
 async function post(path, payload) {
   const res = await fetch(`${baseUrl}/${path.replace(/^\//, '')}`, {
     method: 'POST',
@@ -26,6 +30,7 @@ async function post(path, payload) {
       Authorization: `Bearer ${secret}`,
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      'X-BetterMan-Ingest-Contract': contractVersion,
     },
     body: JSON.stringify(payload),
   })
@@ -44,7 +49,7 @@ function stableSha(value) {
 
 function page({
   name, section, title, description, toc, blocks, synopsis = null, options = null, seeAlso = null,
-  sourcePackage = null, sourcePackageVersion = null,
+  sourcePackage = null, sourcePackageVersion = null, popularityScore = 0,
 }) {
   const doc = { toc, blocks }
   const plainText = [name, description, JSON.stringify(doc)].join(' ')
@@ -52,7 +57,9 @@ function page({
     externalId: crypto.randomUUID(),
     name,
     section,
-    sitemapPage: 1,
+    sitemapPage: section === '3pm' ? 0 : 1,
+    indexable: section !== '3pm',
+    popularityScore,
     title,
     description,
     sourcePath: `/e2e/${name}.${section}`,
@@ -124,10 +131,20 @@ function makePages(distro) {
           termInlines: [{ type: 'code', text: '-c, --create' }],
           definitionBlocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Create a new archive.' }] }],
         },
+        ...[
+          ['-x, --extract, --get', 'opt-extract', 'Extract files from an archive.'],
+          ['-z, --gzip, --gunzip, --ungzip', 'opt-gzip', 'Filter through gzip.'],
+          ['-f, --file ARCHIVE', 'opt-file', 'Use archive file.'],
+          ['-v, --verbose', 'opt-verbose', 'List processed files.'],
+          ['-t, --list', 'opt-list', 'List archive contents.'],
+        ].map(([flags, id, description]) => ({
+          id, termInlines: [{ type: 'code', text: flags }],
+          definitionBlocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: description }] }],
+        })),
       ],
     },
     { type: 'heading', id: 'examples', level: 2, text: 'EXAMPLES' },
-    { type: 'code_block', id: 'example-1', text: 'tar -cf archive.tar ./my-folder\n\ntar -xf archive.tar', languageHint: 'bash' },
+    { type: 'code_block', id: 'example-1', text: 'tar -cf archive.tar ./my-folder\n\ntar -xzf archive.tar.gz\n\ntar -czf archive.tar.gz ./my-folder\n\ntar -tvf archive.tar', languageHint: 'bash' },
     { type: 'heading', id: 'see-also', level: 2, text: 'SEE ALSO' },
     {
       type: 'paragraph',
@@ -152,8 +169,16 @@ function makePages(distro) {
     ],
     blocks: tarBlocks,
     synopsis: ['tar [OPTION]... [FILE]...'],
-    options: [{ flags: '-c, --create', argument: null, description: 'Create a new archive.', anchorId: tarOptAnchor }],
+    options: [
+      { flags: '-c, --create', argument: null, description: 'Create a new archive.', anchorId: tarOptAnchor },
+      { flags: '-x, --extract, --get', anchorId: 'opt-extract', description: 'Extract files from an archive.' },
+      { flags: '-z, --gzip, --gunzip, --ungzip', anchorId: 'opt-gzip', description: 'Filter through gzip.' },
+      { flags: '-f, --file', argument: 'ARCHIVE', anchorId: 'opt-file', description: 'Use archive file.' },
+      { flags: '-v, --verbose', anchorId: 'opt-verbose', description: 'List processed files.' },
+      { flags: '-t, --list', anchorId: 'opt-list', description: 'List archive contents.' },
+    ],
     seeAlso: [{ name: 'gzip', section: '1', resolvedPageId: gzip.externalId }, { name: 'cpio', section: '1', resolvedPageId: null }],
+    popularityScore: 5470,
     sourcePackage: 'tar',
     sourcePackageVersion: '1.35+dfsg-3',
   })
@@ -238,7 +263,11 @@ function makePages(distro) {
     name: 'foo::bar', section: '3pm', title: 'foo::bar(3pm)', description: 'Perl module route fixture', sourcePackage: 'perl',
     toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Perl module documentation.' }] }],
   })
-  const pages = [gzip, tar, printf1, printf3, openssl, evp, bash, perl]
+  const competitors = [['instmodsh', 4900], ['ptar', 4900], ['dpkg', 5470]].map(([name, popularityScore]) => page({
+    name, popularityScore, section: '1', title: `${name}(1)`, description: `${name} utility`,
+    toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: `${name} utility` }] }], options: [{ flags: '-x, --extract, --get', anchorId: 'extract', description: 'Extract files.' }],
+  }))
+  const pages = [gzip, tar, printf1, printf3, openssl, evp, bash, perl, ...competitors]
   // Linux only, so FreeBSD and macOS have a page another distro carries.
   if (distro !== 'freebsd' && distro !== 'macos') {
     pages.push(
@@ -305,6 +334,15 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
       { type: 'table', headers: ['Oct', 'Dec', 'Hex', 'Char'], rows: asciiRows },
     ],
   }))
+
+  // Retain one real legacy release shape to exercise rolling-deploy serving.
+  if (distro === 'macos' || unscored) {
+    for (const page of pages) {
+      delete page.indexable
+      delete page.popularityScore
+      page.sitemapPage = 1
+    }
+  }
   const datasetReleaseId = `e2e-${distro}-${Date.now()}`
   const sectionTotals = Object.entries(
     pages.reduce((acc, p) => {
@@ -322,6 +360,7 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     ingestedAt: now,
     packageManifest: { packages: [] },
     pageCount: pages.length,
+    ...(distro === 'macos' || unscored ? {} : { indexablePageCount: pages.filter(p => p.indexable).length }),
     providerCount: 5,
     packageBatches: [],
     aliasCount: 3,
@@ -335,20 +374,31 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     const tar = pages.find((p) => p.name === 'tar')
     await post('/ingest/generated', { records: [{
       contentSha256: tar.contentSha256,
-      page: { examples: [{ description: 'Create an archive from a folder', command: 'tar -cf archive.tar ./my-folder' }], flagUsage: [{ flag: '-c', count: 1 }] },
+      page: { examples: [
+        { description: 'Create an archive from a folder', command: 'tar -cf archive.tar ./my-folder' },
+        { description: 'Extract a gzipped archive', command: 'tar -xzf archive.tar.gz' },
+        { description: 'List archive contents verbosely', command: 'tar -tvf archive.tar' },
+      ], flagUsage: unscored ? [] : [{ flag: '-c', count: 2 }, { flag: '-x', count: 1 }, { flag: '-z', count: 2 }, { flag: '-f', count: 4 }, { flag: '-v', count: 1 }, { flag: '-t', count: 1 }] },
       tldr: {
         commit: 'f4566462f5996e13a4f3523f21dc2a863aec53c1', path: 'common/tar.md', rejected: 0,
         examples: [{ description: 'Create an archive and write it to a file', command: 'tar --create --file path/to/target.tar path/to/file', placeholders: [[20, 38], [39, 51]] }],
-        flagUsage: [{ flag: '--create', count: 1 }],
+        flagUsage: unscored ? [] : [{ flag: '--create', count: 1 }, { flag: '--file', count: 1 }],
       },
       generated: {
         provider: 'opencode-go', model: 'deepseek-v4.1-flash', promptVersion: 'b6-v1', generatedAt: '2026-10-28',
         summary: 'Creates and extracts archive files <b>such as</b> tarballs.',
         examples: [{ description: 'Create an archive of the current folder', command: 'tar -c .' }],
-        taskPhrases: ['create a tar archive', 'bundle a folder'],
+        taskPhrases: ['create a tar archive', 'bundle a folder', 'extract files from an archive'],
         rejected: 0,
       },
     }] })
+    for (const [name, phrase] of [['instmodsh', 'create tarball from installed module'], ['ptar', 'extract a tar archive'], ['dpkg', 'extract package files']]) {
+      const competitor = pages.find(p => p.name === name)
+      await post('/ingest/generated', { records: [{ contentSha256: competitor.contentSha256, generated: {
+        provider: 'fixture', model: 'fixture', promptVersion: 'b6-v1', generatedAt: '2026-10-30',
+        summary: `${name} utility`, examples: [], rejected: 0, taskPhrases: [phrase],
+      } }] })
+    }
   }
   await post('/ingest/pages/storage', { datasetReleaseId, pages: [{
     ...pages.find((p) => p.name === 'foo::bar'), externalId: crypto.randomUUID(), sourcePackage: 'same-perl', providerOnly: true,
@@ -378,5 +428,57 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     if (result.pending !== true) throw new Error('Invalid seed activation response')
     if (Date.now() >= deadline) throw new Error('Seed activation timed out waiting for hydration')
     await sleep(200)
+  }
+}
+
+// Translated manuals (#395): German tar(1) on Debian. Translated releases never
+// activate straight to prod; this goes through staging and the explicitly
+// authorized promotion, the same hold the dataset workflow faces.
+{
+  const datasetReleaseId = `e2e-debian-de-${Date.now()}`
+  const tar = page({
+    name: 'tar', section: '1', title: 'tar(1)', description: 'ein Archivierungsprogramm', sourcePackage: 'manpages-de', sourcePackageVersion: '4.27.0-1',
+    toc: [{ id: 'BESCHREIBUNG', title: 'BESCHREIBUNG', level: 2 }],
+    blocks: [
+      { type: 'heading', id: 'BESCHREIBUNG', level: 2, text: 'BESCHREIBUNG' },
+      { type: 'paragraph', inlines: [{ type: 'text', text: 'GNU tar speichert viele Dateien zusammen in einem einzigen Archiv.' }] },
+    ],
+    // Older than English tar 1.35 and, of English tar's options, missing only -c/--create:
+    // the drift note's evidence. Keep the rest in step with the English seed above.
+    options: [
+      { flags: '-x, --extract, --get', argument: null, description: 'Entpackt ein Archiv.', anchorId: 'opt-x' },
+      { flags: '-z, --gzip, --gunzip, --ungzip', argument: null, description: 'Filtert durch gzip.', anchorId: 'opt-gzip' },
+      { flags: '-f, --file', argument: 'ARCHIV', description: 'Verwendet die Archivdatei.', anchorId: 'opt-file' },
+      { flags: '-v, --verbose', argument: null, description: 'Listet die verarbeiteten Dateien auf.', anchorId: 'opt-verbose' },
+      { flags: '-t, --list', argument: null, description: 'Listet den Inhalt eines Archivs auf.', anchorId: 'opt-list' },
+    ],
+  })
+  await post('/ingest/release', {
+    datasetReleaseId, locale: 'de', distro: 'debian', imageRef: 'e2e', imageDigest: 'e2e', ingestedAt: now,
+    packageManifest: { packages: [] }, pageCount: 2, packageBatches: [], aliasCount: 1, licenseCount: 0,
+    sectionTotals: [{ section: '1', total: 2 }], licensePackages: [],
+  })
+  // A German-only page: no English route, so no English link or English hreflang.
+  const onlyGerman = page({
+    name: 'nur-de', section: '1', title: 'nur-de(1)', description: 'nur auf Deutsch', sourcePackage: 'manpages-de',
+    toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Diese Seite gibt es nur auf Deutsch.' }] }],
+  })
+  await post('/ingest/pages/storage', { datasetReleaseId, pages: [{ ...tar, documentedVersion: 'GNU tar 1.34' }, onlyGerman] })
+  await post('/ingest/aliases', { datasetReleaseId, aliases: [{ name: 'gtar', section: '1', targetName: 'tar', targetSection: '1' }] })
+  const deadline = Date.now() + 300_000
+  while (true) {
+    const result = await post('/ingest/activate', { stage: 'staging', datasetReleaseId, activatedAt: now })
+    if (result.pending === false) break
+    if (Date.now() >= deadline) throw new Error('Translated seed activation timed out')
+    await sleep(200)
+  }
+  if (stage === 'prod') {
+    const res = await fetch(`${baseUrl}/ingest/promote`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json', 'X-BetterMan-Ingest-Contract': contractVersion },
+      body: JSON.stringify({ fromStage: 'staging', toStage: 'prod', distros: ['debian'], locale: 'de', allowTranslations: true, activatedAt: now, expectedDatasetReleaseId: { debian: datasetReleaseId } }),
+    })
+    const promoted = await res.json()
+    if (!res.ok || promoted.promoted?.[0]?.datasetReleaseId !== datasetReleaseId) throw new Error(`Translated seed promotion failed: ${res.status}`)
   }
 }

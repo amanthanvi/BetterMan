@@ -9,7 +9,7 @@ on:
         required: false
         default: true
       linux:
-        description: Run Linux distro ingests (full Debian requires its separate opt-in)
+        description: Run Linux distro ingests (full archives require separate per-distro opt-ins)
         type: boolean
         required: false
         default: true
@@ -58,6 +58,46 @@ on:
         type: boolean
         required: false
         default: false
+      alpine_full:
+        description: Explicitly authorize full Alpine APK extraction to staging
+        type: boolean
+        required: false
+        default: false
+      alpine_full_promote:
+        description: Explicitly authorize promotion of a held full Alpine staging release
+        type: boolean
+        required: false
+        default: false
+      arch_full:
+        description: Explicitly authorize full Arch package extraction to staging
+        type: boolean
+        required: false
+        default: false
+      arch_full_promote:
+        description: Explicitly authorize promotion of a held full Arch staging release
+        type: boolean
+        required: false
+        default: false
+      fedora_full:
+        description: Explicitly authorize full Fedora RPM extraction to staging
+        type: boolean
+        required: false
+        default: false
+      fedora_full_promote:
+        description: Explicitly authorize promotion of a held full Fedora staging release
+        type: boolean
+        required: false
+        default: false
+      ubuntu_full:
+        description: Explicitly authorize full Ubuntu archive ingestion to staging
+        type: boolean
+        required: false
+        default: false
+      ubuntu_full_promote:
+        description: Explicitly authorize promotion of a held full Ubuntu staging release
+        type: boolean
+        required: false
+        default: false
       debian_download_only:
         description: Download-only Debian benchmark; no Convex, upload, activation or promotion
         type: boolean
@@ -88,6 +128,22 @@ permissions:
 # workflow_dispatch choices above aligned with its LINUX and BSD lists.
 
 env:
+  BETTERMAN_ALPINE_FULL: ${{ vars.BETTERMAN_ALPINE_FULL }}
+  BETTERMAN_ALPINE_FULL_INPUT: ${{ inputs.alpine_full && 'true' || 'false' }}
+  BETTERMAN_ALPINE_FULL_PROMOTE: ${{ vars.BETTERMAN_ALPINE_FULL_PROMOTE }}
+  BETTERMAN_ALPINE_FULL_PROMOTE_INPUT: ${{ inputs.alpine_full_promote && 'true' || 'false' }}
+  BETTERMAN_ARCH_FULL: ${{ vars.BETTERMAN_ARCH_FULL }}
+  BETTERMAN_ARCH_FULL_INPUT: ${{ inputs.arch_full && 'true' || 'false' }}
+  BETTERMAN_ARCH_FULL_PROMOTE: ${{ vars.BETTERMAN_ARCH_FULL_PROMOTE }}
+  BETTERMAN_ARCH_FULL_PROMOTE_INPUT: ${{ inputs.arch_full_promote && 'true' || 'false' }}
+  BETTERMAN_FEDORA_FULL: ${{ vars.BETTERMAN_FEDORA_FULL }}
+  BETTERMAN_FEDORA_FULL_INPUT: ${{ inputs.fedora_full && 'true' || 'false' }}
+  BETTERMAN_FEDORA_FULL_PROMOTE: ${{ vars.BETTERMAN_FEDORA_FULL_PROMOTE }}
+  BETTERMAN_FEDORA_FULL_PROMOTE_INPUT: ${{ inputs.fedora_full_promote && 'true' || 'false' }}
+  BETTERMAN_UBUNTU_FULL: ${{ vars.BETTERMAN_UBUNTU_FULL }}
+  BETTERMAN_UBUNTU_FULL_INPUT: ${{ inputs.ubuntu_full && 'true' || 'false' }}
+  BETTERMAN_UBUNTU_FULL_PROMOTE: ${{ vars.BETTERMAN_UBUNTU_FULL_PROMOTE }}
+  BETTERMAN_UBUNTU_FULL_PROMOTE_INPUT: ${{ inputs.ubuntu_full_promote && 'true' || 'false' }}
   BETTERMAN_DEBIAN_FULL: ${{ vars.BETTERMAN_DEBIAN_FULL }}
   BETTERMAN_DEBIAN_FULL_INPUT: ${{ inputs.debian_full && 'true' || 'false' }}
   BETTERMAN_DEBIAN_FULL_PROMOTE: ${{ vars.BETTERMAN_DEBIAN_FULL_PROMOTE }}
@@ -115,10 +171,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: 3.14
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: false
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -206,7 +262,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: 3.14
 
@@ -228,7 +284,7 @@ jobs:
           DISTRO: ${{ matrix.distro }}
 
       # Secret-bearing job: 'auto' would enable the cache here.
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         if: ${{ needs.plan.outputs.ingest == 'true' && matrix.distro != 'freebsd' }}
         with:
           enable-cache: false
@@ -250,6 +306,26 @@ jobs:
         if: ${{ needs.plan.outputs.ingest == 'true' && matrix.full_debian }}
         run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends mandoc
 
+      - name: Install Alpine archive renderer
+        id: alpine_renderer
+        if: ${{ needs.plan.outputs.ingest == 'true' && matrix.full_alpine }}
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends mandoc
+
+      - name: Install Arch archive renderer
+        id: arch_renderer
+        if: ${{ needs.plan.outputs.ingest == 'true' && matrix.full_arch }}
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends mandoc
+
+      - name: Install Fedora archive readers
+        id: fedora_renderer
+        if: ${{ needs.plan.outputs.ingest == 'true' && matrix.full_fedora }}
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends mandoc libarchive-tools
+
+      - name: Install Ubuntu archive renderer
+        id: ubuntu_renderer
+        if: ${{ needs.plan.outputs.ingest == 'true' && matrix.full_ubuntu }}
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends mandoc
+
       - name: Ingest to Convex staging
         id: staging
         if: ${{ needs.plan.outputs.ingest == 'true' && matrix.distro != 'freebsd' }}
@@ -261,6 +337,18 @@ jobs:
           BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
           BETTERMAN_INGEST_GIT_SHA: ${{ github.sha }}
           BETTERMAN_DEBIAN_FULL_SELECTED: ${{ matrix.full_debian }}
+          BETTERMAN_ALPINE_FULL_SELECTED: ${{ matrix.full_alpine }}
+          BETTERMAN_ALPINE_WORKDIR: ${{ runner.temp }}/betterman-alpine/workspace
+          BETTERMAN_ALPINE_CACHE_DIR: ${{ runner.temp }}/betterman-alpine/archives
+          BETTERMAN_ARCH_FULL_SELECTED: ${{ matrix.full_arch }}
+          BETTERMAN_ARCH_WORKDIR: ${{ runner.temp }}/betterman-arch/workspace
+          BETTERMAN_ARCH_CACHE_DIR: ${{ runner.temp }}/betterman-arch/archives
+          BETTERMAN_FEDORA_FULL_SELECTED: ${{ matrix.full_fedora }}
+          BETTERMAN_FEDORA_WORKDIR: ${{ runner.temp }}/betterman-fedora/workspace
+          BETTERMAN_FEDORA_CACHE_DIR: ${{ runner.temp }}/betterman-fedora/archives
+          BETTERMAN_UBUNTU_FULL_SELECTED: ${{ matrix.full_ubuntu }}
+          BETTERMAN_UBUNTU_WORKDIR: ${{ runner.temp }}/betterman-ubuntu/workspace
+          BETTERMAN_UBUNTU_CACHE_DIR: ${{ runner.temp }}/betterman-ubuntu/archives
           BETTERMAN_DEBIAN_WORKDIR: ${{ runner.temp }}/betterman-debian/workspace
           BETTERMAN_DEBIAN_CACHE_DIR: ${{ runner.temp }}/betterman-debian/archives
         shell: bash
@@ -272,6 +360,18 @@ jobs:
           fi
           if [[ "${BETTERMAN_DEBIAN_FULL_SELECTED}" == "true" ]]; then
             ingest_args+=(--debian-full)
+          fi
+          if [[ "${BETTERMAN_ALPINE_FULL_SELECTED}" == "true" ]]; then
+            ingest_args+=(--alpine-full)
+          fi
+          if [[ "${BETTERMAN_ARCH_FULL_SELECTED}" == "true" ]]; then
+            ingest_args+=(--arch-full)
+          fi
+          if [[ "${BETTERMAN_FEDORA_FULL_SELECTED}" == "true" ]]; then
+            ingest_args+=(--fedora-full)
+          fi
+          if [[ "${BETTERMAN_UBUNTU_FULL_SELECTED}" == "true" ]]; then
+            ingest_args+=(--ubuntu-full)
           fi
           python3 scripts/dataset-workflow.py run "${DISTRO}" ingest \
             uv run --directory ingestion python -m ingestion.cli ingest --distro "${DISTRO}" "${ingest_args[@]}"
@@ -299,6 +399,10 @@ jobs:
               pkg install -y python312
               py="python3.12"
             fi
+            # FreeBSD packages each interpreter's sqlite3 module separately; ingestion spools to SQLite (#431).
+            if ! $py -c 'import sqlite3' 2>/dev/null; then
+              pkg install -y "py$($py -c 'import sys; print("%d%d" % sys.version_info[:2])')-sqlite3"
+            fi
             if ! command -v cargo >/dev/null 2>&1; then
               pkg install -y rust
             fi
@@ -309,6 +413,8 @@ jobs:
             if [ "${BETTERMAN_INGEST_SAMPLE}" = "true" ]; then
               set -- --sample --no-activate
             fi
+            # Run checkout sources so B4's checksum-pinned data accompanies the module.
+            export PYTHONPATH="$GITHUB_WORKSPACE/ingestion${PYTHONPATH:+:$PYTHONPATH}"
             $py scripts/dataset-workflow.py run freebsd ingest $py -m ingestion.cli ingest --distro freebsd "$@"
         env:
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
@@ -362,6 +468,15 @@ jobs:
           BETTERMAN_JOB_STATUS: ${{ job.status }}
           BETTERMAN_STEPS: ${{ toJSON(steps) }}
         run: python3 scripts/dataset-workflow.py finish "${DISTRO}"
+      - name: Export Alpine whole-file SHA256 pins for owner review
+        if: ${{ always() && matrix.full_alpine }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: alpine-package-sha256
+          path: ${{ runner.temp }}/betterman-alpine/workspace/**/alpine-package-sha256.json
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Upload sanitized distro result
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -12,8 +12,9 @@ test('text cache keys survive promotion and rollback on local Convex', async ({ 
   test.setTimeout(120_000)
   const secret = process.env.CONVEX_INGEST_SECRET!
   expect(secret).toBeTruthy()
+  const contract = await (await request.get(`${url.origin}/ingest/contract`, { headers: { Authorization: `Bearer ${secret}` } })).json()
   const post = async (path: string, body: object) => {
-    const res = await request.post(`${url.origin}${path}`, { headers: { Authorization: `Bearer ${secret}` }, data: body })
+    const res = await request.post(`${url.origin}${path}`, { headers: { Authorization: `Bearer ${secret}`, 'X-BetterMan-Ingest-Contract': String(contract.schemaVersion) }, data: body })
     expect([200, 409], `${path}: ${await res.text()}`).toContain(res.status())
     return await res.json()
   }

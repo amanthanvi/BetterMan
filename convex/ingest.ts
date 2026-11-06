@@ -3,15 +3,17 @@ import { persistOptionSignature, persistPackedSignature } from "./_derivedInputs
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { contentChunks, splitContentFields, type ContentField, type ContentJsonKind } from "./_legacyContent";
-import { datasetStageValidator, distroValidator } from "./schema";
+import { acquisitionValidator, datasetStageValidator, distroValidator } from "./schema";
 import { scheduleRelatedMetadataBackfill } from "./related";
 import { scheduleTaskPhraseBackfill } from "./taskPhrases";
 import { scheduleDerivedBuild } from "./derived";
-import { fullDebianPromotionHeld, releaseAcquisition, recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
+import { fullArchivePromotionReason, fullDebianTierMissing, fullDebianPromotionHeld, translatedPromotionHeld, releaseAcquisition, recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
 import { insertProvider, recordProviderUploads, refreshProviderPackages } from "./_providers";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, type OptionFlagRow } from "./_optionFlags";
 import { insertSymbols, symbolInput } from './_symbols';
+import { DEFAULT_LOCALE, isContentLocale } from "./_locales";
+import { scheduleTranslationDrift } from "./translationDrift";
 import {
   compactManPageSearchText,
   DATASET_STAGES,
@@ -45,6 +47,8 @@ const pageInput = v.object({
   name: v.string(),
   section: v.string(),
   sitemapPage: v.number(),
+  indexable: v.optional(v.boolean()),
+  popularityScore: v.optional(v.number()),
   title: v.string(),
   description: v.string(),
   sourcePath: v.string(),
@@ -80,6 +84,8 @@ const storedPageInput = v.object({
   name: v.string(),
   section: v.string(),
   sitemapPage: v.number(),
+  indexable: v.optional(v.boolean()),
+  popularityScore: v.optional(v.number()),
   title: v.string(),
   description: v.string(),
   sourcePath: v.string(),
@@ -89,6 +95,9 @@ const storedPageInput = v.object({
   hasParseWarnings: v.boolean(),
   extractorVersion: v.optional(v.number()),
   contentStorageId: v.id("_storage"),
+  // Translated pages only: the upstream version the translation documents,
+  // from its .TH source field. Drift notes compare it with English (#395).
+  documentedVersion: v.optional(v.string()),
   optionFlags: v.optional(v.array(optionFlagInput)),
   optionsSignature: v.optional(v.string()),
   symbols: v.optional(v.array(symbolInput)),
@@ -111,6 +120,7 @@ const licenseInput = v.object({
   licenseId: v.string(),
   licenseName: v.string(),
   licenseText: v.string(),
+  storageId: v.optional(v.id("_storage")),
   sourceUrl: v.union(v.string(), v.null()),
 });
 
@@ -146,6 +156,18 @@ export function canonicalJson(value: unknown): string {
     if (!nested || typeof nested !== "object" || Array.isArray(nested)) return nested;
     return Object.fromEntries(Object.entries(nested).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0));
   });
+}
+
+function validatePageDemand(release: Doc<"datasetReleases">, page: {
+  indexable?: boolean; popularityScore?: number; sitemapPage: number;
+}): void {
+  if (release.indexablePageCount === undefined) return; // queued legacy/internal jobs
+  const maxPage = Math.ceil(release.indexablePageCount / 10_000);
+  if (typeof page.indexable !== "boolean" || typeof page.popularityScore !== "number" ||
+      !Number.isSafeInteger(page.popularityScore) || page.popularityScore < 0 || !Number.isSafeInteger(page.sitemapPage) ||
+      (page.indexable ? page.sitemapPage < 1 || page.sitemapPage > maxPage : page.sitemapPage !== 0)) {
+    throw new Error("INVALID_INDEX_POLICY");
+  }
 }
 
 async function validateNewPageRoute(ctx: MutationCtx, releaseId: Id<"datasetReleases">, page: { name: string; section: string; externalId: string }) {
@@ -298,17 +320,22 @@ export const createRelease = internalMutation({
     packageManifest: v.optional(v.any()),
     packageManifestStorageId: v.optional(v.id("_storage")),
     packageManifestDigest: v.optional(v.string()),
-    acquisition: v.optional(v.literal("deb-extraction")),
+    acquisition: v.optional(acquisitionValidator),
     packageBatches: v.optional(v.array(v.object({ digest: v.string(), count: v.number(), licenseCount: v.number() }))),
     providerCount: v.optional(v.number()),
     pageCount: v.number(),
+    indexablePageCount: v.optional(v.number()),
     aliasCount: v.number(),
     licenseCount: v.number(),
     sectionTotals: v.array(sectionStatInput),
     licensePackages: v.optional(v.array(licensePackageInput)),
   },
+  returns: v.object({ releaseId: v.id("datasetReleases"), existed: v.boolean() }),
   handler: async (ctx, args) => {
+    if (args.indexablePageCount !== undefined && (!validManifestCount(args.indexablePageCount) || args.indexablePageCount > args.pageCount)) throw new Error("INVALID_INDEX_POLICY");
+    if (!isContentLocale(args.locale)) throw new Error("INVALID_RELEASE_LOCALE");
     const acquisition = args.packageManifest !== undefined ? releaseAcquisition(args.packageManifest) : args.acquisition;
+    if ((acquisition === "ubuntu-deb-extraction" && args.distro !== "ubuntu") || (acquisition === "fedora-rpm-extraction" && args.distro !== "fedora") || (acquisition === "arch-pkg-extraction" && args.distro !== "arch") || (acquisition === "alpine-apk-extraction" && args.distro !== "alpine")) throw new Error("INVALID_RELEASE_MANIFEST");
     if (args.acquisition !== undefined && acquisition !== args.acquisition) throw new Error("INVALID_RELEASE_MANIFEST");
     const packages = args.licensePackages ?? [];
     if (args.providerCount !== undefined && (!validManifestCount(args.providerCount) || args.packageBatches === undefined)) throw new Error("INVALID_RELEASE_MANIFEST");
@@ -355,10 +382,11 @@ export const createRelease = internalMutation({
       imageDigest: args.imageDigest,
       acquisition,
       ingestedAt: args.ingestedAt,
-      ...(args.packageBatches !== undefined ? { shardedPageUploads: true, relatedMetadataVersion: 1 } : {}),
+      ...(args.packageBatches !== undefined || args.indexablePageCount !== undefined ? { shardedPageUploads: true, relatedMetadataVersion: 1 } : {}),
       packageBatchCount: args.packageBatches?.length ?? 0,
       uploadedPackageBatchCount: 0,
       pageCount: args.pageCount,
+      indexablePageCount: args.indexablePageCount,
       ...(args.providerCount !== undefined ? { providerCount: args.providerCount } : {}),
       aliasCount: args.aliasCount,
       licenseCount: args.licenseCount,
@@ -437,6 +465,7 @@ export const insertPages = internalMutation({
     datasetReleaseId: v.string(),
     pages: v.array(pageInput),
   },
+  returns: v.object({ inserted: v.number(), skipped: v.number() }),
   handler: async (ctx, args) => {
     const release = await ctx.db
       .query("datasetReleases")
@@ -446,6 +475,7 @@ export const insertPages = internalMutation({
     const immutable = await releaseIsImmutable(ctx, release);
 
     let inserted = 0;
+    let indexed = 0;
     let skipped = 0;
     const bySection = new Map<string, number>();
     for (const page of args.pages) {
@@ -461,6 +491,7 @@ export const insertPages = internalMutation({
       }
       if (immutable) throw new Error("RELEASE_SEALED");
 
+      validatePageDemand(release, page);
       await validateNewPageRoute(ctx, release._id, page);
 
       const pageId = await ctx.db.insert("manPages", {
@@ -472,6 +503,8 @@ export const insertPages = internalMutation({
         name: page.name,
         section: page.section,
         sitemapPage: page.sitemapPage,
+        indexable: page.indexable,
+        popularityScore: page.popularityScore,
         title: page.title,
         description: page.description,
         sourcePath: page.sourcePath,
@@ -528,11 +561,12 @@ export const insertPages = internalMutation({
       }
 
       inserted += 1;
+      if (page.indexable) indexed += 1;
       bySection.set(page.section, (bySection.get(page.section) ?? 0) + 1);
     }
 
     if (inserted > 0) {
-      await recordPageUploads(ctx, release, bySection, args.pages[0].externalId);
+      await recordPageUploads(ctx, release, bySection, args.pages[0].externalId, indexed);
       if (!release.shardedPageUploads) await ctx.db.patch(release._id, { relatedMetadataVersion: (release.relatedMetadataVersion ?? 0) + 1 });
     }
     return { inserted, skipped };
@@ -544,6 +578,7 @@ export const insertStoredPages = internalMutation({
     datasetReleaseId: v.string(),
     pages: v.array(storedPageInput),
   },
+  returns: v.object({ inserted: v.number(), skipped: v.number(), unusedStorageIds: v.array(v.id("_storage")) }),
   handler: async (ctx, args) => {
     const release = await ctx.db
       .query("datasetReleases")
@@ -553,6 +588,7 @@ export const insertStoredPages = internalMutation({
     const immutable = await releaseIsImmutable(ctx, release);
 
     let inserted = 0;
+    let indexed = 0;
     let skipped = 0;
     let providerInserted = 0;
     const bySection = new Map<string, number>();
@@ -576,6 +612,7 @@ export const insertStoredPages = internalMutation({
       }
       if (immutable) throw new Error("RELEASE_SEALED");
 
+      validatePageDemand(release, page);
       await validateNewPageRoute(ctx, release._id, page);
 
       const pageId = await ctx.db.insert("manPages", {
@@ -587,6 +624,8 @@ export const insertStoredPages = internalMutation({
         name: page.name,
         section: page.section,
         sitemapPage: page.sitemapPage,
+        indexable: page.indexable,
+        popularityScore: page.popularityScore,
         title: page.title,
         description: page.description,
         sourcePath: page.sourcePath,
@@ -594,6 +633,8 @@ export const insertStoredPages = internalMutation({
         sourcePackageVersion: optionalString(page.sourcePackageVersion),
         contentSha256: page.contentSha256,
         hasParseWarnings: page.hasParseWarnings,
+        ...(release.locale !== DEFAULT_LOCALE && page.documentedVersion?.trim()
+          ? { documentedVersion: page.documentedVersion.trim().slice(0, 120) } : {}),
       });
       await refreshProviderPackages(ctx, release, page.name, page.section);
 
@@ -637,12 +678,13 @@ export const insertStoredPages = internalMutation({
       }
 
       inserted += 1;
+      if (page.indexable) indexed += 1;
       bySection.set(page.section, (bySection.get(page.section) ?? 0) + 1);
     }
 
     if (providerInserted > 0) await recordProviderUploads(ctx, release, providerInserted, args.pages[0].externalId);
     if (bySection.size > 0) {
-      await recordPageUploads(ctx, release, bySection, args.pages[0].externalId);
+      await recordPageUploads(ctx, release, bySection, args.pages[0].externalId, indexed);
       if (!release.shardedPageUploads) await ctx.db.patch(release._id, { relatedMetadataVersion: (release.relatedMetadataVersion ?? 0) + 1 });
     }
     const unusedStorageIds: Id<"_storage">[] = [];
@@ -746,6 +788,7 @@ export const insertLicenses = internalMutation({
 
     let inserted = 0;
     let skipped = 0;
+    const unusedStorageIds = [];
     for (const license of args.licenses) {
       const pkg = license.packageName.trim().toLowerCase();
       const existing = await ctx.db
@@ -755,11 +798,13 @@ export const insertLicenses = internalMutation({
         )
         .unique();
       if (existing) {
+        if (license.storageId) unusedStorageIds.push(license.storageId);
         skipped += 1;
         continue;
       }
       if (immutable) throw new Error("RELEASE_SEALED");
-      if (!license.licenseText.trim()) throw new Error("EMPTY_LICENSE_TEXT");
+      if (!license.licenseText.trim() && !license.storageId) throw new Error("EMPTY_LICENSE_TEXT");
+      if (license.storageId && (!await ctx.db.system.get(license.storageId) || license.licenseText)) throw new Error("INVALID_INGEST_PAYLOAD");
       const declaration = await ctx.db.query("licensePackages")
         .withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", release._id).eq("packageName", pkg)).unique();
       if (!declaration?.hasLicenseText) throw new Error("UNDECLARED_LICENSE_PACKAGE");
@@ -771,13 +816,17 @@ export const insertLicenses = internalMutation({
         licenseId: license.licenseId,
         licenseName: license.licenseName,
         licenseText: license.licenseText,
+        storageId: license.storageId,
         sourceUrl: optionalString(license.sourceUrl),
+      });
+      if (license.storageId) await ctx.db.insert("storedLicenseFiles", {
+        releaseId: release._id, storageId: license.storageId,
       });
       inserted += 1;
     }
 
     if (inserted > 0) await recordOtherUploads(ctx, release, "licenses", inserted);
-    return { inserted, skipped };
+    return unusedStorageIds.length ? { inserted, skipped, unusedStorageIds } : { inserted, skipped };
   },
 });
 
@@ -803,6 +852,11 @@ export const activateRelease = internalMutation({
     datasetReleaseId: v.string(),
     activatedAt: v.string(),
     allowFullDebian: v.optional(v.boolean()),
+    allowFullUbuntu: v.optional(v.boolean()),
+    allowFullFedora: v.optional(v.boolean()),
+    allowFullArch: v.optional(v.boolean()),
+    allowFullAlpine: v.optional(v.boolean()),
+    allowTranslations: v.optional(v.boolean()),
   },
   returns: v.object({
     stage: datasetStageValidator,
@@ -818,7 +872,12 @@ export const activateRelease = internalMutation({
     if (!release) throw new Error("RELEASE_NOT_FOUND");
     if (release.pruning) throw new Error("RELEASE_PRUNING");
 
+    const archiveHold = fullArchivePromotionReason(release, args.stage, args);
+    if (archiveHold) throw new Error(archiveHold);
+
+    if (fullDebianTierMissing(release, args.stage)) throw new Error("FULL_DEBIAN_TIER_REQUIRED");
     if (fullDebianPromotionHeld(release, args.stage, args.allowFullDebian)) throw new Error("FULL_DEBIAN_PROMOTION_HELD");
+    if (translatedPromotionHeld(release, args.stage, args.allowTranslations)) throw new Error("TRANSLATED_PROMOTION_HELD");
 
     await verifyDeclaredManifest(ctx, release);
     if (!release.sealed) await ctx.db.patch(release._id, { sealed: true });
@@ -862,12 +921,18 @@ export const activateRelease = internalMutation({
       await ctx.db.insert("activeReleases", payload);
     }
 
-    if (args.stage === "prod") await scheduleDerivedBuild(ctx, release.locale);
-    // Task-phrase rows do not gate activation: until they finish, worded queries
-    // match fewer pages, and a stopped backfill shows in convex:task-check.
-    await scheduleTaskPhraseBackfill(ctx, release).catch((error: unknown) => {
-      if (!(error instanceof Error) || error.message !== "TASK_PHRASE_BACKFILL_FAILED") throw error;
-    });
+    // Translated pages compare with English after either pointer moves (#395).
+    await scheduleTranslationDrift(ctx, release);
+    // Derived corpus data and task phrases are English-only (#395): generated
+    // phrases are keyed by English content hashes, so a translation has none.
+    if (release.locale === DEFAULT_LOCALE) {
+      if (args.stage === "prod") await scheduleDerivedBuild(ctx, release.locale);
+      // Task-phrase rows do not gate activation: until they finish, worded queries
+      // match fewer pages, and a stopped backfill shows in convex:task-check.
+      await scheduleTaskPhraseBackfill(ctx, release).catch((error: unknown) => {
+        if (!(error instanceof Error) || error.message !== "TASK_PHRASE_BACKFILL_FAILED") throw error;
+      });
+    }
 
     return result;
   },
@@ -890,11 +955,12 @@ const expectedReleaseIdsValidator = v.object(Object.fromEntries(
 
 // Authenticated workflow preflight only. Staging never enters the public API.
 export const getPromotionSource = internalQuery({
-  args: { distro: distroValidator },
+  args: { distro: distroValidator, locale: v.optional(v.string()) },
   returns: v.object({ distro: distroValidator, datasetReleaseId: v.string() }),
-  handler: async (ctx, { distro }) => {
+  handler: async (ctx, { distro, locale = DEFAULT_LOCALE }) => {
+    if (!isContentLocale(locale)) throw new Error("INVALID_RELEASE_LOCALE");
     const source = await ctx.db.query("activeReleases")
-      .withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "staging").eq("locale", "en").eq("distro", distro))
+      .withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "staging").eq("locale", locale).eq("distro", distro))
       .unique();
     if (!source) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
     const release = await ctx.db.get(source.releaseId);
@@ -911,6 +977,13 @@ export const promoteActiveReleases = internalMutation({
     distros: v.array(distroValidator),
     activatedAt: v.string(),
     allowFullDebian: v.optional(v.boolean()),
+    allowFullUbuntu: v.optional(v.boolean()),
+    allowFullFedora: v.optional(v.boolean()),
+    allowFullArch: v.optional(v.boolean()),
+    allowFullAlpine: v.optional(v.boolean()),
+    // One content locale per request; English when absent (#395).
+    locale: v.optional(v.string()),
+    allowTranslations: v.optional(v.boolean()),
     expectedDatasetReleaseId: v.optional(expectedReleaseIdsValidator),
   },
   returns: v.object({
@@ -918,6 +991,8 @@ export const promoteActiveReleases = internalMutation({
     skipped: v.optional(v.array(v.object({ distro: distroValidator, datasetReleaseId: v.string(), reason: v.string() }))),
   }),
   handler: async (ctx, args) => {
+    const locale = args.locale ?? DEFAULT_LOCALE;
+    if (!isContentLocale(locale)) throw new Error("INVALID_RELEASE_LOCALE");
     const promoted = [];
     const skipped = [];
     for (const [distro, expected] of Object.entries(args.expectedDatasetReleaseId ?? {})) {
@@ -930,7 +1005,7 @@ export const promoteActiveReleases = internalMutation({
       const target = await ctx.db
         .query("activeReleases")
         .withIndex("by_stage_and_locale_and_distro", (q) =>
-          q.eq("stage", args.toStage).eq("locale", "en").eq("distro", distro),
+          q.eq("stage", args.toStage).eq("locale", locale).eq("distro", distro),
         )
         .unique();
       // A lost response can be retried after staging advances. Acknowledge the
@@ -940,7 +1015,7 @@ export const promoteActiveReleases = internalMutation({
       const source = await ctx.db
         .query("activeReleases")
         .withIndex("by_stage_and_locale_and_distro", (q) =>
-          q.eq("stage", args.fromStage).eq("locale", "en").eq("distro", distro),
+          q.eq("stage", args.fromStage).eq("locale", locale).eq("distro", distro),
         )
         .unique();
       if (!alreadyPromoted && expected !== undefined && source?.datasetReleaseId !== expected) {
@@ -954,8 +1029,21 @@ export const promoteActiveReleases = internalMutation({
       if (!release) throw new Error("RELEASE_NOT_FOUND");
       // Check persisted acquisition identity in the pointer transaction; a
       // preflight read or mirror URL would not enforce the release's hold.
+      const archiveHold = fullArchivePromotionReason(release, args.toStage, args);
+      if (archiveHold) {
+        skipped.push({ distro, datasetReleaseId: candidate.datasetReleaseId, reason: archiveHold });
+        continue;
+      }
+      if (fullDebianTierMissing(release, args.toStage)) {
+        skipped.push({ distro, datasetReleaseId: candidate.datasetReleaseId, reason: "FULL_DEBIAN_TIER_REQUIRED" });
+        continue;
+      }
       if (fullDebianPromotionHeld(release, args.toStage, args.allowFullDebian)) {
         skipped.push({ distro, datasetReleaseId: candidate.datasetReleaseId, reason: "FULL_DEBIAN_PROMOTION_HELD" });
+        continue;
+      }
+      if (translatedPromotionHeld(release, args.toStage, args.allowTranslations)) {
+        skipped.push({ distro, datasetReleaseId: candidate.datasetReleaseId, reason: "TRANSLATED_PROMOTION_HELD" });
         continue;
       }
       requirePromotableRelease(release);
@@ -988,9 +1076,10 @@ export const promoteActiveReleases = internalMutation({
       }
 
       promoted.push({ distro, datasetReleaseId: candidate.datasetReleaseId });
+      await scheduleTranslationDrift(ctx, release);
     }
 
-    if (args.toStage === "prod" && promoted.length) await scheduleDerivedBuild(ctx, "en");
+    if (args.toStage === "prod" && promoted.length && locale === DEFAULT_LOCALE) await scheduleDerivedBuild(ctx, locale);
 
 
     return skipped.length ? { promoted, skipped } : { promoted };

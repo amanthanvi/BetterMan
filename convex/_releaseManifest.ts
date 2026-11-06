@@ -4,15 +4,42 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 export const MAX_MANIFEST_SECTIONS = 256;
 
 // Persist acquisition identity independently of the mirror and large manifest.
-export function releaseAcquisition(manifest: unknown): "deb-extraction" | undefined {
+export function releaseAcquisition(manifest: unknown): Doc<"datasetReleases">["acquisition"] {
   const acquisition = manifest && typeof manifest === "object" && "acquisition" in manifest
     ? manifest.acquisition : undefined;
-  if (acquisition !== undefined && acquisition !== "deb-extraction") throw new Error("INVALID_RELEASE_MANIFEST");
+  if (acquisition !== undefined && acquisition !== "deb-extraction" && acquisition !== "ubuntu-deb-extraction" && acquisition !== "fedora-rpm-extraction" && acquisition !== "arch-pkg-extraction" && acquisition !== "alpine-apk-extraction") throw new Error("INVALID_RELEASE_MANIFEST");
   return acquisition;
+}
+
+export function fullArchivePromotionReason(release: Doc<"datasetReleases">, stage: "prod" | "staging", authorization: { allowFullUbuntu?: boolean; allowFullFedora?: boolean; allowFullArch?: boolean; allowFullAlpine?: boolean }): string | undefined {
+  if (stage !== "prod") return;
+  let distro: string;
+  let allowed: boolean | undefined;
+  switch (release.acquisition) {
+    case "ubuntu-deb-extraction": distro = "UBUNTU"; allowed = authorization.allowFullUbuntu; break;
+    case "fedora-rpm-extraction": distro = "FEDORA"; allowed = authorization.allowFullFedora; break;
+    case "arch-pkg-extraction": distro = "ARCH"; allowed = authorization.allowFullArch; break;
+    case "alpine-apk-extraction": distro = "ALPINE"; allowed = authorization.allowFullAlpine; break;
+    default: return;
+  }
+  if (release.indexablePageCount === undefined) return `FULL_${distro}_TIER_REQUIRED`;
+  if (allowed !== true) return `FULL_${distro}_PROMOTION_HELD`;
+}
+
+// An owner authorization may lift the spend hold, never the required B4 tier.
+export function fullDebianTierMissing(release: Doc<"datasetReleases">, stage: "prod" | "staging"): boolean {
+  return stage === "prod" && release.distro === "debian" && release.acquisition === "deb-extraction" && release.indexablePageCount === undefined;
 }
 
 export function fullDebianPromotionHeld(release: Doc<"datasetReleases">, stage: "prod" | "staging", allowFullDebian?: boolean): boolean {
   return stage === "prod" && release.distro === "debian" && release.acquisition === "deb-extraction" && allowFullDebian !== true;
+}
+
+// Translated releases add Convex storage per language, so prod needs explicit
+// authorization (owner sign-off on measured cost). This is independent of the
+// full-Debian hold: an archive-extracted translation needs both.
+export function translatedPromotionHeld(release: Doc<"datasetReleases">, stage: "prod" | "staging", allowTranslations?: boolean): boolean {
+  return stage === "prod" && release.locale !== "en" && allowTranslations !== true;
 }
 
 export function validManifestCount(value: number): boolean {
@@ -65,14 +92,16 @@ export async function pageUploadProgress(ctx: QueryCtx | MutationCtx, release: D
     .withIndex("by_releaseId_and_bucket", (q) => q.eq("releaseId", release._id)).take(PAGE_UPLOAD_SHARDS + 1);
   if (shards.length > PAGE_UPLOAD_SHARDS) throw new Error("INVALID_RELEASE_MANIFEST");
   let pageCount = 0;
+  let indexablePageCount = 0;
   for (const shard of shards) {
     pageCount += shard.pageCount;
+    indexablePageCount += shard.indexablePageCount ?? 0;
     for (const stat of shard.sections) sections.set(stat.section, (sections.get(stat.section) ?? 0) + stat.uploaded);
   }
-  return { pageCount, sections };
+  return { pageCount, indexablePageCount, sections };
 }
 
-export async function recordPageUploads(ctx: MutationCtx, release: Doc<"datasetReleases">, bySection: Map<string, number>, batchKey: string): Promise<void> {
+export async function recordPageUploads(ctx: MutationCtx, release: Doc<"datasetReleases">, bySection: Map<string, number>, batchKey: string, indexed = 0): Promise<void> {
   if (release.manifestBasis !== "declared" || release.uploadedPageCount === undefined) throw new Error("RELEASE_MANIFEST_UNDECLARED");
   if (release.shardedPageUploads) {
     let hash = 0;
@@ -91,7 +120,7 @@ export async function recordPageUploads(ctx: MutationCtx, release: Doc<"datasetR
       sections.set(section, uploaded);
       added += count;
     }
-    const payload = { releaseId: release._id, bucket, pageCount: (shard?.pageCount ?? 0) + added,
+    const payload = { releaseId: release._id, bucket, indexablePageCount: (shard?.indexablePageCount ?? 0) + indexed, pageCount: (shard?.pageCount ?? 0) + added,
       sections: [...sections].map(([section, uploaded]) => ({ section, uploaded })) };
     if (shard) await ctx.db.replace(shard._id, payload);
     else await ctx.db.insert("releasePageUploadShards", payload);
@@ -129,6 +158,9 @@ export async function verifyDeclaredManifest(ctx: MutationCtx, release: Doc<"dat
     .withIndex("by_releaseId_and_section", (q) => q.eq("releaseId", release._id)).take(MAX_MANIFEST_SECTIONS + 1);
   validateManifestSections(release.pageCount, stats);
   const progress = await pageUploadProgress(ctx, release);
+  if (release.indexablePageCount !== undefined && progress.indexablePageCount !== release.indexablePageCount) {
+    throw new Error("RELEASE_MANIFEST_INCOMPLETE");
+  }
   if (release.providerCount !== undefined) {
     const shards = await ctx.db.query("releaseProviderUploadShards")
       .withIndex("by_releaseId_and_bucket", q => q.eq("releaseId", release._id)).take(PAGE_UPLOAD_SHARDS + 1);

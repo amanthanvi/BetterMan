@@ -22,7 +22,7 @@ BetterMan 2 aims, in order, to be the default lookup, a daily-driver tool, and a
 
 ## Constraints (durable)
 
-- Strict CSP: self-hosted assets only (one web font, BM Text, in unicode-range woff2 files; sans and mono are system faces), nonce'd scripts; browser analytics requests stay same-origin through a cookieless Plausible proxy. Only optional Sentry connects externally.
+- Strict CSP: self-hosted assets only (one web font, BM Text, in unicode-range woff2 files; sans and mono are system faces), nonce'd scripts; production-only, cookieless Vercel Web Analytics requests stay same-origin. Only optional Sentry connects externally.
 - Content is a typed block/inline AST from the ingestion pipeline (`ingestion/ingestion/doc_model.py`, mirrored in `nextjs/lib/docModel.ts`, kept aligned by golden fixtures).
 - Playwright e2e specs in `nextjs/e2e/` are the behavioral contract (semantic roles, aria-labels, `data-bm-*` hooks); reading prefs bind via `body[data-bm-*]` attributes.
 - Convex is the runtime data source, read server-side only; read-cost frugality is an active goal — no client subscriptions.

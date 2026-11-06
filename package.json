@@ -14,7 +14,6 @@
 		"convex:prune-releases": "node scripts/prune-inactive-releases.mjs",
 		"ops:test": "node --test scripts/*.test.mjs",
 		"perf:check": "node scripts/check-perf-budgets.mjs",
-		"analytics:counts": "node scripts/export-plausible-counts.mjs",
 		"deps:provenance": "node scripts/check-vercel-provenance.mjs",
 		"next:dev": "convex dev --start \"pnpm -C nextjs dev\"",
 		"next:build": "pnpm -C nextjs build",
@@ -26,6 +25,7 @@
 		"ingest:lint": "cd ingestion && uv run ruff check . && uv run ruff format --check .",
 		"ingest:test": "cd ingestion && uv run python -m pytest",
 		"ingest:sample": "cd ingestion && uv run python -m ingestion.cli ingest --sample",
+		"ingest:popularity-report": "cd ingestion && uv run python -m scripts.report_index_demand",
 		"ingest:debian-pin-popcon": "cd ingestion && uv run python -m scripts.pin_debian_popcon",
 		"ingest:debian-benchmark": "cd ingestion && uv run python -m scripts.check_debian_archives",
 		"ingest:scale": "cd ingestion && uv run python -m scripts.check_scale",
@@ -33,19 +33,20 @@
 		"ingest:run": "cd ingestion && uv run python -m ingestion.cli ingest",
 		"derived:benchmark": "node scripts/benchmark-derived.mjs",
 		"convex:derived-check": "node scripts/check-derived-data.mjs",
-		"convex:task-check": "node scripts/check-task-phrases.mjs"
+		"convex:task-check": "node scripts/check-task-phrases.mjs",
+		"ingest:full-benchmark": "cd ingestion && uv run python -m scripts.check_full_archives"
 	},
 	"dependencies": {
 		"convex": "^1.48.0"
 	},
 	"devDependencies": {
 		"@edge-runtime/vm": "5.0.0",
-		"@types/node": "^26.6.4",
+		"@types/node": "^26.6.6",
 		"convex-test": "0.0.60",
 		"sigstore": "5.0.0",
 		"typescript": "6.0.3",
 		"vercel": "58.4.4",
-		"vite": "8.3.3",
+		"vite": "8.3.5",
 		"vitest": "5.0.5"
 	}
 }

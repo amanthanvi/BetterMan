@@ -1,0 +1,1636 @@
+{
+  "fedora-curated": {
+    "distro": "fedora",
+    "scope": "local, no upload; all curated-route index competitors",
+    "pinsSha256": "a31b20e453c83689cc3829eb996111bbd63d7cf59b6603f3e1f40c7c02b032ad",
+    "fullPackages": 9970,
+    "fullArchiveBytes": 16876398372,
+    "fullArchiveMaxBytes": 548552750,
+    "samplePackages": 41,
+    "acquiredPackages": 58,
+    "downloadedBytes": 121343838,
+    "indexSeconds": 21.954738750006072,
+    "acquireSeconds": 5.509255249984562,
+    "parseSeconds": 40.66116987506393,
+    "licenseSeconds": 3.536159082897939,
+    "pages": 4005,
+    "providers": 396,
+    "aliases": 6880,
+    "sourceBytes": 13182409,
+    "spoolBytes": 107753472,
+    "parentPeakRssBytes": 379551744,
+    "childPeakRssBytes": 176029696,
+    "commandOwners": {
+      "groff": "groff-base",
+      "bash": "bash",
+      "coreutils": "coreutils-common",
+      "util-linux": "util-linux-core",
+      "findutils": "findutils",
+      "grep": "grep",
+      "sed": "sed",
+      "gawk": "gawk",
+      "curl": "curl",
+      "wget": "wget1",
+      "openssh-clients": "openssh-clients",
+      "rsync": "rsync",
+      "tar": "tar",
+      "systemd": "systemd",
+      "vim-enhanced": "vim-common",
+      "less": "less",
+      "git": "git-core-doc",
+      "make": "make",
+      "gcc": "gcc",
+      "gdb": "gdb-headless",
+      "nginx": "nginx",
+      "httpd": "httpd",
+      "openssl": "openssl",
+      "python3": "python3",
+      "perl": "perl-interpreter",
+      "iproute": "iproute",
+      "procps-ng": "procps-ng",
+      "postgresql": "postgresql"
+    },
+    "parseFailures": [],
+    "unresolved": [
+      {
+        "package": "bash",
+        "path": "usr/share/man/man1/..1.gz",
+        "error": "Unsupported route name"
+      },
+      {
+        "package": "bash",
+        "path": "usr/share/man/man1/:.1.gz",
+        "error": "Unsupported route name"
+      },
+      {
+        "package": "groff-base",
+        "path": "usr/share/man/man1/gsoelim.1.gz",
+        "error": "groff-base:usr/share/man/man1/soelim.1.gz"
+      },
+      {
+        "package": "groff-base",
+        "path": "usr/share/man/man1/zsoelim.1.gz",
+        "error": "groff-base:usr/share/man/man1/soelim.1.gz"
+      }
+    ],
+    "verifiedLicenses": 38,
+    "packages": [
+      {
+        "name": "bash",
+        "sha256": "2ccb046d638f5ad23f5613222a78ee71067dc43f0bdf03b60ce311536bc4bed5",
+        "bytes": 1985877
+      },
+      {
+        "name": "coreutils",
+        "sha256": "a418ac69e4d9b6b22c2e6db27cf8121abb6fa31512a79ee16c66211ed359bbe6",
+        "bytes": 1245872
+      },
+      {
+        "name": "coreutils-common",
+        "sha256": "556c75b9c32e60499ba83f6464a143621d971362af21203ea7e73f13037ad455",
+        "bytes": 2236256
+      },
+      {
+        "name": "curl",
+        "sha256": "c0339c79fc1e20070a2b35518072552dfa53508e1acfdb7d03530aea87fd5c6a",
+        "bytes": 246571
+      },
+      {
+        "name": "cyrus-imapd",
+        "sha256": "a5a7c35e70ad8627beb268c30ad75c13230dc49bb75c73b28930b7960b5a464c",
+        "bytes": 2148220
+      },
+      {
+        "name": "findutils",
+        "sha256": "b1f9fe72be7a0cf0fb53ec00ef9e6b8ccc9987cb5f55e9de02bbc67f9cf3b5cf",
+        "bytes": 565758
+      },
+      {
+        "name": "gawk",
+        "sha256": "4059b760d3c8dd654d555bd54b38ede197b89317021de6bd75e4c93c3333e2f4",
+        "bytes": 1190532
+      },
+      {
+        "name": "gcc",
+        "sha256": "5410123363bb8a6e3ac5d00448619957f8062e4769a434ba28cf61e9f2524871",
+        "bytes": 45161684
+      },
+      {
+        "name": "gdb",
+        "sha256": "45d1c15275e452c0251f671b6ec7fbc813ce38bec6ce2d45d69d9dc38280254e",
+        "bytes": 157778
+      },
+      {
+        "name": "gdb-headless",
+        "sha256": "f05b0507dc5e65f2ffa7b09b27080abe0ca972e4afd05868ad415fde7953c9d4",
+        "bytes": 5779288
+      },
+      {
+        "name": "git",
+        "sha256": "4f9d118813aa94516f86bb6e3f7562cc2dbe26ea65f4b1c46a9ad2fdc9df107e",
+        "bytes": 41968
+      },
+      {
+        "name": "git-core-doc",
+        "sha256": "12e2db464bfa10726554860c7a63df9216a23d2553cc93126731886de80b114b",
+        "bytes": 3255700
+      },
+      {
+        "name": "grep",
+        "sha256": "0b1e3d96f14f6346d0af992a8cdc1af696ff8e616311abfdee49d6a3a3f1e746",
+        "bytes": 308807
+      },
+      {
+        "name": "groff",
+        "sha256": "07be739a6f0a4c707068af24f71cb61c71988b260b22d1f07b65b1b43cb753bb",
+        "bytes": 1406854
+      },
+      {
+        "name": "groff-base",
+        "sha256": "201b47e01d8cbda6ebaffb06be0df25be9b014e61f812e58b1b8c4c523ce3f53",
+        "bytes": 1177840
+      },
+      {
+        "name": "httpd",
+        "sha256": "f103ddbe8d3d5519167faf017fab90ea8c958fab0c27845443a7a3bd46e5e093",
+        "bytes": 47686
+      },
+      {
+        "name": "iproute",
+        "sha256": "756b149f3d89a8a1dfb1d91abbb85fc2c9f0775283e4db6848aec356b1c73517",
+        "bytes": 884945
+      },
+      {
+        "name": "less",
+        "sha256": "98b9e7d0bd2223e8fca79d4f623c5847295035a37db53be0a1075b74dfb0d1a8",
+        "bytes": 225278
+      },
+      {
+        "name": "make",
+        "sha256": "c8fe074463f4292219769505d27456e38a389074da759c058568f6fe56693cc3",
+        "bytes": 602810
+      },
+      {
+        "name": "man-pages",
+        "sha256": "327059cf4b4cf90fefe3785b81c4d118a7a277ad21ef7c832b1408a2e3c0bbb7",
+        "bytes": 3900377
+      },
+      {
+        "name": "nginx",
+        "sha256": "8bf99b76f3d3e28dce6f41051e834399c109fea08c76ce11e285282d29e19583",
+        "bytes": 33752
+      },
+      {
+        "name": "openssh-clients",
+        "sha256": "4a47767b6827e3248dbb5b5e85e45757abf608184ebeb977d166d55af7635ed2",
+        "bytes": 790324
+      },
+      {
+        "name": "openssl",
+        "sha256": "05d719de824fc7919c8c3737f342df530a045a8ae971f706fea8cbcec1d82d72",
+        "bytes": 1296191
+      },
+      {
+        "name": "openssl-devel",
+        "sha256": "a36f444d2e15c9c37e825c5e99c39f961b8eac7b3a5e42a85686615ae59058c6",
+        "bytes": 3163734
+      },
+      {
+        "name": "perl",
+        "sha256": "0ffb4a58c021324521007ccb41f616a03a5221cd850fc1746ff12352c579facc",
+        "bytes": 13565
+      },
+      {
+        "name": "perl-interpreter",
+        "sha256": "298ceba70c39da768ed87cd4cf6482c7c79972aa0f6e4ee83e33bf33d6eac34c",
+        "bytes": 73664
+      },
+      {
+        "name": "postgresql",
+        "sha256": "2c359b8530936704ece94c4ea4c86d5b0d2d8f44a1e8fb9fa3cb88ca92ba4ee0",
+        "bytes": 2115375
+      },
+      {
+        "name": "postgresql16",
+        "sha256": "f35d87e1826b82853fa26d2b3126cef2c33b0f0d321d7d3940720309969d3041",
+        "bytes": 2020357
+      },
+      {
+        "name": "postgresql17",
+        "sha256": "6f3a3b0ee1805f958b3b878c535ad212602ac5602c7308971e3e94bf5afb702f",
+        "bytes": 2056873
+      },
+      {
+        "name": "procps-ng",
+        "sha256": "72336f2e3930ffb779fe205b461bcf5d0debb38bf31d1ee40ec85f27da647017",
+        "bytes": 408466
+      },
+      {
+        "name": "python3",
+        "sha256": "7db6a488efe47ee7a811e22ea40f44dfc1b795204a49c5f420e9ff2a2dc959eb",
+        "bytes": 28934
+      },
+      {
+        "name": "rsync",
+        "sha256": "e91bc226b5debd33791acc78f89c2b080d9a37ce9c85a6cb9f6462ae9c5646f5",
+        "bytes": 441655
+      },
+      {
+        "name": "sed",
+        "sha256": "f1cf741fb40f3a911f32ad0161c689c4b9811a604599fc41f33c867c775cd4d1",
+        "bytes": 326830
+      },
+      {
+        "name": "systemd",
+        "sha256": "7e34df0b5f65a61a6000088b9a3b1b40bda7ccd0dcc82e0dfcecd68b1dde86cf",
+        "bytes": 4472029
+      },
+      {
+        "name": "tar",
+        "sha256": "5b9cc358930c4fddec59c3cc13d8ebc9fbb315019a9c96dc24adaa2e38d07568",
+        "bytes": 889035
+      },
+      {
+        "name": "util-linux",
+        "sha256": "6981e614c75e0c15e0f25405d9c6f3f6db8a2014d571516c3b6e7c5801c483c8",
+        "bytes": 1262994
+      },
+      {
+        "name": "util-linux-core",
+        "sha256": "e258f6d4f1aa9cc2f36af4603545a32e5c864b4f6c62b8c6d550c91278c63c67",
+        "bytes": 571199
+      },
+      {
+        "name": "vim-common",
+        "sha256": "47893b362935947b0a14f948be3ee85bb4a3f073e0f692efa410942b124b7056",
+        "bytes": 8770885
+      },
+      {
+        "name": "vim-enhanced",
+        "sha256": "76d5fdc2dd6ed5e0493360d9fcf9a49c2c641407a28c982def8599f0e28f3080",
+        "bytes": 2202372
+      },
+      {
+        "name": "wget1-wget",
+        "sha256": "ae3c96d5476b58cef82c05ca4c4924bfbe8b06c0ee4ede2aeb3bac01ab121f3d",
+        "bytes": 10309
+      },
+      {
+        "name": "wget2-wget",
+        "sha256": "fdc8cb9e15f819985c0906235d99b4289b35205801e38322ac28f85844dcffc4",
+        "bytes": 9563
+      }
+    ]
+  },
+  "fedora-reviewed": {
+    "distro": "fedora",
+    "scope": "local, no upload; all curated-route index competitors",
+    "pinsSha256": "e9e5410afbbec9a5a4c4807f5e1b5a1b73002a227d80b2e07241d993bb905777",
+    "fullPackages": 9970,
+    "fullArchiveBytes": 16876398372,
+    "fullArchiveMaxBytes": 548552750,
+    "samplePackages": 41,
+    "acquiredPackages": 62,
+    "downloadedBytes": 0,
+    "indexSeconds": 22.007075834088027,
+    "acquireSeconds": 1.1746689159190282,
+    "parseSeconds": 44.754977042088285,
+    "licenseSeconds": 0.9684602079214528,
+    "pages": 4005,
+    "providers": 396,
+    "aliases": 6885,
+    "sourceBytes": 13258483,
+    "spoolBytes": 107753472,
+    "parentPeakRssBytes": 376143872,
+    "childPeakRssBytes": 177799168,
+    "commandOwners": {
+      "groff": "groff-base",
+      "bash": "bash",
+      "coreutils": "coreutils-common",
+      "util-linux": "util-linux-core",
+      "findutils": "findutils",
+      "grep": "grep",
+      "sed": "sed",
+      "gawk": "gawk",
+      "curl": "curl",
+      "wget": "wget1",
+      "openssh-clients": "openssh-clients",
+      "rsync": "rsync",
+      "tar": "tar",
+      "systemd": "systemd",
+      "vim-enhanced": "vim-common",
+      "less": "less",
+      "git": "git-core-doc",
+      "make": "make",
+      "gcc": "gcc",
+      "gdb": "gdb-headless",
+      "nginx": "nginx",
+      "httpd": "httpd",
+      "openssl": "openssl",
+      "python3": "python3",
+      "perl": "perl-interpreter",
+      "iproute": "iproute",
+      "procps-ng": "procps-ng",
+      "postgresql": "postgresql"
+    },
+    "parseFailures": [],
+    "unresolved": [],
+    "unsupportedRoutes": [
+      {
+        "package": "bash",
+        "path": "usr/share/man/man1/..1.gz",
+        "error": "Unsupported route name"
+      },
+      {
+        "package": "bash",
+        "path": "usr/share/man/man1/:.1.gz",
+        "error": "Unsupported route name"
+      }
+    ],
+    "verifiedLicenses": 40,
+    "packagesWithoutLicenseText": [
+      "man-pages"
+    ],
+    "packages": [
+      {
+        "name": "bash",
+        "sha256": "2ccb046d638f5ad23f5613222a78ee71067dc43f0bdf03b60ce311536bc4bed5",
+        "bytes": 1985877
+      },
+      {
+        "name": "coreutils",
+        "sha256": "a418ac69e4d9b6b22c2e6db27cf8121abb6fa31512a79ee16c66211ed359bbe6",
+        "bytes": 1245872
+      },
+      {
+        "name": "coreutils-common",
+        "sha256": "556c75b9c32e60499ba83f6464a143621d971362af21203ea7e73f13037ad455",
+        "bytes": 2236256
+      },
+      {
+        "name": "curl",
+        "sha256": "c0339c79fc1e20070a2b35518072552dfa53508e1acfdb7d03530aea87fd5c6a",
+        "bytes": 246571
+      },
+      {
+        "name": "cyrus-imapd",
+        "sha256": "a5a7c35e70ad8627beb268c30ad75c13230dc49bb75c73b28930b7960b5a464c",
+        "bytes": 2148220
+      },
+      {
+        "name": "findutils",
+        "sha256": "b1f9fe72be7a0cf0fb53ec00ef9e6b8ccc9987cb5f55e9de02bbc67f9cf3b5cf",
+        "bytes": 565758
+      },
+      {
+        "name": "gawk",
+        "sha256": "4059b760d3c8dd654d555bd54b38ede197b89317021de6bd75e4c93c3333e2f4",
+        "bytes": 1190532
+      },
+      {
+        "name": "gcc",
+        "sha256": "5410123363bb8a6e3ac5d00448619957f8062e4769a434ba28cf61e9f2524871",
+        "bytes": 45161684
+      },
+      {
+        "name": "gdb",
+        "sha256": "45d1c15275e452c0251f671b6ec7fbc813ce38bec6ce2d45d69d9dc38280254e",
+        "bytes": 157778
+      },
+      {
+        "name": "gdb-headless",
+        "sha256": "f05b0507dc5e65f2ffa7b09b27080abe0ca972e4afd05868ad415fde7953c9d4",
+        "bytes": 5779288
+      },
+      {
+        "name": "git",
+        "sha256": "4f9d118813aa94516f86bb6e3f7562cc2dbe26ea65f4b1c46a9ad2fdc9df107e",
+        "bytes": 41968
+      },
+      {
+        "name": "git-core-doc",
+        "sha256": "12e2db464bfa10726554860c7a63df9216a23d2553cc93126731886de80b114b",
+        "bytes": 3255700
+      },
+      {
+        "name": "grep",
+        "sha256": "0b1e3d96f14f6346d0af992a8cdc1af696ff8e616311abfdee49d6a3a3f1e746",
+        "bytes": 308807
+      },
+      {
+        "name": "groff",
+        "sha256": "07be739a6f0a4c707068af24f71cb61c71988b260b22d1f07b65b1b43cb753bb",
+        "bytes": 1406854
+      },
+      {
+        "name": "groff-base",
+        "sha256": "201b47e01d8cbda6ebaffb06be0df25be9b014e61f812e58b1b8c4c523ce3f53",
+        "bytes": 1177840
+      },
+      {
+        "name": "httpd",
+        "sha256": "f103ddbe8d3d5519167faf017fab90ea8c958fab0c27845443a7a3bd46e5e093",
+        "bytes": 47686
+      },
+      {
+        "name": "iproute",
+        "sha256": "756b149f3d89a8a1dfb1d91abbb85fc2c9f0775283e4db6848aec356b1c73517",
+        "bytes": 884945
+      },
+      {
+        "name": "less",
+        "sha256": "98b9e7d0bd2223e8fca79d4f623c5847295035a37db53be0a1075b74dfb0d1a8",
+        "bytes": 225278
+      },
+      {
+        "name": "make",
+        "sha256": "c8fe074463f4292219769505d27456e38a389074da759c058568f6fe56693cc3",
+        "bytes": 602810
+      },
+      {
+        "name": "man-pages",
+        "sha256": "327059cf4b4cf90fefe3785b81c4d118a7a277ad21ef7c832b1408a2e3c0bbb7",
+        "bytes": 3900377
+      },
+      {
+        "name": "nginx",
+        "sha256": "8bf99b76f3d3e28dce6f41051e834399c109fea08c76ce11e285282d29e19583",
+        "bytes": 33752
+      },
+      {
+        "name": "openssh-clients",
+        "sha256": "4a47767b6827e3248dbb5b5e85e45757abf608184ebeb977d166d55af7635ed2",
+        "bytes": 790324
+      },
+      {
+        "name": "openssl",
+        "sha256": "05d719de824fc7919c8c3737f342df530a045a8ae971f706fea8cbcec1d82d72",
+        "bytes": 1296191
+      },
+      {
+        "name": "openssl-devel",
+        "sha256": "a36f444d2e15c9c37e825c5e99c39f961b8eac7b3a5e42a85686615ae59058c6",
+        "bytes": 3163734
+      },
+      {
+        "name": "perl",
+        "sha256": "0ffb4a58c021324521007ccb41f616a03a5221cd850fc1746ff12352c579facc",
+        "bytes": 13565
+      },
+      {
+        "name": "perl-interpreter",
+        "sha256": "298ceba70c39da768ed87cd4cf6482c7c79972aa0f6e4ee83e33bf33d6eac34c",
+        "bytes": 73664
+      },
+      {
+        "name": "postgresql",
+        "sha256": "2c359b8530936704ece94c4ea4c86d5b0d2d8f44a1e8fb9fa3cb88ca92ba4ee0",
+        "bytes": 2115375
+      },
+      {
+        "name": "postgresql16",
+        "sha256": "f35d87e1826b82853fa26d2b3126cef2c33b0f0d321d7d3940720309969d3041",
+        "bytes": 2020357
+      },
+      {
+        "name": "postgresql17",
+        "sha256": "6f3a3b0ee1805f958b3b878c535ad212602ac5602c7308971e3e94bf5afb702f",
+        "bytes": 2056873
+      },
+      {
+        "name": "procps-ng",
+        "sha256": "72336f2e3930ffb779fe205b461bcf5d0debb38bf31d1ee40ec85f27da647017",
+        "bytes": 408466
+      },
+      {
+        "name": "python3",
+        "sha256": "7db6a488efe47ee7a811e22ea40f44dfc1b795204a49c5f420e9ff2a2dc959eb",
+        "bytes": 28934
+      },
+      {
+        "name": "rsync",
+        "sha256": "e91bc226b5debd33791acc78f89c2b080d9a37ce9c85a6cb9f6462ae9c5646f5",
+        "bytes": 441655
+      },
+      {
+        "name": "sed",
+        "sha256": "f1cf741fb40f3a911f32ad0161c689c4b9811a604599fc41f33c867c775cd4d1",
+        "bytes": 326830
+      },
+      {
+        "name": "systemd",
+        "sha256": "7e34df0b5f65a61a6000088b9a3b1b40bda7ccd0dcc82e0dfcecd68b1dde86cf",
+        "bytes": 4472029
+      },
+      {
+        "name": "tar",
+        "sha256": "5b9cc358930c4fddec59c3cc13d8ebc9fbb315019a9c96dc24adaa2e38d07568",
+        "bytes": 889035
+      },
+      {
+        "name": "util-linux",
+        "sha256": "6981e614c75e0c15e0f25405d9c6f3f6db8a2014d571516c3b6e7c5801c483c8",
+        "bytes": 1262994
+      },
+      {
+        "name": "util-linux-core",
+        "sha256": "e258f6d4f1aa9cc2f36af4603545a32e5c864b4f6c62b8c6d550c91278c63c67",
+        "bytes": 571199
+      },
+      {
+        "name": "vim-common",
+        "sha256": "47893b362935947b0a14f948be3ee85bb4a3f073e0f692efa410942b124b7056",
+        "bytes": 8770885
+      },
+      {
+        "name": "vim-enhanced",
+        "sha256": "76d5fdc2dd6ed5e0493360d9fcf9a49c2c641407a28c982def8599f0e28f3080",
+        "bytes": 2202372
+      },
+      {
+        "name": "wget1-wget",
+        "sha256": "ae3c96d5476b58cef82c05ca4c4924bfbe8b06c0ee4ede2aeb3bac01ab121f3d",
+        "bytes": 10309
+      },
+      {
+        "name": "wget2-wget",
+        "sha256": "fdc8cb9e15f819985c0906235d99b4289b35205801e38322ac28f85844dcffc4",
+        "bytes": 9563
+      }
+    ]
+  },
+  "fedora-proof": {
+    "distro": "fedora",
+    "scope": "local, no-upload bounded sample",
+    "pinsSha256": "e9e5410afbbec9a5a4c4807f5e1b5a1b73002a227d80b2e07241d993bb905777",
+    "fullPackages": 9970,
+    "fullArchiveBytes": 16876398372,
+    "fullArchiveMaxBytes": 548552750,
+    "samplePackages": 200,
+    "acquiredPackages": 471,
+    "downloadedBytes": 0,
+    "indexSeconds": 18.887108749942854,
+    "acquireSeconds": 3.0683697920758277,
+    "parseSeconds": 67.33244979195297,
+    "licenseSeconds": 5.872032625018619,
+    "pages": 8583,
+    "providers": 2,
+    "aliases": 11006,
+    "sourceBytes": 33375716,
+    "spoolBytes": 221790208,
+    "parentPeakRssBytes": 397213696,
+    "childPeakRssBytes": 199999488,
+    "commandOwners": {},
+    "parseFailures": [],
+    "unresolved": [],
+    "unsupportedRoutes": [
+      {
+        "package": "bash",
+        "path": "usr/share/man/man1/..1.gz",
+        "error": "Unsupported route name"
+      },
+      {
+        "package": "bash",
+        "path": "usr/share/man/man1/:.1.gz",
+        "error": "Unsupported route name"
+      }
+    ],
+    "verifiedLicenses": 172,
+    "maxLicenseBytes": 4526667,
+    "packagesWithoutLicenseText": [
+      "autokey-qt",
+      "man-pages",
+      "otf2bdf",
+      "perl-CPAN-Plugin-Sysdeps",
+      "perl-Catalyst-View-HTML-Template",
+      "perl-Exporter-Tidy",
+      "perl-HTML-Lint",
+      "perl-JavaScript-Beautifier",
+      "perl-Lingua-PT-Stemmer",
+      "perl-Lingua-Translit",
+      "perl-Log-Dispatch-Config",
+      "perl-MIME-EncWords",
+      "perl-Math-Cartesian-Product",
+      "perl-Module-Versions-Report",
+      "perl-POE-Component-JobQueue",
+      "perl-POE-Component-Server-SOAP",
+      "perl-Perl6-Caller",
+      "perl-Pipeline",
+      "perl-Scriptalicious",
+      "perl-Term-Size-Any",
+      "perl-TestML",
+      "perl-Time-Piece-MySQL",
+      "perl-Unicode-Casing",
+      "rubygem-chake",
+      "sendxmpp",
+      "sqlt-graph",
+      "texlive-bibtex8",
+      "texlive-mathspic",
+      "tftp-server",
+      "virtdetect",
+      "xfhell"
+    ],
+    "packages": [
+      {
+        "name": "bash",
+        "sha256": "2ccb046d638f5ad23f5613222a78ee71067dc43f0bdf03b60ce311536bc4bed5",
+        "bytes": 1985877
+      },
+      {
+        "name": "curl",
+        "sha256": "c0339c79fc1e20070a2b35518072552dfa53508e1acfdb7d03530aea87fd5c6a",
+        "bytes": 246571
+      },
+      {
+        "name": "findutils",
+        "sha256": "b1f9fe72be7a0cf0fb53ec00ef9e6b8ccc9987cb5f55e9de02bbc67f9cf3b5cf",
+        "bytes": 565758
+      },
+      {
+        "name": "gawk",
+        "sha256": "4059b760d3c8dd654d555bd54b38ede197b89317021de6bd75e4c93c3333e2f4",
+        "bytes": 1190532
+      },
+      {
+        "name": "gcc",
+        "sha256": "5410123363bb8a6e3ac5d00448619957f8062e4769a434ba28cf61e9f2524871",
+        "bytes": 45161684
+      },
+      {
+        "name": "gdb",
+        "sha256": "45d1c15275e452c0251f671b6ec7fbc813ce38bec6ce2d45d69d9dc38280254e",
+        "bytes": 157778
+      },
+      {
+        "name": "git",
+        "sha256": "4f9d118813aa94516f86bb6e3f7562cc2dbe26ea65f4b1c46a9ad2fdc9df107e",
+        "bytes": 41968
+      },
+      {
+        "name": "grep",
+        "sha256": "0b1e3d96f14f6346d0af992a8cdc1af696ff8e616311abfdee49d6a3a3f1e746",
+        "bytes": 308807
+      },
+      {
+        "name": "groff",
+        "sha256": "07be739a6f0a4c707068af24f71cb61c71988b260b22d1f07b65b1b43cb753bb",
+        "bytes": 1406854
+      },
+      {
+        "name": "httpd",
+        "sha256": "f103ddbe8d3d5519167faf017fab90ea8c958fab0c27845443a7a3bd46e5e093",
+        "bytes": 47686
+      },
+      {
+        "name": "iproute",
+        "sha256": "756b149f3d89a8a1dfb1d91abbb85fc2c9f0775283e4db6848aec356b1c73517",
+        "bytes": 884945
+      },
+      {
+        "name": "less",
+        "sha256": "98b9e7d0bd2223e8fca79d4f623c5847295035a37db53be0a1075b74dfb0d1a8",
+        "bytes": 225278
+      },
+      {
+        "name": "make",
+        "sha256": "c8fe074463f4292219769505d27456e38a389074da759c058568f6fe56693cc3",
+        "bytes": 602810
+      },
+      {
+        "name": "man-pages",
+        "sha256": "327059cf4b4cf90fefe3785b81c4d118a7a277ad21ef7c832b1408a2e3c0bbb7",
+        "bytes": 3900377
+      },
+      {
+        "name": "nginx",
+        "sha256": "8bf99b76f3d3e28dce6f41051e834399c109fea08c76ce11e285282d29e19583",
+        "bytes": 33752
+      },
+      {
+        "name": "openssh-clients",
+        "sha256": "4a47767b6827e3248dbb5b5e85e45757abf608184ebeb977d166d55af7635ed2",
+        "bytes": 790324
+      },
+      {
+        "name": "openssl",
+        "sha256": "05d719de824fc7919c8c3737f342df530a045a8ae971f706fea8cbcec1d82d72",
+        "bytes": 1296191
+      },
+      {
+        "name": "openssl-devel",
+        "sha256": "a36f444d2e15c9c37e825c5e99c39f961b8eac7b3a5e42a85686615ae59058c6",
+        "bytes": 3163734
+      },
+      {
+        "name": "perl-doc",
+        "sha256": "13d28b34ec06c6b782d7b12bc5416055cb48739b470524c7825eeb466d1647be",
+        "bytes": 5260367
+      },
+      {
+        "name": "postgresql",
+        "sha256": "2c359b8530936704ece94c4ea4c86d5b0d2d8f44a1e8fb9fa3cb88ca92ba4ee0",
+        "bytes": 2115375
+      },
+      {
+        "name": "procps-ng",
+        "sha256": "72336f2e3930ffb779fe205b461bcf5d0debb38bf31d1ee40ec85f27da647017",
+        "bytes": 408466
+      },
+      {
+        "name": "python3",
+        "sha256": "7db6a488efe47ee7a811e22ea40f44dfc1b795204a49c5f420e9ff2a2dc959eb",
+        "bytes": 28934
+      },
+      {
+        "name": "rsync",
+        "sha256": "e91bc226b5debd33791acc78f89c2b080d9a37ce9c85a6cb9f6462ae9c5646f5",
+        "bytes": 441655
+      },
+      {
+        "name": "sed",
+        "sha256": "f1cf741fb40f3a911f32ad0161c689c4b9811a604599fc41f33c867c775cd4d1",
+        "bytes": 326830
+      },
+      {
+        "name": "systemd",
+        "sha256": "7e34df0b5f65a61a6000088b9a3b1b40bda7ccd0dcc82e0dfcecd68b1dde86cf",
+        "bytes": 4472029
+      },
+      {
+        "name": "tar",
+        "sha256": "5b9cc358930c4fddec59c3cc13d8ebc9fbb315019a9c96dc24adaa2e38d07568",
+        "bytes": 889035
+      },
+      {
+        "name": "util-linux",
+        "sha256": "6981e614c75e0c15e0f25405d9c6f3f6db8a2014d571516c3b6e7c5801c483c8",
+        "bytes": 1262994
+      },
+      {
+        "name": "vim-common",
+        "sha256": "47893b362935947b0a14f948be3ee85bb4a3f073e0f692efa410942b124b7056",
+        "bytes": 8770885
+      },
+      {
+        "name": "perl-Net-Netmask",
+        "sha256": "7d72f793ed1c9ce9819a7cbb2bbd17d9b2a8b86d86c039c04883e10d097eb45a",
+        "bytes": 43036
+      },
+      {
+        "name": "autokey-qt",
+        "sha256": "caedd85da4a0c599425459dab230c31791f17a4f72803ab38e1a09e0123f31aa",
+        "bytes": 274006
+      },
+      {
+        "name": "hqx",
+        "sha256": "5801a53464928d09e1220cb003766274ae43495b01951965b9801618fa2f0c56",
+        "bytes": 13348
+      },
+      {
+        "name": "ntpstat",
+        "sha256": "265095a7c8b8868556dae2c55c3c5653f5cbb99e2bfc7e3777ad31bcda0f374a",
+        "bytes": 12352
+      },
+      {
+        "name": "libmwaw-tools",
+        "sha256": "ba8bdf1f63e2c52f5b1abcbcd97ef03126ea9701473b40e1920e3ce7c49384d9",
+        "bytes": 69502
+      },
+      {
+        "name": "vit",
+        "sha256": "3159f0918179ac45d8812457966930102c89e7b4962aa516da87a774aaacf893",
+        "bytes": 330247
+      },
+      {
+        "name": "nfsv4-client-utils",
+        "sha256": "7620272c9a0f12aa12a32517ef0c2f752e74acf211f2af9dcc3dedc36de386c0",
+        "bytes": 46666
+      },
+      {
+        "name": "perl-Devel-Peek",
+        "sha256": "258bfb6183a07523bfc59faecbe7711267fbc796610d0e37e1819569fdd575af",
+        "bytes": 32334
+      },
+      {
+        "name": "perl-Term-Size-Any",
+        "sha256": "50064dedda13d3cd21089f6dbadafa8ee9723071d895d88255e10b5b6745f333",
+        "bytes": 13379
+      },
+      {
+        "name": "netpbm-devel",
+        "sha256": "8ea77d7b189cf9657096af504c042421b8dea08fc11af2928ff65804d33725ca",
+        "bytes": 104072
+      },
+      {
+        "name": "ark",
+        "sha256": "572f5183924bf6052ae96ff1f57b174c48c00a38f79a95963ff11af3d43074a6",
+        "bytes": 1152324
+      },
+      {
+        "name": "ipsilon-client",
+        "sha256": "a785d1e572798d198704a619604009e24d33b3a6f640765ba4bc3bd090bc1a64",
+        "bytes": 29850
+      },
+      {
+        "name": "perl-Devel-REPL-Plugin-CompletionDriver-Keywords",
+        "sha256": "522c848cc117f13815f2afc54f7d5db098e82340da58167e87d9c3b491fecd8d",
+        "bytes": 11151
+      },
+      {
+        "name": "lsw",
+        "sha256": "ea528377fdd2198cdd0bca509b2b3550c30dd1447c8234c076de82f803ab9044",
+        "bytes": 14586
+      },
+      {
+        "name": "rshim",
+        "sha256": "d26cd636a20a44d2cc0016a34fa3e2a95316682645cbf6c04d5f724d50680ada",
+        "bytes": 111969
+      },
+      {
+        "name": "doxygen-doxywizard",
+        "sha256": "f48718f733d0059026989d6a57b17a14509ce5f13bef24a155243362e3280ebe",
+        "bytes": 840731
+      },
+      {
+        "name": "nemo",
+        "sha256": "20a136daa84b6b361ee4caea75718389d115c720d1ea6b9b475a91aaa2ea1365",
+        "bytes": 1123867
+      },
+      {
+        "name": "yosys-devel",
+        "sha256": "28c03166f7918a44b2084e45e67d3fd7e017a332a8eca617327ada0205e8608b",
+        "bytes": 150763
+      },
+      {
+        "name": "lugaru",
+        "sha256": "614f770452bdfe177ce95717c0eb9aafd6e7efe903e5361871e04c5895966825",
+        "bytes": 532333
+      },
+      {
+        "name": "udisks2-lsm",
+        "sha256": "3b44fb8566ea362cc8498dd32401332589756c53cd5921560f113fc3bfe6e0e0",
+        "bytes": 218218
+      },
+      {
+        "name": "perl-Crypt-Random-Seed",
+        "sha256": "cbae2a3608a2e945191996155927beff1e6c15b8320c0dce2ac2bce8f6f429d8",
+        "bytes": 34607
+      },
+      {
+        "name": "coin-or-Bonmin",
+        "sha256": "a09c8aea0436cccefd2a04aaa84bcf326718eef64c76096d5c6ee8f16ecb74f2",
+        "bytes": 423737
+      },
+      {
+        "name": "genisoimage",
+        "sha256": "0edd795df3730b128e74a8a89a419e30f410a03b90460c592b49fca141114882",
+        "bytes": 340598
+      },
+      {
+        "name": "perl-Unicode-Casing",
+        "sha256": "409b6ab2d2458119f2c338553efa318ec4eea0f05fd2b0538faa647ac78b118d",
+        "bytes": 23354
+      },
+      {
+        "name": "copr-backend",
+        "sha256": "301a206628b662dc7a5556b0eb548967c43e20a8b4f67824932508b0163cc630",
+        "bytes": 249324
+      },
+      {
+        "name": "libkiwix",
+        "sha256": "68a6c56ca3088258f334206a6be5d8efc483e090e0ecedf1554120d522ace81e",
+        "bytes": 812562
+      },
+      {
+        "name": "readline-devel",
+        "sha256": "8783653bdac9bedefaec2aa89fffd6923a73d83df70453336ecc08df10b29491",
+        "bytes": 224520
+      },
+      {
+        "name": "papilo",
+        "sha256": "965a7507f502929d184481ec32b1012db28ad8a9fb7c7fa9e1121b8cda4d49ce",
+        "bytes": 466950
+      },
+      {
+        "name": "perl-Params-ValidationCompiler",
+        "sha256": "a5017c31e46572dacfe2f10ef44a1d150a28a9a34419a5cd2bf887e9843c930e",
+        "bytes": 38119
+      },
+      {
+        "name": "otf2bdf",
+        "sha256": "d247f3959a3f1c4cf7c9ee4e49ee0db68a69ee1c6411275f0db03d8d3a0deddb",
+        "bytes": 31116
+      },
+      {
+        "name": "python3-diff-cover",
+        "sha256": "29d6323e2f1b5ea642d8dbe056afeddb30c0ad96ec492215e25145a4103d0407",
+        "bytes": 117507
+      },
+      {
+        "name": "perl-ExtUtils-InstallPaths",
+        "sha256": "45193976eb6f5d8cfc3ca9bd22129964cd8534a5dae03299a7317a513b9e217f",
+        "bytes": 27979
+      },
+      {
+        "name": "gcc-hppa-linux-gnu",
+        "sha256": "b1f9ac757b3a614bfadc5d93be52374f62bd511ed6addb81440941891eabd5cc",
+        "bytes": 31300443
+      },
+      {
+        "name": "perl-Log-Dispatch-Config",
+        "sha256": "0ae649a9da3f1852f0fd91954d2a97401ba211a0133ec0ba0b572bae697965bd",
+        "bytes": 25556
+      },
+      {
+        "name": "dcm2niix",
+        "sha256": "eda5b7afa74d0947956fc8170d5679a61f6ce55ad81da48419a909f7b2c45f40",
+        "bytes": 387649
+      },
+      {
+        "name": "perl-UUID-URandom",
+        "sha256": "3a334286db9db0a2da32157207562cf6c5766e4b9fa82f0034e2c07c731847ca",
+        "bytes": 18638
+      },
+      {
+        "name": "bidscoin",
+        "sha256": "c63b5d57707b03126d1d6db38532ce4ac6d6d42d0fdd1cb22f8712d34d29d286",
+        "bytes": 927807
+      },
+      {
+        "name": "lapack",
+        "sha256": "8245329b044d8a4b4b218f704d5c2a10f420f3c02fbad4a3fd2e0874f0a711ae",
+        "bytes": 12702280
+      },
+      {
+        "name": "hylafax+-client",
+        "sha256": "1ac221f570db982c94d302e5a4f7875562818604089eb0146c201223c038a846",
+        "bytes": 745868
+      },
+      {
+        "name": "perl-Lingua-PT-Stemmer",
+        "sha256": "36aa172fe313223025401eed035ce02097fea5a544494a542e78f53736adc01a",
+        "bytes": 16438
+      },
+      {
+        "name": "zita-resampler",
+        "sha256": "1acbdd29bffdf89a279b97e3db73683871196025229d638e7db2db9fb2c8d7c0",
+        "bytes": 47597
+      },
+      {
+        "name": "icedax",
+        "sha256": "b2c47384d0034c525eaabdc1e374b712f65e287a575580c05f59fe1a032611ad",
+        "bytes": 153518
+      },
+      {
+        "name": "sqlt-graph",
+        "sha256": "e7fe8b48850f3c83284a05d1cc4ca9eb366dc1bfd4b18e6451861f23c77530b0",
+        "bytes": 14164
+      },
+      {
+        "name": "perl-Time-Piece-MySQL",
+        "sha256": "a606c850b82584a4f69752a065c6ac56a0aceb58728e7f22633be06eeeff8cb1",
+        "bytes": 13712
+      },
+      {
+        "name": "perl-Test-Fatal",
+        "sha256": "747737a1ad15293af72d9eeb54a2f4fbf4cad081466a887693d078fa1eb4ac87",
+        "bytes": 26665
+      },
+      {
+        "name": "tio",
+        "sha256": "bddb3edc36e8149c479ce2d4d138ae87c43842841983b20d0526dcb75ebde909",
+        "bytes": 107047
+      },
+      {
+        "name": "age",
+        "sha256": "40fdd00afe844ed5dce9dfc4c73a35f39cf5e9589819397a488c35c18955e527",
+        "bytes": 2394064
+      },
+      {
+        "name": "perl-Module-Install-GithubMeta",
+        "sha256": "2109a71ac96cf2754f891d28e8c97806d8673091819837e61a4b7ad3f45260e6",
+        "bytes": 19506
+      },
+      {
+        "name": "fbida-ida",
+        "sha256": "daf08639713efe16fbfaf2db57d1d7a845b3e30861bea9ded4c90de6c094c9f6",
+        "bytes": 136997
+      },
+      {
+        "name": "mcomix3-base",
+        "sha256": "400e99661110d533d923d901b417fc8c679d2423c1074a4740aa85f3d9180760",
+        "bytes": 3099802
+      },
+      {
+        "name": "rpm-plugin-ima",
+        "sha256": "609463fa517bd41daa3f1bcf427f30da6b408af78be4517da552983714bfb60f",
+        "bytes": 18672
+      },
+      {
+        "name": "perl-Spiffy",
+        "sha256": "c856d1859ae3f7e5169a52470f41b29cb6b222e1da9df5187a2424c5435d07e1",
+        "bytes": 39404
+      },
+      {
+        "name": "perl-Data-AMF",
+        "sha256": "4d3c57bce5d7ad0bc66027efe22be061f6f798db109c3b08ba696defe7b6adff",
+        "bytes": 55648
+      },
+      {
+        "name": "openbao-vault-compat",
+        "sha256": "1654277cf779c83f998feeca13e1e61c862d0ef07119e4d897e66cd44b8d6b41",
+        "bytes": 9103
+      },
+      {
+        "name": "xen-runtime",
+        "sha256": "94a2bcd32b887aaf95b3dc632df9655812aca0e76dc0a39dd1d8d08cd23f8ba2",
+        "bytes": 1653618
+      },
+      {
+        "name": "perl-PPIx-QuoteLike",
+        "sha256": "885e9171d94cba529ea84befedee3c165213a5d1411089bc70a27acc33394cf0",
+        "bytes": 87278
+      },
+      {
+        "name": "surf",
+        "sha256": "8414f73b32986d45839d849c48c7b0d794f2027cd8e88ef421a418f0c3b01ee9",
+        "bytes": 80648
+      },
+      {
+        "name": "wtype",
+        "sha256": "97646d188ca009d47297227d8832657d052c19c2670d976e1619a13ecfcac348",
+        "bytes": 19400
+      },
+      {
+        "name": "perl-Math-Cartesian-Product",
+        "sha256": "7d8633dc309d8627c3e414c77e1509aa1650477d2b0392ae591ed42640d5adba",
+        "bytes": 14659
+      },
+      {
+        "name": "perl-Class-Loader",
+        "sha256": "bf2c74c67a90d0a99a54cc29b59e0cbc795b54ffce6348a49a760ac5683e630f",
+        "bytes": 17249
+      },
+      {
+        "name": "sasl-xoauth2",
+        "sha256": "2c3efca83da5870bbde815069a51d27b81d6c4e484d74697c52f79c39f87b478",
+        "bytes": 76192
+      },
+      {
+        "name": "targetd",
+        "sha256": "1834e75f64b74ba0c614bf00404ba28523ed6c65997a2425bfbc94b52b09cc68",
+        "bytes": 104322
+      },
+      {
+        "name": "perl-HTTP-Lite",
+        "sha256": "69859a6b893d9ae947b61b9eab97947fa23373b21df2dc89e5ab2947182aa3ac",
+        "bytes": 30549
+      },
+      {
+        "name": "perl-Exporter-Tidy",
+        "sha256": "f46563e7cc1111254f75622968b58c4be4cec45c19c92b7fe6a7ad2c47c2e8a6",
+        "bytes": 15965
+      },
+      {
+        "name": "virtdetect",
+        "sha256": "bea6f3c601f565e386bf4085e208c08ebe8318bf7468f57b16df000ce313214f",
+        "bytes": 11826
+      },
+      {
+        "name": "libpcap",
+        "sha256": "660997bc6a1c4d87ea6fc055c7987de7deb65186ed88a4c98a630a9331cc8281",
+        "bytes": 189087
+      },
+      {
+        "name": "starplot",
+        "sha256": "f75106000031183dd768f275a32aeeb17c7f3a1901a6f92ef561e8a14ef2cc40",
+        "bytes": 634536
+      },
+      {
+        "name": "perl-Log-Dispatch-ApacheLog",
+        "sha256": "36346666e0d8874097138377536ba071cf0d2b11c1b62c5e1ef3ea666ea4e2b1",
+        "bytes": 11465
+      },
+      {
+        "name": "nfs-ganesha-rgw",
+        "sha256": "f48d6e1dd78cbdcb1e50831137dea364112ad193cfdcafd6e5391f0bc210f647",
+        "bytes": 31984
+      },
+      {
+        "name": "xfdesktop",
+        "sha256": "c529d5a8d109e4eefea200d0a9c42fb9bc5bdeda95dd9d336c335b80c52699d4",
+        "bytes": 1833950
+      },
+      {
+        "name": "perl-Gtk2-Ex-Dialogs",
+        "sha256": "a32a2d7f578ecdb64c5f6e1d7842e8a1a6632d87e3410382bb5dbe37d4bd1241",
+        "bytes": 48783
+      },
+      {
+        "name": "fluidsynth",
+        "sha256": "87804a859ec8f3d705ddf95f204e4cefd88125a3b7795846997b27a087e54685",
+        "bytes": 27585
+      },
+      {
+        "name": "perl-Hash-Flatten",
+        "sha256": "c875b1a737d5b90ba675487fbe653562bae3ec4add0e0fe9668db5050519ba0b",
+        "bytes": 23625
+      },
+      {
+        "name": "perl-File-Flat",
+        "sha256": "14335eb0b463f9ee23d7da4b6361801de8b5e8d834f34348dfc603558cfbf323",
+        "bytes": 31208
+      },
+      {
+        "name": "gcc-c++-powerpc64-linux-gnu",
+        "sha256": "5f0d8fdc93f6410911b71a853499e16ec21cc66f60e842110f090450e2f09fec",
+        "bytes": 12694006
+      },
+      {
+        "name": "abrt-tui",
+        "sha256": "771bb5be1c9643dd9e3d4682c919946d78ff4e4cea00e387611e0c8710bae738",
+        "bytes": 49639
+      },
+      {
+        "name": "perl-Alien-autoconf",
+        "sha256": "666a379ef707812af546f482c6296fa20e9ed5e0548c56fed4d1533becfbb259",
+        "bytes": 22282
+      },
+      {
+        "name": "openjpeg",
+        "sha256": "601584fe3f69567024dfd0dc3c80c35936121f62de828c2e038e13f04bb600bc",
+        "bytes": 202843
+      },
+      {
+        "name": "perl-DBD-Mock",
+        "sha256": "6967d0a7a436cf7f9d52efd0257a915b1f69c88428dc6da2694a8483f6ec2ab4",
+        "bytes": 67978
+      },
+      {
+        "name": "perl-Test-Spelling",
+        "sha256": "97d6f45d2beb54cc27e5e6c595b029591b1b2026585ad2d443e034d54f7e5e2d",
+        "bytes": 28247
+      },
+      {
+        "name": "gnome-phone-manager",
+        "sha256": "89dd0cd0db5463c56f01a3f4aee5b44f99ae93019df092705e624e8d2f7f2783",
+        "bytes": 194674
+      },
+      {
+        "name": "perl-Fedora-VSP",
+        "sha256": "1627b4f533b4daf20474c512b21f8bfe4346dcb6182575b22def7f36eb7462ee",
+        "bytes": 23511
+      },
+      {
+        "name": "nmstate",
+        "sha256": "8ac8313edbfaf5d8f5193fca96eedac967b15a1415359f7567a969d8f30840b2",
+        "bytes": 4344537
+      },
+      {
+        "name": "MySQL-zrm",
+        "sha256": "bfdc4ff20aa9d0c8c7fd6aa67a5ef4c75ef9ec092212d6d184e24c3408d819da",
+        "bytes": 149121
+      },
+      {
+        "name": "perl-POE-Component-Server-SOAP",
+        "sha256": "b5efda57ec7e32070a0f5bd6b4c0e12596b590c1962da11ffbb1a95d6b1fbf0e",
+        "bytes": 32760
+      },
+      {
+        "name": "perl-Minion-Backend-SQLite",
+        "sha256": "5cde4a9e433271711408ab836286342d40df57c6f8ddd75717ed119b96fa85c7",
+        "bytes": 32752
+      },
+      {
+        "name": "taskd",
+        "sha256": "a7467dc441c9e731bc8585d5516f64e6274fd842dc4f93fa30b77454d4a7b57e",
+        "bytes": 241706
+      },
+      {
+        "name": "samba-vfs-cephfs",
+        "sha256": "54855cad95b93b1431424ee4c4bb90f966831a71ab2280a1a2b68937431708ed",
+        "bytes": 101225
+      },
+      {
+        "name": "dpkg-perl",
+        "sha256": "5fa62b0b27e0e017ce3ff3f9b80c9cf559ca80fa12f52661d4dde16437233df9",
+        "bytes": 359296
+      },
+      {
+        "name": "tigervnc-wayland-server",
+        "sha256": "12433883801f5f5e85bca7a1268f2ea69f7a8ec337acf4ba6b5dcc4c64987e18",
+        "bytes": 292008
+      },
+      {
+        "name": "qalculate-gtk",
+        "sha256": "7946b54db99714d1351529ef56887fbfe66c65b9d7dbc8c8767bf83b47b2ccc8",
+        "bytes": 2904883
+      },
+      {
+        "name": "gcc-mips64-linux-gnu",
+        "sha256": "c03a38efe2fa4f8b35d5259a31b878ba1245bf67d7a6d89896d9685cf845f1cd",
+        "bytes": 35474532
+      },
+      {
+        "name": "perl-Data-Compare",
+        "sha256": "ef19090007d6de4ec26247a9465703c51f397de18a55a62358d63726498e97de",
+        "bytes": 34878
+      },
+      {
+        "name": "cryfs",
+        "sha256": "e3db34a4f96e37f856941672857612d9f3e6f8da6a3110aea20b6f91fb4ff6bc",
+        "bytes": 1312561
+      },
+      {
+        "name": "rubygem-chake",
+        "sha256": "a0df3500a8d11ee9eca60dea3bd456c395cc3a3f25ec47b02d4858c6aa1d2c3f",
+        "bytes": 23509
+      },
+      {
+        "name": "perl-Shell-Config-Generate",
+        "sha256": "8c1d6a3c716e7ffe09ba2ae61b526be66f4d0d1942b3ef205c79f6cfc13cfe32",
+        "bytes": 29933
+      },
+      {
+        "name": "libyaz-devel",
+        "sha256": "e94f6610e5447473405ac19ba1a9342d486f2abb0a8bb1bfc2c184b0101e1147",
+        "bytes": 250107
+      },
+      {
+        "name": "perl-PerlX-Maybe",
+        "sha256": "b782779c96f60233535398306f36cf52f32bf55dde208ba19aea0f92610c8a35",
+        "bytes": 26264
+      },
+      {
+        "name": "tftp-server",
+        "sha256": "ef9623c01688f4522947a518c461a80126dde9668793bc55973076f37c153059",
+        "bytes": 42312
+      },
+      {
+        "name": "unibilium-devel",
+        "sha256": "a9a0eb035fcd63c01de1647a7d1b09c368719d64f541fe9663576cb1b1f1523b",
+        "bytes": 86961
+      },
+      {
+        "name": "perl-POE-Component-JobQueue",
+        "sha256": "b540835ab850e445b5a4ddd160cc44c615827d8db89b1260bc6c7c51c4d28e07",
+        "bytes": 22979
+      },
+      {
+        "name": "xfhell",
+        "sha256": "ad8b975207909469d278ec5c1d31c4e65ddbda3138d4aeccc9027b5561ac7ab3",
+        "bytes": 160146
+      },
+      {
+        "name": "net-tools",
+        "sha256": "6ca525899425be131569d07a3b833761f6d5b85f10d313447be26dee709c3f8e",
+        "bytes": 269570
+      },
+      {
+        "name": "ghdl",
+        "sha256": "0e91b1e71e06d7c8181ad8b27d3fee5a3e67566ed5a7119f4c39f6bebaaea5dd",
+        "bytes": 17220057
+      },
+      {
+        "name": "libmspub-tools",
+        "sha256": "55fe51a18507bf994b2e3c846a9715f197bab5b265797e989c118410778a5b4e",
+        "bytes": 19681
+      },
+      {
+        "name": "diffutils",
+        "sha256": "45001ec4ea4d2c56a879ad55dc94c426525100bfa421f2ed41224ed08adb9cc3",
+        "bytes": 404803
+      },
+      {
+        "name": "perl-Lingua-Translit",
+        "sha256": "5a2c4da63387d26fb9df199de688cdd4cef4fc0715e7b019b2fe6c004e521b31",
+        "bytes": 34027
+      },
+      {
+        "name": "perl-XML-Simple",
+        "sha256": "a9fd080079fbc4e653ad3d599ccbc612511cbab1990cd71dda4ec057e463c015",
+        "bytes": 81219
+      },
+      {
+        "name": "dosfstools",
+        "sha256": "11a1ddea2c27bcd9c764f086a1b8fed459a39d9a56be5db14a95128a9df074d0",
+        "bytes": 107546
+      },
+      {
+        "name": "fence-agents-ilo-moonshot",
+        "sha256": "d1ea95047c529ac5bd68e2bbdd31ce4e14791aaaf1a7d316a27a4838b4875af2",
+        "bytes": 11877
+      },
+      {
+        "name": "cdrdao",
+        "sha256": "23173f1dbe3823aec4d203bb720c7bebd1757d2941ed883b23697d6275145f53",
+        "bytes": 777891
+      },
+      {
+        "name": "oclock",
+        "sha256": "2f68df511d889ad4e775d41645f4185c7ad8022cb54c6c3e98d2ad33216fa16f",
+        "bytes": 21527
+      },
+      {
+        "name": "libcpuid-devel",
+        "sha256": "97ddf8aff8a4b40ba5141e471400a8fde25c5d89196952bb809ad7dec9ab03a7",
+        "bytes": 72096
+      },
+      {
+        "name": "perl-Math-Random-MT",
+        "sha256": "a33b5532a147dc69239dd86d22323eb8d0f9b4465be7354d31673bc1bb6f58e0",
+        "bytes": 23476
+      },
+      {
+        "name": "perl-Perl6-Caller",
+        "sha256": "a5887ae52162330680abd84aa23e6e13acb6bcdc9a88c196768f1600e768a236",
+        "bytes": 15596
+      },
+      {
+        "name": "sloccount",
+        "sha256": "4a2ef1cb3e0ec25a5a0f32ff1b60de864e92a56cab345c8a483a192842454774",
+        "bytes": 127816
+      },
+      {
+        "name": "musescore",
+        "sha256": "c1912f68893667e32aa5c85e61370908fa53c1cfb02ab16828eb8f3628e9a073",
+        "bytes": 16857463
+      },
+      {
+        "name": "perl-String-RewritePrefix",
+        "sha256": "1f1c39218465d5081c250914689df80b24f9d2d99bb7fbafab9d599d6c6efca5",
+        "bytes": 20008
+      },
+      {
+        "name": "flatbuffers-compiler",
+        "sha256": "f25c4e7c4ac2a4117cf2d9efe19c75d180e0b90b0ce58e47193cb43ea0ddae9e",
+        "bytes": 1151433
+      },
+      {
+        "name": "mkbootdisk",
+        "sha256": "df56742d990850d021bf0783df6fd87eee4d51ea40f71edcb17e55b5718335d8",
+        "bytes": 19053
+      },
+      {
+        "name": "sendxmpp",
+        "sha256": "6f544506943c2ac61c2ab1820534ff5294f44cbca73e7730689585beeb016b70",
+        "bytes": 20224
+      },
+      {
+        "name": "perl-MooseX-Role-WarnOnConflict",
+        "sha256": "6c2c5249e3893ab205e648933397ff9bd12096d1c737a727c77463e11c25dcb2",
+        "bytes": 18768
+      },
+      {
+        "name": "aw-server-rust",
+        "sha256": "91b9787bad72149bda65fc54d5f7221f95927c7fa4c7b048387b60f9296f3308",
+        "bytes": 6268290
+      },
+      {
+        "name": "perl-Catalyst-View-HTML-Template",
+        "sha256": "7163766629c5f7ea891f7ff3fa10269b87b70af5d367d393c7d4e4c226dda165",
+        "bytes": 15253
+      },
+      {
+        "name": "perl-Module-Versions-Report",
+        "sha256": "c001cd36dc718c5cb2f7ea34e42a028b93fc4ae3fe2b17f60bac453c841e7579",
+        "bytes": 15308
+      },
+      {
+        "name": "python3-meshio",
+        "sha256": "99e4131c01d5849843d9d58ba7b3329f84486ae05d504299e2736ba41cb3dba2",
+        "bytes": 427531
+      },
+      {
+        "name": "texlive-bibtex8",
+        "sha256": "7a47daf3098c10fb671cef6f41e37fd3dabdc45a2c8362e339e8cc18738324b9",
+        "bytes": 105785
+      },
+      {
+        "name": "perl-Scriptalicious",
+        "sha256": "f2344e6f7cb0720dd1ecb3fff7e339f08996e0e1da359d73fe5b8e7ae9fb7cee",
+        "bytes": 35304
+      },
+      {
+        "name": "samba-test",
+        "sha256": "7d43effd0b9b941520d95aa34209cb45c03b436a92e029a923e22ab61bad3b1c",
+        "bytes": 2784334
+      },
+      {
+        "name": "perl-Prima",
+        "sha256": "9a04f5bdde9e9c5984ba072755c51968133df22abacda2ec864bd66c7d18975f",
+        "bytes": 2840919
+      },
+      {
+        "name": "a2jmidid",
+        "sha256": "a68208cf7a56013e6315c7957a7c095fe86352a09227f546cd6200d6e17f4b23",
+        "bytes": 54267
+      },
+      {
+        "name": "perl-subs",
+        "sha256": "371476ed5b50df30fa20a042fc36a0bbf83757491e26f29aa3d422c3a8c21e3b",
+        "bytes": 11619
+      },
+      {
+        "name": "pasdoc",
+        "sha256": "bde69a0c933da0087d11da919f89380c172b9ab4ceca3ae582b69d7b41db9b08",
+        "bytes": 601867
+      },
+      {
+        "name": "mscgen",
+        "sha256": "5170172aa389d3a172c8ac02395d4bc14538ef3c639c583dd7fb948786efe0aa",
+        "bytes": 62926
+      },
+      {
+        "name": "perl-JavaScript-Beautifier",
+        "sha256": "26c9eb79ed2ba0c59a2b771f4d2ddc13e32c60e68969d326ff64f7608e246632",
+        "bytes": 21068
+      },
+      {
+        "name": "perl-CPAN-Plugin-Sysdeps",
+        "sha256": "25e19a9abe053f184540a4fefad641e02ee797513657d17a9ec0dbeb016008a9",
+        "bytes": 52241
+      },
+      {
+        "name": "perl-Test-NoBreakpoints",
+        "sha256": "5e26506d7bbb44c902b5e6dc342b850e821ba82ed66959e40ce887e9f7a512f0",
+        "bytes": 23455
+      },
+      {
+        "name": "zaz",
+        "sha256": "f2a3d61e1b9e98919cbdeae7d9e0c136d4dbec3d7b8061f350aa665322928fe8",
+        "bytes": 20159017
+      },
+      {
+        "name": "perl-MooseX-Extended",
+        "sha256": "07078755dd1f09f49d4b30cff1ba7a308464365889cfc99cdf65c7499f4ad647",
+        "bytes": 92373
+      },
+      {
+        "name": "perl-Test-MockTime-HiRes",
+        "sha256": "54b8a4d961200fac52a44754023d71b4ee812116cf56af9f46d8cec37396994a",
+        "bytes": 19123
+      },
+      {
+        "name": "perl-Pipeline",
+        "sha256": "31e78646e4b4f3a1fb20c61ecb690f9907e646779f306e1ddab70d34142f5ef7",
+        "bytes": 62564
+      },
+      {
+        "name": "perl-Test-Modern",
+        "sha256": "e0b632b45972d9294a93973156696c7a95240477c9d27fe6f696fc4a2cf9948c",
+        "bytes": 42523
+      },
+      {
+        "name": "mjpegtools",
+        "sha256": "7737249312e14a2588678c0553de653b9139d8a424e64db095aab84cac5b1d43",
+        "bytes": 639788
+      },
+      {
+        "name": "perl-Email-Abstract",
+        "sha256": "674775c0a866db65814983492d7188c2ddcfc655b3794ac013a9bb5084fb8bb9",
+        "bytes": 36489
+      },
+      {
+        "name": "soundfont-utils",
+        "sha256": "3bb2356debe6ed3db1e052c7f2398e2cd1ee8bd7ee5ca2983fb2935ad6ecbf8c",
+        "bytes": 95467
+      },
+      {
+        "name": "asymptote",
+        "sha256": "7a2a9e12d4d76367e24c1eb72cedf118517a903b598af38d6ddf357338f4cccd",
+        "bytes": 5389761
+      },
+      {
+        "name": "ncid-mysql",
+        "sha256": "a5ea922c258deb5b0ce46ced1742f5a5769f726674b804603b0e99ebec6005f5",
+        "bytes": 17695
+      },
+      {
+        "name": "beaker-client",
+        "sha256": "bac43bc49b01ae3036a8b68c5ae89f4499ff8cf5b528302a311d97930b52d480",
+        "bytes": 228379
+      },
+      {
+        "name": "perl-Test-Type",
+        "sha256": "bdeb93b3af0c69b431c6b519aef34143528211c82dd1daa66b9d9fd2e697a759",
+        "bytes": 21749
+      },
+      {
+        "name": "accel-ppp",
+        "sha256": "b8de1efd4a1b9c862db95b8fad2e0d8f614435fe140728b4468ec160418dbcee",
+        "bytes": 431032
+      },
+      {
+        "name": "fence-agents-vmware-soap",
+        "sha256": "46c68b2901ebd15a957d60e4ea18b47758dd64991c87432769132a07ff926444",
+        "bytes": 14289
+      },
+      {
+        "name": "perl-Cwd-utf8",
+        "sha256": "5973b0bb1974a4accccc9b99e390e2f706d82ab436c058f808625968f4a154ab",
+        "bytes": 22365
+      },
+      {
+        "name": "gnome-color-manager",
+        "sha256": "11db9180cee8e4a5dc41957235567f07727ba9ef0061bfb05b7ca927c8efaac2",
+        "bytes": 1166796
+      },
+      {
+        "name": "vgrep",
+        "sha256": "d9d2d70f49d453bc86ea68aa798a2e3ddcbffb0a8824cd6cd2a94fe7de807861",
+        "bytes": 1454755
+      },
+      {
+        "name": "perl-Scalar-Properties",
+        "sha256": "18e7bbcaa30280939898ea872a4515961e3410a825b81b6751628c11ee1e5449",
+        "bytes": 27428
+      },
+      {
+        "name": "wmCalClock",
+        "sha256": "055480959d8f1b43e2a663628a46ecaeb1cdb6016f2e7f85321f84988b347f0b",
+        "bytes": 57245
+      },
+      {
+        "name": "udev-hid-bpf",
+        "sha256": "c1d89b04222ff68ab86cab35cbf4de74e042ea5d92a2a93c28cb80d9d515eeed",
+        "bytes": 1117347
+      },
+      {
+        "name": "texlive-mathspic",
+        "sha256": "e87a0f99b2157c9d19d037aa496d1e777da6c944750c7205e15a3e046831272a",
+        "bytes": 2471461
+      },
+      {
+        "name": "pipewire-pulseaudio",
+        "sha256": "c04eb66ff94b194e88f64ca775ddc0481dfdb58b55790120ea890bae6edf6337",
+        "bytes": 225640
+      },
+      {
+        "name": "perl-TestML",
+        "sha256": "4586d0c22350e5dbda5e5a9d25f14b49372e02471f9ebf9ba16a7424534d9d3e",
+        "bytes": 18058
+      },
+      {
+        "name": "perl-HTML-Lint",
+        "sha256": "a0c115703582fcc7af2c7fdf69a308d099f00f8231dfed86c2a9268393d9544a",
+        "bytes": 39294
+      },
+      {
+        "name": "adanaxisgpl",
+        "sha256": "6a646c2ff0437fba75956dafcc632820e557a941999510a66446a02381f91d7b",
+        "bytes": 18849336
+      },
+      {
+        "name": "gforth",
+        "sha256": "fe4700a97bcba6d0fda68cf700eeadfadfff846693ce6a9ce499a0701c48cb16",
+        "bytes": 929154
+      },
+      {
+        "name": "qrencode",
+        "sha256": "93e24cfcbbdfade16b9171da31d9bfaa23c4d2607a9f18b74f73dced893c2b0f",
+        "bytes": 25752
+      },
+      {
+        "name": "totem-video-thumbnailer",
+        "sha256": "f6831a681a80b7b034f83215ab668829de8ddbafc390473f5ca450c39d5632e5",
+        "bytes": 33243
+      },
+      {
+        "name": "eureka",
+        "sha256": "1adb093ef27db348c2203f65e3ad5740b2139c7c15a4adba6f2b44f690da4b75",
+        "bytes": 1105731
+      },
+      {
+        "name": "perl-MIME-EncWords",
+        "sha256": "c56e378701f35dcd57122b95d99d66134d1516f46c4c82b3709a989dbc3242d9",
+        "bytes": 58092
+      },
+      {
+        "name": "gnuradio",
+        "sha256": "53d4841ac652dd4631dd7b0f4b9c35bf0f9c69750e9f96108f9b78fa6033a334",
+        "bytes": 3321256
+      },
+      {
+        "name": "cargo-rpmstatus",
+        "sha256": "767f4e50fcf70069b09050a6ab32502008de89fef928c6f551f2920fa00b7423",
+        "bytes": 1979186
+      },
+      {
+        "name": "perl-Text-Abbrev",
+        "sha256": "4632de09e6e914ba4d0ce9bde131fce92da584915a8c351713c35428c6343538",
+        "bytes": 12070
+      },
+      {
+        "name": "perl-Frontier-RPC-doc",
+        "sha256": "658294c9c41019bfe5baca1fdfebeea3a25140e48e7334f89609632ce5d22c7d",
+        "bytes": 29573
+      },
+      {
+        "name": "clang15",
+        "sha256": "ee102ab325aa9e39a97aa5d4627a860d4524fd612804bb5f2e8ef891f0d11498",
+        "bytes": 72159
+      }
+    ]
+  }
+}

@@ -15,8 +15,11 @@ from pathlib import Path
 
 from ingestion.debian_indexes import (
     BINARY_PATH,
+    LOCALIZED_MAN_PATH,
     MAN_PATH,
     Package,
+    link_target,
+    localized_manual,
     manual_registered,
     require_private_package,
     safe_path,
@@ -37,7 +40,7 @@ DOC_ROOTS = (
     "usr/share/librarian-puppet/",
     "usr/share/scala-",
 )
-EXTRACTOR_VERSION = 5
+EXTRACTOR_VERSION = 7
 
 
 class ExtractedQuota:
@@ -137,9 +140,21 @@ def postinst_from_archive(archive: Path) -> str:
     return ""
 
 
-def extract(archive: Path, package: Package, root: Path, *, quota=None) -> list[tuple]:
-    """Stream past unrelated members; write only man sources and copyrights."""
-    require_private_package(package)
+def extract(
+    archive: Path,
+    package: Package,
+    root: Path,
+    *,
+    quota=None,
+    registrations=None,
+    localized_roots=frozenset(),
+) -> list[tuple]:
+    """Stream past unrelated members; write only man sources and copyrights.
+
+    Translated roots (usr/share/man/<lang>/) are kept only when requested, so
+    English workspaces and their receipts are unchanged.
+    """
+    require_private_package(package, registrations)
     files = root / "files"
     files.mkdir(parents=True, exist_ok=True)
     quota = quota or ExtractedQuota(files)
@@ -158,12 +173,7 @@ def extract(archive: Path, package: Package, root: Path, *, quota=None) -> list[
             if BINARY_PATH.fullmatch(raw_path):
                 path = safe_path(raw_path)
                 if member.issym() or member.islnk():
-                    target = member.linkname
-                    if target.startswith("/"):
-                        target = target.lstrip("/")
-                    elif member.issym():
-                        target = posixpath.join(posixpath.dirname(path), target)
-                    target = safe_path(posixpath.normpath(target))
+                    target = link_target(path, member.linkname, symbolic=member.issym())
                     if BINARY_PATH.fullmatch(target):
                         entries.append((package.name, path, "binary-link", target, None))
                 elif member.isfile():
@@ -172,17 +182,14 @@ def extract(archive: Path, package: Package, root: Path, *, quota=None) -> list[
             if not raw_path.startswith(DOC_ROOTS):
                 continue
             path = safe_path(member.name)
-            manual = manual_registered(package.name, path)
+            manual = manual_registered(package.name, path, registrations) or (
+                localized_manual(path, localized_roots) is not None
+            )
             notice = COPYRIGHT.fullmatch(path)
             if member.issym() or member.islnk():
                 if not manual and not notice and path.count("/") != 3:
                     continue
-                target = member.linkname
-                if target.startswith("/"):
-                    target = target.lstrip("/")
-                elif member.issym():
-                    target = posixpath.join(posixpath.dirname(path), target)
-                target = safe_path(posixpath.normpath(target))
+                target = link_target(path, member.linkname, symbolic=member.issym())
                 if not target.startswith(DOC_ROOTS):
                     # Debian docs may link examples to /etc or alternatives.
                     # Keep no filesystem link and never read outside the store.
@@ -226,8 +233,10 @@ def source_bytes(path: Path) -> bytes:
 
 
 class ArchiveStore:
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, *, registrations=None, source_targets=None):
         self.root = root
+        self.registrations = registrations
+        self.source_targets = source_targets or {}
         self.db = sqlite3.connect(root / "archives.sqlite3")
         self.db.execute("PRAGMA cache_size=-8192")
         self.db.executescript("""
@@ -236,6 +245,9 @@ class ArchiveStore:
                 (pkg TEXT, path TEXT, kind TEXT, target TEXT, file TEXT,
                 PRIMARY KEY(pkg,path));
             CREATE TABLE IF NOT EXISTS receipts(pkg TEXT PRIMARY KEY,digest TEXT,version INTEGER);
+            CREATE TABLE IF NOT EXISTS apk_hashes
+                (pkg TEXT PRIMARY KEY,control TEXT,sha256 TEXT,
+                 data_sha256 TEXT,data_offset INTEGER);
             CREATE INDEX IF NOT EXISTS entries_path ON entries(path);
         """)
 
@@ -248,17 +260,38 @@ class ArchiveStore:
             self.db.executemany("INSERT OR REPLACE INTO entries VALUES (?,?,?,?,?)", entries)
             self.db.execute(
                 "INSERT OR REPLACE INTO receipts VALUES (?,?,?)",
-                (package.name, package.sha256, EXTRACTOR_VERSION),
+                (
+                    package.name,
+                    getattr(package, "receipt_digest", package.sha256),
+                    EXTRACTOR_VERSION,
+                ),
             )
+            if hasattr(package, "control_checksum"):
+                if not re.fullmatch(r"[a-f0-9]{64}", package.sha256):
+                    raise ValueError("Missing verified APK archive SHA256")
+                self.db.execute(
+                    "INSERT OR REPLACE INTO apk_hashes VALUES (?,?,?,?,?)",
+                    (
+                        package.name,
+                        package.control_checksum,
+                        package.sha256,
+                        package.data_sha256,
+                        package.data_offset,
+                    ),
+                )
 
     def complete(self, package: Package):
         receipt = self.db.execute(
             "SELECT digest,version FROM receipts WHERE pkg=?", (package.name,)
         ).fetchone()
-        return receipt == (package.sha256, EXTRACTOR_VERSION) and all(
-            Path(row[0]).is_file()
-            for row in self.db.execute(
-                "SELECT file FROM entries WHERE pkg=? AND file IS NOT NULL", (package.name,)
+        return (
+            bool(package.sha256)
+            and receipt == (getattr(package, "receipt_digest", package.sha256), EXTRACTOR_VERSION)
+            and all(
+                Path(row[0]).is_file()
+                for row in self.db.execute(
+                    "SELECT file FROM entries WHERE pkg=? AND file IS NOT NULL", (package.name,)
+                )
             )
         )
 
@@ -315,7 +348,7 @@ class ArchiveStore:
         owner, kind, target, file = entry
         if kind == "blocked":
             raise ValueError("Documentation link leaves archive documentation roots")
-        if kind == "link":
+        if kind in {"link", "generated-link"}:
             return self.resolve(owner, target, seen, details=details, follow_stubs=follow_stubs)
         data = source_bytes(Path(file))
         stub = is_so_stub(data)
@@ -328,9 +361,24 @@ class ArchiveStore:
             else:
                 resolved = posixpath.join(posixpath.dirname(path), target)
             resolved = safe_path(posixpath.normpath(resolved))
-            if not MAN_PATH.fullmatch(resolved):
-                raise ValueError("Roff include escapes manual root")
-            return self.resolve(owner, resolved, set(seen), details=with_details)
+            localized = LOCALIZED_MAN_PATH.fullmatch(path)
+            # A translation includes only its own language root: English (or
+            # another language) included into it would publish under its lang.
+            allowed = (
+                localized_manual(resolved, {localized[1]})
+                if localized
+                else MAN_PATH.fullmatch(resolved)
+            )
+            if not allowed:
+                repair = self.source_targets.get(resolved) if not localized else None
+                if not repair or not MAN_PATH.fullmatch(repair[1]):
+                    raise ValueError("Roff include escapes manual root")
+                result = self.resolve(repair[0], repair[1], set(seen), details=True)
+            else:
+                result = self.resolve(owner, resolved, set(seen), details=True)
+            if localized and not localized_manual(result[1], {localized[1]}):
+                raise ValueError("Translated include resolves outside its language root")
+            return result if with_details else result[2]
 
         if stub:
             if not follow_stubs:
@@ -339,13 +387,29 @@ class ArchiveStore:
         # Use the same syntax state as the final guard: a `.so` after `.cc |`
         # is text, while `|so` is a real request. Resolve verified archive includes
         # before mandoc sees them; never consult the host filesystem.
-        from ingestion.mandoc import checked_source
+        from ingestion.mandoc import RoffSourceError, checked_source
 
-        data = checked_source(data, include=include)
+        try:
+            data = checked_source(data, include=include)
+        except RoffSourceError as exc:
+            # One refused page counts against the archive parse gate; it does not stop
+            # the distro. Other errors (e.g. an excluded package) still propagate.
+            raise ValueError(f"{owner}:{path}: {exc}") from exc
         return (owner, path, data) if details else data
 
+    def localized_manuals(self, root: str):
+        for pkg, path in self.db.execute(
+            "SELECT pkg,path FROM entries WHERE path LIKE ? ORDER BY pkg,path",
+            (f"usr/share/man/{root}/%",),
+        ):
+            match = localized_manual(path, {root})
+            if match:
+                yield pkg, path, match[2].lower(), match[3].lower()
+
     def manuals(self):
-        for pkg, path in self.db.execute("SELECT pkg,path FROM entries ORDER BY pkg,path"):
+        for pkg, path in self.db.execute(
+            "SELECT pkg,path FROM entries WHERE kind != 'generated-link' ORDER BY pkg,path"
+        ):
             match = MAN_PATH.fullmatch(path)
-            if match and manual_registered(pkg, path):
+            if match and manual_registered(pkg, path, self.registrations):
                 yield pkg, path, match.group(1).lower(), match.group(2).lower()

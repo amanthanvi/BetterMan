@@ -53,7 +53,7 @@ class WorkflowTest(unittest.TestCase):
         self.addCleanup(self.no_network.stop)
         self.contract = patch.object(ConvexIngestClient, '_get_json', return_value={
             'schemaVersion': REQUIRED_SCHEMA_VERSION, 'functions': list(REQUIRED_FUNCTIONS),
-            'declarationCounts': list(REQUIRED_DECLARATION_COUNTS), 'activatePending': True,
+            'declarationCounts': list(REQUIRED_DECLARATION_COUNTS), 'activatePending': True, 'acquisitions': ['deb-extraction', 'ubuntu-deb-extraction', 'fedora-rpm-extraction', 'arch-pkg-extraction', 'alpine-apk-extraction'],
         }).start()
         self.source_ids = {}
 
@@ -141,6 +141,104 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(rows, [])
         self.assertEqual((values['ingest'],values['promote']), ('false','false'))
 
+    def test_ubuntu_promotion_argument_requires_advertised_capability(self):
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        for distro in ['ubuntu', 'arch']:
+            for advertised in [False, True]:
+                self.contract.return_value['acquisitions'] = ['ubuntu-deb-extraction'] if advertised else []
+                def response(request, **kwargs):
+                    payload = json.loads(request.data)
+                    self.assertEqual('allowFullUbuntu' in payload, advertised)
+                    if advertised:
+                        self.assertFalse(payload['allowFullUbuntu'])
+                    return io.BytesIO(json.dumps({'promoted': [{'distro': distro, 'datasetReleaseId': 'release-' + distro}]}).encode())
+                with self.post_mock(response):
+                    self.assertEqual(w.promote(distro), 0)
+        os.environ['BETTERMAN_UBUNTU_FULL_PROMOTE_INPUT'] = 'true'
+        self.contract.return_value['acquisitions'] = []
+        with self.post_mock(lambda *a, **kw: self.fail('Unsupported authorization must not write')) as http:
+            self.assertEqual(w.promote('ubuntu'), 1)
+        http.assert_not_called()
+        self.assertIn('acquisition support', w.load('ubuntu')['error'])
+
+    def test_ubuntu_full_gates_are_independent_and_fail_closed(self):
+        self.contract.return_value['acquisitions'] = ['ubuntu-deb-extraction']
+        for event in ['schedule', 'workflow_dispatch']:
+            for enabled in [False, True]:
+                for allowed in [False, True]:
+                    _, rows = self.plan(BETTERMAN_WORKFLOW_EVENT=event,
+                        BETTERMAN_UBUNTU_FULL='1' if enabled else '',
+                        BETTERMAN_UBUNTU_FULL_INPUT='true' if enabled else 'false',
+                        BETTERMAN_UBUNTU_FULL_PROMOTE='1' if allowed else '',
+                        BETTERMAN_UBUNTU_FULL_PROMOTE_INPUT='false',
+                        BETTERMAN_DEBIAN_FULL='1', BETTERMAN_DEBIAN_FULL_INPUT='true',
+                        BETTERMAN_DEBIAN_FULL_PROMOTE='', BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT='false')
+                    row = next(r for r in rows if r['distro'] == 'ubuntu')
+                    self.assertEqual(row['full_ubuntu'], enabled)
+                    self.assertEqual(row['promote'], not enabled or allowed)
+                    self.assertFalse(next(r for r in rows if r['distro'] == 'debian')['promote'])
+        _, rows = self.plan(BETTERMAN_INGEST_SAMPLE='true', BETTERMAN_UBUNTU_FULL='1', BETTERMAN_UBUNTU_FULL_INPUT='true')
+        self.assertTrue(all(not r['full_ubuntu'] and not r['promote'] for r in rows))
+        self.plan(BETTERMAN_INGEST_SAMPLE='false', BETTERMAN_INGEST_ENABLED='false')
+        for reason in ['FULL_UBUNTU_PROMOTION_HELD', 'FULL_UBUNTU_TIER_REQUIRED']:
+            for returned_distro, release in [('ubuntu', 'release-ubuntu'), ('debian', 'release-ubuntu'), ('ubuntu', 'different')]:
+                with self.post_mock(lambda request, **kwargs: io.BytesIO(json.dumps({'promoted': [], 'skipped': [{'distro': returned_distro, 'datasetReleaseId': release, 'reason': reason}]}).encode())):
+                    self.assertEqual(w.promote('ubuntu'), 0 if returned_distro == 'ubuntu' and release == 'release-ubuntu' else 1)
+
+    def test_fedora_gates_do_not_borrow_other_family_authorization(self):
+        for event in ['schedule', 'workflow_dispatch']:
+            for enabled in [False, True]:
+                for allowed in [False, True]:
+                    _, rows = self.plan(BETTERMAN_WORKFLOW_EVENT=event,
+                        BETTERMAN_FEDORA_FULL='1' if enabled else '',
+                        BETTERMAN_FEDORA_FULL_INPUT='true' if enabled else 'false',
+                        BETTERMAN_FEDORA_FULL_PROMOTE='1' if allowed else '',
+                        BETTERMAN_FEDORA_FULL_PROMOTE_INPUT='false',
+                        BETTERMAN_UBUNTU_FULL_PROMOTE='1', BETTERMAN_DEBIAN_FULL_PROMOTE='1')
+                    row = next(r for r in rows if r['distro'] == 'fedora')
+                    self.assertEqual(row['full_fedora'], enabled)
+                    self.assertEqual(row['promote'], not enabled or allowed)
+        self.plan(BETTERMAN_INGEST_ENABLED='false')
+        for reason in ['FULL_FEDORA_PROMOTION_HELD', 'FULL_FEDORA_TIER_REQUIRED']:
+            with self.post_mock(lambda request, **kwargs: io.BytesIO(json.dumps({'promoted': [], 'skipped': [{'distro': 'fedora', 'datasetReleaseId': 'release-fedora', 'reason': reason}]}).encode())):
+                self.assertEqual(w.promote('fedora'), 0)
+
+    def test_arch_gates_do_not_borrow_other_family_authorization(self):
+        for event in ['schedule', 'workflow_dispatch']:
+            for enabled in [False, True]:
+                for allowed in [False, True]:
+                    _, rows = self.plan(BETTERMAN_WORKFLOW_EVENT=event,
+                        BETTERMAN_ARCH_FULL='1' if enabled else '',
+                        BETTERMAN_ARCH_FULL_INPUT='true' if enabled else 'false',
+                        BETTERMAN_ARCH_FULL_PROMOTE='1' if allowed else '',
+                        BETTERMAN_ARCH_FULL_PROMOTE_INPUT='false',
+                        BETTERMAN_UBUNTU_FULL_PROMOTE='1', BETTERMAN_DEBIAN_FULL_PROMOTE='1')
+                    row = next(r for r in rows if r['distro'] == 'arch')
+                    self.assertEqual(row['full_arch'], enabled)
+                    self.assertEqual(row['promote'], not enabled or allowed)
+        self.plan(BETTERMAN_INGEST_ENABLED='false')
+        for reason in ['FULL_ARCH_PROMOTION_HELD', 'FULL_ARCH_TIER_REQUIRED']:
+            with self.post_mock(lambda request, **kwargs: io.BytesIO(json.dumps({'promoted': [], 'skipped': [{'distro': 'arch', 'datasetReleaseId': 'release-arch', 'reason': reason}]}).encode())):
+                self.assertEqual(w.promote('arch'), 0)
+
+    def test_alpine_gates_do_not_borrow_other_family_authorization(self):
+        for event in ['schedule', 'workflow_dispatch']:
+            for enabled in [False, True]:
+                for allowed in [False, True]:
+                    _, rows = self.plan(BETTERMAN_WORKFLOW_EVENT=event,
+                        BETTERMAN_ALPINE_FULL='1' if enabled else '',
+                        BETTERMAN_ALPINE_FULL_INPUT='true' if enabled else 'false',
+                        BETTERMAN_ALPINE_FULL_PROMOTE='1' if allowed else '',
+                        BETTERMAN_ALPINE_FULL_PROMOTE_INPUT='false',
+                        BETTERMAN_UBUNTU_FULL_PROMOTE='1', BETTERMAN_DEBIAN_FULL_PROMOTE='1')
+                    row = next(r for r in rows if r['distro'] == 'alpine')
+                    self.assertEqual(row['full_alpine'], enabled)
+                    self.assertEqual(row['promote'], not enabled or allowed)
+        self.plan(BETTERMAN_INGEST_ENABLED='false')
+        for reason in ['FULL_ALPINE_PROMOTION_HELD', 'FULL_ALPINE_TIER_REQUIRED']:
+            with self.post_mock(lambda request, **kwargs: io.BytesIO(json.dumps({'promoted': [], 'skipped': [{'distro': 'alpine', 'datasetReleaseId': 'release-alpine', 'reason': reason}]}).encode())):
+                self.assertEqual(w.promote('alpine'), 0)
+
     def test_full_debian_promotion_hold_and_explicit_recovery(self):
         os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
         self.source_ids['debian'] = 'full'
@@ -159,6 +257,53 @@ class WorkflowTest(unittest.TestCase):
             if not allowed:
                 self.assertIn('Skipping held full-Debian', log.getvalue())
                 self.assertIn('skipped=true', Path('output').read_text())
+
+    def test_unscored_full_debian_skip_preserves_pinned_expectations_and_siblings(self):
+        self.plan()
+        self.ingest('ubuntu')
+        sibling = w.load('ubuntu')
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        for legacy_error in [False, True]:
+            for pin in [None, 'release-debian', 'different']:
+                os.environ['BETTERMAN_EXPECTED_RELEASE_IDS_INPUT'] = json.dumps({'debian': pin}) if pin else ''
+                for allowed in ['false', 'true']:
+                    os.environ['BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT'] = allowed
+                    Path('output').write_text('')
+                    requests = []
+                    def response(request, **kwargs):
+                        requests.append(request)
+                        self.assertTrue(request.full_url.endswith('/ingest/promote'))
+                        self.assertEqual(json.loads(request.data)['expectedDatasetReleaseId'], {'debian': 'release-debian'})
+                        self.assertEqual(request.get_header('X-betterman-ingest-contract'), str(REQUIRED_SCHEMA_VERSION))
+                        if legacy_error:
+                            raise w.urllib.error.HTTPError(request.full_url, 409, 'Conflict', {},
+                                io.BytesIO(json.dumps({'error': {'code': 'FULL_DEBIAN_TIER_REQUIRED'}}).encode()))
+                        return io.BytesIO(json.dumps({'promoted': [], 'skipped': [{'distro': 'debian',
+                            'datasetReleaseId': 'release-debian', 'reason': 'FULL_DEBIAN_TIER_REQUIRED'}]}).encode())
+                    with self.post_mock(response), contextlib.redirect_stdout(io.StringIO()) as log:
+                        self.assertEqual(w.promote('debian'), 1 if pin == 'different' else 0)
+                    if pin == 'different':
+                        self.assertEqual(requests, [])
+                        self.assertIn('STAGING_RELEASE_CONFLICT', w.load('debian')['error'])
+                        self.assertEqual(Path('output').read_text(), '')
+                    else:
+                        self.assertEqual(len(requests), 1)
+                        self.assertIn('scored full-Debian replacement required', log.getvalue())
+                        self.assertEqual(w.load('debian')['result'], 'success')
+                        self.assertEqual(w.load('debian')['error'], '')
+                        self.assertEqual(Path('output').read_text(), 'skipped=true\n')
+                    self.assertEqual(w.load('ubuntu'), sibling)
+
+    def test_tier_skip_must_name_the_verified_debian_release(self):
+        self.plan()
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        for distro, release_id in [('ubuntu', 'release-debian'), ('debian', 'different')]:
+            Path('output').write_text('')
+            with self.post_mock(lambda request, **kwargs: io.BytesIO(json.dumps({'promoted': [],
+                'skipped': [{'distro': distro, 'datasetReleaseId': release_id, 'reason': 'FULL_DEBIAN_TIER_REQUIRED'}]}).encode())):
+                self.assertEqual(w.promote('debian'), 1)
+            self.assertIn('Unexpected promotion response', w.load('debian')['error'])
+            self.assertEqual(Path('output').read_text(), '')
 
     def test_misspelled_gate_values_warn_and_stay_off(self):
         for name in ['BETTERMAN_DEBIAN_FULL', 'BETTERMAN_DEBIAN_FULL_PROMOTE']:
@@ -586,6 +731,17 @@ function assertWorkflowWiring(workflow) {
   assert.ok(!JSON.stringify(download).includes('secrets.'))
   assert.ok(!JSON.stringify(download).includes('--local-upload'))
   assert.match(download.steps.find(s => s.name === 'Acquire only; never create a Convex client').run, /--download-only$/)
+  for (const distro of ['ubuntu', 'fedora', 'arch', 'alpine']) {
+    assert.equal(workflow.on.workflow_dispatch.inputs[`${distro}_full`].default, false)
+    assert.equal(workflow.on.workflow_dispatch.inputs[`${distro}_full_promote`].default, false)
+    assert.equal(workflow.env[`BETTERMAN_${distro.toUpperCase()}_FULL`], '${{ vars.BETTERMAN_' + distro.toUpperCase() + '_FULL }}')
+  }
+  assert.ok(Object.keys(workflow.on.workflow_dispatch.inputs).length <= 25)
+  const alpinePins = ingest.steps.find(s => s.name === 'Export Alpine whole-file SHA256 pins for owner review')
+  assert.equal(alpinePins.if, '${{ always() && matrix.full_alpine }}')
+  assert.equal(alpinePins.with.name, 'alpine-package-sha256')
+  assert.equal(alpinePins.with.path, '${{ runner.temp }}/betterman-alpine/workspace/**/alpine-package-sha256.json')
+  assert.equal(alpinePins.with['retention-days'], 14)
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_full.default, false)
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_download_only.default, false)
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_full_promote.default, false)
@@ -650,6 +806,46 @@ test('workflow wiring tests reject unsafe promotion, FreeBSD and summary mutatio
     const workflow = readWorkflow()
     mutate(workflow)
     assert.throws(() => assertWorkflowWiring(workflow))
+  }
+})
+
+test('FreeBSD VM ingest imports checkout sources so B4 policy pins are present', () => {
+  // pip installs ./ingestion without its sibling data/ directory; PopularityPolicy.load() reads the pins from there.
+  const script = readWorkflow().jobs.ingest.steps.find(step => step.id === 'freebsd').with.run
+  const exportAt = script.indexOf('export PYTHONPATH="$GITHUB_WORKSPACE/ingestion${PYTHONPATH:+:$PYTHONPATH}"')
+  assert.ok(exportAt > script.indexOf('pip install ./ingestion'))
+  assert.ok(exportAt < script.indexOf('run freebsd ingest'))
+})
+
+test('FreeBSD VM bootstrap installs the interpreter sqlite3 package when the module is missing', () => {
+  const script = readWorkflow().jobs.ingest.steps.find(step => step.id === 'freebsd').with.run
+  const python = spawnSync('python3', ['-c', 'import sys; print(sys.executable)'], { encoding: 'utf8' }).stdout.trim()
+  const version = spawnSync(python, ['-c', 'import sys; print("%d%d" % sys.version_info[:2])'], { encoding: 'utf8' }).stdout.trim()
+  const root = mkdtempSync(join(tmpdir(), 'bm-fbsd-sqlite-'))
+  try {
+    mkdirSync(join(root, 'bin'))
+    mkdirSync(join(root, 'scripts'))
+    copyFileSync(resolve('scripts/dataset-workflow.py'), join(root, 'scripts/dataset-workflow.py'))
+    writeFileSync(join(root, 'bin/pkg'), '#!/bin/sh\necho "$*" >> "$PKG_LOG"\n', { mode: 0o755 })
+    writeFileSync(join(root, 'bin/cargo'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+    writeFileSync(join(root, 'bin/python3'), `#!/bin/sh
+if [ "$1" = -c ] && [ "$2" = 'import sqlite3' ] && [ "\${HAS_SQLITE:-1}" = 0 ]; then exit 1; fi
+case "$*" in
+  -c*|scripts/dataset-workflow.py*) exec '${python.replaceAll("'", "'\\''")}' "$@" ;;
+  '-m ingestion.cli'*) echo '{"event":"ingest_done","datasetReleaseId":"freebsd-test","published":true}' ;;
+esac
+`, { mode: 0o755 })
+    for (const hasSqlite of ['0', '1']) {
+      const log = join(root, `pkg-${hasSqlite}.log`)
+      const env = { ...process.env, GITHUB_WORKSPACE: root, BETTERMAN_INGEST_SAMPLE: 'false',
+        PATH: `${join(root, 'bin')}:${process.env.PATH}`, PKG_LOG: log, HAS_SQLITE: hasSqlite }
+      const run = spawnSync('bash', ['-c', script], { cwd: root, env, encoding: 'utf8' })
+      assert.equal(run.status, 0, run.stderr + run.stdout)
+      const installs = readFileSync(log, 'utf8')
+      assert.equal(installs.includes(`install -y py${version}-sqlite3`), hasSqlite === '0', installs)
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true })
   }
 })
 

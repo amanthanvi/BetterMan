@@ -16,7 +16,7 @@ from ingestion.generated.page import PageInput
 from ingestion.generated.selector import Candidate
 
 # Keep aligned with convex/_generatedLayer.ts.
-GENERATED_CONTRACT_VERSION = 2
+GENERATED_CONTRACT_VERSION = 3
 CANDIDATE_PAGE_SIZE = 200
 INPUT_BATCH = 10
 RECORD_BATCH = 25
@@ -57,7 +57,9 @@ class GeneratedStore:
             )
         return payload
 
-    def candidates(self, *, stage: str, distro: str, section: str) -> Iterator[RemoteCandidate]:
+    def candidates(
+        self, *, stage: str, distro: str, section: str | None
+    ) -> Iterator[RemoteCandidate]:
         cursor: str | None = None
         while True:
             result = self.client.post(
@@ -77,6 +79,8 @@ class GeneratedStore:
                         section=item["section"],
                         content_sha256=item["contentSha256"],
                         source_package=item.get("sourcePackage"),
+                        indexable=item.get("indexable"),
+                        popularity_score=item.get("popularityScore"),
                     ),
                     prompt_version=item.get("promptVersion"),
                     tldr_commit=item.get("tldrCommit"),

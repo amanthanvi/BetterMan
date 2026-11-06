@@ -266,7 +266,7 @@ recorded alongside the earlier admission cases; the original browser fixture
 and all existing metric policies remain intact. Main's generated brief and
 its `{ derived, brief }` page response are retained during the rebase.
 
-The integrated man page measures five calls, 29 documents and one blob read:
+The recorded integrated man-page ceiling is five calls, 29 documents and one blob read:
 main's generated-brief lookup adds one document to the earlier derived-only
 28-document case. Symbol search remains ten documents and the explanation
 ceiling remains 66. All pre-existing metric descriptors and tolerances are
@@ -282,3 +282,61 @@ one different document and one identical hash. The default disclosure must
 contain both links; the alternate must render its own content and noindex
 metadata. Their cold function/document/blob, HTML and client-byte metrics are
 budgeted separately. Existing metric policies and baselines are preserved.
+
+The `searchClusterBare` and `searchClusterBareShort` scenarios measure `-xzf`
+and `-xf`, including all twelve brief lookups and candidate rows for every
+letter. Nine fully covering commands and six partial competitors saturate the
+runtime ceilings: five pages for three-letter clusters, seven for two letters.
+Both require tar first and enforce one call, at most forty document reads and
+zero blob reads. The implementation reserves the full brief for every cluster
+length, so a short cluster cannot exceed the same forty-read ceiling. Search
+regression queries use runtime syscall accounting to enforce that ceiling even
+when their fixture mutations require Convex's normal transaction limits.
+
+The new two-letter measurement and updated fixture hash require the existing
+`perf-budget-change` label and Budget explanation. Other workload descriptors
+and tolerances remain unchanged; ordinary search still measures two calls and
+thirty documents. Candidate source rebuilds run in debounced, generation-buffered
+background passes and do not replace the completed snapshot during measurement.
+
+## Analytics migration
+
+Vercel Web Analytics uses platform same-origin intake, removing one BetterMan
+relay function invocation per pageview and per custom event (#421). It loads only
+on the Vercel production deployment; the perf harness, previews, CI and Docker
+emit no tracker. No byte or read budget is raised by this migration. The measured
+man page uses **four calls, 26 documents and one storage read**, meeting the
+requested target. The existing `perf-budgets.json` ceiling remains **five calls,
+29 documents and one storage read**; it is an allowance, not the current measured
+cost. Analytics changes no Convex reads.
+## Translated page cases
+
+B3 (#395) adds `manTranslated` (`/man/bash/1?lang=de`) and
+`manTranslationFallback` (`/man/bash/1?lang=fr`) from the same corpus plus a
+German release with bash(1) and a French release without it. Each must render
+cold through the proxy: the German page with `lang="de"`, its note and its
+`hreflang` set; the fallback as English with the missing-translation note and
+`noindex`. Both measure 4 calls and 1 storage read, at 17 and 29 documents.
+The German page carries a finished drift build and note. Its 17 documents
+include the drift read (the English pointer, the note and the build), within
+the tightened ceiling of 17 (previously 18). The
+fixture hash changed for these rows only; every existing baseline and
+tolerance is unchanged.
+
+The translated-language miss serving English (`manTranslationFallback`) measured
+**4 calls / 29 documents / 1 storage read** through the production proxy and
+renderer. Removing the translation sitemap pipeline adds no page-view reads.
+
+Fixture **v16** combines main/#465’s saturated bare-cluster scenarios
+(`searchClusterBare` and `searchClusterBareShort`) with B3’s translated and
+missing-translation browser scenarios. Main’s existing metric policies are
+retained, alongside B3’s existing 50-byte search gzip allowance. Only the
+translated scenario baselines are re-recorded; every tolerance and unrelated
+baseline remains unchanged. Without drift, the translated case measures
+**4 calls / 14 documents / 1 storage read**; the English fallback is **4 / 29 / 1**.
+
+At the #474 tip, v16’s combined fixture includes the finished translation drift
+build and note. Its recorded translated case is **4 / 17 / 1**, with zero
+tolerance on calls, documents, and storage reads; fallback remains **4 / 29 / 1**.
+Both bare-cluster cases measure **1 / 38 / 0**, within the unchanged **1 / 40 / 0**
+budgets. The combined drift-fixture SHA-256 is `de81e551eeed9da7a3b6a894ba2f5da1c32c8e7190a3cb8529cff99e19745462`.

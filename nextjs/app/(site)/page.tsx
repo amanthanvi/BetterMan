@@ -10,6 +10,7 @@ import { tRich } from '../../lib/i18n/rich'
 import { localizedSeo } from '../../lib/i18n/seo'
 import { getI18n } from '../../lib/i18n/server'
 import { explicitDistro, explicitLang, getFirst, resolveRequestDistro, resolveRequestLang, type SearchParams } from '../../lib/requestContext'
+import { translatedLang } from '../../lib/i18n/locales'
 import { sectionsLabel } from '../../lib/sectionsLabel'
 import { bsdSectionLabel, ManSectionLabel, sectionLabel } from '../../components/man/RunningHead'
 import { SearchResultsBody } from '../../components/search/SearchResultsBody'
@@ -42,7 +43,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     Promise.all([
       fetchInfo(activeDistro),
       listSections(activeDistro),
-      q ? search({ distro: activeDistro, q, limit: HOME_RESULTS, offset: 0, brief: true }) : Promise.resolve(null),
+      q ? search({ distro: activeDistro, q, limit: HOME_RESULTS, offset: 0, brief: true, ...(translatedLang(getFirst(sp.lang)) ? { lang: translatedLang(getFirst(sp.lang)) } : {}) }) : Promise.resolve(null),
     ]),
   )
   const urlDistro = explicitDistro(sp)

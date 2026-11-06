@@ -17,7 +17,7 @@ limits and the cost model are in `docs/generated-layer.md`.
    - `BETTERMAN_GEN_RUN_CAP_USD`: ceiling per run, default `8`.
    - `BETTERMAN_GEN_RPM`: requests per minute, default `20`.
 4. Deploy Convex from `main` so `GET /ingest/generated/contract` answers
-   version 2 (the generated-layer contract; the release ingest contract is
+   version 3 (the generated-layer contract; the release ingest contract is
    separate). The CLI refuses to run against any other version.
 
 Without the secret, every run is a dry run: it reads a 50-page sample,

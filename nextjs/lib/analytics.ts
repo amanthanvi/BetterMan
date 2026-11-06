@@ -7,23 +7,21 @@ type AnalyticsEvent =
   | [name: typeof CUSTOM_EVENTS[number]]
   | [name: 'pref changed', axis: typeof PREFERENCE_AXES[number]]
 
-type PlausibleArgs = [name: string, options?: { props: { axis: string } }]
-type Plausible = ((...args: PlausibleArgs) => void) & { q?: PlausibleArgs[] }
+type AnalyticsPayload = { name: AnalyticsEvent[0]; data?: { axis: typeof PREFERENCE_AXES[number] } }
+type VercelArgs = [command: 'event', payload: AnalyticsPayload]
 
 declare global {
   interface Window {
-    plausible?: Plausible
+    va?: (...args: VercelArgs) => void
+    vaq?: VercelArgs[]
   }
 }
 
 export function trackEvent(...[name, axis]: AnalyticsEvent): void {
   try {
     if (typeof window === 'undefined') return
-    const plausible = window.plausible ??= Object.assign(
-      (...args: PlausibleArgs) => { plausible.q?.push(args) },
-      { q: [] as PlausibleArgs[] },
-    )
-    plausible(name, axis ? { props: { axis } } : undefined)
+    window.va ??= (...args: VercelArgs) => { (window.vaq ??= []).push(args) }
+    window.va('event', axis ? { name, data: { axis } } : { name })
   } catch {
     // Analytics must never interrupt the interaction.
   }

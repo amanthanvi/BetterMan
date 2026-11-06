@@ -304,6 +304,70 @@ def test_archive_publisher_uses_bounded_pipeline_and_declares_every_provider(
     assert any(path == "activate" for path, _ in calls)
 
 
+def test_debian_publisher_uploads_notices_over_one_mib_whole(archive_workspace, monkeypatch):
+    # Full Debian ships notices over Convex's 1 MiB document limit (libboost1.83-tools-dev is
+    # about 2.2 MB); they go through the stored-notice path untruncated, like the B2 distros.
+    import json
+
+    from ingestion import debian_publish
+    from ingestion.debian_indexes import PINS
+
+    obj = archive_workspace
+    obj.pins = {
+        **json.loads(PINS.read_text()),
+        "mirror": "https://example.test/snapshot",
+        "releaseSha256": "a" * 64,
+    }
+    notice = "L" * (2200 * 1024)
+    monkeypatch.setattr(debian_publish, "copyright_text", lambda *_args: notice)
+    monkeypatch.setenv("BETTERMAN_INGEST_WORKERS", "1")
+    calls = []
+
+    class Client:
+        def post(self, path, payload):
+            calls.append((path, payload))
+            if path == "/ingest/pages/storage":
+                return {"inserted": len(payload["pages"]), "skipped": 0}
+            return {}
+
+    debian_publish.publish_workspace(
+        obj, Client(), activate=False, dataset_stage="staging", git_sha="test", sample=True
+    )
+    texts = [
+        license["licenseText"]
+        for path, payload in calls
+        if path == "/ingest/licenses"
+        for license in payload["licenses"]
+    ]
+    assert texts and all(text == notice for text in texts)
+
+
+def test_full_debian_and_ubuntu_require_deployed_stored_notice_support(monkeypatch):
+    from ingestion import debian_publish
+
+    for distro, acquisitions in [("debian", []), ("ubuntu", ["ubuntu-deb-extraction"])]:
+        contract = {"acquisitions": acquisitions, "storedLicenseText": False}
+        monkeypatch.setattr(
+            debian_publish,
+            "ConvexIngestClient",
+            lambda *_, contract=contract: type(
+                "Client", (), {"require_deployed_contract": lambda _self: contract}
+            )(),
+        )
+        monkeypatch.setattr(
+            debian_publish, "Workspace", lambda *a, **kw: pytest.fail("must not acquire")
+        )
+        with pytest.raises(RuntimeError, match="stored-license support"):
+            debian_publish.ingest_debian(
+                activate=False,
+                convex_url="unused",
+                ingest_secret="unused",
+                dataset_stage="staging",
+                git_sha="test",
+                distro=distro,
+            )
+
+
 def test_contract_failure_precedes_archive_acquisition(monkeypatch):
     from ingestion import debian_publish
     from ingestion.convex_client import ConvexContractError
@@ -488,6 +552,74 @@ def test_selected_traversal_member_is_rejected_without_filesystem_links(tmp_path
     with pytest.raises(ValueError, match="Unsafe"):
         extract(archive, package("gawk"), tmp_path)
     assert not (tmp_path / "outside").exists()
+
+
+def test_deb_symlink_targets_stop_at_the_root_and_escaping_doc_links_stay_blocked(tmp_path):
+    import tarfile
+
+    tar_bytes = io.BytesIO()
+    with tarfile.open(fileobj=tar_bytes, mode="w") as tar:
+        for name, target in [
+            ("usr/bin/awk-extra", "../../../usr/bin/gawk"),
+            ("usr/share/man/man1/escape.1.gz", "../../../../../etc/passwd"),
+            ("usr/share/man/man1/absolute.1.gz", "/../../usr/share/man/man1/gawk.1.gz"),
+        ]:
+            member = tarfile.TarInfo(name)
+            member.type, member.linkname = tarfile.SYMTYPE, target
+            tar.addfile(member)
+
+    def ar_member(name, data):
+        return (
+            f"{name:<16}{0:<12}{0:<6}{0:<6}{'100644':<8}{len(data):<10}`\n".encode()
+            + data
+            + (b"\n" if len(data) % 2 else b"")
+        )
+
+    archive = tmp_path / "links.deb"
+    archive.write_bytes(
+        b"!<arch>\n"
+        + ar_member("debian-binary", b"2.0\n")
+        + ar_member("data.tar", tar_bytes.getvalue())
+    )
+    entries = extract(archive, package("gawk"), tmp_path)
+    links = {path: (kind, target) for _pkg, path, kind, target, _digest in entries}
+    assert links["usr/bin/awk-extra"] == ("binary-link", "usr/bin/gawk")
+    assert links["usr/share/man/man1/escape.1.gz"] == ("blocked", "etc/passwd")
+    assert links["usr/share/man/man1/absolute.1.gz"] == ("link", "usr/share/man/man1/gawk.1.gz")
+    assert all(not p.is_symlink() for p in tmp_path.rglob("*"))
+    assert not (tmp_path / "etc").exists()
+
+
+@pytest.mark.parametrize(
+    "path,linkname,symbolic,expected",
+    [
+        ("usr/bin/a", "../../../usr/bin/b", True, "usr/bin/b"),
+        ("usr/bin/a", "/../../usr/bin/b", True, "usr/bin/b"),
+        ("usr/share/man/man1/a.1", "b.1", True, "usr/share/man/man1/b.1"),
+        ("usr/share/man/man1/a.1", "./usr/share/man/man1/b.1", False, "usr/share/man/man1/b.1"),
+    ],
+)
+def test_link_target_resolves_like_the_kernel(path, linkname, symbolic, expected):
+    from ingestion.debian_indexes import link_target
+
+    assert link_target(path, linkname, symbolic=symbolic) == expected
+
+
+@pytest.mark.parametrize(
+    "linkname,symbolic",
+    [
+        ("../../../../etc/passwd", False),
+        ("usr/../../x", False),
+        ("usr/bin/a\\b", True),
+        ("usr/bin/a\x00b", True),
+        ("usr/bin/a\nb", True),
+    ],
+)
+def test_link_target_still_fails_closed(linkname, symbolic):
+    from ingestion.debian_indexes import link_target
+
+    with pytest.raises(ValueError, match="Unsafe"):
+        link_target("usr/bin/a", linkname, symbolic=symbolic)
 
 
 def test_missing_cross_package_targets_acquire_only_the_indexed_owner(

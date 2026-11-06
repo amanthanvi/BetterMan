@@ -1,0 +1,227 @@
+{
+  "distro": "arch",
+  "scope": "local, no upload; all curated-route index competitors",
+  "pinsSha256": "aa37b0651f7103a73f9ea0b8f8743449d6b605bfb6de4163ffed8134b190b0ca",
+  "fullPackages": 3714,
+  "fullArchiveBytes": 18459361278,
+  "fullArchiveMaxBytes": 3290190315,
+  "samplePackages": 31,
+  "acquiredPackages": 33,
+  "downloadedBytes": 170330327,
+  "archiveFallbacks": 14,
+  "indexSeconds": 20.356067541986704,
+  "acquireSeconds": 20.487965625012293,
+  "parseSeconds": 68.86219066602644,
+  "licenseSeconds": 0.680248791933991,
+  "pages": 6842,
+  "providers": 7,
+  "aliases": 7484,
+  "sourceBytes": 23938532,
+  "spoolBytes": 204288000,
+  "parentPeakRssBytes": 280510464,
+  "childPeakRssBytes": 191774720,
+  "commandOwners": {
+    "groff": "groff",
+    "bash": "bash",
+    "coreutils": "coreutils",
+    "util-linux": "util-linux",
+    "findutils": "findutils",
+    "grep": "grep",
+    "sed": "sed",
+    "gawk": "gawk",
+    "curl": "curl",
+    "wget": "wget",
+    "openssh": "openssh",
+    "rsync": "rsync",
+    "openbsd-netcat": "openbsd-netcat",
+    "tar": "tar",
+    "systemd": "systemd",
+    "vim": "vim",
+    "less": "less",
+    "git": "git",
+    "make": "make",
+    "gcc": "gcc",
+    "gdb": "gdb",
+    "nginx": "nginx",
+    "apache": "apache",
+    "openssl": "openssl",
+    "python": "python",
+    "perl": "perl",
+    "iproute2": "iproute2",
+    "procps-ng": "procps-ng"
+  },
+  "parseFailures": [],
+  "unresolved": [],
+  "unsupportedRoutes": [],
+  "verifiedLicenses": 29,
+  "maxLicenseBytes": 116375,
+  "packagesWithoutLicenseText": [
+    "grep",
+    "make",
+    "procps-ng"
+  ],
+  "packages": [
+    {
+      "name": "apache",
+      "sha256": "9b0ebab03d957e319cd36f8ac1679e2203b9778c56ac2a7d45f538aed320ad62",
+      "bytes": 1805065
+    },
+    {
+      "name": "bash",
+      "sha256": "73a67dc509ed4a6dd64e4c7eca2895643f48083940f49431782ce78c4d4619e1",
+      "bytes": 2001850
+    },
+    {
+      "name": "coreutils",
+      "sha256": "9196947f860144b5bf4dbe5079e8a1d38ea3080fdb83cae96294d1e83681c6eb",
+      "bytes": 3075958
+    },
+    {
+      "name": "curl",
+      "sha256": "60b5c0ccc169cf1e36c95a5b2cab79d73c1490715e6b122828a9590fd2fcfc1c",
+      "bytes": 1363193
+    },
+    {
+      "name": "findutils",
+      "sha256": "76ac56a7f03039d163306701e5c02777b9b7170ad5388e66e46c363dd2792edf",
+      "bytes": 539114
+    },
+    {
+      "name": "gawk",
+      "sha256": "875761229b80b29078cd1fafc35a07add9ac4c2dbb9a429bd0b72ddcc14a31bd",
+      "bytes": 1553071
+    },
+    {
+      "name": "gcc",
+      "sha256": "1d79371ccf3138e3c172dd83b51560687b65ab824c1ad7e9cb41b7857ed9c55f",
+      "bytes": 60743018
+    },
+    {
+      "name": "gdb",
+      "sha256": "df58d8324b737daa8d300c0669af45a9cbcff5b4a0f6bffe4bfbbfa10aac5ff8",
+      "bytes": 8577127
+    },
+    {
+      "name": "git",
+      "sha256": "2da35402982c74083251b56bb04ee53bc14377dcc58cbb7e8682f1980beaee83",
+      "bytes": 7788783
+    },
+    {
+      "name": "grep",
+      "sha256": "9dd8a5dad99e8d388b1fb1406919de218d30c7e49924f615a12d3f2deaaecfe2",
+      "bytes": 241270
+    },
+    {
+      "name": "groff",
+      "sha256": "eadef618a9e22a72c657efeb923e8f6991161842d4ac30540dc5d4f29ae57228",
+      "bytes": 2513494
+    },
+    {
+      "name": "gvim",
+      "sha256": "ffe126f3952de0758d3bf047794574a6eeeea201c3b3ddfdbc18b92f67bcbf6e",
+      "bytes": 2827062
+    },
+    {
+      "name": "iproute2",
+      "sha256": "cc112560ce18eba5b0b1da01847e1ec10a823ce56cdf897eb00ab12d6f02b083",
+      "bytes": 1243859
+    },
+    {
+      "name": "less",
+      "sha256": "77cad584d9844c93ee587e36034a7c01321f8fb19c54e82b6736e56260ff8cd6",
+      "bytes": 172837
+    },
+    {
+      "name": "make",
+      "sha256": "b03efac9175b986a5f29302336fb1271874464644de3191e6a40079eb8cc5276",
+      "bytes": 529562
+    },
+    {
+      "name": "man-pages",
+      "sha256": "1f97d7fb1acc29455b969dfc113a99f55cb4cb5076b6ce795f2369e97c42eb2d",
+      "bytes": 5955752
+    },
+    {
+      "name": "nginx",
+      "sha256": "886dc8a06f65459bff3338ceed09f29b77cfb57aade4e9c1cbbc7815d95cfa83",
+      "bytes": 673830
+    },
+    {
+      "name": "nginx-mainline",
+      "sha256": "e1ac67e160970f97ebcef001a639567b243b0a7498c45d50e4af74338de779d3",
+      "bytes": 696131
+    },
+    {
+      "name": "openbsd-netcat",
+      "sha256": "23b0433361b6b906b2a51cdf19282fcd9a57743bd22c54d425826edb3c3585fb",
+      "bytes": 26139
+    },
+    {
+      "name": "openssh",
+      "sha256": "7095495592ec579541478fb82dc0c0038f3b9da8adc774ffe1a1589004432992",
+      "bytes": 1493386
+    },
+    {
+      "name": "openssl",
+      "sha256": "be0a07ef3d8ffa878732b138e98dee26559527212cb941fc5f6c282545c787cc",
+      "bytes": 5783344
+    },
+    {
+      "name": "perl",
+      "sha256": "1f2f64d0c4c6c117ea814a2144cb9b22a93e2462e9a7773db2e982a68e378816",
+      "bytes": 21482129
+    },
+    {
+      "name": "procps-ng",
+      "sha256": "7a0b17ee89ad1a04f7c6c86be69c9c816ac2c14da9648dfdefb7ccf4b22c14d3",
+      "bytes": 1023957
+    },
+    {
+      "name": "python",
+      "sha256": "8a350ce53aae01ae687f043b301931e411bf06333ba480b42b3b5432a0e6c79b",
+      "bytes": 14184166
+    },
+    {
+      "name": "rsync",
+      "sha256": "15d025602074af0cc2c735c8034f21e42ef80ac4a4252542574e5887adf859f4",
+      "bytes": 435290
+    },
+    {
+      "name": "sed",
+      "sha256": "90733f34fe5791b554b935998df858350bcea53061257dba06829ce3533f8e01",
+      "bytes": 220815
+    },
+    {
+      "name": "systemd",
+      "sha256": "6a66944f081cbd190ed0a63bb7be8dae35d9c246dd7248a40b63e66977695f9d",
+      "bytes": 11195406
+    },
+    {
+      "name": "tar",
+      "sha256": "e8a3baa1b4bd754442f92c1c25794b9225700f931e1d2c175bb2e7d9a28725e7",
+      "bytes": 783624
+    },
+    {
+      "name": "util-linux",
+      "sha256": "95b7096bf4b45274645f6bb96f5b5508af6ea80e5fccba29244abaa53a341962",
+      "bytes": 6684541
+    },
+    {
+      "name": "vim",
+      "sha256": "b354f8141dddb0f8ac24cac45a0bb0492641dcfd472549934730152c16bd9f78",
+      "bytes": 2654520
+    },
+    {
+      "name": "wget",
+      "sha256": "b13fda4c67cf71c8a913e0109dc6bd42cca0ac5562e165db2a63885e42c42217",
+      "bytes": 721480
+    }
+  ],
+  "fallbackReasonsIncludingIndexes": {
+    "short_body": 2,
+    "oversize": 1,
+    "http_404": 14
+  },
+  "cacheScope": "fresh isolated BETTERMAN_ARCH_CACHE_DIR; indexes also downloaded cold",
+  "projectedLocalAcquisitionMinutes": 37.00601120035688
+}

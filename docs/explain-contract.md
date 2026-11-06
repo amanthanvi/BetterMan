@@ -250,7 +250,7 @@ such entries an older worker kept. Sentry never carries their values:
 `PRIVATE_QUERY_PARAMS` in `lib/sentryScrub.ts` (`cmd`, `q`, `name`) feeds every
 `dataCollection` deny list and the scrubber, which redacts each value to the
 next unencoded `&` or `#` (and inside percent-encoded nested URLs) in every
-outgoing event, transaction, span and breadcrumb (`beforeSend`, `beforeSendTransaction`, `beforeSendSpan`,
+outgoing event, span and breadcrumb (`beforeSend`, `beforeSendSpan`,
 `beforeBreadcrumb`) and in each envelope's header (the trace context's
 `transaction`), in all three Sentry configs.
 

@@ -56,30 +56,27 @@ is deferred; it is not claimed as a zero-read path.
 
 ## SEO and caches
 
-Distinct alternate manuals keep their validated `?pkg=` self-canonical, but are
-**noindex** until a later demand tier explicitly promotes them. An alternate whose
-`contentSha256` equals the winner’s canonicalizes to the clean URL. The winner’s
-own `?pkg=` URL also canonicalizes clean. Missing provider metadata canonicalizes
-clean, including curated releases and pre-deploy cached responses; the persistent
-page cache moved from v4 to v5 so old responses are discarded. Alternates remain
-outside the sitemap, which reads only canonical `manPages` rows.
+B4 combines ingest-time demand with provider identity in one `page.indexable`
+flag. A page is indexable only when its demand tier qualifies AND it is not a
+provider alternate. Unscored releases retain legacy indexing for canonical rows;
+all provider alternates stay noindex, including identical-content alternates.
+The provider marker is internal; no extra release or page read is added.
 
-Every alternate row currently carries `indexable: false`, including identical
-content alternates. HTML emits meta robots; text, JSON (including metadata), and
-OG responses set `X-Robots-Tag: noindex` from that same selected row. Winners keep
-their existing index tier. Debian’s canonical omits `distro`; other distros retain
-it. Plain-text canonical headers and share images use `manCanonicalPath` too. The
-default package link points directly to the clean URL.
+HTML emits meta robots and `X-Robots-Tag: noindex`; text, JSON (including metadata)
+and OG emit the same header from that selected row. Noindex pages omit HTML
+canonical links and text canonical Link headers: no canonical declaration points
+to a noindex page. This supersedes B10's initial alternate self-canonical policy.
+Indexable winners retain their clean canonical; Debian omits `distro`, other
+distros retain it. Share images and canonical paths still use `manCanonicalPath`.
+The default package link points directly to the clean URL. Alternates remain
+outside the sitemap, which reads only canonical `manPages` rows, filtered by B4.
 
-**B4 / #445 integration:** B4’s `pageIsIndexable` already returns false for provider
-rows and must remain the source of their index tier when it lands after Nov 1.
-There is an expected textual conflict on the plain-text success response. Whichever
-PR merges second must keep `manCanonicalPath` for the Link header and base
-`X-Robots-Tag` on the same selected row used for HTML. #462 merged during the follow-up and is now rebased into this branch. Its trusted
-proxy-release arguments and private mismatch headers are preserved alongside
-`manCanonicalPath` and row-based robots. A regression asserts all three headers
-on a mismatched alternate answer. Its real promotion/rollback test is run
-separately against this worktree’s local deployment.
+**B4 / #445 integration:** the page-data cache is **v7** to discard old B4/B10
+response shapes. #462's trusted proxy release, authenticated unknown marker/null
+key and private mismatch headers are preserved. Regressions cover both scored
+and unscored providers, same/different content, all representations, and omission
+of canonical declarations on noindex pages. The real text promotion/rollback
+regression runs separately against the dedicated local deployment.
 
 The CDN rewrite already preserves `pkg` alongside distro and the answering release;
 unit coverage now explicitly asserts it. The persistent content cache already

@@ -1,6 +1,8 @@
+import { pageIsIndexable } from "./_indexPolicy";
 import type { Doc } from "./_generated/dataModel";
 import type { PageDerivedResponse } from "./_derivedEncoding";
 import type { ManPageBrief } from "./_generatedLayer";
+import type { PageTranslationDrift } from "./translationDrift";
 
 export const DISTROS = [
   "debian",
@@ -101,11 +103,11 @@ export type ManProviders = { packages: string[]; defaultPackage: string | null; 
 
 export function pageResponse(
   release: Doc<"datasetReleases">,
-  page: Pick<Doc<"manPages">, "externalId" | "name" | "section" | "title" | "description" | "sourcePackage" | "sourcePackageVersion" | "hasParseWarnings"> & { indexable?: boolean },
+  page: Pick<Doc<"manPages">, "externalId" | "name" | "section" | "title" | "description" | "sourcePackage" | "sourcePackageVersion" | "hasParseWarnings"> & { indexable?: boolean; popularityScore?: number; providerOnly?: boolean },
   content: ManPageContentPayload,
   variants: Array<{ distro: string; datasetReleaseId: string; contentSha256: string }>,
   // Enrichment beside the upstream content, each part optional and independent.
-  extras: { derived?: PageDerivedResponse | null; brief?: ManPageBrief | null; providers?: ManProviders | null } = {},
+  extras: { derived?: PageDerivedResponse | null; brief?: ManPageBrief | null; providers?: ManProviders | null; drift?: PageTranslationDrift | null; driftPending?: boolean } = {},
 ) {
   const doc = parseJsonField(content.docJson);
   const contentPayload: Record<string, unknown> =
@@ -119,7 +121,6 @@ export function pageResponse(
 
   return {
     page: {
-      ...(page.indexable === false ? { indexable: false } : {}),
       id: page.externalId,
       locale: release.locale,
       distro: release.distro,
@@ -131,12 +132,16 @@ export function pageResponse(
       sourcePackageVersion: page.sourcePackageVersion ?? null,
       datasetReleaseId: release.datasetReleaseId,
       hasParseWarnings: page.hasParseWarnings,
+      indexable: release.locale === "en" && pageIsIndexable(release, page),
+      popularityScore: page.popularityScore ?? 0,
     },
     content: contentPayload,
     variants,
     ...(extras.derived ? { derived: extras.derived } : {}),
     brief: extras.brief ?? null,
     providers: extras.providers ?? null,
+    ...(extras.drift ? { translationDrift: extras.drift } : {}),
+    ...(extras.driftPending ? { translationDriftPending: true } : {}),
   };
 }
 

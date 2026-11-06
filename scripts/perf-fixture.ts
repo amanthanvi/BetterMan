@@ -4,6 +4,7 @@ import schema from '../convex/schema'
 import { internal } from '../convex/_generated/api'
 import { persistOptionSignature } from '../convex/_derivedInputs'
 import { serializeStoredPayload } from '../convex/_storedPayload'
+import { syncFlagCandidates } from '../convex/_flagSearch'
 import { optionFlagRows } from '../convex/_optionFlags'
 import { instrumentModules } from './perf-metrics.mjs'
 import { actionGeneric, makeFunctionReference, queryGeneric } from 'convex/server'
@@ -130,6 +131,50 @@ export async function createProviderFixture(onCall: () => void) {
       await ctx.db.insert('manPageProviders', { releaseId: active.releaseId, datasetReleaseId: active.datasetReleaseId,
         externalId: pkg, name: 'bash', section: '1', title: page.title, description: page.description,
         sourcePath: `/fixture/${pkg}/bash.1`, sourcePackage: pkg, contentSha256: hash, hasParseWarnings: false, blobId })
+    }
+  })
+  return t
+}
+
+// Translated releases (#395) beside the unchanged corpus: German has bash(1),
+// French has a release without it, so `?lang=fr` measures the English fallback.
+export async function createTranslationFixture(onCall: () => void) {
+  const t = await createFixture(onCall)
+  await t.run(async ctx => {
+    const english = (await ctx.db.query('activeReleases').withIndex('by_stage_and_locale_and_distro', q =>
+      q.eq('stage', 'prod').eq('locale', 'en').eq('distro', 'debian')).unique())!
+    const englishBash = (await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q =>
+      q.eq('releaseId', english.releaseId).eq('name', 'bash').eq('section', '1')).unique())!
+    const content = (await ctx.db.query('manPageContents').withIndex('by_pageId', q => q.eq('pageId', englishBash._id)).unique())!
+    const blob = (await ctx.db.get(content.blobId!))!
+    const payload = JSON.parse(await (await ctx.storage.get(blob.storageId!))!.text())
+    for (const [locale, name] of [['de', 'bash'], ['fr', 'tar01']] as const) {
+      const datasetReleaseId = `2026-10-30+perf-v1-debian-${locale}`
+      const releaseId = await ctx.db.insert('datasetReleases', {
+        datasetReleaseId, distro: 'debian', locale, imageRef: 'fixture', imageDigest: 'fixture',
+        ingestedAt: '2026-10-30T00:00:00Z', pageCount: 1, sealed: true, manifestVerified: true,
+      })
+      await ctx.db.insert('activeReleases', { stage: 'prod', locale, distro: 'debian', releaseId, datasetReleaseId, activatedAt: '2026-10-30T00:00:00Z' })
+      const contentSha256 = `fixture-${locale}-${name}`
+      const doc = JSON.parse(payload.content.docJson)
+      doc.blocks.unshift({ type: 'paragraph', inlines: [{ type: 'text', text: `Übersetzte Handbuchseite (${locale}).` }] })
+      const storageId = await ctx.storage.store(new Blob([serializeStoredPayload(contentSha256, { ...payload.content, docJson: JSON.stringify(doc) })]))
+      const pageId = await ctx.db.insert('manPages', {
+        releaseId, datasetReleaseId, externalId: `debian-${locale}-${name}`, locale, distro: 'debian', name, section: '1', sitemapPage: 1,
+        title: `${name}(1)`, description: 'GNU Bourne-Again SHell (übersetzt)', sourcePath: `/fixture/${locale}/${name}.1`,
+        sourcePackage: `manpages-${locale}`, sourcePackageVersion: '4.27.0-1', contentSha256, hasParseWarnings: false, documentedVersion: 'GNU bash 5.2',
+      })
+      const blobId = await ctx.db.insert('manPageContentBlobs', { contentSha256, storageId })
+      await ctx.db.insert('manPageContents', { pageId, blobId, contentSha256 })
+      // A finished drift build with a note on German bash(1): the drift read's full cost (#395).
+      await ctx.db.insert('translationDriftBuilds', {
+        releaseId, englishReleaseId: english.releaseId, cursor: null, scanned: 1, drifted: locale === 'de' ? 1 : 0, done: true, updatedAt: 0,
+      })
+      if (locale === 'de') {
+        await ctx.db.insert('manPageTranslationDrift', {
+          releaseId, pageId, englishReleaseId: english.releaseId, documented: '5.2', english: '5.3', older: true, missingFlags: ['--debugger'], missingCount: 1,
+        })
+      }
     }
   })
   return t
@@ -282,6 +327,43 @@ export async function createExplainMultiFixture(onCall: () => void) {
     }
     const bash=(await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section',q=>q.eq('releaseId',git.releaseId).eq('name','bash')).first())!
     for(let i=0;i<4;i++) await ctx.db.insert('manPageSymbols',{releaseId:git.releaseId,pageId:bash._id,name:'bash',section:'1',title:'bash(1)',description:'Syntax',term:'shell:pipeline',termNorm:'shell:pipeline',anchorId:`pipeline${i}`,excerpt:'Pipeline',kind:'shell'})
+  })
+  return t
+}
+
+// Worst-case bare-cluster workload: nine covering candidates, crowded -x, and all 12 brief lookups.
+export async function createBareSearchFixture(onCall: () => void) {
+  const t = await createSearchFixture(onCall)
+  await t.run(async ctx => {
+    const active = await ctx.db.query('activeReleases').withIndex('by_stage_and_locale_and_distro', q => q.eq('stage', 'prod').eq('locale', 'en').eq('distro', 'debian')).unique()
+    const { releaseId } = active!
+    await ctx.db.patch(releaseId, { flagSearchReady: true })
+    const tar = await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', releaseId).eq('name', 'tar')).unique()
+    const extra = Array.from({ length: 9 }, (_, i) => `--fixture-${i}`)
+    for (const flag of extra) await ctx.db.insert('manPageOptionFlags', { releaseId, pageId: tar!._id, nameNorm: 'tar', section: '1', flag, flags: flag, anchorId: flag.slice(2) })
+    const verifiedFlagUsage = ['-x', '-z', '-f', ...extra].map(flag => ({ flag, count: flag.length === 2 ? 10 : 1, source: 'tldr' as const }))
+    await ctx.db.patch(tar!._id, { popularityScore: 5470, verifiedFlagUsage })
+    await syncFlagCandidates(ctx, { ...tar!, popularityScore: 5470, verifiedFlagUsage })
+    for (let i = 0; i < 8; i++) {
+      const name = `covering-${i}`
+      const pageId = await ctx.db.insert('manPages', { releaseId, datasetReleaseId: tar!.datasetReleaseId, externalId: name,
+        locale: 'en', distro: 'debian', name, section: '1', sitemapPage: 1, title: name, description: name,
+        sourcePath: name, contentSha256: name, hasParseWarnings: false, popularityScore: 5470,
+        verifiedFlagUsage: ['-x', '-z', '-f'].map(flag => ({ flag, count: 1, source: 'tldr' as const })) })
+      for (const row of optionFlagRows([{ flags: '-x', anchorId: 'x' }, { flags: '-z', anchorId: 'z' }, { flags: '-f', anchorId: 'f', argument: 'FILE' }])) {
+        await ctx.db.insert('manPageOptionFlags', { releaseId, pageId, nameNorm: name, section: '1', ...row })
+      }
+      await syncFlagCandidates(ctx, (await ctx.db.get(pageId))!)
+    }
+    const grep = await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', releaseId).eq('name', 'grep')).unique()
+    for (const flag of ['-x', '-z', '-f']) await ctx.db.insert('manPageOptionFlags', { releaseId, pageId: grep!._id, nameNorm: 'grep', section: '1', flag, flags: flag, anchorId: flag.slice(1), ...(flag === '-f' ? { takesArgument: true } : {}) })
+    await ctx.db.patch(grep!._id, { popularityScore: 5470 })
+    for (let i = 0; i < 6; i++) {
+      const name = `a-crowded-${i}`
+      const pageId = await ctx.db.insert('manPages', { releaseId, datasetReleaseId: grep!.datasetReleaseId,
+        externalId: name, locale: 'en', distro: 'debian', name, section: '1', sitemapPage: 1, title: name, description: name, sourcePath: name, contentSha256: name, hasParseWarnings: false, popularityScore: 5470 })
+      await ctx.db.insert('manPageOptionFlags', { releaseId, pageId, nameNorm: name, section: '1', flag: '-x', flags: '-x', anchorId: 'x' })
+    }
   })
   return t
 }

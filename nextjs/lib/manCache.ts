@@ -11,6 +11,8 @@ import type { ServerResponse } from 'node:http'
 export const MAN_PAGE_CACHE = 'public, s-maxage=3600, stale-while-revalidate=86400'
 /** A miss can become a page when a release adds it, so it is kept for less time. */
 export const MAN_MISS_CACHE = 'public, s-maxage=600, stale-while-revalidate=3600'
+/** A translated page whose drift note is still being computed (#395): kept a minute, not an hour. */
+export const MAN_PENDING_CACHE = 'public, s-maxage=60, stale-while-revalidate=60'
 /** Responses that depend on the requester (rate-limited suggestions) or carry no release key. */
 export const MAN_PRIVATE_CACHE = 'private, no-store'
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { ConvexHttpClient } from 'convex/browser'
-import { anyApi as api } from 'convex/server'
+import { pathToFileURL } from 'node:url'
+let api
 
 const VALID_DISTROS = new Set(['debian', 'ubuntu', 'fedora', 'arch', 'alpine', 'freebsd', 'macos'])
 
@@ -17,6 +17,7 @@ Optional:
   BETTERMAN_EXPECTED_RELEASE_IDS='{"debian":"<datasetReleaseId>"}'
   BETTERMAN_MIN_PAGE_COUNT=1
   BETTERMAN_CHECK_JSON=1
+  BETTERMAN_CHECK_RANKING=seed  # fatal tar-first assertions only for the E2E seed
 `)
 }
 
@@ -88,6 +89,26 @@ function hasGoldenPage(results, golden) {
   return results.some((result) => result.name === golden.name && result.section === golden.section)
 }
 
+// Corpus ranking is advisory at deploy/promotion: a data refresh must not strand the frontend.
+// Seed mode is explicit and fatal; the original availability/content goldens remain fatal in every mode.
+export async function checkRanking(client, distro, strict = false) {
+  const failures = [], warnings = []
+  const issues = strict ? failures : warnings
+  if (distro !== 'debian') return { failures, warnings }
+  for (const q of ['how do I extract a tarball', 'extract a tar archive', 'extract tarball', '--extract', '-xzf']) {
+    try {
+      const result = await client.query('queries:search', { distro, q, section: null, limit: 5, offset: 0 })
+      const candidates = result.results.slice(0, strict ? 1 : 3)
+      if (!candidates.some(hit => hit.name === 'tar' && hit.section === '1')) {
+        issues.push(`ranking search ${q} did not place tar(1) in ${strict ? 'first place' : 'the top 3'}`)
+      }
+    } catch (error) {
+      issues.push(`ranking search ${q} failed: ${error.message}`)
+    }
+  }
+  return { failures, warnings }
+}
+
 async function checkDistro(client, { distro, minPageCount, expectedReleaseId }) {
   const failures = []
   const golden = GOLDEN_CHECKS[distro]
@@ -117,6 +138,9 @@ async function checkDistro(client, { distro, minPageCount, expectedReleaseId }) 
   } catch (error) {
     failures.push(`golden search ${golden.query} failed: ${error.message}`)
   }
+
+  const ranking = await checkRanking(client, distro, process.env.BETTERMAN_CHECK_RANKING === 'seed')
+  failures.push(...ranking.failures)
 
   let page = null
   try {
@@ -182,6 +206,7 @@ async function checkDistro(client, { distro, minPageCount, expectedReleaseId }) 
     metadataTitle: metadata?.page?.title ?? null,
     ok: failures.length === 0,
     failures,
+    rankingWarnings: ranking.warnings,
   }
 }
 
@@ -199,6 +224,9 @@ async function main() {
   const distros = parseDistros()
   const minPageCount = parseMinPageCount()
   const expectedReleaseIds = parseExpectedReleaseIds(distros)
+  const { ConvexHttpClient } = await import('convex/browser')
+  const { anyApi } = await import('convex/server')
+  api = anyApi
   const client = new ConvexHttpClient(convexUrl)
   const releases = await client.query(api.queries.listSeoReleases, {})
   const activeDistros = new Set(releases.items.map((item) => item.distro))
@@ -243,13 +271,14 @@ async function main() {
         `${status} ${result.distro} release=${result.datasetReleaseId ?? 'none'} pages=${result.pageCount} golden=${result.goldenQuery ?? 'none'} expected=${result.goldenExpected ?? 'none'} top=${result.goldenTop ?? 'none'}`,
       )
       for (const failure of result.failures) console.log(`  - ${failure}`)
+      for (const warning of result.rankingWarnings ?? []) console.log(`  ranking advisory: ${warning}`)
     }
   }
 
   return payload.ok ? 0 : 1
 }
 
-main()
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main()
   .then((code) => {
     process.exitCode = code
   })

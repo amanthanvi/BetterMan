@@ -6,8 +6,8 @@ import { ingestClientError } from "./_ingestErrors";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { packOptionSignature } from "./_derivedInputs";
 import { optionFlagRows } from "./_optionFlags";
-import { MANIFEST_CONTENT_TYPE } from "./_manifestStorage";
-import { INGEST_CONTRACT } from "./ingestContract";
+import { LICENSE_CONTENT_TYPE, MANIFEST_CONTENT_TYPE } from "./_manifestStorage";
+import { INGEST_CONTRACT, INGEST_CONTRACT_HEADER } from "./ingestContract";
 import { canonicalJson } from "./ingest";
 import { releaseAcquisition } from "./_releaseManifest";
 import { GENERATED_CONTRACT, GENERATED_LIMITS, generationDoc } from "./_generatedLayer";
@@ -42,14 +42,16 @@ async function requireIngestSecret(req: Request): Promise<Response | null> {
   return null;
 }
 
-function ingestAction(handler: (ctx: ActionCtx, body: unknown) => Promise<Response>, requireContract = false) {
+function ingestAction(handler: (ctx: ActionCtx, body: unknown) => Promise<Response>, requireContract = true) {
   return httpAction(async (ctx, req) => {
     const auth = await requireIngestSecret(req);
     if (auth) return auth;
-    // Fence old in-flight workflows as well as new callers' preflight reads.
-    // The CAS field remains optional for manual operators using this contract.
-    if (requireContract && req.headers.get("x-betterman-ingest-contract") !== String(INGEST_CONTRACT.schemaVersion)) {
-      return jsonResponse({ error: { code: "INGEST_CONTRACT_MISMATCH", message: `Promotion requires ingest contract v${INGEST_CONTRACT.schemaVersion}; use the matching workflow/client and deploy Convex first.` } }, 409);
+    // Every release-contract request names the exact contract it was written
+    // for, so an older or newer client (or workflow) stops before any read or
+    // write, the way the client stops on an older or newer deployment. A shared
+    // feature subset is not enough: two contracts may name the same fields.
+    if (requireContract && req.headers.get(INGEST_CONTRACT_HEADER) !== String(INGEST_CONTRACT.schemaVersion)) {
+      return jsonResponse({ error: { code: "INGEST_CONTRACT_MISMATCH", message: `This deployment serves ingest contract v${INGEST_CONTRACT.schemaVersion}; use the matching workflow/client and deploy Convex first.` } }, 409);
     }
     let body: unknown;
     try {
@@ -215,8 +217,35 @@ http.route({
   path: "/ingest/licenses",
   method: "POST",
   handler: ingestAction(async (ctx, body) => {
-    const result = await ctx.runMutation(internal.ingest.insertLicenses, body as never);
-    return jsonResponse(result);
+    const input = body as { datasetReleaseId: string; licenses: Array<Record<string, unknown>> };
+    if (!input || !Array.isArray(input.licenses) || input.licenses.length > 100) throw new Error("INVALID_INGEST_PAYLOAD");
+    const created: Array<Id<"_storage">> = [];
+    let committed = false;
+    try {
+      const licenses = [];
+      for (const license of input.licenses) {
+        if (!license || typeof license !== "object" || "storageId" in license ||
+            typeof license.packageName !== "string" || typeof license.licenseId !== "string" ||
+            typeof license.licenseName !== "string" || typeof license.licenseText !== "string") throw new Error("INVALID_INGEST_PAYLOAD");
+        if (!license.licenseText.trim()) throw new Error("EMPTY_LICENSE_TEXT");
+        const bytes = new TextEncoder().encode(license.licenseText).length;
+        if (bytes > 7 * 1024 * 1024) throw new Error("INVALID_INGEST_PAYLOAD");
+        if (bytes <= 512 * 1024) { licenses.push(license); continue; }
+        const text = JSON.stringify({ package: license.packageName.trim().toLowerCase(),
+          licenseId: license.licenseId, licenseName: license.licenseName, text: license.licenseText });
+        const storageId = await ctx.storage.store(new Blob([text], { type: LICENSE_CONTENT_TYPE }));
+        created.push(storageId);
+        licenses.push({ ...license, licenseText: "", storageId });
+      }
+      const { unusedStorageIds = [], ...result } = await ctx.runMutation(internal.ingest.insertLicenses,
+        { ...input, licenses } as never);
+      committed = true;
+      await Promise.all(unusedStorageIds.map(id => ctx.storage.delete(id)));
+      return jsonResponse(result);
+    } catch (error) {
+      if (!committed) await Promise.all(created.map(id => ctx.storage.delete(id)));
+      throw error;
+    }
   }),
 });
 
@@ -224,8 +253,8 @@ http.route({
   path: "/ingest/activate",
   method: "POST",
   handler: ingestAction(async (ctx, body) => {
-    // Full-Debian production authorization belongs to the gated promote path.
-    const result = await ctx.runMutation(internal.ingest.activateRelease, { ...body as object, allowFullDebian: false } as never);
+    // Full archive production authorization belongs to the gated promote path.
+    const result = await ctx.runMutation(internal.ingest.activateRelease, { ...body as object, allowFullDebian: false, allowFullUbuntu: false, allowFullFedora: false, allowFullArch: false, allowFullAlpine: false, allowTranslations: false } as never);
     return jsonResponse(result, result.pending ? 409 : 200);
   }),
 });
@@ -244,7 +273,7 @@ http.route({
   handler: ingestAction(async (ctx, body) => {
     const result = await ctx.runMutation(internal.ingest.promoteActiveReleases, body as never);
     return jsonResponse(result);
-  }, true),
+  }),
 });
 
 // Generated layer (B6). Separate from the release contract above: records are
@@ -265,7 +294,7 @@ http.route({
   handler: ingestAction(async (ctx, body) => {
     const result = await ctx.runQuery(internal.generated.listCandidates, body as never);
     return jsonResponse(result);
-  }),
+  }, false),
 });
 
 function parsedField(value: string | undefined): unknown {
@@ -320,7 +349,7 @@ http.route({
       }
     }
     return jsonResponse({ pages, deferred, skipped });
-  }),
+  }, false),
 });
 
 http.route({
@@ -329,7 +358,7 @@ http.route({
   handler: ingestAction(async (ctx, body) => {
     const result = await ctx.runMutation(internal.generated.propagateFlagUsage, body as never);
     return jsonResponse(result);
-  }),
+  }, false),
 });
 
 http.route({
@@ -342,7 +371,7 @@ http.route({
       updatedAt: new Date().toISOString(),
     } as never);
     return jsonResponse(result);
-  }),
+  }, false),
 });
 
 export default http;

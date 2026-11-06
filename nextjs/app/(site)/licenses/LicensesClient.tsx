@@ -130,18 +130,19 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
                   <li key={p.name} className="border-b border-rule last:border-b-0">
                     <button
                       type="button"
-                      className={`w-full py-1.5 text-left transition-colors ${p.hasLicenseText ? 'hover:text-accent' : 'opacity-50'}`}
+                      className={`w-full py-1.5 text-left transition-colors ${p.hasLicenseText && !p.licenseWarning ? 'hover:text-accent' : 'opacity-50'}`}
                       aria-current={isSelected ? 'true' : undefined}
                       onClick={() => setSelected(p.hasLicenseText ? p.name : null)}
                       disabled={!p.hasLicenseText}
                     >
                       <div className="flex items-baseline justify-between gap-3">
-                        <div
-                          className={`min-w-0 truncate font-mono text-sm font-bold ${
-                            isSelected ? 'text-accent' : ''
-                          }`}
-                        >
-                          {p.name}
+                        <div className="min-w-0">
+                          <div className={`truncate font-mono text-sm font-bold ${isSelected ? 'text-accent' : ''}`}>
+                            {p.name}
+                          </div>
+                          {!p.hasLicenseText || p.licenseWarning ? (
+                            <div className="text-xs text-ink-3">{t('No license text.')}</div>
+                          ) : null}
                         </div>
                         <div className="shrink-0 font-mono text-xs text-ink-3">{p.version}</div>
                       </div>
@@ -171,20 +172,27 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
               {error}
             </div>
           ) : license ? (
-            <div>
-              <div className="flex flex-wrap items-baseline justify-between gap-3">
-                <h2 className="font-mono text-sm font-bold">{license.package}</h2>
-                <div className="font-mono text-xs text-ink-3">{license.licenseId}</div>
-              </div>
-              <pre tabIndex={0} role="group" aria-label={t('License text for {name}', { name: license.package })} className="mt-3 max-h-[70vh] overflow-auto text-xs leading-relaxed text-ink-2">
-                {license.text}
-              </pre>
-            </div>
+            <LicenseEntry license={license} />
           ) : (
             <p className="py-2 text-sm text-ink-3">{t('No license text.')}</p>
           )}
         </section>
       </div>
+    </div>
+  )
+}
+
+export function LicenseEntry({ license }: { license: LicenseTextResponse }) {
+  const t = useT()
+  return (
+    <div>
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h2 className="font-mono text-sm font-bold">{license.package}</h2>
+        <div className="font-mono text-xs text-ink-3">{license.licenseId}</div>
+      </div>
+      <pre tabIndex={0} role="group" aria-label={t('License text for {name}', { name: license.package })} className="mt-3 max-h-[70vh] overflow-auto whitespace-pre-wrap text-xs leading-relaxed text-ink-2">
+        {license.text}
+      </pre>
     </div>
   )
 }

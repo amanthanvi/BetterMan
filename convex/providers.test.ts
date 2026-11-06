@@ -2,6 +2,7 @@
 import { convexTest } from "convex-test";
 import { afterEach, expect, it, vi } from "vitest";
 import schema from "./schema";
+import { INGEST_CONTRACT } from "./ingestContract";
 import { api, internal } from "./_generated/api";
 import { readProviderPackages } from "./_providers";
 import { requireMutableBlob } from "./_releaseIntegrity";
@@ -25,7 +26,7 @@ it("preserves every provider, seals only complete uploads, and isolates canonica
     ...(providerOnly ? { providerOnly: true } : {}),
   });
   const upload = (pages: unknown[]) => t.fetch("/ingest/pages/storage", { method: "POST",
-    headers: { authorization: "Bearer local", "content-type": "application/json" },
+    headers: { authorization: "Bearer local", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
     body: JSON.stringify({ datasetReleaseId: "providers", pages }),
   });
   expect((await upload([page("case-A", true)])).status).toBe(200); // Alternate can arrive first.
@@ -44,6 +45,12 @@ it("preserves every provider, seals only complete uploads, and isolates canonica
   expect(await activate()).toMatchObject({ pending: true });
   await t.finishAllScheduledFunctions(() => vi.runAllTimers());
   expect(await activate()).toMatchObject({ pending: false });
+  expect(await t.query(api.queries.providersFor, { distro: "debian", name: "SHARED", section: "1" }))
+    .toEqual({ packages: ["alternate", "identical", "popular", "stub"], datasetReleaseId: "providers" });
+  expect(await t.query(api.queries.providersFor, { distro: "debian", name: "missing", section: "1" }))
+    .toEqual({ packages: [], datasetReleaseId: "providers" });
+  await expect(t.query(api.queries.providersFor, { distro: "debian", name: "shared", section: "1", ...{ stage: "staging" } }))
+    .rejects.toThrow();
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "stub" }))
     .toMatchObject({ kind: "alias", name: "shared", section: "1", pkg: "popular" });
   await t.run(async ctx => {
@@ -80,6 +87,22 @@ it("preserves every provider, seals only complete uploads, and isolates canonica
     .toMatchObject({ kind: "page", data: { page: { sourcePackage: "alternate", description: "case-A", indexable: false }, providers: { sameAsDefault: false } } });
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "identical" }))
     .toMatchObject({ kind: "page", data: { page: { indexable: false }, providers: { sameAsDefault: true } } });
+  for (const indexed of [undefined, false, true]) {
+    await t.run(async ctx => {
+      const canonical = (await ctx.db.query("manPages").take(1))[0];
+      await ctx.db.patch(canonical.releaseId, { indexablePageCount: indexed === undefined ? undefined : Number(indexed) });
+      await ctx.db.patch(canonical._id, { indexable: indexed ?? false });
+    });
+    for (const pkg of ["popular", "alternate", "identical"]) {
+      expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg }))
+        .toMatchObject({ kind: "page", data: { page: { indexable: pkg === "popular" && indexed !== false } } });
+    }
+  }
+  await t.run(async ctx => {
+    const canonical = (await ctx.db.query("manPages").take(1))[0];
+    await ctx.db.patch(canonical.releaseId, { indexablePageCount: undefined });
+    await ctx.db.patch(canonical._id, { indexable: undefined });
+  });
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "absent" })).toBeNull();
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "absent", reportRelease: true }))
     .toEqual({ kind: "not_found", datasetReleaseId: expect.any(String) });

@@ -46,6 +46,7 @@ from ingestion.generated.provider import OpenAICompatibleProvider, ProviderConfi
 from ingestion.generated.safety import is_destructive
 from ingestion.generated.selector import INDEXED_SECTIONS, Candidate, Priority, select
 from ingestion.generated.tldr import TLDR_COMMIT, TldrIndex, fetch_pinned
+from ingestion.popularity import PopularityPolicy
 
 logger = logging.getLogger("betterman.generated")
 DISTROS = ["debian", "ubuntu", "fedora", "arch", "alpine", "freebsd", "macos"]
@@ -109,9 +110,10 @@ def coverage(pages: Iterable[PageInput], tldr: TldrIndex) -> dict:
     rejected_flags: Counter[str] = Counter()
     input_tokens = 0
     need_by_tier: Counter[str] = Counter()
+    policy = PopularityPolicy.load()
     for page in pages:
         counts["pages"] += 1
-        indexed = page.section in INDEXED_SECTIONS
+        indexed = policy.evaluate(page.name, page.section, page.source_package).indexable
         command = page.section in {"1", "8", "6"}
         counts["commandPages"] += command
         counts["indexedPages"] += indexed
@@ -234,7 +236,7 @@ def run(args: argparse.Namespace) -> int:
         store = GeneratedStore(client)
         store.require_contract()
         candidates = []
-        for section in sections:
+        for section in sections if args.sections else (None,):
             for item in store.candidates(stage=args.stage, distro=args.distro, section=section):
                 candidates.append(item.candidate)
                 remote[item.candidate.content_sha256] = item
@@ -244,6 +246,8 @@ def run(args: argparse.Namespace) -> int:
             raise SystemExit("--cache is required with --source cache")
         candidates, inputs = _candidates_from_cache(Path(args.cache), args.distro)
 
+    if args.sections:
+        candidates = [candidate for candidate in candidates if candidate.section in sections]
     chosen = select(candidates, priority=priority, sections=sections, limit=args.limit)
     cache = ResultCache(Path(args.cache_dir) if args.cache_dir else None)
     checkpoint = Checkpoint.load(Path(args.checkpoint) if args.checkpoint else None)
@@ -418,7 +422,9 @@ def main(argv: list[str] | None = None) -> int:
     run_p.add_argument("--cache", help="cached mandoc HTML root, for --source cache")
     run_p.add_argument("--distro", choices=DISTROS, default="debian")
     run_p.add_argument("--stage", choices=["staging", "prod"], default="staging")
-    run_p.add_argument("--sections", help=f"comma list, default {','.join(INDEXED_SECTIONS)}")
+    run_p.add_argument(
+        "--sections", help="comma list restricting the scan; default all B4 indexed-tier sections"
+    )
     run_p.add_argument("--priority", help="priority list: name, name(section) or pkg:name")
     run_p.add_argument("--limit", type=int)
     run_p.add_argument("--tldr", help="tldr-pages checkout; default fetches the pinned commit")

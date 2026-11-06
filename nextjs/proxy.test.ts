@@ -10,6 +10,7 @@ vi.mock('./lib/manRelease', async (importOriginal) => ({
   servingRelease: release.servingRelease,
 }))
 
+import { ANALYTICS_BOOT_SCRIPT } from './lib/analyticsBoot'
 import { MAN_BOOT_SCRIPT } from './lib/manBoot'
 import { holdBack, releaseHeld } from './lib/i18n/testing'
 
@@ -30,7 +31,8 @@ afterEach(() => {
 
 it('keeps production CSP self-only for analytics and issues a fresh nonce per request', async () => {
   vi.stubEnv('NODE_ENV', 'production')
-  vi.stubEnv('NEXT_PUBLIC_PLAUSIBLE_DOMAIN', 'betterman.sh')
+  vi.stubEnv('VERCEL_ENV', 'production')
+  vi.stubEnv('VERCEL_OBSERVABILITY_CLIENT_CONFIG', JSON.stringify({ analytics: { scriptSrc: '/project-intake/script.js' } }))
   vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', '')
   const first = await proxy(new NextRequest('https://betterman.sh/'))
   const second = await proxy(new NextRequest('https://betterman.sh/'))
@@ -38,7 +40,7 @@ it('keeps production CSP self-only for analytics and issues a fresh nonce per re
   expect(csp).toContain("connect-src 'self';")
   expect(csp).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/)
   expect(csp).toMatch(/script-src-elem 'self' 'nonce-[^']+';/)
-  expect(csp).not.toMatch(/plausible\.io|unsafe-eval|script-src[^;]*unsafe-inline/)
+  expect(csp).not.toMatch(/https?:|unsafe-eval|script-src[^;]*unsafe-inline/)
   expect(second.headers.get('content-security-policy')).not.toBe(csp)
   expect(csp).toContain(`'nonce-${first.headers.get('x-middleware-request-x-nonce')}'`)
   expect(first.headers.get('x-content-type-options')).toBe('nosniff')
@@ -145,7 +147,7 @@ it('keys text exports without applying the HTML distro cookie', async () => {
   expect(release.servingRelease).toHaveBeenCalledWith('debian')
 })
 
-it.each(['/api', '/api/v1/info', '/api/v1/man/tar/1', '/assets', '/assets/site.js', '/assets/entry', '/_bm/man.0123456789abcdef.js'])('skips API and asset routes: %s', (url) => {
+it.each(['/api', '/api/v1/info', '/api/v1/man/tar/1', '/assets', '/_bm/man.0123456789abcdef.js'])('skips API and asset routes: %s', (url) => {
   expect(unstable_doesMiddlewareMatch({ config, url })).toBe(false)
 })
 
@@ -445,4 +447,17 @@ it('marks the language cookie Secure over HTTPS, and leaves plain-http localhost
   expect(await cookie('https://betterman.sh/-/lang/de?to=%2F')).toMatch(/bm-lang=de;.*Secure/i)
   expect(await cookie('http://betterman.sh/-/lang/de?to=%2F', { 'x-forwarded-proto': 'https' })).toMatch(/Secure/i)
   expect(await cookie('http://localhost:3000/-/lang/de?to=%2F')).not.toMatch(/Secure/i)
+})
+
+it.each(['/man/tar/1', '/concept/signals'])('authorizes the exact analytics bootstrap hash on cached production pages (%s)', async (path) => {
+  vi.stubEnv('NODE_ENV', 'production')
+  vi.stubEnv('VERCEL_ENV', 'production')
+  vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', '')
+  vi.stubEnv('VERCEL_OBSERVABILITY_CLIENT_CONFIG', JSON.stringify({ analytics: { scriptSrc: '/project-intake/script.js' } }))
+  const csp = (await proxy(new NextRequest(`https://betterman.sh${path}`))).headers.get('content-security-policy')!
+  const hash = `'sha256-${createHash('sha256').update(ANALYTICS_BOOT_SCRIPT).digest('base64')}'`
+  expect(csp).toContain(`script-src 'self' ${bootHash} ${hash};`)
+  expect(csp).toContain(`script-src-elem 'self' ${bootHash} ${hash};`)
+  expect(csp).toContain("connect-src 'self';")
+  expect(csp).not.toMatch(/https?:|nonce|strict-dynamic|unsafe-eval|script-src[^;]*unsafe-inline/)
 })

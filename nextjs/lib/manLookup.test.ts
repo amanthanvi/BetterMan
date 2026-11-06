@@ -16,6 +16,7 @@ vi.mock('./api', async (importOriginal) => {
     FastApiError: actual.FastApiError,
     withDistroFallback: actual.withDistroFallback,
     servedRelease: actual.servedRelease,
+    nameResolutionAnsweredBy: actual.nameResolutionAnsweredBy,
     answeredBy: actual.answeredBy,
     fetchManByNameAndSectionOrAlias: mocks.fetchManByNameAndSectionOrAlias,
     fetchRelated: mocks.fetchRelated,
@@ -43,6 +44,12 @@ beforeEach(() => {
 })
 
 describe('lookupManPage', () => {
+  it('does not read related pages after an explicit selector fails provider proof', async () => {
+    mocks.fetchManByNameAndSectionOrAlias.mockRejectedValue(pageNotFound())
+    await expect(lookupManPage({ name: 'tar', section: '1', distro: 'debian', pkg: 'invented' })).resolves.toMatchObject({ kind: 'miss' })
+    expect(mocks.fetchRelated).not.toHaveBeenCalled()
+  })
+
   it('reads the document and related pages together, keyed on the release', async () => {
     await expect(lookupManPage({ name: 'tar', section: '1', distro: 'debian', release: 'r1' })).resolves.toEqual({
       kind: 'page',

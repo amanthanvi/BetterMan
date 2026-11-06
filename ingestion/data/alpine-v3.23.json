@@ -1,0 +1,40 @@
+{
+  "acquisition": "alpine-apk-extraction",
+  "mirror": "https://dl-cdn.alpinelinux.org/alpine/v3.23",
+  "architecture": "x86_64",
+  "releaseSha256": "c153b5cad0d1f5955db9a6ca8ca78848de86c4243f694a177427f9cd8e691f18",
+  "popcon": {
+    "url": "https://popcon.debian.org/by_inst",
+    "acquiredAt": "2026-10-29",
+    "sourceSha256": "60d469b43fbb00fed5a1e1c67d9136bb3b6590bec64dd47cc9321616f1cb8a91",
+    "file": "popcon-by-inst.tsv.gz",
+    "sha256": "8e2cc98280beacff1ac62b434380a00d5ebbc79800cf51845f1fc46d6db1750a",
+    "format": "package tab installed-count; normalized from rank/name/inst columns of by_inst"
+  },
+  "distro": "alpine",
+  "fallbackMirror": "https://dl-3.alpinelinux.org/alpine/v3.23",
+  "archiveSuffix": ".apk",
+  "repositories": [
+    {
+      "name": "main",
+      "file": "alpine-v3.23-main-20261030.tar.gz",
+      "sha256": "0f803a0c7157052e4c14ecf765702da225fc1d435c94c9c0dbd9e2be96a0490d",
+      "size": 523581
+    },
+    {
+      "name": "community",
+      "file": "alpine-v3.23-community-20261030.tar.gz",
+      "sha256": "1f38c61240cdab5edc6e0f75bc37e264eedde51e2289cb3009e7a811e71a9471",
+      "size": 2383376
+    }
+  ],
+  "popularitySource": "Debian by_inst exact-name proxy; no Alpine installation counts",
+  "alternatives": "archive-owned links only; APK hooks never execute",
+  "packageVersions": {
+    "dotnet-bash-completion": "10.0.110-r0",
+    "dotnet-doc": "10.0.110-r0",
+    "dotnet-host": "10.0.13-r0",
+    "dotnet-zsh-completion": "10.0.110-r0",
+    "netstandard21-targeting-pack": "9.0.122-r0"
+  }
+}

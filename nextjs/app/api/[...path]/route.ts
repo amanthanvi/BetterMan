@@ -23,6 +23,7 @@ import {
   type Suggestion,
 } from '@/lib/api'
 import { canonicalWithDistro, normalizeDistro, type Distro } from '@/lib/distro'
+import { translatedLang } from '@/lib/i18n/locales'
 import { getPublicOrigin } from '@/lib/public-origin'
 import { isRateLimited } from '@/lib/rateLimit'
 import { nonHtmlSecurityHeaders } from '@/lib/securityHeaders'
@@ -181,7 +182,8 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       const section = first(req.nextUrl.searchParams.get('section'))
       const limited = await measure(metrics, 'rate_limit', () => enforceRateLimit(req, 'search'))
       if (limited) return limited
-      const result = await measure(metrics, 'convex_search', () => search({ distro, q, section, limit, offset }))
+      const lang = translatedLang(req.nextUrl.searchParams.get('lang'))
+      const result = await measure(metrics, 'convex_search', () => search({ distro, q, section, limit, offset, ...(lang ? { lang } : {}) }))
       return cachedJson(result, SEARCH_CACHE_SECONDS)
     }
 
@@ -348,7 +350,22 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       if (limited) return limited
       const distro = distroFrom(req)
       if (distro instanceof Response) return distro
-      return cachedJson(await fetchLicenseText({ distro, packageName: parts[1] }))
+      const license = await fetchLicenseText({ distro, packageName: parts[1] })
+      if (license.textUrl) {
+        const gzip = (req.headers.get('accept-encoding') ?? '').split(',').some(value => {
+          const [name, ...parameters] = value.trim().split(';')
+          return name.trim() === 'gzip' && !parameters.some(p => /^\s*q=0(?:\.0*)?\s*$/.test(p))
+        })
+        if (!gzip) return new Response(null, { status: 307, headers: { ...nonHtmlSecurityHeaders(), Location: license.textUrl, Vary: 'Accept-Encoding' } })
+        const stored = await fetch(license.textUrl, { cache: 'no-store' })
+        if (!stored.ok || !stored.body) throw new FastApiError(503, 'LICENSE_UNAVAILABLE', 'Failed to load license text')
+        // Stream compressed JSON to keep large notices below the function payload limit.
+        return new Response(stored.body.pipeThrough(new CompressionStream('gzip')), { headers: {
+          ...nonHtmlSecurityHeaders(), 'Content-Type': 'application/json; charset=utf-8',
+          'Content-Encoding': 'gzip', Vary: 'Accept-Encoding', 'Cache-Control': `public, max-age=${PUBLIC_CACHE_SECONDS}`,
+        } })
+      }
+      return cachedJson(license)
     }
 
     if (parts.length === 2 && parts[0] === 'seo' && parts[1] === 'releases') {

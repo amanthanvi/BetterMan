@@ -182,8 +182,8 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url)
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return
-  // The upstream tracker has no content hash; let its HTTP TTL refresh it.
-  if (url.pathname === '/assets/site.js') return
+  // Cache only our immutable application scripts, never analytics at a deployment-specific path.
+  if (request.destination === 'script' && !isNextAsset(url) && !url.pathname.startsWith('/_bm/')) return
   if (isPrivate(url)) return
 
   if (request.mode === 'navigate') {

@@ -1,20 +1,21 @@
 import { Head, Html, Main, NextScript, type DocumentProps } from 'next/document'
 
 import { ManHeadTags, type ManHeadData } from '../components/man/ManHead'
+import { AnalyticsScripts } from '../components/AnalyticsScripts'
 import { MAN_BOOT_SCRIPT } from '../lib/manBoot'
 
 /**
  * The man pages' document. Next's runtime is off for these pages
- * (`unstable_runtimeJS: false`), so the only inline script is the boot script,
- * which the proxy's CSP allows by hash. No nonce: the HTML is cached at the edge.
+ * (`unstable_runtimeJS: false`). The proxy allows the fixed inline bootstraps
+ * by hash. No nonce: the HTML is cached at the edge.
  */
-export default function ManDocument(props: DocumentProps) {
+export default function ManDocument(props: Pick<DocumentProps, '__NEXT_DATA__'>) {
   const pageProps = (props.__NEXT_DATA__.props as { pageProps?: { head?: ManHeadData; i18n?: { lang?: string } } } | undefined)?.pageProps
   const head = pageProps?.head
-  const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN?.trim()
   return (
     <Html lang={pageProps?.i18n?.lang ?? 'en'}>
       <Head>
+        <AnalyticsScripts />
         {head ? <ManHeadTags {...head} /> : null}
         <script dangerouslySetInnerHTML={{ __html: MAN_BOOT_SCRIPT }} />
         {/* The manual's roman, Latin range. Other ranges and the italic load when a page uses them. */}
@@ -28,7 +29,6 @@ export default function ManDocument(props: DocumentProps) {
       <body>
         <Main />
         <NextScript />
-        {plausibleDomain ? <script defer src="/assets/site.js" data-api="/assets/entry" data-domain={plausibleDomain} /> : null}
       </body>
     </Html>
   )

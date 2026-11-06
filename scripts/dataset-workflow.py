@@ -14,6 +14,7 @@ import urllib.request
 from pathlib import Path
 
 LINUX = ["debian", "ubuntu", "fedora", "arch", "alpine"]
+FULL_DISTROS = ["debian", "ubuntu", "fedora", "arch", "alpine"]
 BSD = ["freebsd", "macos"]
 RESULTS = Path("dataset-results")
 MAX_EXPECTED_RELEASE_IDS_BYTES = 4096
@@ -85,10 +86,10 @@ def gate(name):
     return value == "1"
 
 
-def full_promotion_enabled():
-    return gate("BETTERMAN_DEBIAN_FULL_PROMOTE") or (
+def full_promotion_enabled(distro="debian"):
+    return gate(f"BETTERMAN_{distro.upper()}_FULL_PROMOTE") or (
         os.environ["BETTERMAN_WORKFLOW_EVENT"] == "workflow_dispatch"
-        and os.environ.get("BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT") == "true"
+        and os.environ.get(f"BETTERMAN_{distro.upper()}_FULL_PROMOTE_INPUT") == "true"
     )
 
 
@@ -97,14 +98,13 @@ def selection():
     ingest = not dispatch or os.environ["BETTERMAN_INGEST_ENABLED"] == "true"
     promote = not dispatch or os.environ["BETTERMAN_PROMOTE_ENABLED"] == "true"
     sample = dispatch and os.environ["BETTERMAN_INGEST_SAMPLE"] == "true"
-    cron_full = gate("BETTERMAN_DEBIAN_FULL")
-    auto_full = full_promotion_enabled()
+    cron_full = {d: gate(f"BETTERMAN_{d.upper()}_FULL") for d in FULL_DISTROS}
+    auto_full = {d: full_promotion_enabled(d) for d in FULL_DISTROS}
     if dispatch and os.environ.get("BETTERMAN_DEBIAN_DOWNLOAD_ONLY") == "true":
         return {"include": []}, False, False
-    full_debian = not sample and (
-        os.environ.get("BETTERMAN_DEBIAN_FULL_INPUT") == "true" if dispatch
-        else cron_full
-    )
+    full = {d: not sample and (
+        os.environ.get(f"BETTERMAN_{d.upper()}_FULL_INPUT") == "true" if dispatch else cron_full[d]
+    ) for d in FULL_DISTROS}
     distros = []
     if ingest:
         for group, key in ((BSD, "BSD"), (LINUX, "LINUX")):
@@ -119,9 +119,9 @@ def selection():
         "include": [
             {
                 "distro": distro,
-                "full_debian": distro == "debian" and full_debian,
+                **{f"full_{d}": distro == d and full[d] for d in FULL_DISTROS},
                 "promote": promote and not sample and (
-                    distro != "debian" or not full_debian or auto_full or (dispatch and not ingest)
+                    distro not in FULL_DISTROS or not full[distro] or auto_full[distro] or (dispatch and not ingest)
                 ),
                 "runner": "macos-latest" if distro == "macos" and ingest else "ubuntu-latest",
                 "timeout": (60 if distro == "macos" else 90 if distro == "freebsd" else 300)
@@ -236,7 +236,7 @@ def promote(distro):
     # The promotion-only runner has Python but no installed ingestion package.
     # This client uses only the standard library; share its exact-version gate.
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ingestion"))
-    from ingestion.convex_client import ConvexIngestClient
+    from ingestion.convex_client import CONTRACT_HEADER, REQUIRED_SCHEMA_VERSION, ConvexIngestClient
 
     record = load(distro)
     matrix, ingest, enabled = selection()
@@ -263,6 +263,8 @@ def promote(distro):
             headers={
                 "Authorization": f"Bearer {os.environ['CONVEX_INGEST_SECRET']}",
                 "Content-Type": "application/json",
+                # Every release-contract request names the exact version it was written for.
+                CONTRACT_HEADER: str(REQUIRED_SCHEMA_VERSION),
             },
             method="POST",
         )
@@ -274,6 +276,12 @@ def promote(distro):
             ingest_secret=os.environ["CONVEX_INGEST_SECRET"],
         )
         contract = retry_request(client.require_deployed_contract)
+        for family, identity in {"ubuntu": "ubuntu-deb-extraction", "fedora": "fedora-rpm-extraction", "arch": "arch-pkg-extraction", "alpine": "alpine-apk-extraction"}.items():
+            allowed = full_promotion_enabled(family)
+            if identity in contract.get("acquisitions", []):
+                payload["allowFull" + family.capitalize()] = allowed
+            elif allowed:
+                raise ValueError(f"Deploy B2 {family} acquisition support before full promotion")
         record["stage"] = "verify staging source"
         save(distro, record)
         if not ingest:
@@ -291,7 +299,6 @@ def promote(distro):
             expected = pinned
         payload["expectedDatasetReleaseId"] = {distro: expected}
         request = ingest_request("promote", payload)
-        request.add_header("X-BetterMan-Ingest-Contract", str(contract["schemaVersion"]))
         record["stage"] = "read previous prod"
         save(distro, record)
         info = request_json(
@@ -316,12 +323,15 @@ def promote(distro):
         result = request_json(request)
         promoted = result["promoted"]
         skipped = result.get("skipped", [])
-        if (not promoted and distro == "debian" and len(skipped) == 1
-            and skipped[0].get("distro") == "debian"
+        if (not promoted and distro in FULL_DISTROS and len(skipped) == 1
+            and skipped[0].get("distro") == distro
             and skipped[0].get("datasetReleaseId") == expected
-            and skipped[0].get("reason") == "FULL_DEBIAN_PROMOTION_HELD"):
-            print("[dataset] Skipping held full-Debian staging release: authorize debian_full_promote or BETTERMAN_DEBIAN_FULL_PROMOTE=1", flush=True)
-            record.update(stage="full Debian promotion held", result="success")
+            and skipped[0].get("reason") in {f"FULL_{distro.upper()}_PROMOTION_HELD", f"FULL_{distro.upper()}_TIER_REQUIRED"}):
+            label = distro.capitalize()
+            missing_tier = skipped[0]["reason"] == f"FULL_{distro.upper()}_TIER_REQUIRED"
+            message = f"scored full-{label} replacement required" if missing_tier else f"held full-{label} staging release: authorize {distro}_full_promote or BETTERMAN_{distro.upper()}_FULL_PROMOTE=1"
+            print(f"[dataset] Skipping {message}", flush=True)
+            record.update(stage=f"scored full-{label} replacement required" if missing_tier else f"full {label} promotion held", result="success")
             save(distro, record)
             with open(os.environ["GITHUB_OUTPUT"], "a") as output:
                 output.write("skipped=true\n")
@@ -344,7 +354,20 @@ def promote(distro):
         detail = str(error)
         if isinstance(error, urllib.error.HTTPError):
             try:
-                detail += ": " + error.read(4096).decode("utf-8", errors="replace")
+                body = error.read(4096).decode("utf-8", errors="replace")
+                try:
+                    code = json.loads(body).get("error", {}).get("code")
+                except (ValueError, AttributeError, TypeError):
+                    code = None
+                if (error.code == 409 and distro == "debian" and record["stage"] == "promote"
+                    and code == "FULL_DEBIAN_TIER_REQUIRED"):
+                    print("[dataset] Skipping promotion: scored full-Debian replacement required", flush=True)
+                    record.update(stage="scored full-Debian replacement required", result="success", error="")
+                    save(distro, record)
+                    with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+                        output.write("skipped=true\n")
+                    return 0
+                detail += ": " + body
             except (OSError, http.client.HTTPException):
                 pass  # Preserve the HTTP status when its error body is unreadable.
         record.update(result="failure", error=clean(detail)[:1200])

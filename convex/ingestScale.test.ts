@@ -5,6 +5,7 @@ import { api, internal } from "./_generated/api";
 import { canonicalJson } from "./ingest";
 import { storedPayloadDigest } from "./_storedPayload";
 import schema from "./schema";
+import { INGEST_CONTRACT } from "./ingestContract";
 
 const modules = import.meta.glob("./**/*.ts");
 const declaration = {
@@ -21,7 +22,7 @@ it("keeps a >1 MiB manifest with 20k package entries off the release and reclaim
   const manifest = { packages: Array.from({ length: 20_000 }, (_, i) => ({ name: `pkg${i}`, version: "v".repeat(80) })) };
   expect(canonicalJson(manifest).length).toBeGreaterThan(1024 * 1024);
   const post = () => t.fetch("/ingest/release", { method: "POST",
-    headers: { authorization: "Bearer local-test", "content-type": "application/json" },
+    headers: { authorization: "Bearer local-test", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
     body: JSON.stringify({ ...declaration, packageManifest: manifest, packageBatches: [] }),
   });
   const first = await post();

@@ -7,6 +7,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import resource
 import shutil
 import sqlite3
@@ -30,9 +31,12 @@ from ingestion.debian_indexes import (
     debian_cdn_enabled,
     download,
     popularity,
+    private_registrations,
+    safe_path,
 )
 from ingestion.debian_licenses import copyright_text
 from ingestion.ingest_runner import (
+    _COMMAND_PAGE_OWNERS,
     _NAME_RE,
     _AliasRow,
     _bounded_futures,
@@ -44,7 +48,7 @@ from ingestion.ingest_runner import (
 )
 from ingestion.man_scan import ManSource
 from ingestion.mandoc_parser import is_so_stub
-from ingestion.package_set import FULL_PACKAGE_SET_DEBIAN
+from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO, FULL_PACKAGE_SET_DEBIAN
 from ingestion.util import sha256_hex
 
 log = logging.getLogger("betterman.ingestion")
@@ -80,14 +84,14 @@ def require_job_budget(phase: str):
         raise RuntimeError(f"Job budget exhausted during Debian {phase}; release remains inactive")
 
 
-def sample_packages(packages: list[Package], limit: int | None) -> list[Package]:
+def sample_packages(packages: list[Package], limit: int | None, distro="debian") -> list[Package]:
     if limit is None:
         return packages
     if limit < 1:
         raise ValueError("Package limit must be positive")
-    curated_names = set(FULL_PACKAGE_SET_DEBIAN) | {
-        value[0] for value in CURATED_ALTERNATIVES.values()
-    }
+    curated_names = set(
+        FULL_PACKAGE_SET_DEBIAN if distro == "debian" else FULL_PACKAGE_SET_BY_DISTRO[distro]
+    ) | {value[0] for value in CURATED_ALTERNATIVES.values()}
     curated_names |= {"perl-doc", "libssl-doc", "mariadb-client"}
     curated = sorted(
         (p for p in packages if p.name in curated_names or p.name.startswith("postgresql-client-")),
@@ -100,42 +104,123 @@ def sample_packages(packages: list[Package], limit: int | None) -> list[Package]
 
 
 class Workspace:
-    def __init__(self, root: Path, *, limit: int | None = None):
+    localized_roots: frozenset[str] = frozenset()
+    distro = "debian"
+    pins = {}
+
+    def __init__(self, root: Path, *, limit: int | None = None, distro="debian"):
+        self.distro = distro
+        if distro not in {"debian", "ubuntu", "fedora", "arch", "alpine"}:
+            raise ValueError("Unsupported deb archive distro")
+        self.pins_path = pins_path = (
+            PINS
+            if distro == "debian"
+            else PINS.with_name(
+                {
+                    "ubuntu": "ubuntu-noble.json",
+                    "fedora": "fedora-44.json",
+                    "arch": "arch-20261001.json",
+                    "alpine": "alpine-v3.23.json",
+                }[distro]
+            )
+        )
         self.root = root.resolve()
         self.root.mkdir(parents=True, exist_ok=True)
-        fingerprint = sha256_hex(PINS.read_bytes())
+        # Exclusions are reviewed pins, bound to the same workspace hash as the indexes.
+        pins = json.loads(pins_path.read_text())
+        exclusions = pins.get("excludedPackages", {})
+        if not isinstance(exclusions, dict) or any(
+            not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9+_.-]*", name)
+            or not isinstance(reason, str)
+            or not reason.strip()
+            for name, reason in exclusions.items()
+        ):
+            raise ValueError("Invalid pinned package exclusions")
+        source_targets = pins.get("sourceTargets", {})
+        if not isinstance(source_targets, dict) or any(
+            not isinstance(path, str)
+            or path == "."
+            or safe_path(path) != path
+            or not isinstance(target, list)
+            or len(target) != 2
+            or not all(isinstance(value, str) for value in target)
+            or target[1] == "."
+            or safe_path(target[1]) != target[1]
+            for path, target in source_targets.items()
+        ):
+            raise ValueError("Invalid pinned source targets")
+        fingerprint = sha256_hex(pins_path.read_bytes())
         marker = self.root / "pins.sha256"
         if marker.exists() and marker.read_text() != fingerprint:
             raise ValueError("Workspace belongs to different archive pins")
         marker.write_text(fingerprint)
-        self.pins, self.all_manual_packages = catalog(self.root / "indexes")
-        self.packages = sample_packages(self.all_manual_packages, limit)
+        self.pins, self.all_manual_packages = self._catalog()
+        if distro in {"debian", "ubuntu"}:
+            self.registrations = (
+                private_registrations(PINS.parent / self.pins["privateManuals"])
+                if self.pins.get("privateManuals")
+                else private_registrations()
+            )
+            self.available = available_packages(self.root / "indexes", popularity(self.pins))
+        if unknown := sorted(set(exclusions) - self.available.keys()):
+            # A reviewed exclusion must name a real package, or the audit entry misleads.
+            raise ValueError("Pinned exclusions name unknown packages: " + ", ".join(unknown))
+        if unknown := sorted(
+            {target[0] for target in source_targets.values()} - self.available.keys()
+        ):
+            raise ValueError("Pinned source targets name unknown packages: " + ", ".join(unknown))
+        self.all_manual_packages = [p for p in self.all_manual_packages if p.name not in exclusions]
+        self.packages = self._sample(self.all_manual_packages, limit)
         selection_path = self.root / "selection.json"
         if selection_path.exists():
             selection = json.loads(selection_path.read_text())
             if selection["limit"] != limit:
                 raise ValueError("Workspace was created for a different sample limit")
+            self.require_allowed_packages(selection["packages"])
             by_name = {package.name: package for package in self.all_manual_packages}
             self.packages = [by_name[name] for name in selection["packages"]]
         else:
             selection_path.write_text(
                 json.dumps({"limit": limit, "packages": [p.name for p in self.packages]})
             )
-        self.available = available_packages(self.root / "indexes", popularity(self.pins))
-        # Retain the original curated pass, including runtime packages such as
-        # vim-tiny whose manual slaves live in vim-common. Their postinst data
-        # supplies alternatives; they are never installed.
-        selected_names = {p.name for p in self.packages}
-        self.curated_packages = [
-            self.available[n]
-            # G++ and vim-tiny have alternatives but no manual-owned archive
-            # paths. Their control scripts still participate in a full election.
-            for n in sorted(set(FULL_PACKAGE_SET_DEBIAN) | {"g++", "vim-tiny"})
-            if n in self.available and n not in selected_names
-        ]
-        self.store = ArchiveStore(self.root)
+        # Curated names and the packages that own their command pages (git -> git-man).
+        self.require_allowed_packages(
+            set(FULL_PACKAGE_SET_BY_DISTRO[distro])
+            | set(_COMMAND_PAGE_OWNERS.get(distro, {}).values())
+        )
+        self.curated_packages = self._curated()
+        if distro == "alpine":
+            from ingestion.alpine_archives import require_sha256_pin
+
+            for package in self.packages + self.curated_packages:
+                require_sha256_pin(self.pins, package)
+        self.store = ArchiveStore(
+            self.root,
+            registrations=self.registrations,
+            source_targets=self.pins.get("sourceTargets"),
+        )
+        if distro == "alpine":
+            from ingestion.alpine_archives import require_sha256_pin
+
+            for name, checksum, actual, data, offset in self.store.db.execute(
+                "SELECT * FROM apk_hashes"
+            ):
+                package = self.available.get(name)
+                if package and package.control_checksum == checksum:
+                    require_sha256_pin(self.pins, package)
+                    if package.pinned_sha256 and package.pinned_sha256 != actual:
+                        continue
+                    self.available[name] = dataclasses.replace(
+                        package, sha256=actual, data_sha256=data, data_offset=offset
+                    )
+            self.packages = [self.available[p.name] for p in self.packages]
+            self.curated_packages = [self.available[p.name] for p in self.curated_packages]
         self.owners = sqlite3.connect(self.root / "indexes" / "owners.sqlite3")
-        self.acquired = {p.name for p in self.available.values() if self.store.complete(p)}
+        self.acquired = {
+            p.name
+            for p in self.available.values()
+            if p.name not in exclusions and self.store.complete(p)
+        }
         # Never resolve through stale/incomplete extraction records. Keep the
         # hashed source files for recovery, but reconstruct their index from a
         # verified archive when that package is next needed.
@@ -151,15 +236,19 @@ class Workspace:
         self.downloaded = 0
         self.archive_fallbacks = 0
         self.cache = Path(
-            os.environ.get("BETTERMAN_DEBIAN_CACHE_DIR", str(self.root.parent / "archives"))
+            os.environ.get(
+                f"BETTERMAN_{distro.upper()}_CACHE_DIR", str(self.root.parent / "archives")
+            )
         ).resolve()
         self.cache.mkdir(parents=True, exist_ok=True)
-        self.cache_limit = int(os.environ.get("BETTERMAN_DEBIAN_CACHE_MAX_BYTES", str(2 * 1024**3)))
+        self.cache_limit = int(
+            os.environ.get(f"BETTERMAN_{distro.upper()}_CACHE_MAX_BYTES", str(2 * 1024**3))
+        )
         if not 1024**3 <= self.cache_limit <= 2 * 1024**3:
             raise ValueError("Archive cache limit must be between 1 GiB and 2 GiB")
 
         extracted_limit = int(
-            os.environ.get("BETTERMAN_DEBIAN_EXTRACTED_MAX_BYTES", str(4 * 1024**3))
+            os.environ.get(f"BETTERMAN_{distro.upper()}_EXTRACTED_MAX_BYTES", str(4 * 1024**3))
         )
         if not 16 * 1024**2 <= extracted_limit <= 4 * 1024**3:
             raise ValueError("Extracted-file disk limit must be between 16 MiB and 4 GiB")
@@ -169,11 +258,69 @@ class Workspace:
         self._inflight = set()
         self.missing: list[dict] = []
 
+    def _catalog(self):
+        distro = self.distro
+        pins_path = self.pins_path
+        if distro in {"fedora", "arch", "alpine"}:
+            if distro == "fedora":
+                from ingestion.fedora_archives import catalog as archive_catalog
+            elif distro == "arch":
+                from ingestion.arch_archives import catalog as archive_catalog
+            else:
+                from ingestion.alpine_archives import catalog as archive_catalog
+
+            self.pins, self.all_manual_packages, self.available = archive_catalog(
+                self.root / "indexes", pins_path
+            )
+            self.registrations = {"packages": {}}
+        else:
+            self.pins, self.all_manual_packages = (
+                catalog(self.root / "indexes")
+                if distro == "debian"
+                else catalog(self.root / "indexes", pins_path)
+            )
+        return self.pins, self.all_manual_packages
+
+    def _sample(self, packages, limit):
+        return sample_packages(packages, limit, self.distro)
+
+    def _curated(self):
+        # Retain the original curated pass, including runtime packages such as
+        # vim-tiny whose manual slaves live in vim-common. Their postinst data
+        # supplies alternatives; they are never installed.
+        selected_names = {p.name for p in self.packages}
+        return [
+            self.available[n]
+            # G++ and vim-tiny have alternatives but no manual-owned archive
+            # paths. Their control scripts still participate in a full election.
+            for n in sorted(
+                set(FULL_PACKAGE_SET_BY_DISTRO[self.distro])
+                | ({"g++", "vim-tiny"} if self.distro in {"debian", "ubuntu"} else set())
+            )
+            if n in self.available and n not in selected_names
+        ]
+
+    def require_allowed_packages(self, names):
+        for name in names:
+            reason = self.pins.get("excludedPackages", {}).get(name)
+            if reason is not None:
+                raise RuntimeError(f"Archive dependency requires excluded package {name}: {reason}")
+
     def _acquire(self, package: Package):
-        if package.size > 1024 * 1024 * 1024:
-            raise ValueError("Package exceeds 1 GiB archive budget")
+        if self.distro == "alpine":
+            from ingestion.alpine_archives import require_sha256_pin
+
+            require_sha256_pin(self.pins, package)
+        archive_budget = (4 if self.distro == "arch" else 1) * 1024**3
+        if package.size > archive_budget:
+            raise ValueError("Package exceeds bounded archive budget")
         require_job_budget("acquisition")
-        cdn = debian_cdn_enabled()
+        cdn = debian_cdn_enabled() if self.distro == "debian" else True
+        cdn_base = self.pins.get("cdn", "https://deb.debian.org/debian")
+        if self.distro not in {"debian", "ubuntu"}:
+            cdn = bool(self.pins.get("cdn"))
+        suffix = self.pins.get("archiveSuffix", ".deb")
+        cache_key = getattr(package, "cache_key", package.sha256)
         snapshot_url = f"{self.pins['mirror']}/{package.filename}"
         fallbacks = []
         with self._disk_lock:
@@ -183,34 +330,68 @@ class Workspace:
             ):
                 raise RuntimeError("Insufficient workspace disk for bounded archive extraction")
             self._reserved += package.size
-            self._inflight.add(f"{package.sha256}.deb")
-        archive = self.cache / f"{package.sha256}.deb"
+            self._inflight.add(f"{cache_key}{suffix}")
+        archive = self.cache / f"{cache_key}{suffix}"
         try:
             started = time.monotonic()
+            verified = {}
+            verify_options = {}
+            if self.distro == "alpine":
+                from ingestion.alpine_archives import verify
+
+                verify_options = {"verify": lambda path: verified.update(verify(path, package))}
             size = download(
-                f"https://deb.debian.org/debian/{package.filename}" if cdn else snapshot_url,
+                f"{cdn_base}/{package.filename}" if cdn else snapshot_url,
                 archive,
-                package.sha256,
+                None if self.distro == "alpine" else package.sha256,
                 package.size,
-                fallback_url=snapshot_url if cdn else None,
+                fallback_url=snapshot_url
+                if cdn
+                else (
+                    f"{self.pins['fallbackMirror']}/{package.filename}"
+                    if self.pins.get("fallbackMirror")
+                    else None
+                ),
                 on_fallback=fallbacks.append,
+                **verify_options,
             )
+            if self.distro == "alpine":
+                package = dataclasses.replace(package, **verified)
             downloaded = time.monotonic()
             archive.touch()
-            entries = extract(archive, package, self.root, quota=self.extracted_quota)
+            extractor = extract
+            if self.distro == "fedora":
+                from ingestion.fedora_archives import extract as extractor
+            elif self.distro == "arch":
+                from ingestion.arch_archives import extract as extractor
+            elif self.distro == "alpine":
+                from ingestion.alpine_archives import extract as extractor
+            entries = extractor(
+                archive,
+                package,
+                self.root,
+                quota=self.extracted_quota,
+                registrations=getattr(self, "registrations", None),
+                **({"localized_roots": self.localized_roots} if self.localized_roots else {}),
+            )
             extracted = time.monotonic()
         finally:
             with self._disk_lock:
                 self._reserved -= package.size
-                self._inflight.discard(f"{package.sha256}.deb")
+                self._inflight.discard(f"{cache_key}{suffix}")
                 self._evict_archives()
         return package, entries, size, downloaded - started, extracted - downloaded, len(fallbacks)
 
     def _evict_archives(self):
         # Called under the disk lock. In-flight archives are excluded; complete
         # extracted packages remain resumable independently of archive eviction.
-        used = sum(p.stat().st_size for p in self.cache.glob("*.deb"))
-        for candidate in sorted(self.cache.glob("*.deb"), key=lambda p: p.stat().st_mtime):
+        used = sum(
+            p.stat().st_size for p in self.cache.glob("*" + self.pins.get("archiveSuffix", ".deb"))
+        )
+        for candidate in sorted(
+            self.cache.glob("*" + self.pins.get("archiveSuffix", ".deb")),
+            key=lambda p: p.stat().st_mtime,
+        ):
             if used <= self.cache_limit:
                 break
             if candidate.name in self._inflight:
@@ -219,16 +400,21 @@ class Workspace:
             candidate.unlink()
 
     def acquire(self, packages=None, *, workers=2):
+        packages = self.packages + self.curated_packages if packages is None else list(packages)
+        self.require_allowed_packages(p.name for p in packages)
         workers = min(2, max(1, workers))
-        pending = list(
-            {
-                p.name: p
-                for p in (self.packages + self.curated_packages if packages is None else packages)
-                if p.name not in self.acquired
-            }.values()
-        )
+        pending = list({p.name: p for p in packages if p.name not in self.acquired}.values())
+        if workers > 1 and any(p.size > 1024**3 for p in pending):
+            self.acquire([p for p in pending if p.size <= 1024**3], workers=workers)
+            self.acquire([p for p in pending if p.size > 1024**3], workers=1)
+            return
         # Consume restored archives before fresh downloads can evict them.
-        pending.sort(key=lambda p: not (self.cache / f"{p.sha256}.deb").is_file())
+        suffix = self.pins.get("archiveSuffix", ".deb")
+        pending.sort(
+            key=lambda p: (
+                not (self.cache / f"{getattr(p, 'cache_key', p.sha256)}{suffix}").is_file()
+            )
+        )
         started = time.monotonic()
         download_seconds = extract_seconds = 0
         cache_hits = fallback_count = 0
@@ -245,6 +431,13 @@ class Workspace:
                     fallback_count += fallbacks
                     self.archive_fallbacks += fallbacks
                     self.store.add(package, entries)
+                    if self.distro == "alpine":
+                        self.available[package.name] = package
+                        with self.owners:
+                            self.owners.executemany(
+                                "INSERT OR IGNORE INTO owners VALUES (?,?)",
+                                [(entry[1], entry[0]) for entry in entries],
+                            )
                     self.acquired.add(package.name)
                     self.downloaded += size
                     if len(self.acquired) % 100 == 0:
@@ -279,13 +472,19 @@ class Workspace:
         )
 
     def resolve(self, package: str, path: str, **kwargs):
+        self.require_allowed_packages([package])
         for _ in range(32):
             try:
                 return self.store.resolve(package, path, **kwargs)
             except MissingSource as exc:
-                repair = SOURCE_TARGETS.get(exc.path)
+                repair = (
+                    SOURCE_TARGETS
+                    if self.distro == "debian"
+                    else self.pins.get("sourceTargets", {})
+                ).get(exc.path)
                 if repair:
                     owner, target = repair
+                    self.require_allowed_packages([owner])
                     if owner not in self.acquired:
                         self.acquire([self.available[owner]], workers=1)
                     with self.store.db:
@@ -367,28 +566,34 @@ class Workspace:
             package,
         )
 
-    def require_command_owners(self):
+    def command_owner_allowances(self):
         from ingestion.ingest_runner import _COMMAND_PAGE_EXCLUSIONS, _COMMAND_PAGES
 
         providers = {}
         for package in self.available.values():
             for name in package.provides:
                 providers.setdefault(name, set()).add(package.name)
-        actual = {}
-        # Use the finalized publication map, including elected alias targets.
-        for (name, section), owner in sorted(
-            self.published_route_owners.items(),
-            key=lambda row: (row[0][0], len(row[0][1]), row[0][1]),
-        ):
-            actual.setdefault((name, section[:1]), owner)
         result = {}
-        for requested in FULL_PACKAGE_SET_DEBIAN:
-            if requested not in _COMMAND_PAGES or requested in _COMMAND_PAGE_EXCLUSIONS["debian"]:
+        requested_packages = (
+            FULL_PACKAGE_SET_DEBIAN
+            if self.distro == "debian"
+            else FULL_PACKAGE_SET_BY_DISTRO[self.distro]
+        )
+        for requested in requested_packages:
+            if requested not in _COMMAND_PAGES or requested in _COMMAND_PAGE_EXCLUSIONS.get(
+                self.distro, {}
+            ):
                 continue
-            name, section = _COMMAND_PAGES[requested]
-            if (name, section) not in actual:
-                continue  # The existing missing-page gate reports absent routes.
-            expected_package = ARCHIVE_COMMAND_PACKAGES.get(requested, requested)
+            name, section = (
+                ("httpd", "8")
+                if self.distro == "alpine" and requested == "apache2"
+                else _COMMAND_PAGES[requested]
+            )
+            expected_package = (
+                ARCHIVE_COMMAND_PACKAGES.get(requested, requested)
+                if self.distro == "debian"
+                else requested
+            )
             allowed, pending = set(), [expected_package]
             # Match apt_install's explicit companion request; mount is not a util-linux dependency.
             if requested == "util-linux":
@@ -404,7 +609,40 @@ class Workspace:
                     # Only a virtual name is satisfied by its providers; a real
                     # package (make) is not by another that Provides it (make-guile).
                     pending.extend(providers.get(current, ()))
-            owner = actual[(name, section)]
+            if self.distro == "alpine":
+                runtime = [self.available[n] for n in allowed if n in self.available]
+                for doc in self.available.values():
+                    if (
+                        doc.name.endswith("-doc")
+                        and doc.source
+                        and "docs" in doc.install_if
+                        and any(
+                            doc.source == package.source and doc.version == package.version
+                            for package in runtime
+                        )
+                    ):
+                        allowed.add(doc.name)
+            result[requested] = ((name, section), expected_package, allowed)
+        return result
+
+    def require_command_owners(self):
+        actual = {}
+        # Use the finalized publication map, including elected alias targets.
+        for (name, section), owner in sorted(
+            self.published_route_owners.items(),
+            key=lambda row: (row[0][0], len(row[0][1]), row[0][1]),
+        ):
+            actual.setdefault((name, section[:1]), owner)
+        result = {}
+        for requested, (
+            route,
+            expected_package,
+            allowed,
+        ) in self.command_owner_allowances().items():
+            if route not in actual:
+                continue  # The existing missing-page gate reports absent routes.
+            name, section = route
+            owner = actual[route]
             if owner not in allowed:
                 raise RuntimeError(
                     f"publish blocked: wrong command-page owner for {name}({section}): "
@@ -414,6 +652,18 @@ class Workspace:
         return result
 
     def sources(self):
+        # Rebuild RPM-generated links from this selection's election on each pass.
+        if self.distro == "fedora":
+            with self.store.db:
+                self.store.db.execute("DELETE FROM entries WHERE kind='generated-link'")
+        curated_owners = (
+            {}
+            if self.distro == "debian"
+            else {
+                route: allowed
+                for route, _expected, allowed in self.command_owner_allowances().values()
+            }
+        )
         selected = {p.name for p in self.packages} | {
             p.name for p in getattr(self, "curated_packages", [])
         }
@@ -501,6 +751,20 @@ class Workspace:
                     }
                 )
                 continue
+            if self.distro == "fedora":
+                with self.store.db:
+                    self.store.db.executemany(
+                        "INSERT OR IGNORE INTO entries VALUES (?,?,?,?,NULL)",
+                        [
+                            (
+                                winner,
+                                f"usr/share/man/man{section}/{name}.{section}{suffix}",
+                                "generated-link",
+                                target,
+                            )
+                            for suffix in ("", ".gz", ".xz", ".bz2", ".zst")
+                        ],
+                    )
             for pkg, path, priority in ranked:
                 if path is not None:
                     normalized = name.lower()
@@ -548,6 +812,7 @@ class Workspace:
                     name,
                     section,
                     spelling != name,
+                    pkg not in curated_owners.get((name, section[:1]), {pkg}),
                     priority is not None,
                     *(
                         self.alternative_rank(pkg, priority, name, section)
@@ -577,6 +842,7 @@ class Workspace:
                 name,
                 section,
                 MAN_PATH.fullmatch(path)[1] != name,
+                pkg not in curated_owners.get((name, section[:1]), {pkg}),
                 False,
                 False,
                 -self.available[pkg].installed,
@@ -630,18 +896,19 @@ class ArchiveParseInput:
     section: str
     raw: bytes
     version: str
+    distro: str = "debian"
 
 
 def parse_archive_source(item: ArchiveParseInput) -> _PageRow:
     page = _parse_source(
         ManSource(Path(item.path), item.name, item.section),
         item.raw,
-        _ParseContext("debian", "amd64", {}, {}),
+        _ParseContext(item.distro, "amd64", {}, {}),
     )
     return dataclasses.replace(
         page,
         page_id=sha256_hex(
-            f"debian/{item.package}/{item.path}/{item.name}/{item.section}".encode()
+            f"{item.distro}/{item.package}/{item.path}/{item.name}/{item.section}".encode()
         )[:32],
         source_package=item.package,
         source_package_version=item.version,
@@ -654,7 +921,9 @@ def parse_workspace(workspace: Workspace, spool: _PageSpool, *, workers=4):
             require_job_budget("parsing")
             if alias:
                 continue
-            yield ArchiveParseInput(pkg, path, name, section, raw, workspace.available[pkg].version)
+            yield ArchiveParseInput(
+                pkg, path, name, section, raw, workspace.available[pkg].version, workspace.distro
+            )
 
     providers = set()
     seen_routes = set()
@@ -719,9 +988,9 @@ def parse_workspace(workspace: Workspace, spool: _PageSpool, *, workers=4):
     return providers, failed
 
 
-def benchmark(root: Path, *, limit=2000, workers=4) -> dict:
+def benchmark(root: Path, *, limit=2000, workers=4, distro="debian") -> dict:
     started = time.monotonic()
-    workspace = Workspace(root, limit=limit)
+    workspace = Workspace(root, limit=limit, distro=distro)
     indexed = time.monotonic()
     workspace.acquire(workers=workers)
     acquired = time.monotonic()

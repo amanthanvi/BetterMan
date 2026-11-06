@@ -13,15 +13,15 @@ test('man: In brief sits between the synopsis and the options, with sourced exam
 
   // Every example names its source; tldr-pages is credited with its file and licence.
   const examples = brief.locator('ol > li')
-  await expect(examples).toHaveCount(3)
+  await expect(examples).toHaveCount(5)
   await expect(examples.nth(0)).toContainText('from EXAMPLES')
   await expect(examples.nth(0).locator('code')).toHaveText('tar -cf archive.tar ./my-folder')
-  await expect(examples.nth(1).getByRole('link', { name: 'tldr-pages' })).toHaveAttribute('href', /github\.com\/tldr-pages\/tldr\/blob\/[0-9a-f]{40}\/pages\/common\/tar\.md$/)
-  await expect(examples.nth(1).getByRole('link', { name: 'CC BY 4.0' })).toHaveAttribute('href', 'https://creativecommons.org/licenses/by/4.0/')
-  await expect(examples.nth(1).locator('code i')).toHaveText(['path/to/target.tar', 'path/to/file'])
+  await expect(examples.nth(3).getByRole('link', { name: 'tldr-pages' })).toHaveAttribute('href', /github\.com\/tldr-pages\/tldr\/blob\/[0-9a-f]{40}\/pages\/common\/tar\.md$/)
+  await expect(examples.nth(3).getByRole('link', { name: 'CC BY 4.0' })).toHaveAttribute('href', 'https://creativecommons.org/licenses/by/4.0/')
+  await expect(examples.nth(3).locator('code i')).toHaveText(['path/to/target.tar', 'path/to/file'])
   await expect(brief.getByText(/tldr-pages examples, modified: Placeholders converted/)).toBeVisible()
-  await expect(examples.nth(2)).toContainText('generated · deepseek-v4.1-flash, 2026-10-28')
-  await expect(brief.getByRole('button', { name: 'Copy code block' })).toHaveCount(3)
+  await expect(examples.nth(4)).toContainText('generated · deepseek-v4.1-flash, 2026-10-28')
+  await expect(brief.getByRole('button', { name: 'Copy code block' })).toHaveCount(5)
 
   // The source section keeps its anchor, so the contents link still lands on it.
   await expect(page.locator('#examples')).toHaveCount(1)

@@ -3,40 +3,38 @@ import { trackEvent } from './analytics'
 
 afterEach(() => vi.unstubAllGlobals())
 
-it('sends only the event name and preference axis', () => {
-  const plausible = vi.fn()
-  vi.stubGlobal('window', { plausible })
+it('sends only the event name and preference axis in Vercel format', () => {
+  const va = vi.fn()
+  vi.stubGlobal('window', { va })
   trackEvent('palette opened')
   trackEvent('pref changed', 'fontSize')
-  trackEvent('composer copied')
-  expect(plausible.mock.calls).toEqual([
-    ['palette opened', undefined],
-    ['pref changed', { props: { axis: 'fontSize' } }],
-    ['composer copied', undefined],
+  trackEvent('explain used')
+  expect(va.mock.calls).toEqual([
+    ['event', { name: 'palette opened' }],
+    ['event', { name: 'pref changed', data: { axis: 'fontSize' } }],
+    ['event', { name: 'explain used' }],
   ])
 })
 
-it('is harmless during SSR, when blocked, or when the tracker fails', () => {
+it('is harmless during SSR or when the tracker fails', () => {
   expect(() => trackEvent('palette opened')).not.toThrow()
-  vi.stubGlobal('window', {})
-  expect(() => trackEvent('palette opened')).not.toThrow()
-  vi.stubGlobal('window', { plausible: () => { throw new Error('blocked') } })
+  vi.stubGlobal('window', { va: () => { throw new Error('blocked') } })
   expect(() => trackEvent('palette opened')).not.toThrow()
 })
 
-it('queues early events in Plausible format and lets the tracker replay them in order', () => {
+it('queues early events in the documented vaq and lets the tracker replay them in order', () => {
   vi.stubGlobal('window', {})
   trackEvent('palette opened')
   trackEvent('pref changed', 'fontSize')
-  const queued = window.plausible!
-  expect(queued.q).toEqual([
-    ['palette opened', undefined], ['pref changed', { props: { axis: 'fontSize' } }],
+  expect(window.vaq).toEqual([
+    ['event', { name: 'palette opened' }], ['event', { name: 'pref changed', data: { axis: 'fontSize' } }],
   ])
   const loaded = vi.fn()
-  window.plausible = loaded
-  queued.q!.forEach((args) => loaded(...args))
-  trackEvent('concept opened')
+  window.va = loaded
+  window.vaq!.forEach((args) => loaded(...args))
+  trackEvent('composer copied')
   expect(loaded.mock.calls).toEqual([
-    ['palette opened', undefined], ['pref changed', { props: { axis: 'fontSize' } }], ['concept opened', undefined],
+    ['event', { name: 'palette opened' }], ['event', { name: 'pref changed', data: { axis: 'fontSize' } }],
+    ['event', { name: 'composer copied' }],
   ])
 })

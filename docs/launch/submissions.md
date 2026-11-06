@@ -35,6 +35,6 @@ Not looked up: Ubuntu and Alpine community channels, Unix & Linux Stack Exchange
 
 ## Notes for the owner
 
-- **Check [launch-checklist.md](launch-checklist.md) step 5 first.** The Firewall rules for non-browser access must be live before a post claims `curl betterman.sh/tar.txt` works.
+- **Check [launch-checklist.md](launch-checklist.md) step 5 first.** The Firewall rules for non-browser access went live on 2026-10-30; re-run its anonymous checks before a post claims `curl -L betterman.sh/tar.txt` works. The short URL redirects to `/man/tar/1.txt`, so plain `curl` without `-L` prints nothing.
 - **Disclosure.** Mention that you built it. In r/ and mailing-list posts, mention generated text and the model.
 - **Replies.** Answer in the thread, not in a new post. Log reports from every channel as GitHub issues so the 48-hour review has one list.

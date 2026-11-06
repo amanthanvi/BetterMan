@@ -43,6 +43,23 @@ def _build_parser() -> argparse.ArgumentParser:
     ingest.add_argument(
         "--debian-full", action="store_true", help="Opt in to full Debian archive ingestion"
     )
+    ingest.add_argument(
+        "--ubuntu-full", action="store_true", help="Opt in to full Ubuntu archive ingestion"
+    )
+    ingest.add_argument(
+        "--fedora-full", action="store_true", help="Opt in to full Fedora RPM extraction"
+    )
+    ingest.add_argument(
+        "--arch-full", action="store_true", help="Opt in to full Arch package extraction"
+    )
+    ingest.add_argument(
+        "--alpine-full", action="store_true", help="Opt in to full Alpine APK extraction"
+    )
+    ingest.add_argument(
+        "--debian-translation",
+        choices=["de", "fr", "es", "pt-BR", "ja", "ru"],
+        help="Opt in to one language's translated Debian manuals (staging only)",
+    )
     ingest.add_argument("--in-container", action="store_true", help=argparse.SUPPRESS)
 
     activation = sub.add_parser(
@@ -88,27 +105,61 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "ingest":
-        if (
+        full = (
             args.debian_full
-            and os.environ.get("BETTERMAN_DATASET_STAGE", "staging").strip().lower() == "prod"
-        ):
+            or args.debian_translation
+            or args.ubuntu_full
+            or args.fedora_full
+            or args.arch_full
+            or args.alpine_full
+        )
+        if args.debian_full and args.distro != "debian":
+            parser.error("--debian-full requires --distro debian")
+        if args.alpine_full and args.distro != "alpine":
+            parser.error("--alpine-full requires --distro alpine")
+        if args.arch_full and args.distro != "arch":
+            parser.error("--arch-full requires --distro arch")
+        if args.fedora_full and args.distro != "fedora":
+            parser.error("--fedora-full requires --distro fedora")
+        if args.ubuntu_full and args.distro != "ubuntu":
+            parser.error("--ubuntu-full requires --distro ubuntu")
+        if full and os.environ.get("BETTERMAN_DATASET_STAGE", "staging").strip().lower() == "prod":
             _log(
                 "ingest_error",
-                error="--debian-full cannot use stage prod; ingest to staging "
+                error="full archive or --debian-translation cannot use stage prod; "
+                "ingest to staging "
                 "and use the gated promotion workflow",
             )
             return 2
+        if args.debian_translation and (
+            args.distro != "debian" or args.debian_full or args.in_container
+        ):
+            _log(
+                "ingest_error",
+                error="--debian-translation needs --distro debian and its own host run, "
+                "not --debian-full or --in-container",
+            )
+            return 2
         activate = bool(args.activate) if args.activate is not None else (not args.sample)
+        if args.debian_translation:
+            return _run_ingest(
+                sample=args.sample,
+                activate=activate,
+                distro="debian",
+                image_ref="deb-archives",
+                image_digest="pinned",
+                translation=args.debian_translation,
+            )
         if (
-            args.distro == "debian"
-            and args.debian_full
+            args.distro in {"debian", "ubuntu", "fedora", "arch", "alpine"}
+            and full
             and not args.sample
             and not args.in_container
         ):
             return _run_ingest(
                 sample=False,
                 activate=activate,
-                distro="debian",
+                distro=args.distro,
                 image_ref="deb-archives",
                 image_digest="pinned",
                 archive_mode=True,
@@ -165,6 +216,7 @@ def _run_ingest(
     image_ref: str,
     image_digest: str,
     archive_mode: bool = False,
+    translation: str | None = None,
 ) -> int:
     convex_url = os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL")
     ingest_secret = os.environ.get("CONVEX_INGEST_SECRET")
@@ -182,6 +234,12 @@ def _run_ingest(
             from ingestion.debian_publish import ingest_debian
 
             ingest_function = ingest_debian
+        if translation:
+            from functools import partial
+
+            from ingestion.debian_translations import ingest_debian_translation
+
+            ingest_function = partial(ingest_debian_translation, locale=translation)
         result = ingest_function(
             sample=sample,
             activate=activate,

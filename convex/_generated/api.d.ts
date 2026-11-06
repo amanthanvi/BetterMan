@@ -14,9 +14,12 @@ import type * as _derivedInputs from "../_derivedInputs.js";
 import type * as _derivedModel from "../_derivedModel.js";
 import type * as _destructive from "../_destructive.js";
 import type * as _explainBounds from "../_explainBounds.js";
+import type * as _flagSearch from "../_flagSearch.js";
 import type * as _generatedLayer from "../_generatedLayer.js";
+import type * as _indexPolicy from "../_indexPolicy.js";
 import type * as _ingestErrors from "../_ingestErrors.js";
 import type * as _legacyContent from "../_legacyContent.js";
+import type * as _locales from "../_locales.js";
 import type * as _manifestStorage from "../_manifestStorage.js";
 import type * as _optionFlags from "../_optionFlags.js";
 import type * as _providers from "../_providers.js";
@@ -31,6 +34,7 @@ import type * as _shellParser from "../_shellParser.js";
 import type * as _shellWrappers from "../_shellWrappers.js";
 import type * as _storedPayload from "../_storedPayload.js";
 import type * as _symbols from "../_symbols.js";
+import type * as _translationDrift from "../_translationDrift.js";
 import type * as content from "../content.js";
 import type * as crons from "../crons.js";
 import type * as derived from "../derived.js";
@@ -49,6 +53,7 @@ import type * as queries from "../queries.js";
 import type * as rateLimit from "../rateLimit.js";
 import type * as related from "../related.js";
 import type * as taskPhrases from "../taskPhrases.js";
+import type * as translationDrift from "../translationDrift.js";
 
 import type {
   ApiFromModules,
@@ -63,9 +68,12 @@ declare const fullApi: ApiFromModules<{
   _derivedModel: typeof _derivedModel;
   _destructive: typeof _destructive;
   _explainBounds: typeof _explainBounds;
+  _flagSearch: typeof _flagSearch;
   _generatedLayer: typeof _generatedLayer;
+  _indexPolicy: typeof _indexPolicy;
   _ingestErrors: typeof _ingestErrors;
   _legacyContent: typeof _legacyContent;
+  _locales: typeof _locales;
   _manifestStorage: typeof _manifestStorage;
   _optionFlags: typeof _optionFlags;
   _providers: typeof _providers;
@@ -80,6 +88,7 @@ declare const fullApi: ApiFromModules<{
   _shellWrappers: typeof _shellWrappers;
   _storedPayload: typeof _storedPayload;
   _symbols: typeof _symbols;
+  _translationDrift: typeof _translationDrift;
   content: typeof content;
   crons: typeof crons;
   derived: typeof derived;
@@ -98,6 +107,7 @@ declare const fullApi: ApiFromModules<{
   rateLimit: typeof rateLimit;
   related: typeof related;
   taskPhrases: typeof taskPhrases;
+  translationDrift: typeof translationDrift;
 }>;
 
 /**

@@ -20,7 +20,7 @@ async function storedDistro(page: Page) {
 
 test('reader: the options index and the body definitions have distinct ids', async ({ page }) => {
   await page.goto('/man/tar/1')
-  const row = page.getByRole('table', { name: 'Command-line options' }).getByRole('link')
+  const row = page.getByRole('table', { name: 'Command-line options' }).getByRole('link', { name: /--create/ })
   await expect(row).toHaveAttribute('id', 'opt-opt-create')
   await expect(row).toHaveAttribute('href', '#opt-opt-create')
   await expect(page.locator('dt#opt-create')).toHaveCount(1)

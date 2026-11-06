@@ -1,3 +1,6 @@
+import { readProviderPackages } from "./_providers";
+import { compareFlagCandidates } from "./_flagSearch";
+import { pageIsIndexable, sitemapPageCount } from "./_indexPolicy";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { MAX_MANIFEST_SECTIONS } from "./_releaseManifest";
@@ -9,6 +12,7 @@ import { nameEditDistance } from "./_searchTypos";
 import { query, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { distroValidator, publicStageCompatibilityValidator } from "./schema";
+import { DEFAULT_LOCALE, isContentLocale } from "./_locales";
 import {
   deterministicSnippet,
   DISTRO_ORDER,
@@ -23,6 +27,7 @@ import {
   sectionSortKey,
 } from "./lib";
 import {
+  activePointer,
   activeRelease,
   pageByNameAndSection,
   requireActiveRelease,
@@ -37,7 +42,19 @@ const MAX_LEGACY_SECTION_SCAN = 5_000;
 const SITEMAP_CHUNK_ITEMS = 5_000;
 const MAX_RELATED = 50;
 const MAX_DESCRIPTION_HITS = 24;
+// Curated task vocabulary only: keep command names, flags and explain input literal.
+const TASK_SYNONYMS = new Map([["tarball", "tar archive"], ["tarballs", "tar archive"]]);
 const SEARCH_STOP_WORDS = new Set("a an and are as at be by can do does for from how i in is it of on or the to what when where which with".split(" "));
+
+function taskExpansion(word: string, prefixWord?: string): string | undefined {
+  return TASK_SYNONYMS.get(word) ?? (word === prefixWord && word.length >= 4
+    ? [...TASK_SYNONYMS].find(([synonym]) => synonym.startsWith(word))?.[1] : undefined);
+}
+
+function wordOverlap(words: string[], queryWords: string[], prefixWord?: string): number {
+  return queryWords.reduce((score, word) => score + (words.includes(word) ? 1 :
+    word === prefixWord && word.length >= 4 && words.some(candidate => candidate.startsWith(word)) ? 0.5 : 0), 0);
+}
 
 function boundedInt(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
@@ -79,13 +96,22 @@ export const getInfo = query({
   args: {
     stage: publicStageCompatibilityValidator,
     distro: distroValidator,
+    // A content language (#395): adds `translation`, that language's release (null without one).
+    locale: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // English always; with a translated `locale` (#395) the language's release
+    // too, so a translated page view costs this one call.
+    const locale = args.locale ?? DEFAULT_LOCALE;
+    const translation = locale !== DEFAULT_LOCALE && isContentLocale(locale)
+      ? { translation: { locale, datasetReleaseId: (await activePointer(ctx, { stage: PUBLIC_DATASET_STAGE, distro: args.distro, locale }))?.datasetReleaseId ?? null } }
+      : {};
     const release = await activeRelease(ctx, { stage: PUBLIC_DATASET_STAGE, distro: args.distro });
     if (!release) {
       return {
+        ...translation,
         datasetReleaseId: "uninitialized",
-        locale: "en",
+        locale: DEFAULT_LOCALE,
         distro: args.distro,
         pageCount: 0,
         lastUpdated: new Date().toISOString(),
@@ -93,6 +119,7 @@ export const getInfo = query({
     }
 
     return {
+      ...translation,
       datasetReleaseId: release.datasetReleaseId,
       locale: release.locale,
       distro: release.distro,
@@ -127,6 +154,31 @@ export const listSections = query({
   },
 });
 
+/** Provider proof reads route metadata only; the active pointer already names its release. */
+export const providersFor = query({
+  args: {
+    distro: distroValidator,
+    name: v.string(),
+    section: v.string(),
+  },
+  returns: v.object({ packages: v.array(v.string()), datasetReleaseId: v.string() }),
+  handler: async (ctx, args) => {
+    const active = await ctx.db.query("activeReleases")
+      .withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", PUBLIC_DATASET_STAGE).eq("locale", "en").eq("distro", args.distro)).unique();
+    if (!active) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
+    const name = normalizeName(args.name);
+    const section = normalizeSection(args.section);
+    const page = await pageByNameAndSection(ctx, { releaseId: active.releaseId, name, section });
+    if (page?.providerPackages) return { packages: page.providerPackages, datasetReleaseId: active.datasetReleaseId };
+    // Legacy and alias-owned routes have no cached list; use their bounded indexed providers.
+    const release = await ctx.db.get(active.releaseId);
+    if (!release) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
+    const packages = await readProviderPackages(ctx, release, name, section, page);
+    if (page?.sourcePackage && !packages.includes(page.sourcePackage)) packages.push(page.sourcePackage);
+    return { packages, datasetReleaseId: active.datasetReleaseId };
+  },
+});
+
 export const getManMetaByNameAndSection = query({
   args: {
     stage: publicStageCompatibilityValidator,
@@ -146,6 +198,7 @@ export const getManMetaByNameAndSection = query({
         description: v.string(),
         sourcePackage: v.union(v.string(), v.null()),
         sourcePackageVersion: v.union(v.string(), v.null()),
+        indexable: v.boolean(),
         datasetReleaseId: v.string(),
       }),
     }),
@@ -176,6 +229,7 @@ export const getManMetaByNameAndSection = query({
         description: page.description,
         sourcePackage: page.sourcePackage ?? null,
         sourcePackageVersion: page.sourcePackageVersion ?? null,
+        indexable: pageIsIndexable(release, page),
         datasetReleaseId: release.datasetReleaseId,
       },
     };
@@ -187,6 +241,8 @@ export const resolveManByName = query({
   args: {
     distro: distroValidator,
     name: v.string(),
+    // `?lang=` (#395): the language's sections first, then English's.
+    locale: v.optional(v.string()),
   },
   returns: v.union(
     v.object({
@@ -196,26 +252,45 @@ export const resolveManByName = query({
       title: v.string(),
       description: v.string(),
       datasetReleaseId: v.string(),
+      translatedReleaseId: v.optional(v.union(v.string(), v.null())),
     }),
     v.object({
       kind: v.literal("ambiguous"),
+      indexable: v.boolean(),
       options: v.array(v.object({ section: v.string(), title: v.string(), description: v.string() })),
       datasetReleaseId: v.string(),
+      translatedReleaseId: v.optional(v.union(v.string(), v.null())),
     }),
-    v.object({ kind: v.literal("alias"), name: v.string(), section: v.string(), pkg: v.optional(v.string()), datasetReleaseId: v.string() }),
-    v.object({ kind: v.literal("not_found"), datasetReleaseId: v.string() }),
+    v.object({ kind: v.literal("alias"), name: v.string(), section: v.string(), pkg: v.optional(v.string()), datasetReleaseId: v.string(), translatedReleaseId: v.optional(v.union(v.string(), v.null())) }),
+    v.object({ kind: v.literal("not_found"), datasetReleaseId: v.string(), translatedReleaseId: v.optional(v.union(v.string(), v.null())) }),
   ),
   handler: async (ctx, args) => {
+    const name = normalizeName(args.name);
+    const translated = args.locale && args.locale !== DEFAULT_LOCALE && isContentLocale(args.locale)
+      ? await activePointer(ctx, { stage: PUBLIC_DATASET_STAGE, distro: args.distro, locale: args.locale })
+      : null;
+    if (translated) {
+      const translatedRelease = await ctx.db.get(translated.releaseId);
+      if (!translatedRelease) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
+      const found = await resolvePageByName(ctx, { release: translatedRelease, name });
+      if (found.kind !== "not_found") {
+        const datasetReleaseId = translated.datasetReleaseId;
+        if (found.kind !== "page") return { ...found, ...(found.kind === "ambiguous" ? { indexable: false } : {}), datasetReleaseId };
+        const { section, title, description } = found.page;
+        return { kind: "page" as const, name: found.page.name, section, title, description, datasetReleaseId };
+      }
+    }
     const release = await requireActiveRelease(ctx, {
       stage: PUBLIC_DATASET_STAGE,
       distro: args.distro,
     });
-    const result = await resolvePageByName(ctx, { releaseId: release._id, name: normalizeName(args.name) });
+    const result = await resolvePageByName(ctx, { release, name: normalizeName(args.name) });
     // The release this answer comes from, so a caller caching it under an expected release can check.
     const { datasetReleaseId } = release;
-    if (result.kind !== "page") return { ...result, datasetReleaseId };
-    const { name, section, title, description } = result.page;
-    return { kind: "page" as const, name, section, title, description, datasetReleaseId };
+    const provenance = args.locale !== undefined ? { translatedReleaseId: translated?.datasetReleaseId ?? null } : {};
+    if (result.kind !== "page") return { ...result, datasetReleaseId, ...provenance };
+    const { section, title, description } = result.page;
+    return { kind: "page" as const, name: result.page.name, section, title, description, datasetReleaseId, ...provenance };
   },
 });
 
@@ -349,15 +424,22 @@ export const getRelated = query({
     section: v.string(),
     /** A missing page answers `{ items: [], found: false, datasetReleaseId }` instead of null. */
     reportRelease: v.optional(v.boolean()),
+    /** A translated release's links (#395); English when absent. */
+    locale: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const name = normalizeName(args.name);
     const section = normalizeSection(args.section);
-    const release = await requireActiveRelease(ctx, {
+    const locale = args.locale ?? DEFAULT_LOCALE;
+    if (!isContentLocale(locale)) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
+    // `?lang=` (#395): the translated page's links, else English's, as the page itself resolves.
+    const translated = locale === DEFAULT_LOCALE ? null : await activePointer(ctx, { stage: PUBLIC_DATASET_STAGE, distro: args.distro, locale });
+    const translatedPage = translated ? await pageByNameAndSection(ctx, { releaseId: translated.releaseId, name, section }) : null;
+    const release = translatedPage ? { _id: translated!.releaseId, datasetReleaseId: translated!.datasetReleaseId } : await requireActiveRelease(ctx, {
       stage: PUBLIC_DATASET_STAGE,
       distro: args.distro,
     });
-    const page = await pageByNameAndSection(ctx, {
+    const page = translatedPage ?? await pageByNameAndSection(ctx, {
       releaseId: release._id,
       name,
       section,
@@ -564,6 +646,36 @@ async function clusterHits(ctx: QueryCtx, releaseId: Id<"datasetReleases">, name
   return hits;
 }
 
+/** Verified-example coverage is checked before the candidate cap, not after it. */
+async function bareClusterHits(ctx: QueryCtx, release: Doc<"datasetReleases">, flag: string, section: string | null): Promise<RankedHit[]> {
+  const letters = [...flag.slice(1)].map(letter => `-${letter}`);
+  const hints = release.flagSearchReady ? await Promise.all([...new Set(letters)].map(part => ctx.db.query("flagSearchCandidates")
+    .withIndex("by_releaseId_and_generation_and_flag", q => q.eq("releaseId", release._id).eq("generation", release.flagSearchGeneration).eq("flag", part)).unique())) : [];
+  const merged = new Map(hints.flatMap(row => row?.candidates ?? []).map(candidate => [candidate.pageId, candidate]));
+  const preferred = [...merged.values()].filter(c => (section === null || c.section === section) && letters.every(f => c.usage.some(u => u.flag === f)))
+    .sort((a, b) => compareFlagCandidates(a, b, letters));
+  // Reserve release reads, every letter's candidate row, and the full 12-lookup brief.
+  const take = Math.floor((40 - 2 - letters.length - (MAX_TOP_FLAG_LOOKUPS + 2)) / (letters.length + 1));
+  const candidates = preferred.length ? preferred.slice(0, take) : await optionFlagRowsFor(ctx, {
+    releaseId: release._id, section, flag: letters[0], namePrefix: null, take,
+  });
+  const hits: RankedHit[] = [];
+  for (const candidate of candidates) {
+    const rows: Array<Doc<"manPageOptionFlags">> = [];
+    for (const part of letters) {
+      if (rows.length && (rows[rows.length - 1].takesArgument ?? flagTakesArgument(rows[rows.length - 1].flags))) break;
+      const row = "flag" in candidate && part === letters[0] ? candidate : await ctx.db.query("manPageOptionFlags")
+        .withIndex("by_pageId_and_flag", q => q.eq("pageId", candidate.pageId).eq("flag", part)).first();
+      if (!row) break;
+      rows.push(row);
+    }
+    if (rows.length !== letters.length) continue;
+    const hit = await optionHit(ctx, rows[0], 0);
+    if (hit) { hit.highlights = [...new Set(rows.map(row => row.flags))]; hits.push(hit); }
+  }
+  return hits;
+}
+
 function rankSearchDocument(
   doc: Pick<Doc<"manPageSearchDocuments">, "nameNorm" | "descNorm">,
   queryNorm: string,
@@ -631,6 +743,7 @@ async function textHits(
   const symbols = section === null
     ? await ctx.db.query('manPageSymbols').withIndex('by_releaseId_and_termNorm', q => q.eq('releaseId', releaseId).eq('termNorm', queryNorm.replace(/=$/, ''))).take(8)
     : await ctx.db.query('manPageSymbols').withIndex('by_releaseId_and_section_and_termNorm', q => q.eq('releaseId', releaseId).eq('section', section).eq('termNorm', queryNorm.replace(/=$/, ''))).take(8);
+  const prefixWord = queryNorm.match(/[a-z0-9_]+$/)?.[0];
   const contentWords = queryNorm.split(/[^a-z0-9_]+/).filter((word) => word && !SEARCH_STOP_WORDS.has(word));
 
   const ranked = new Map<Id<"manPages">, RankedHit>();
@@ -644,7 +757,7 @@ async function textHits(
     // Convex returns ranked any-term matches. Keep content-word overlap, not
     // stop-word-only answers such as true(1) for "how do I extract a tarball".
     const words = `${doc.nameNorm} ${doc.descNorm}`.split(/[^a-z0-9_]+/);
-    const overlap = contentWords.filter((word) => words.some((candidate) => candidate.startsWith(word))).length;
+    const overlap = wordOverlap(words, contentWords, prefixWord);
     if (queryNorm.includes(" ") && overlap === 0) return;
     ranked.set(doc.pageId, searchDocumentHit(doc, queryText, rankDescriptionDocument(doc, queryNorm, index) + overlap * 50));
   });
@@ -658,7 +771,9 @@ async function textHits(
   // One-letter words ("ls -l") would prefix-match most phrases.
   const taskWords = contentWords.filter((word) => word.length > 1);
   if (queryNorm.includes(" ") && taskWords.length) {
-    for (const hit of await taskHits(ctx, { releaseId, section, queryText, contentWords: taskWords })) {
+    const taskQuery = queryNorm.replace(/\b[a-z]+\b/g, (word) => taskExpansion(word, prefixWord) ? `${word} ${taskExpansion(word, prefixWord)}` : word);
+    const expandedWords = [...new Set(taskWords.flatMap((word) => (taskExpansion(word, prefixWord) ? `${word} ${taskExpansion(word, prefixWord)}` : word).split(" ")))];
+    for (const hit of await taskHits(ctx, { releaseId, section, queryText: taskQuery, contentWords: expandedWords, prefixWord })) {
       const existing = ranked.get(hit.pageId!);
       if (!existing || existing.rank < hit.rank) ranked.set(hit.pageId!, hit);
     }
@@ -676,7 +791,7 @@ const MAX_TASK_HITS = 3;
 
 async function taskHits(
   ctx: QueryCtx,
-  args: { releaseId: Id<"datasetReleases">; section: string | null; queryText: string; contentWords: string[] },
+  args: { releaseId: Id<"datasetReleases">; section: string | null; queryText: string; contentWords: string[]; prefixWord?: string },
 ): Promise<RankedHit[]> {
   const rows = await ctx.db.query("manPageTaskPhrases")
     .withSearchIndex("search_taskText", (q) => {
@@ -684,25 +799,26 @@ async function taskHits(
       return args.section === null ? base : base.eq("section", args.section);
     })
     .take(MAX_TASK_ROWS);
-  const hits: RankedHit[] = [];
-  for (const [index, row] of rows.entries()) {
-    if (hits.length >= MAX_TASK_HITS) break;
+  const hits: Array<RankedHit & { popularityScore?: number }> = [];
+  for (const row of rows) {
     // The phrase sharing the most content words with the query is the evidence;
     // a phrase sharing none (only stop words matched) is not a task match.
     let best: { phrase: string; overlap: number } | null = null;
     for (const phrase of row.taskText.split("\n")) {
-      const words = phrase.toLowerCase().split(/[^a-z0-9_]+/);
-      const overlap = args.contentWords.filter((word) => words.some((candidate) => candidate.startsWith(word))).length;
+      const words = `${row.name} ${phrase}`.toLowerCase().split(/[^a-z0-9_]+/);
+      const overlap = wordOverlap(words, args.contentWords, args.prefixWord);
       if (overlap && (!best || overlap > best.overlap)) best = { phrase, overlap };
     }
     if (!best) continue;
     hits.push({
       name: row.name, section: row.section, title: row.title, description: row.description,
       highlights: [], match: "task", taskPhrase: best.phrase, pageId: row.pageId,
-      rank: 2_000 + best.overlap * 100 - index,
+      popularityScore: row.popularityScore,
+      rank: 2_000 + best.overlap * 100,
     });
   }
-  return hits;
+  return hits.sort((a, b) => b.rank - a.rank || (b.popularityScore ?? 0) - (a.popularityScore ?? 0) || compareHits(a, b))
+    .slice(0, MAX_TASK_HITS).map((hit, index) => ({ ...hit, rank: 2_000 + MAX_TASK_HITS - index }));
 }
 
 // Names within two edits of `queryText`, for a lookup that found nothing.
@@ -787,6 +903,11 @@ async function topHit(ctx: QueryCtx, pageId: Id<"manPages">) {
   return { name: page.name, section: page.section, example, flags, package: page.sourcePackage ?? null };
 }
 
+
+type SearchArgs = {
+  distro: Distro; q: string; section: string | null; limit: number; offset: number; brief?: boolean; locale?: string;
+};
+
 export const search = query({
   args: {
     stage: publicStageCompatibilityValidator,
@@ -797,6 +918,8 @@ export const search = query({
     offset: v.number(),
     // The search page and home ask for the first hit's brief; type-ahead does not.
     brief: v.optional(v.boolean()),
+    // The reader's content language (#395): its translated pages first, then English.
+    locale: v.optional(v.string()),
   },
   returns: v.object({
     query: v.string(),
@@ -805,13 +928,73 @@ export const search = query({
       highlights: v.array(v.string()),
       match: v.optional(v.union(v.literal("option"), v.literal("task"))), anchorId: v.optional(v.string()), symbolKind: v.optional(symbolInput.fields.kind),
       taskPhrase: v.optional(v.string()),
+      // Set on hits from a translated release; English hits omit it.
+      locale: v.optional(v.string()),
     })),
     suggestions: v.array(v.string()),
     correctedQuery: v.optional(v.string()),
     hasMore: v.boolean(), nextOffset: v.union(v.number(), v.null()),
     top: v.optional(topHitValidator),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<LocalizedSearchResponse> => {
+    if (!args.q.trim()) return { query: "", results: [], suggestions: [], hasMore: false, nextOffset: null };
+    const locale = args.locale ?? DEFAULT_LOCALE;
+    const english = await requireActiveRelease(ctx, { stage: PUBLIC_DATASET_STAGE, distro: args.distro });
+    const translated = locale !== DEFAULT_LOCALE && isContentLocale(locale)
+      ? await activeRelease(ctx, { stage: PUBLIC_DATASET_STAGE, distro: args.distro, locale })
+      : null;
+    if (!translated) return await searchRelease(ctx, args, english);
+    return await searchWithFallback(ctx, args, translated, english);
+  },
+});
+
+type SearchResponse = Awaited<ReturnType<typeof searchRelease>>;
+type LocalizedHit = SearchResponse["results"][number] & { locale?: string };
+type LocalizedSearchResponse = Omit<Extract<SearchResponse, { top?: unknown }>, "results"> & { results: LocalizedHit[] };
+
+/**
+ * Translated hits first, then English for every route the translation lacks
+ * (#395). The first page holds at most `limit - 1` translated hits, so English
+ * always advances and later offsets page through English alone, skipping the
+ * routes the translation answered. Reads: one translated search plus English's.
+ */
+async function searchWithFallback(
+  ctx: QueryCtx, args: SearchArgs, translated: Doc<"datasetReleases">, english: Doc<"datasetReleases">,
+): Promise<LocalizedSearchResponse> {
+  const limit = boundedInt(args.limit, 1, MAX_SEARCH_LIMIT);
+  const offset = boundedInt(args.offset, 0, MAX_SEARCH_OFFSET);
+  const local = await searchRelease(ctx, { ...args, offset: 0, limit: Math.max(1, limit - 1), brief: false }, translated);
+  // English's top hit leads only when the language has no hit on this page.
+  const englishLeads = offset > 0 || local.results.length === 0;
+  const fallback = await searchRelease(ctx, { ...args, offset, limit, brief: Boolean(args.brief) && englishLeads }, english);
+  const key = (hit: { name: string; section: string }) => `${hit.name}\u0000${hit.section}`;
+  const answered = new Set(local.results.map(key));
+  const results: LocalizedHit[] = offset === 0
+    ? local.results.slice(0, Math.max(1, limit - 1)).map((hit) => ({ ...hit, locale: translated.locale }))
+    : [];
+  let consumed = 0;
+  for (const hit of fallback.results) {
+    if (results.length >= limit) break;
+    consumed++;
+    if (!answered.has(key(hit))) results.push(hit);
+  }
+  const moreEnglish = consumed < fallback.results.length || fallback.hasMore;
+  const nextOffset = moreEnglish && offset + consumed < MAX_SEARCH_OFFSET
+    ? Math.min(offset + Math.max(consumed, 1), MAX_SEARCH_OFFSET) : null;
+  const suggestions = results.length ? [] : fallback.suggestions;
+  const englishFirst = results[0] && results[0].locale === undefined;
+  return {
+    query: fallback.query,
+    results,
+    suggestions,
+    ...(suggestions.length && fallback.correctedQuery ? { correctedQuery: fallback.correctedQuery } : {}),
+    hasMore: nextOffset !== null,
+    nextOffset,
+    ...(args.brief ? { top: englishFirst ? fallback.top ?? null : null } : {}),
+  };
+}
+
+async function searchRelease(ctx: QueryCtx, args: SearchArgs, release: Doc<"datasetReleases">) {
     const queryText = args.q.trim().replace(/\s+/g, " ").slice(0, 120).trim();
     if (!queryText) {
       return { query: queryText, results: [], suggestions: [], hasMore: false, nextOffset: null };
@@ -820,10 +1003,6 @@ export const search = query({
     const section = citation ? normalizeSection(citation[2]) : args.section ? normalizeSection(args.section) : null;
     const limit = boundedInt(args.limit, 1, MAX_SEARCH_LIMIT);
     const offset = boundedInt(args.offset, 0, MAX_SEARCH_OFFSET);
-    const release = await requireActiveRelease(ctx, {
-      stage: PUBLIC_DATASET_STAGE,
-      distro: args.distro,
-    });
     const takeCount = Math.min(offset + limit + 5, MAX_SEARCH_OFFSET + MAX_SEARCH_LIMIT);
 
     // Single flags retain the existing 43-read first page / 303-read maximum.
@@ -845,6 +1024,11 @@ export const search = query({
       if (!rows.length && flag.startsWith("--") && flag !== flag.toLowerCase()) {
         rows = await optionFlagRowsFor(ctx, { ...lookup, flag: flag.toLowerCase() });
       }
+      if (!rows.length && name === null && /^-[a-zA-Z0-9]{2,8}$/.test(flag)) {
+        const hits = await bareClusterHits(ctx, release, flag, section);
+        visible = hits.slice(offset, offset + limit);
+        hasMore = hits.length > offset + limit;
+      }
       if (!rows.length && isNamedCluster) {
         const hits = await clusterHits(ctx, release._id, name!, flag, section);
         if (hits.length) {
@@ -858,13 +1042,20 @@ export const search = query({
           if (!exactCommand) rows = await optionFlagRowsFor(ctx, { ...lookup, exactName: false, flag });
         }
       }
-      if (rows.length) {
+      const hints = visible === null && name === null && release.flagSearchReady ? await ctx.db.query("flagSearchCandidates")
+        .withIndex("by_releaseId_and_generation_and_flag", q => q.eq("releaseId", release._id).eq("generation", release.flagSearchGeneration).eq("flag", flag.startsWith("--") ? flag.toLowerCase() : flag)).unique() : null;
+      const preferred = (hints?.candidates ?? []).filter(c => section === null || c.section === section);
+      if (rows.length || preferred.length) {
+        const candidates: Array<RankedHit | Doc<"manPageOptionFlags">> = [
+          ...preferred.map(c => ({ ...c, highlights: [c.flags], match: "option" as const, rank: 0 })),
+          ...rows.filter(row => !preferred.some(c => c.pageId === row.pageId)),
+        ];
         visible = [];
-        for (const row of rows.slice(offset, offset + limit)) {
-          const hit = await optionHit(ctx, row, 0);
+        for (const row of candidates.slice(offset, offset + limit)) {
+          const hit = "rank" in row ? row : await optionHit(ctx, row, 0);
           if (hit) visible.push(hit);
         }
-        hasMore = rows.length > offset + limit;
+        hasMore = candidates.length > offset + limit;
       } else if (visible === null) {
         if (!name) return { query: queryText, results: [], suggestions: [], hasMore: false, nextOffset: null };
         textQuery = name;
@@ -937,8 +1128,7 @@ export const search = query({
       nextOffset,
       ...(args.brief ? { top } : {}),
     };
-  },
-});
+}
 
 export const suggest = query({
   args: {
@@ -1039,11 +1229,14 @@ export const getLicense = query({
       )
       .unique();
     if (!license) return null;
+    const textUrl = license.storageId ? await ctx.storage.getUrl(license.storageId) : null;
+    if (license.storageId && !textUrl) throw new Error("LICENSE_FILE_MISSING");
     return {
       package: pkg,
       licenseId: license.licenseId,
       licenseName: license.licenseName,
       text: license.licenseText,
+      ...(textUrl ? { textUrl } : {}),
     };
   },
 });
@@ -1052,6 +1245,10 @@ export const listSeoReleases = query({
   args: {
     stage: publicStageCompatibilityValidator,
   },
+  returns: v.object({
+    urlsPerFile: v.number(),
+    items: v.array(v.object({ distro: distroValidator, datasetReleaseId: v.string(), ingestedAt: v.string(), pageCount: v.number() })),
+  }),
   handler: async (ctx) => {
     const releases = await Promise.all(
       DISTROS.map(async (distro) => {
@@ -1061,7 +1258,7 @@ export const listSeoReleases = query({
           distro,
           datasetReleaseId: release.datasetReleaseId,
           ingestedAt: release.ingestedAt,
-          pageCount: release.pageCount,
+          pageCount: sitemapPageCount(release),
         };
       }),
     );
@@ -1080,12 +1277,18 @@ export const listSitemapPageChunk = query({
     page: v.number(),
     paginationOpts: paginationOptsValidator,
   },
+  returns: v.union(v.null(), v.object({
+    datasetReleaseId: v.string(), items: v.array(v.object({ name: v.string(), section: v.string() })),
+    page: v.number(), isDone: v.boolean(), continueCursor: v.string(),
+  })),
   handler: async (ctx, args) => {
     const release = await activeRelease(ctx, {
       stage: PUBLIC_DATASET_STAGE,
       distro: args.distro,
     });
     if (!release) return null;
+    if (!Number.isSafeInteger(args.page) || args.page < 1 ||
+        args.page > Math.ceil(sitemapPageCount(release) / SITEMAP_URLS_PER_FILE)) return null;
     const paginationOpts = {
       ...args.paginationOpts,
       numItems: boundedInt(args.paginationOpts.numItems, 1, SITEMAP_CHUNK_ITEMS),
@@ -1099,7 +1302,7 @@ export const listSitemapPageChunk = query({
     if (!result.page.length && args.paginationOpts.cursor === null) return null;
     return {
       datasetReleaseId: release.datasetReleaseId,
-      items: result.page.map((page) => ({ name: page.name, section: page.section })),
+      items: result.page.filter((page) => pageIsIndexable(release, page)).map((page) => ({ name: page.name, section: page.section })),
       page: args.page,
       isDone: result.isDone,
       continueCursor: result.continueCursor,

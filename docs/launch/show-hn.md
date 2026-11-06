@@ -26,7 +26,7 @@ Hi HN. BetterMan is a web reader for Unix manual pages. I've been working on it 
 
 **What it does.**
 
-- `betterman.sh/tar`, `/tar.1`, `/tar/-x` go to the page or flag. `curl betterman.sh/tar.txt` returns plain text. Browsers can add it as a search engine.
+- `betterman.sh/tar`, `/tar.1`, `/tar/-x` go to the page or flag. `curl -L betterman.sh/tar.txt` returns plain text. Browsers can add it as a search engine.
 - Each page opens with a one-sentence summary, up to five examples (each labelled with its source) and the most-used flags. The upstream manual follows unchanged, with a filterable options index.
 - Search matches task phrases ("extract a tarball" finds tar(1)), manual citations such as `open(2)` and clustered flags.
 - *Explain*: paste a shell line, get each command and flag linked to its definition. Clustered flags are split. It is a deterministic parser, not a model. For input it can't parse safely it says so instead of guessing.
@@ -49,7 +49,7 @@ Hi HN. BetterMan is a web reader for Unix manual pages. I've been working on it 
 - Portability compares distros, not versions of a distro.
 - Explain covers a defined shell grammar. It will refuse some valid lines.
 - Generated summaries can be wrong or flat. Every page has a *report a problem* link that opens a prefilled GitHub issue.
-- {{INDEXING_POLICY}} (Planned: sections 1, 5, 7, 8 and popular packages indexable, the long tail served and searchable but `noindex` until real traffic promotes it, to avoid 100k thin pages. That is B4, #396, and was not built when this was drafted: `nextjs/lib/manRobots.ts` indexes every page that carries no `indexable` flag. Describe what production does, and delete this line if you'd rather not discuss it.)
+- {{INDEXING_POLICY}} (Planned: sections 1, 5, 7, 8 and popular packages indexable, the long tail served and searchable but `noindex`, to avoid 100k thin pages. That is B4, #396, and was not built when this was drafted: `nextjs/lib/manRobots.ts` indexes every page that carries no `indexable` flag. Describe what production does, and delete this line if you'd rather not discuss it.)
 - Parsing man pages is messy. Pages that mandoc warned about carry a note, and some will still render badly.
 - No CLI, API or editor extension for now. `/api/` is disallowed for crawlers.
 
@@ -60,7 +60,7 @@ It's MIT licensed: https://github.com/amanthanvi/BetterMan. I'll be around to an
 ## Anticipated questions (for the owner, not for posting)
 
 - *"Why not just `man`?"* Because you can't link to a flag, search by task, or compare distros in a terminal. `man` stays the better tool locally. Say so.
-- *"Does it send my commands to a model?"* No. Explain runs a parser on the server, with no model. Sentry events strip `cmd`, `q` and `name` (`nextjs/lib/sentryScrub.ts`). Plausible is first-party and cookieless and receives no search text ([analytics.md](../analytics.md)).
+- *"Does it send my commands to a model?"* No. Explain runs a parser on the server, with no model. Sentry events strip `cmd`, `q` and `name` (`nextjs/lib/sentryScrub.ts`). Vercel Web Analytics loads only in production, uses same-origin intake without cookies, and receives no search text ([analytics.md](../analytics.md)).
 - *"AI-generated content on a reference site?"* Lead with the labelling and the flag check. Do not claim the summaries are always right.
 - *"Cost and traffic?"* Convex Professional. Don't give numbers that aren't in the issue; take the real ones from the first 48 hours.
 - *"Scraping?"* Answer engines may crawl `/man/*`. Bytespider and CCBot are disallowed. See [abuse-scraping.md](../runbooks/abuse-scraping.md).

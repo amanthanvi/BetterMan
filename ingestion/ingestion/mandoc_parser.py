@@ -40,7 +40,24 @@ _bare_xref_re = re.compile(
     r"(?<![\w./-])(?P<name>[A-Za-z0-9_][A-Za-z0-9_.+:-]*)\((?P<section>[1-9][a-z0-9]*)\)"
 )
 _bullet_term_re = re.compile(r"^\s*(?:\*|\+|-|•)(?:\s+|$)")
-_options_heading_re = re.compile(r"\bOPTIONS?\b", re.IGNORECASE)
+_options_heading_re = re.compile(
+    # English, then the translated titles Debian ships (#395).
+    r"\bOPTIONS?\b|\b(?:OPTIONEN|OPCIONES|OPÇÕES|ПАРАМЕТРЫ|ОПЦИИ)\b|オプション",
+    re.IGNORECASE,
+)
+# Translated manuals (#395) title these sections in their own language, and
+# mandoc gives non-ASCII headings no id, so the fallback matches heading text.
+# English ids always win; titles were tallied from man-pages-l10n in trixie.
+_LOCALIZED_SECTION_TITLES = {
+    "NAME": frozenset(
+        {"BEZEICHNUNG", "NOM", "NOMBRE", "NOME", "名前", "名称", "НАИМЕНОВАНИЕ", "ИМЯ", "НАЗВАНИЕ"}
+    ),
+    # French "SYNOPSIS" already has the English id.
+    "SYNOPSIS": frozenset({"ÜBERSICHT", "SINOPSIS", "SINOPSE", "書式", "ОБЗОР"}),
+    "SEE ALSO": frozenset(
+        {"SIEHE AUCH", "VOIR AUSSI", "VÉASE TAMBIÉN", "VEJA TAMBÉM", "関連項目", "СМОТРИТЕ ТАКЖЕ"}
+    ),
+}
 _bare_option_prefix_re = re.compile(r"^\s*(?:--|-|\+)(?=\s*(?:,|$))")
 # Keep symbolic placeholders and grouped flags, not numeric ranges or shell operators.
 _option_term_re = re.compile(
@@ -847,8 +864,20 @@ def _xref_to_href(label: str) -> tuple[str | None, str]:
     return f"/man/{name}", "internal"
 
 
+def _section_heading(manual_text: Tag, *ids: str) -> Tag | None:
+    for heading_id in ids:
+        heading = manual_text.find(id=heading_id)
+        if heading is not None:
+            return heading
+    titles = _LOCALIZED_SECTION_TITLES[ids[0]]
+    for heading in manual_text.find_all("h1"):
+        if normalize_ws(heading.get_text(" ")).upper() in titles:
+            return heading
+    return None
+
+
 def _extract_description(manual_text: Tag) -> str | None:
-    name_heading = manual_text.find(id="NAME")
+    name_heading = _section_heading(manual_text, "NAME")
     if name_heading is None:
         return None
     section = name_heading.find_parent("section")
@@ -868,7 +897,7 @@ def _extract_description(manual_text: Tag) -> str | None:
 
 
 def _extract_synopsis(manual_text: Tag) -> list[str]:
-    heading = manual_text.find(id="SYNOPSIS")
+    heading = _section_heading(manual_text, "SYNOPSIS")
     if heading is None:
         return []
     section = heading.find_parent("section")
@@ -1028,7 +1057,7 @@ def _option_definition_lists(
 
 
 def _extract_see_also(manual_text: Tag) -> list[SeeAlsoRef] | None:
-    heading = manual_text.find(id="SEE ALSO") or manual_text.find(id="SEE_ALSO")
+    heading = _section_heading(manual_text, "SEE ALSO", "SEE_ALSO")
     if heading is None:
         return None
 

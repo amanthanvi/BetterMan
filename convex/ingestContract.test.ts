@@ -25,7 +25,9 @@ it("advertises the ingest contract only when the ingest secret matches", async (
   });
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({
-    schemaVersion: INGEST_CONTRACT.schemaVersion,
+    schemaVersion: 9,
+    acquisitions: [...INGEST_CONTRACT.acquisitions],
+    storedLicenseText: true,
     functions: [...INGEST_CONTRACT.functions],
     declarationCounts: [...INGEST_CONTRACT.declarationCounts],
     activatePending: INGEST_CONTRACT.activatePending,
@@ -42,18 +44,38 @@ it("does not advertise the ingest contract when the secret is unset", async () =
   expect(response.status).toBe(503);
 });
 
-it.each([undefined, "5", "7"])("rejects promotion from a workflow with contract header %s before touching pointers", async (version) => {
+const RELEASE_ROUTES = [
+  "/ingest/release", "/ingest/license-packages", "/ingest/pages", "/ingest/pages/storage", "/ingest/aliases",
+  "/ingest/licenses", "/ingest/activate", "/ingest/promotion-source", "/ingest/promote",
+];
+const current = INGEST_CONTRACT.schemaVersion;
+
+it.each(RELEASE_ROUTES.flatMap((route) => [undefined, String(current - 1), String(current + 1), "v" + current].map((version) => [route, version] as const)))(
+  "the server rejects %s from a client with contract header %s before any read or write",
+  async (route, version) => {
+    vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
+    const t = convexTest(schema, modules);
+    const response = await t.fetch(route, {
+      method: "POST",
+      headers: { authorization: "Bearer test-secret", "content-type": "application/json", ...(version ? { "x-betterman-ingest-contract": version } : {}) },
+      body: JSON.stringify({ fromStage: "staging", toStage: "prod", distros: ["debian"], activatedAt: "now", datasetReleaseId: "r", stage: "staging", distro: "debian" }),
+    });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: { code: "INGEST_CONTRACT_MISMATCH" } });
+    expect(await t.run((ctx) => ctx.db.query("datasetReleases").take(1))).toEqual([]);
+    expect(await t.run((ctx) => ctx.db.query("activeReleases").take(1))).toEqual([]);
+    expect(await t.run((ctx) => ctx.db.system.query("_scheduled_functions").take(1))).toEqual([]);
+  },
+);
+
+it("checks the secret before the contract, and leaves the generated layer to its own contract", async () => {
   vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
   const t = convexTest(schema, modules);
-  const response = await t.fetch("/ingest/promote", {
-    method: "POST",
-    headers: { authorization: "Bearer test-secret", "content-type": "application/json", ...(version ? { "x-betterman-ingest-contract": version } : {}) },
-    body: JSON.stringify({ fromStage: "staging", toStage: "prod", distros: ["debian"], activatedAt: "now" }),
+  expect((await t.fetch("/ingest/release", { method: "POST", headers: { "x-betterman-ingest-contract": String(current) }, body: "{}" })).status).toBe(401);
+  const generated = await t.fetch("/ingest/generated/candidates", {
+    method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json" }, body: "{}",
   });
-  expect(response.status).toBe(409);
-  expect(await response.json()).toMatchObject({ error: { code: "INGEST_CONTRACT_MISMATCH" } });
-  expect(await t.run(ctx => ctx.db.query("activeReleases").take(10))).toEqual([]);
-  expect(await t.run(ctx => ctx.db.system.query("_scheduled_functions").take(10))).toEqual([]);
+  expect(generated.status).not.toBe(409);
 });
 
 it("accepts the deployed promotion contract while keeping CAS optional for manual callers", async () => {
@@ -67,7 +89,7 @@ it("accepts the deployed promotion contract while keeping CAS optional for manua
   expect(await response.json()).toEqual({ promoted: [] });
 });
 
-it("combines package batches, symbols, signatures, optional arguments and providers in one v5 sealed release", async () => {
+it("combines package batches, symbols, signatures, optional arguments and providers and demand policy in one v9 sealed release", async () => {
   vi.useFakeTimers();
   vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
   try {
@@ -75,7 +97,7 @@ it("combines package batches, symbols, signatures, optional arguments and provid
     const packages = [{ name: "tar", version: "1", hasLicenseText: false }];
     const { releaseId } = await t.mutation(internal.ingest.createRelease, {
       datasetReleaseId: "combined-contract", locale: "en", distro: "debian", imageRef: "test", imageDigest: "test",
-      ingestedAt: "2026-10-28T00:00:00Z", packageManifest: null, pageCount: 1, providerCount: 2, aliasCount: 1, licenseCount: 0,
+      ingestedAt: "2026-10-28T00:00:00Z", packageManifest: null, pageCount: 1, indexablePageCount: 1, providerCount: 2, aliasCount: 1, licenseCount: 0,
       sectionTotals: [{ section: "1", total: 1 }],
       packageBatches: [{ digest: await storedPayloadDigest(canonicalJson(packages)), count: 1, licenseCount: 0 }],
     });
@@ -83,9 +105,9 @@ it("combines package batches, symbols, signatures, optional arguments and provid
       datasetReleaseId: "combined-contract", batchIndex: 0, packages,
     })).toEqual({ inserted: 1, skipped: 0 });
     const response = await t.fetch("/ingest/pages/storage", {
-      method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
+      method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
       body: JSON.stringify({ datasetReleaseId: "combined-contract", pages: [{
-        externalId: "tar", name: "tar", section: "1", sitemapPage: 0, title: "tar", description: "archive",
+        externalId: "tar", name: "tar", section: "1", sitemapPage: 1, indexable: true, popularityScore: 5000, title: "tar", description: "archive",
         sourcePath: "tar.1", sourcePackage: "tar", sourcePackageVersion: "1", contentSha256: "tar-source",
         hasParseWarnings: false, extractorVersion: 123456, doc: { toc: [], blocks: [] }, synopsis: null,
         options: [{ flags: "-c, --create", anchorId: "create" }, { flags: "--color", argument: "[WHEN]", anchorId: "color" }], seeAlso: null,
@@ -95,7 +117,7 @@ it("combines package batches, symbols, signatures, optional arguments and provid
     });
     expect(response.status).toBe(200);
     const alternate = await t.fetch("/ingest/pages/storage", {
-      method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
+      method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
       body: JSON.stringify({ datasetReleaseId: "combined-contract", pages: [{
         externalId: "tar-alternate", name: "tar", section: "1", sitemapPage: 0, title: "alternate tar", description: "alternate archive",
         sourcePath: "alternate/tar.1", sourcePackage: "alternate-tar", sourcePackageVersion: "2", contentSha256: "alternate-source",
@@ -125,7 +147,7 @@ it("combines package batches, symbols, signatures, optional arguments and provid
       aliasProviders: await ctx.db.query("manPageAliasProviders").withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", releaseId)).take(2),
       packages: await ctx.db.query("licensePackages").withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", releaseId)).take(2),
     }));
-    expect(state.release).toMatchObject({ sealed: true, uploadedPackageBatchCount: 1 });
+    expect(state.release).toMatchObject({ sealed: true, indexablePageCount: 1, uploadedPackageBatchCount: 1 });
     expect(state.input).toMatchObject({ status: "ready", extractorVersion: 123456 });
     expect(state.symbols).toMatchObject([{term: "TAR_OPTIONS", anchorId: "environment"}]);
     expect(state.flags.find(flag => flag.flag === "--color")).toMatchObject({argumentOptional: true});
@@ -137,4 +159,25 @@ it("combines package batches, symbols, signatures, optional arguments and provid
   } finally {
     vi.useRealTimers();
   }
+});
+
+it("rejects missing/contradictory demand fields and refuses to seal a wrong tier count", async () => {
+  const t = convexTest(schema, modules);
+  const { releaseId } = await t.mutation(internal.ingest.createRelease, {
+    datasetReleaseId: "demand", locale: "en", distro: "debian", imageRef: "fixture", imageDigest: "fixture",
+    ingestedAt: "now", pageCount: 2, indexablePageCount: 1, aliasCount: 0, licenseCount: 0,
+    sectionTotals: [{ section: "3", total: 2 }], licensePackages: [],
+  });
+  const page = {
+    externalId: "one", name: "one", section: "3", sitemapPage: 0, title: "one", description: "one",
+    sourcePath: "one", sourcePackage: null, sourcePackageVersion: null, contentSha256: "one",
+    hasParseWarnings: false, doc: { toc: [], blocks: [] }, synopsis: null, options: null, seeAlso: null,
+    searchText: "", snippetText: "", links: [],
+  };
+  await expect(t.mutation(internal.ingest.insertPages, { datasetReleaseId: "demand", pages: [page] })).rejects.toThrow("INVALID_INDEX_POLICY");
+  await expect(t.mutation(internal.ingest.insertPages, { datasetReleaseId: "demand", pages: [{ ...page, indexable: true, popularityScore: 100 }] })).rejects.toThrow("INVALID_INDEX_POLICY");
+  const rows = [page, { ...page, externalId: "two", name: "two" }].map(p => ({ ...p, indexable: false, popularityScore: 0 }));
+  await t.mutation(internal.ingest.insertPages, { datasetReleaseId: "demand", pages: rows });
+  await expect(t.mutation(internal.ingest.activateRelease, { datasetReleaseId: "demand", stage: "staging", activatedAt: "now" })).rejects.toThrow("RELEASE_MANIFEST_INCOMPLETE");
+  expect((await t.run(ctx => ctx.db.get(releaseId)))?.sealed).not.toBe(true);
 });

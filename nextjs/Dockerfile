@@ -18,6 +18,7 @@ RUN pnpm install --frozen-lockfile
 
 COPY convex ./convex
 COPY nextjs ./nextjs
+COPY scripts/check-convex-indexes.mjs ./scripts/check-convex-indexes.mjs
 
 RUN pnpm -C nextjs build
 # Reuse the integrity-checked store populated above, but link only production dependencies.

@@ -29,8 +29,8 @@ A craft showcase is explicitly not a goal. Restraint applies throughout: nothing
 - **Current release per distro only.** No multi-release history.
 - **All available languages**, chosen with an explicit language switch. English stays canonical. Pages declare `hreflang` alternates and there are no auto-redirects. The UI itself is localized. Translations that lag the English page get a one-line drift note.
 - **Collisions.** When several packages ship the same page, the most-installed package gets the clean URL and a "provided by" switch offers the rest. Curated alternatives keep today's behavior (e.g. `awk(1)` → gawk).
-- **Index by demand.** Sections 1, 5, 7, and 8 and popular packages are indexable. Long-tail pages are served and searchable on-site but `noindex` until real traffic promotes them.
-- **Popularity signals.** Ranking and promotion use popcon install counts plus first-party Plausible pageviews, both aggregated at build time.
+- **Index by demand.** Sections 1, 5, 7, and 8 and popular packages are indexable. Long-tail pages are served and searchable on-site but `noindex` until popcon demand makes them eligible.
+- **Popularity signals.** Popcon install counts alone drive the tier; the optional traffic signal was removed with the analytics migration.
 - **Hosting.** Convex Professional with modest overage spend. Spend changes need owner sign-off.
 
 ### Generated layer
@@ -74,7 +74,7 @@ Decided: deterministic features computed from the corpus, plus build-time genera
   - Per-page share cards.
   - Typographic finesse and a print stylesheet that looks like the manual.
   - A per-page "report a problem" link that opens a prefilled GitHub issue.
-- **Measurement.** Plausible is served first-party, plus a few cookieless custom events. Reading-preference axes may be pruned if usage data says so.
+- **Measurement.** Vercel Web Analytics loads only on the production deployment, with same-origin intake and a few cookieless custom events. Reading-preference axes may be pruned if usage data says so.
 - **Zero accounts** stays.
 
 ### Design
@@ -112,7 +112,7 @@ Each ID links to its issue.
 | [A5](https://github.com/amanthanvi/BetterMan/issues/388) | Non-browser access: robots policy for answer engines, a Vercel challenge exemption for `/man/*`, and `.txt` plain-text pages. |
 | [A6](https://github.com/amanthanvi/BetterMan/issues/389) | Hash-based CSP and edge caching of man pages. |
 | [A7](https://github.com/amanthanvi/BetterMan/issues/390) | Performance and cost budgets measured and enforced in CI. |
-| [A8](https://github.com/amanthanvi/BetterMan/issues/391) | First-party Plausible plus a few custom events. |
+| [A8](https://github.com/amanthanvi/BetterMan/issues/391) | Production-only Vercel Web Analytics plus a few custom events. |
 | [A9](https://github.com/amanthanvi/BetterMan/issues/392) | 404 page in man's voice with did-you-mean; per-page "report a problem" link. |
 
 ### B. Data track
@@ -122,7 +122,7 @@ Each ID links to its issue.
 | [B1](https://github.com/amanthanvi/BetterMan/issues/393) | Full-Debian extraction pipeline:<br>• Contents and Packages indexes, `.deb` extraction, symlink and `.so` resolution, alternatives, conflict policy.<br>• Streaming or two-pass memory, parallel upload.<br>• Convex scale fixes: release manifest over 1 MiB, the 8,192-element license array, release-document read cost, section caps (114 sections, the 5,000 offset), Perl `Foo::Bar` names, prune at scale. |
 | [B2](https://github.com/amanthanvi/BetterMan/issues/394) | Full extraction for Ubuntu (shares B1), Fedora (rpm), Arch (pkg), and Alpine (apk). |
 | [B3](https://github.com/amanthanvi/BetterMan/issues/395) | All languages: language-aware schema, search, and sitemaps; hreflang; drift detection. |
-| [B4](https://github.com/amanthanvi/BetterMan/issues/396) | Popularity priors (popcon and Plausible) and the index-by-demand sitemap and `noindex` policy. |
+| [B4](https://github.com/amanthanvi/BetterMan/issues/396) | Popularity priors (popcon alone) and the index-by-demand sitemap and `noindex` policy. |
 | [B5](https://github.com/amanthanvi/BetterMan/issues/397) | Search: popularity-aware ranking, symbol index, task-phrase index, explain parser (full shell line → tokens → option definitions). |
 | [B6](https://github.com/amanthanvi/BetterMan/issues/398) | Generated layer: provider-swappable client, summaries, gap-fill examples, task phrases, tldr-pages ingestion with attribution, flag verifier, provenance, hash-gated regeneration within Go caps. |
 | [B7](https://github.com/amanthanvi/BetterMan/issues/399) | Derived data: portability diffs and variant grouping, "new in X" marks, referenced-by index, subcommand families, package pages, most-used flags. |

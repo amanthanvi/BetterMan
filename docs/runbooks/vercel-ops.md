@@ -167,6 +167,55 @@ Also verify in a real browser:
 - Alias mismatch: inspect both the immutable deployment and both custom domains; the script attempts automatic rollback and must not declare success until their deployment IDs match.
 - Runtime errors: inspect Vercel runtime logs/errors and correlate the deployment ID before rolling back.
 
+## Provider query allowlist
+
+The shared `pkg` validator accepts 1–200 ASCII characters: an initial letter or
+number, then letters, numbers, `+`, `_`, `.`, or `-`. It preserves case; Debian,
+RPM, Arch and Alpine names share this bounded union. `lsb_release`,
+`SDL2_sound-devel` and `R` must reach provider lookup unchanged. Whitespace,
+slashes, control/non-ASCII characters and longer values are invalid. Keep these
+bounds when applying #469's query allowlist so provider selectors cannot expand
+cache keys through arbitrary query strings. The same validator serves HTML,
+plain text, metadata, API and OG routes. Explicit selectors first read a light
+provider-list query, cached only by distro/name/section/release, never by `pkg`.
+It reports the answering release; mismatches are not cached. Only names in that
+list reach the existing release/pkg-keyed page cache. Invented selectors trigger
+no provider lookup or pkg-keyed cache entry, and HTML misses skip related/typo
+reads. This bounded proof replaces the added HTML page-limit mutation; existing
+API/text limits remain. Standard/default HTML lookups are unchanged. #469's
+renderer rules still keep unproven HTML/text/OG responses private.
+
+## Index deployment safety (#470)
+
+B2 adds **no index to the existing `licenses` table**. Large-notice reverse
+references live in the new, initially empty `storedLicenseFiles` table. Its two
+indexes are created with that empty table. License rows and reverse references
+are linked in the same mutation; replay adds no duplicate reference, and release
+pruning removes both. The orphan sweep uses the new table's index, so notice
+cleanup does not scan or backfill historical license text.
+
+Do not rely on Convex 1.48's large-index check alone: `schemaEvaluation.ts` can
+return null when evaluation fails, and `checkForLargeIndexBackfill.ts` skips its
+check in that case. It does not reliably fail closed at the 100,000-row threshold.
+
+Before every current-main Convex deployment, the trusted tooling checkout's
+`scripts/check-convex-indexes.mjs` compares the target commit's `convex/schema.ts`
+with its parent commit's schema using TypeScript syntax, without executing either.
+Main uses squash merges: that parent is the previously deployed revision on both
+automatic runs and manual dispatches of main's head. The application checkout
+fetches both commits. Missing history/schema or computed/uninspectable definitions
+stop deployment even with confirmation. The comparison reads Git objects, not a
+working-tree policy or baseline; target edits cannot approve their own indexes.
+
+Any added or changed index on any previously existing table requires the manual
+current-main `confirm_large_indexes` input, regardless of table size. New tables
+and their indexes pass because they have no existing rows. Removing an index alone
+does not backfill. The check runs before `convex deploy`; failures stop the push.
+After review, use the current-main confirmation procedure (90-minute budget), or
+stage the index in a separate rollout before enabling readers. The SDK guard is
+an additional check, not the safety boundary. No production deploy or confirmation
+was run by this implementation task.
+
 ## Man page edge caching (C4, #406)
 
 Man pages (`/man/<name>`, `/man/<name>/<section>`) send `CDN-Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400` (misses `s-maxage=600`) and `Cache-Control: public, max-age=0, must-revalidate`. The proxy (`nextjs/proxy.ts`) rewrites each one to `…?__bm_release=<active release id>`, so a promotion changes the cache key within a minute. No project setting is needed for this: Vercel's CDN honours `CDN-Cache-Control` from functions. Verify it on the first preview deployment that carries the change, and after the first promotion:
@@ -192,7 +241,7 @@ Man pages (`/man/<name>`, `/man/<name>/<section>`) send `CDN-Cache-Control: publ
 | Parameter | Valid values | Read on |
 |---|---|---|
 | `distro` | a known distro, lower case (`debian` too: explicit Debian is its own URL) | pages, section pickers, `.txt` |
-| `pkg` | a well-formed package name (`packageName`) | pages, section pickers, `.txt` |
+| `pkg` | 1–200 ASCII characters, initial alphanumeric then alphanumeric/`+_.-`, case preserved (`packageName`) | pages, section pickers, `.txt` |
 | `portability` | `text` (the glyphs are the bare URL) | pages |
 | `flag` | one options-index key (`shareFlag`): `-x`, `--extract` | pages |
 | `lang` | B9's UI languages except English, which is the bare URL (`MAN_LANGUAGES`) | pages, section pickers, `.txt` |
@@ -206,3 +255,34 @@ What the allowlist cannot know, the renderer settles: a `flag` the page does not
 Adding a parameter means adding it to `MAN_QUERY` with a validator over a bounded set and to `manQueryParams` for the URLs that read it, then here. Verify on a preview: `curl -sI 'https://<preview>/man/tar/1?zz=1'` answers `308` to `/man/tar/1` with `private, no-store`; `curl -sI 'https://<preview>/man/tar/1?flag=-Q'` answers `307`; and `/man/tar/1?flag=%2Dc` after `/man/tar/1?flag=-c` shows `x-vercel-cache: HIT` (one entry for both spellings).
 
 **Deploy order.** Man pages need the Convex functions that report the serving release (`reportRelease`). New Convex with old Next is safe. New Next with old Convex answers 500, because the old validator rejects the argument. `deploy.yml` always pushes Convex before Vercel and stops if the Convex deploy fails, so keep that order for any manual deploy too.
+
+## Search ranking rollout (#464)
+
+The production `convex:prod-check` used by deploy and post-promotion keeps its
+existing availability, typo, page/content and metadata goldens fatal. The five
+new task/flag ranking queries only report advisories when tar is outside the top
+three, including on unscored releases and during asynchronous backfills. Ranking
+quality cannot block the Vercel handoff after Convex has already deployed.
+
+For the local E2E seed, run `BETTERMAN_CHECK_RANKING=seed pnpm convex:prod-check`;
+that explicit mode requires tar first for all five cases and fails on query errors.
+Use `BETTERMAN_E2E_UNSCORED=1` with the seed script to verify the default production
+mode against a legacy release shape without popularity or verified flag usage.
+
+This revision removes #465's proposed indexes on `manPageOptionFlags`. Candidate
+indexes belong to the new, empty `flagSearchCandidates` table, so this rollout
+needs no `confirm_large_indexes` dispatch. Normal deployment schedules version 5
+through the existing task-backfill entrypoint. The first source scan marks a
+release ready and publishes its candidate generation. Legacy completed rows stay
+readable during migration; subsequent B7 updates never unset readiness.
+
+B7 page writes request a coalesced refresh with a thirty-second delayed start.
+The serialized writer builds a separate generation, publishes it atomically,
+and cleans old generations in bounded batches. Mid-pass writes request another
+pass without delaying publication of the one finishing. Readers keep the last
+completed ranking throughout. Source scans restore evicted candidates; canceled
+old jobs and generation tokens prevent stale chains from writing. An interrupted
+build resumes its staging generation and retains queued rescan requests.
+`pnpm convex:task-check` reports progress and failures through the existing
+per-release status. No production workflow or migration was executed by the
+implementation agent.

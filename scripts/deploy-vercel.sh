@@ -52,7 +52,14 @@ if [[ -z "$previous_production_id" ]]; then
   exit 1
 fi
 
+# This build runs here, not on Vercel's builders, so it never receives the Web
+# Analytics client configuration Vercel injects there. Pass the documented
+# /_vercel/insights routes, which an enabled project serves (docs/analytics.md).
+analytics_client_config='{"analytics":{"scriptSrc":"/_vercel/insights/script.js","eventEndpoint":"/_vercel/insights/event","viewEndpoint":"/_vercel/insights/view"}}'
+
 PUBLIC_BASE_URL="https://${BETTERMAN_PRODUCTION_DOMAIN}" \
+  VERCEL_ENV=production \
+  VERCEL_OBSERVABILITY_CLIENT_CONFIG="${VERCEL_OBSERVABILITY_CLIENT_CONFIG:-$analytics_client_config}" \
   VERCEL_GIT_COMMIT_REF="$BETTERMAN_DEPLOY_REF" \
   VERCEL_GIT_COMMIT_SHA="$BETTERMAN_DEPLOY_SHA" \
   vercel build --prod --yes --token="$VERCEL_TOKEN"

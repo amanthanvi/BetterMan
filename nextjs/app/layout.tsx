@@ -8,6 +8,7 @@ import { expandPlurals } from '../lib/i18n/expand'
 import { requestLangFromHeaders } from '../lib/i18n/request'
 import { getI18n } from '../lib/i18n/server'
 import { READING_PREFS_COOKIE, prefsFromCookie } from '../lib/readingPrefs'
+import { AnalyticsScripts } from '../components/AnalyticsScripts'
 import { Providers } from './providers'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -46,11 +47,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const lang = requestLangFromHeaders(requestHeaders, available)
   const { t, catalog } = await getI18n(lang)
   const messages = lang === 'en' ? undefined : expandPlurals(catalog.client)
-  const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN?.trim()
 
   return (
     <html lang={lang} data-theme={theme} suppressHydrationWarning>
       <head>
+        <AnalyticsScripts nonce={nonce} />
         {/* The manual's roman, Latin range. Other ranges and the italic load when a page uses them. */}
         <link
           rel="preload"
@@ -79,9 +80,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         >
           {children}
         </Providers>
-        {plausibleDomain ? (
-          <script defer src="/assets/site.js" data-api="/assets/entry" data-domain={plausibleDomain} nonce={nonce} />
-        ) : null}
       </body>
     </html>
   )

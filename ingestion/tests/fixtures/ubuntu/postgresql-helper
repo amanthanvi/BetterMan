@@ -1,0 +1,275 @@
+# vim:ft=sh:
+# This file contains common functionality for all postgresql server
+# package maintainer scripts.
+# Most functions accept the version number as first argument and as second
+# optional argument a spelling variant of the version number used in package
+# names that can be used for flavored package builds.
+
+# arguments: version master package [package package]
+_link_manpages() {
+    VERSION="$1"
+    NAME="$2"
+    MANS=$(unset GREP_OPTIONS; dpkg -L $3 $4 $5 2>/dev/null | grep -E "postgresql/$VERSION/man/.*\\.[1-9](\\.gz)?\$" | grep -v "$NAME") || true
+    [ -n "$MANS" ] || return 0
+
+    SLAVES=$(for man in $MANS; do TARGET=$(echo $man | sed -e "s/postgresql\/$VERSION\/man/man/"); echo -n " --slave $TARGET ${man##*/} $man"; done)
+
+    # user might have removed the directories, allow u-a to succeed
+    mkdir -p /usr/share/man/man1 /usr/share/man/man3 /usr/share/man/man7
+    section=$(echo "$NAME" | sed -e 's/.*\.\(.*\)\..*/man\1/')
+    case $VERSION in
+        [89]*) priority=$(echo "$VERSION" | tr -cd 0-9) ;;
+        *) priority="${VERSION}0" ;;
+    esac
+    update-alternatives --install /usr/share/man/$section/$NAME \
+	$NAME /usr/share/postgresql/$VERSION/man/$section/$NAME \
+	$priority $SLAVES
+}
+
+# Merge postmaster.1.gz (removed in PG16) alternatives with psql.1.gz (248)
+relink_postmaster_manpages ()
+{
+    update-alternatives --list postmaster.1.gz >/dev/null 2>&1 || return 0
+
+    echo "Merging postmaster.1.gz alternatives into psql.1.gz link group ..."
+    update-alternatives --remove-all postmaster.1.gz
+    for dir in /usr/lib/postgresql/*; do
+        if test -x $dir/bin/psql; then
+            v=${dir#/usr/lib/postgresql/}
+            _link_manpages $v psql.1.gz postgresql-client-$v postgresql-$v postgresql-contrib-$v
+        fi
+    done
+}
+
+# arguments: version master
+_unlink_manpages() {
+    VERSION="$1"
+    NAME="$2"
+    # user might have removed the directories, allow u-a to succeed
+    mkdir -p /usr/share/man/man1 /usr/share/man/man3 /usr/share/man/man7
+    section=$(echo "$NAME" | sed -e 's/.*\.\(.*\)\..*/man\1/')
+    update-alternatives --remove $NAME /usr/share/postgresql/$VERSION/man/$section/$NAME
+    rmdir --ignore-fail-on-non-empty -p /usr/share/man/man1 /usr/share/man/man3 /usr/share/man/man7
+}
+
+_remove_tsearch() {
+    VERSION="$1"
+   if [ -e /usr/share/postgresql/$VERSION/tsearch_data ]; then
+       find /usr/share/postgresql/$VERSION/tsearch_data -type l \( -name '*.dict' -o -name '*.affix' \) -exec rm '{}' \;
+   fi
+}
+
+# Determine and set system's default locale; we do not want to trust the
+# environment here, as ssh and sudo both propagate the user's locale from
+# potentially a remote host, and that might not even exist; also, we want to be
+# predictable.  /etc/default/locale overrides /etc/environment. Note that
+# /etc/environment is not a shell script, so we must be careful with parsing.
+set_system_locale() {
+    loc_vars="LANG LANGUAGE LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT LC_IDENTIFICATION LC_ALL"
+    unset $loc_vars
+    LANG="C.UTF-8" # fallback locale if nothing is configured explicitly
+    for v in $loc_vars; do
+        unset val
+        val=`pam_getenv -l $v` || true
+        [ -z "$val" ] || export $v="$val"
+    done
+    [ -e /etc/default/locale ] && . /etc/default/locale || true
+    export $loc_vars
+}
+
+# arguments: <major version> <most recently configured package version>
+configure_version() {
+    VERSION="$1"
+    PKG_VER="${3:-$1}"
+
+    # Create a main cluster for given version ($VERSION) if no cluster already exists
+    # for that version and we are installing from scratch.
+    [ "$VERSION" ] || { echo "Error: configure_version: need version parameter" >&2; exit 1; }
+    if [ ! -d "/etc/postgresql/$VERSION" ] || [ -z "$(ls /etc/postgresql/$VERSION)" ] || \
+       [ -z "$(ls /etc/postgresql/$VERSION/*/postgresql.conf 2>/dev/null)" ]; then
+        # skip creating the main cluster when this is not the first install, or
+        # when explicitly disabled ($create is on/off/"")
+        create=$(pg_conftool /etc/postgresql-common/createcluster.conf show -bs create_main_cluster || :)
+        if [ -z "$2" ] && [ "$create" != "off" ]; then
+            set_system_locale
+            pg_createcluster -u postgres --no-status $VERSION main ||
+                echo "Error: could not create default cluster. Please create it manually with
+
+  pg_createcluster $VERSION main --start
+
+or a similar command (see 'man pg_createcluster')." >&2
+        fi
+    fi
+
+    relink_postmaster_manpages
+    _link_manpages "$VERSION" psql.1.gz "postgresql-client-$PKG_VER" "postgresql-$PKG_VER" "postgresql-contrib-$PKG_VER"
+
+    # check if our catalog version changed
+    postinst_check_catversion "$VERSION"
+
+    # done with debconf
+    db_stop
+
+    # update list of packages not to apt-autoremove
+    /usr/share/postgresql-common/pg_updateaptconfig
+
+    # reload systemd to let the generator pick up the new unit
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload
+    fi
+    invoke-rc.d postgresql start $VERSION # systemd: argument ignored, starts all versions
+}
+
+stop_version() {
+    VERSION="$1"
+    if [ -d /run/systemd/system ]; then
+        # cannot use invoke-rc.d here because jessie's version doesn't like patterns
+        deb-systemd-invoke stop "postgresql@$VERSION-*"
+    else
+        invoke-rc.d postgresql stop $VERSION
+    fi
+}
+
+remove_version() {
+    VERSION="$1"
+    PKG_VER="${2:-$1}"
+    # we still want to retain the alternatives for the client packages
+    _link_manpages "$VERSION" psql.1.gz "postgresql-client-$PKG_VER"
+    _remove_tsearch "$VERSION"
+    # update list of packages not to apt-autoremove
+    /usr/share/postgresql-common/pg_updateaptconfig
+}
+
+configure_client_version() {
+    VERSION="$1"
+    PKG_VER="${3:-$1}"
+    relink_postmaster_manpages
+    _link_manpages "$VERSION" psql.1.gz "postgresql-client-$PKG_VER" "postgresql-$PKG_VER" "postgresql-contrib-$PKG_VER"
+}
+
+remove_client_version() {
+    VERSION="$1"
+    _unlink_manpages "$VERSION" psql.1.gz
+}
+
+configure_contrib_version() {
+    VERSION="$1"
+    PKG_VER="${3:-$1}"
+    relink_postmaster_manpages
+    _link_manpages "$VERSION" psql.1.gz "postgresql-client-$PKG_VER" "postgresql-$PKG_VER" "postgresql-contrib-$PKG_VER"
+}
+
+remove_contrib_version() {
+    VERSION="$1"
+    PKG_VER="${2:-$1}"
+    # we still want to retain the alternatives for the server packages
+    _link_manpages "$VERSION" psql.1.gz "postgresql-client-$1" "postgresql-$PKG_VER"
+}
+
+configure_doc_version() {
+    VERSION="$1"
+    PKG_VER="${3:-$1}"
+    _link_manpages "$VERSION" SPI_connect.3.gz "postgresql-doc-$PKG_VER"
+}
+
+remove_doc_version() {
+    VERSION="$1"
+    _unlink_manpages "$VERSION" SPI_connect.3.gz
+}
+
+# Compare the catalog version number of the installed package and the new
+# package. When differing, check if any clusters present are using the old
+# catalog version. If so, copy a minimal set of files from the old package to
+# /var/tmp to enable pg_upgrade to upgrade to the new version.
+
+preinst_check_catversion()
+{
+    MAJOR_VER="$1"
+    NEW_CATVERSION="$2"
+    case $NEW_CATVERSION in
+        *CATVERSION*) echo "BUG: override_dh_installdeb failed to set CATVERSION" >&2
+        return ;;
+    esac
+
+    CATFILE="/usr/share/postgresql/$MAJOR_VER/catalog_version"
+    [ -f "$CATFILE" ] || return 0 # file introduced in 9.6
+    OLD_CATVERSION="$(cat $CATFILE)"
+    [ -z "$OLD_CATVERSION" ] && return
+
+    [ "$OLD_CATVERSION" = "$NEW_CATVERSION" ] && return # no change, nothing to do
+
+    PGCONTROLDATA="/usr/lib/postgresql/$MAJOR_VER/bin/pg_controldata"
+    [ -x "$PGCONTROLDATA" ] || return 0
+
+    echo "PostgreSQL $MAJOR_VER catalog version number changed from $OLD_CATVERSION to $NEW_CATVERSION, checking for clusters using the old version ..."
+
+    pg_lsclusters -h | \
+    while read version cluster port status owner pgdata logfile; do
+        [ "$version" = "$MAJOR_VER" ] || continue
+        [ -d "$pgdata" ] || continue
+        DB_CATVERSION=$(LC_ALL=C $PGCONTROLDATA $pgdata 2>/dev/null | sed -ne 's/^Catalog version number: *\([0-9]\+\)/\1/p')
+
+        if [ "$DB_CATVERSION" = "$OLD_CATVERSION" ]; then
+            echo "Cluster $MAJOR_VER/$cluster is using catalog version $DB_CATVERSION"
+
+            VARTMPDIR="/var/tmp/postgresql-$MAJOR_VER-$OLD_CATVERSION"
+            if [ ! -d "$VARTMPDIR" ]; then
+                echo "Saving binaries for PostgreSQL $MAJOR_VER catalog version $OLD_CATVERSION in $VARTMPDIR ..."
+                mkdir "$VARTMPDIR" # will fail&exit if (potentially rogue) file exists
+                cp -a /usr/lib/postgresql/$MAJOR_VER/bin /usr/lib/postgresql/$MAJOR_VER/lib "$VARTMPDIR"
+            fi
+        fi
+    done
+}
+
+postinst_check_catversion()
+{
+    MAJOR_VER="$1"
+
+    CATFILE="/usr/share/postgresql/$MAJOR_VER/catalog_version"
+    [ -f "$CATFILE" ] || return 0 # file introduced in 9.6
+    NEW_CATVERSION="$(cat $CATFILE)"
+    [ -z "$NEW_CATVERSION" ] && return
+
+    PGCONTROLDATA="/usr/lib/postgresql/$MAJOR_VER/bin/pg_controldata"
+    [ -x "$PGCONTROLDATA" ] || return 0
+
+    for cluster in $(pg_lsclusters -h | awk "/^$MAJOR_VER / { print \$2 }"); do
+        pgdata=$(pg_conftool -s $MAJOR_VER $cluster show data_directory) || continue
+        [ -d "$pgdata" ] || continue
+
+        DB_CATVERSION=$(LC_ALL=C $PGCONTROLDATA $pgdata | sed -ne 's/^Catalog version number: *\([0-9]\+\)/\1/p')
+        [ -z "$DB_CATVERSION" ] && continue
+        [ "$DB_CATVERSION" = "$NEW_CATVERSION" ] && continue
+
+        VARTMPDIR="/var/tmp/postgresql-$MAJOR_VER-$DB_CATVERSION"
+        [ -d "$VARTMPDIR" ] || continue
+        [ -O "$VARTMPDIR" ] || continue # test if owned by root
+
+        # tell the user about it
+	cat <<-EOF
+	Cluster $MAJOR_VER $cluster needs upgrading due to catalog version change:
+	  pg_renamecluster ${MAJOR_VER} ${cluster} ${cluster}.old
+	  pg_upgradecluster ${MAJOR_VER} ${cluster}.old --rename ${cluster} -m upgrade -v ${MAJOR_VER} --old-bindir=${VARTMPDIR}/bin
+	  pg_dropcluster ${MAJOR_VER} ${cluster}.old
+	  rm -rf ${VARTMPDIR}
+	EOF
+        db_fset postgresql-common/catversion-bump seen false
+        db_subst postgresql-common/catversion-bump version $MAJOR_VER
+        db_subst postgresql-common/catversion-bump cluster $cluster
+        db_subst postgresql-common/catversion-bump db_catversion $DB_CATVERSION
+        db_subst postgresql-common/catversion-bump new_catversion $NEW_CATVERSION
+        db_subst postgresql-common/catversion-bump vartmpdir $VARTMPDIR
+        db_input high postgresql-common/catversion-bump || true
+        db_go || true
+    done
+}
+
+# start debconf if we are in the server's postinst (can't run from a function)
+if [ "${DPKG_MAINTSCRIPT_NAME:-}" = "postinst" ] && [ "$1" = "configure" ]; then
+    case $DPKG_MAINTSCRIPT_PACKAGE in
+        postgresql-[89].?|postgresql-[1-9]?|postgresql-[1-9]???) # -9.6 -15 -15ee
+            . /usr/share/debconf/confmodule
+            ;;
+    esac
+fi

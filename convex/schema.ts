@@ -23,6 +23,8 @@ export const datasetStageValidator = v.union(
   v.literal("prod"),
 );
 
+export const acquisitionValidator = v.union(v.literal("deb-extraction"), v.literal("ubuntu-deb-extraction"), v.literal("fedora-rpm-extraction"), v.literal("arch-pkg-extraction"), v.literal("alpine-apk-extraction"));
+
 // Convex functions deploy before the frontend. Keep accepting the legacy field
 // so the previous frontend and historical rollbacks remain compatible; public
 // handlers ignore it and resolve PUBLIC_DATASET_STAGE instead.
@@ -42,13 +44,16 @@ export default defineSchema({
     distro: distroValidator,
     imageRef: v.string(),
     imageDigest: v.string(),
-    acquisition: v.optional(v.literal("deb-extraction")),
+    acquisition: v.optional(acquisitionValidator),
     ingestedAt: v.string(),
     packageManifestJson: v.optional(v.string()),
     shardedPageUploads: v.optional(v.boolean()),
     packageBatchCount: v.optional(v.number()),
     uploadedPackageBatchCount: v.optional(v.number()),
     pageCount: v.number(),
+    indexablePageCount: v.optional(v.number()),
+    flagSearchReady: v.optional(v.boolean()),
+    flagSearchGeneration: v.optional(v.number()),
     providerCount: v.optional(v.number()),
     aliasCount: v.optional(v.number()),
     licenseCount: v.optional(v.number()),
@@ -102,6 +107,7 @@ export default defineSchema({
     releaseId: v.id("datasetReleases"),
     bucket: v.number(),
     pageCount: v.number(),
+    indexablePageCount: v.optional(v.number()),
     sections: v.array(v.object({ section: v.string(), uploaded: v.number() })),
   }).index("by_releaseId_and_bucket", ["releaseId", "bucket"]),
 
@@ -157,6 +163,8 @@ export default defineSchema({
     name: v.string(),
     section: v.string(),
     sitemapPage: v.number(),
+    indexable: v.optional(v.boolean()),
+    popularityScore: v.optional(v.number()),
     title: v.string(),
     description: v.string(),
     sourcePath: v.string(),
@@ -170,6 +178,9 @@ export default defineSchema({
     optionContentBytes: v.optional(v.number()),
     optionExtractorVersion: v.optional(v.number()),
     hasParseWarnings: v.boolean(),
+    // Translated releases only (#395): the upstream version the translation
+    // documents, from its .TH source field. No index; read with the page.
+    documentedVersion: v.optional(v.string()),
     verifiedFlagUsage: v.optional(v.array(v.object({
       flag: v.string(), count: v.number(), source: v.union(v.literal("examples"), v.literal("tldr")),
     }))),
@@ -283,6 +294,17 @@ export default defineSchema({
       "nameNorm",
     ]),
 
+  // Bounded, precomputed verified-example candidates; no new index on the option table.
+  flagSearchCandidates: defineTable({
+    releaseId: v.id("datasetReleases"), flag: v.string(), generation: v.optional(v.number()),
+    candidates: v.array(v.object({
+      pageId: v.id("manPages"), name: v.string(), section: v.string(), title: v.string(), description: v.string(),
+      popularityScore: v.number(), usage: v.array(v.object({ flag: v.string(), count: v.number() })),
+      flags: v.string(), anchorId: v.string(),
+    })),
+  }).index("by_releaseId_and_flag", ["releaseId", "flag"])
+    .index("by_releaseId_and_generation_and_flag", ["releaseId", "generation", "flag"]),
+
   manPageSymbols: defineTable({
     ...symbolInput.fields,
     releaseId: v.id('datasetReleases'), pageId: v.id('manPages'),
@@ -342,8 +364,16 @@ export default defineSchema({
     licenseId: v.string(),
     licenseName: v.string(),
     licenseText: v.string(),
+    storageId: v.optional(v.id("_storage")),
     sourceUrl: v.optional(v.string()),
   }).index("by_releaseId_and_packageName", ["releaseId", "packageName"]),
+
+  // New and initially empty: reverse references need no index backfill on licenses.
+  storedLicenseFiles: defineTable({
+    releaseId: v.id("datasetReleases"),
+    storageId: v.id("_storage"),
+  }).index("by_releaseId", ["releaseId"])
+    .index("by_storageId", ["storageId"]),
 
   // Operational progress and pins are separate from frequently-read release records.
   derivedBuilds: defineTable({
@@ -447,10 +477,37 @@ export default defineSchema({
     section: v.string(),
     title: v.string(),
     description: v.string(),
+    popularityScore: v.optional(v.number()),
     // The phrases, one per line.
     taskText: v.string(),
   }).index("by_releaseId_and_pageId", ["releaseId", "pageId"])
     .searchIndex("search_taskText", { searchField: "taskText", filterFields: ["releaseId", "section"] }),
+
+  // Drift of a translated page against its English page (#395), computed after
+  // activation. Rows exist only for pages that drift; each names the English
+  // release it compared, and readers ignore a row whose English release is no
+  // longer active.
+  manPageTranslationDrift: defineTable({
+    releaseId: v.id("datasetReleases"),
+    pageId: v.id("manPages"),
+    englishReleaseId: v.id("datasetReleases"),
+    documented: v.optional(v.string()),
+    english: v.optional(v.string()),
+    older: v.boolean(),
+    missingFlags: v.array(v.string()),
+    missingCount: v.number(),
+  }).index("by_releaseId_and_pageId", ["releaseId", "pageId"]),
+
+  // One drift build per translated release, against one English release.
+  translationDriftBuilds: defineTable({
+    releaseId: v.id("datasetReleases"),
+    englishReleaseId: v.id("datasetReleases"),
+    cursor: v.union(v.string(), v.null()),
+    scanned: v.number(),
+    drifted: v.number(),
+    done: v.boolean(),
+    updatedAt: v.number(),
+  }).index("by_releaseId", ["releaseId"]),
 
   // Progress of a release's task-phrase backfill; a version bump rebuilds.
   taskPhraseBackfills: defineTable({
@@ -460,6 +517,10 @@ export default defineSchema({
     scanned: v.number(),
     written: v.number(),
     completedVersion: v.optional(v.number()),
+    generation: v.optional(v.number()),
+    candidateGeneration: v.optional(v.number()),
+    clearingFlags: v.optional(v.boolean()),
+    rescanFlags: v.optional(v.boolean()),
     jobId: v.optional(v.id("_scheduled_functions")),
     attempts: v.number(),
     updatedAt: v.number(),

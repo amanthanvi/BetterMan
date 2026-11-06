@@ -11,6 +11,11 @@ from tempfile import TemporaryDirectory
 MANDOC_TIMEOUT_SECONDS = 120
 
 
+class RoffSourceError(RuntimeError):
+    """A manual's roff source the scanner refuses (unsafe or unsupported includes,
+    definitions or expansion). Archive imports skip that page; curated runs stop."""
+
+
 @dataclass(frozen=True)
 class MandocResult:
     html: str
@@ -60,7 +65,7 @@ class _RoffScanner:
 
     def request(self, line, syntax, *, nested=False, depth=0):
         if depth > 32:
-            raise RuntimeError("Roff request nesting exceeds limit")
+            raise RoffSourceError("Roff request nesting exceeds limit")
         if not line or line[0] not in syntax.controls:
             return line, [syntax], None
         command = line[1:].lstrip()
@@ -78,10 +83,10 @@ class _RoffScanner:
                 if key not in self.strings:
                     if not self.enforce:
                         return line, [syntax], None
-                    raise RuntimeError("Unresolved dynamic roff include request")
+                    raise RoffSourceError("Unresolved dynamic roff include request")
                 command = self.strings[key] + command[match.end() :]
             if self.enforce and command.startswith(escape + b"*"):
-                raise RuntimeError("Unresolved dynamic roff include request")
+                raise RoffSourceError("Unresolved dynamic roff include request")
         match = re.match(rb"([A-Za-z][A-Za-z0-9]*)(.*)", command, re.S)
         if not match:
             return line, [syntax], None
@@ -95,10 +100,10 @@ class _RoffScanner:
                 return bytes([syntax.control]) + b"nop\n", [syntax], None
             if name == b"so" and self.include is not None and not nested:
                 if not argument or len(argument.split()) != 1 or (escape and escape in argument):
-                    raise RuntimeError("Unsupported roff include request")
+                    raise RoffSourceError("Unsupported roff include request")
                 return self.include(argument.decode("utf-8")) + b"\n", [syntax], None
             if self.enforce:
-                raise RuntimeError("Unresolved roff include request")
+                raise RoffSourceError("Unresolved roff include request")
             return line, [syntax], None
         if name in {b"ec", b"eo", b"cc", b"c2"}:
             from dataclasses import replace
@@ -128,7 +133,7 @@ class _RoffScanner:
                 new, old = args[:2] if name == b"als" else (args[1], args[0])
                 target = self.aliases.get(old, old)
                 if self.enforce and target in {b"so", b"mso"}:
-                    raise RuntimeError("Roff definition containing so is unsupported")
+                    raise RoffSourceError("Roff definition containing so is unsupported")
                 self.aliases[new] = target
                 if name == b"rn":
                     self.aliases[old] = b""
@@ -218,7 +223,7 @@ def checked_source(source: bytes, *, include=None) -> bytes:
                 definition, definition_states = end, states[:]
         states = list(dict.fromkeys(next_states))
         if len(states) > 32:
-            raise RuntimeError("Too many conditional roff syntaxes")
+            raise RoffSourceError("Too many conditional roff syntaxes")
         checked.append(original if ambiguous_continuation and rendered == line else rendered)
         ambiguous_continuation = False
     if pending:
@@ -227,7 +232,7 @@ def checked_source(source: bytes, *, include=None) -> bytes:
         checked.append(pending_original if ambiguous_continuation else pending)
     result = b"".join(checked)
     if len(result) > 16 * 1024 * 1024:
-        raise RuntimeError("Expanded roff source exceeds limit")
+        raise RoffSourceError("Expanded roff source exceeds limit")
     return result
 
 

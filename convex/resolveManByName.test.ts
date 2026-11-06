@@ -21,12 +21,13 @@ async function activeRelease(ctx: MutationCtx, stage: "prod" | "staging") {
 }
 
 // Pages have no content rows: resolution must not need them.
-async function page(ctx: MutationCtx, releaseId: Id<"datasetReleases">, name: string, section: string) {
+async function page(ctx: MutationCtx, releaseId: Id<"datasetReleases">, name: string, section: string, indexable?: boolean) {
   await ctx.db.insert("manPages", {
     releaseId, datasetReleaseId: "prod", externalId: `${name}.${section}`,
     locale: "en", distro: "debian", name, section, sitemapPage: 0,
     title: `${name}(${section})`, description: `${name} ${section} description`,
     sourcePath: `/man/${name}.${section}`, contentSha256: "test", hasParseWarnings: false,
+    ...(indexable === undefined ? {} : { indexable }),
   });
 }
 
@@ -37,6 +38,19 @@ async function alias(ctx: MutationCtx, releaseId: Id<"datasetReleases">, name: s
 }
 
 describe("resolveManByName", () => {
+  it.each([[false, false], [true, false], [true, true]])("derives picker indexability from the pages already read (scored %s, indexed section %s)", async (scored, indexedSection) => {
+    const t = convexTest(schema, modules);
+    await t.run(async ctx => {
+      const releaseId = await activeRelease(ctx, "prod");
+      if (scored) await ctx.db.patch(releaseId, { indexablePageCount: indexedSection ? 1 : 0 });
+      await page(ctx, releaseId, "library", "3", false);
+      await page(ctx, releaseId, "library", "3pm", indexedSection);
+    });
+    expect(await t.query(api.queries.resolveManByName, { distro: "debian", name: "library" })).toMatchObject({
+      kind: "ambiguous", datasetReleaseId: "prod", indexable: !scored || indexedSection,
+      options: [{ section: "3" }, { section: "3pm" }],
+    });
+  });
   it("prefers a page over an alias and does not read content", async () => {
     const t = convexTest(schema, modules);
     await t.run(async (ctx) => {

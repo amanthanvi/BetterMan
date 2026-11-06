@@ -16,7 +16,7 @@ Optional: `BETTERMAN_INGEST_WORKERS` sets the number of parse processes, clamped
 
 ## Large releases and recovery
 
-Ingest contract **5** must be deployed before this client writes. Release
+Ingest contract **7** must be deployed before this client writes. Release
 provenance is a JSON file in Convex storage, referenced from `releaseManifests`;
 page views read only the small release row. Page-upload counters use 16 shards;
 sealing folds their per-section counts in one bounded verification transaction,
@@ -236,6 +236,18 @@ when the import switch is off. Held Debian logs a clear skip; other distros
 continue. Non-`1` values, including an explicitly empty value, warn and stay off;
 raw values are never printed.
 
+### Translated manuals (#395)
+
+`--debian-translation <de|fr|es|pt-BR|ja|ru>` runs the same archive pipeline
+over one language root (`usr/share/man/<lang>/`) and publishes it as that
+locale's Debian release, to staging only. It is off by default: the separate
+`update-translations` workflow needs `BETTERMAN_DEBIAN_TRANSLATIONS=1` or its
+`debian_translations` input, and promotion needs its own authorization plus the
+Convex translated-release hold. `scripts/check_debian_translations.py` counts
+every translated path in Contents and measures a bounded sample, optionally
+uploading it to this worktree's loopback deployment. Details and measurements:
+`docs/roadmap/b3-translations.md`.
+
 `data/debian-trixie.json` pins snapshot, suite/component/architecture and the
 Release SHA256. Verified Release SHA256/size entries bind Contents-all,
 Contents-amd64 and Packages.xz, which bind every archive filename/version/size/SHA256.
@@ -341,6 +353,13 @@ satisfy only virtual names absent from the real Packages catalog; make-guile's
 precedence over suffixes such as `ls(1plan9)`. Wrong ownership blocks before any
 upload and is not covered by the missing-page escape hatch.
 
+Archive pins may declare `excludedPackages`, a reviewed package-name-to-reason
+map bound to the workspace's whole-pin-file hash and recorded in the release
+manifest. Excluded packages are never selected or acquired; dependencies on their
+files and curated requests fail closed. Ubuntu noble excludes `bcc` and `bin86`
+because linux86 0.16.17-3.5build1 ships no copyright notice in the pinned archive.
+There is no runtime exclusion override; unlisted missing notices still fail.
+
 The curated apt package pass requests netcat-openbsd, but the full archive corpus
 contains netcat-traditional too. Its `standard` Priority wins the default-installed
 group under the existing election policy; the OpenBSD preference breaks only
@@ -442,12 +461,13 @@ It is prepared for an owner-authorized runner measurement and **was not run**:
 runner measurements count as shared execution. The [evidence document](../docs/roadmap/b1-debian-evidence.md)
 contains local results, audit dispositions and projections.
 
-Contract **v6** retains the merged v4 license batches, extractor provenance,
+Contract **v8** retains the merged v4 license batches, extractor provenance,
 packed signatures, symbols and optional-argument metadata with real/alias
-provider declarations from v5, adding verified staging-source reads and CAS
-promotion. Promotion requires the matching v6 header; optional dispatch
+provider declarations from v5, verified staging-source reads and CAS promotion
+from v6, adding B4 demand fields and B2 acquisition identities, promotion holds and stored
+notices. Promotion requires the matching v8 header; optional dispatch
 `expected_release_ids` pins inspected releases through queue waits. The generated
-layer keeps its separate **v2** contract.
+layer keeps its separate **v3** contract.
 The single TS/Python alignment test and bidirectional mismatch tests guard deploy
 ordering. All provider and symbol tables are in the schema-checked release-child
 registry; derived dependency pins protect pruning. Deploy the combined Convex
@@ -457,3 +477,144 @@ Alternate reads retain their own content-hash generated brief, without borrowing
 canonical portability/history. Alias redirects preserve the target package,
 including name-only redirects. Shared full-Debian switches remain explicit and
 were not enabled during integration.
+
+## Index-by-demand
+
+Every release computes demand scores and tier membership from pinned popcon
+and page sections. See the [B4 runbook](../docs/roadmap/b4-index-by-demand.md)
+for thresholds, monthly evaluation, deployment ordering and the required fresh v7 ingestion before full-Debian promotion.
+
+Existing unscored prod releases retain all-page indexing and sitemaps. Full-Debian
+releases without a tier may activate staging but cannot enter prod, including
+with owner authorization. Direct prod activation returns HTTP 409
+`FULL_DEBIAN_TIER_REQUIRED`; promotion skips Debian with that reason while
+allowing eligible siblings to promote. The in-flight
+v5 full-Debian release needs a fresh scored replacement. B4 uses ingest v7,
+retaining #443's CAS request, fixed-source read, header fence and dispatch pins
+alongside demand fields.
+
+## Full Ubuntu from archives (B2)
+
+`pnpm ingest:run --distro ubuntu --ubuntu-full` reuses B1's bounded extraction
+without installing packages. Python 3.14 and host mandoc are required. Noble's
+main/universe Release, Contents, Packages and every archive are pinned and
+checksum verified. Ubuntu has its own audited private-manual paths and uses
+Debian's pinned exact-name popcon counts as a proxy because Ubuntu popcon is defunct.
+
+Cron opt-in: `BETTERMAN_UBUNTU_FULL=1`. Dispatch opt-in: `ubuntu_full: true`.
+Both default off. Promotion independently requires `ubuntu_full_promote: true`
+or `BETTERMAN_UBUNTU_FULL_PROMOTE=1`, plus `promote: true`; persisted
+`ubuntu-deb-extraction` is held server-side otherwise. HTTP activation cannot
+bypass it, and unscored full releases cannot promote. B2 uses v8 after #445's
+pending v7 deployment; all four B2 families share that one bump. Clients reject
+both v7 and v9 servers before writes, and promotion requires the exact v8 header.
+The translations stack follows as v9. No shared workflow is dispatched
+by implementation work.
+
+No-upload rehearsal, with a fresh explicit workdir (relative to ingestion/):
+
+```bash
+pnpm ingest:full-benchmark --distro ubuntu --workdir ../.cache/b2/ubuntu-audit --packages 50 --curated
+```
+
+Use `--packages 200` without `--curated` for a deterministic package sample.
+The curated mode discovers competitors using the complete verified Contents
+and checks elected command owners, aliases and notices before reporting success.
+See [Ubuntu evidence and runner projections](../docs/roadmap/b2-ubuntu-evidence.md).
+
+## Full Fedora from archives (B2)
+
+`pnpm ingest:run --distro fedora --fedora-full` selects the pinned Fedora 44
+Everything x86_64/noarch RPM corpus through verified primary/filelists metadata.
+Python 3.14, mandoc and bsdtar (`libarchive-tools`) are required. Package scripts
+are data only; bounded header reading and B1's static alternatives election
+restore generated links without installation or script execution.
+
+Cron requires `BETTERMAN_FEDORA_FULL=1`; dispatch requires `fedora_full: true`.
+Independent production authorization is `fedora_full_promote: true` or
+`BETTERMAN_FEDORA_FULL_PROMOTE=1`. All default off. Persisted
+`fedora-rpm-extraction`, mandatory index tiers and CAS enforce the server hold.
+
+Notices above 512 KiB use complete storage JSON, including pruning/orphan cleanup;
+7 MiB encoded is the import ceiling. The same-origin API streams compressed JSON
+for browser reads and offers a storage redirect without gzip. Missing standalone
+notices stay explicitly declared absent; license expressions are provenance.
+
+```bash
+pnpm ingest:full-benchmark --distro fedora --workdir ../.cache/b2/fedora-audit --packages 50 --curated
+pnpm ingest:full-benchmark --distro fedora --workdir ../.cache/b2/fedora-sample --packages 200
+```
+
+[Evidence, exact selections, limits and projections](../docs/roadmap/b2-fedora-evidence.md).
+The lead dispatches staging measurement after merge; no implementation run
+changes shared data, enables variables or authorizes promotion.
+
+## Full Arch from archives (B2)
+
+`pnpm ingest:run --distro arch --arch-full` reads pinned 2026-10-01 core/extra/
+multilib files databases and SHA256-verifies the exact package archives. Python
+3.14 and host mandoc are required. `.INSTALL` scripts never execute. The existing
+provider, alias/include, notice, owner and publisher paths are reused.
+
+Four large toolchain/documentation bundles need more than 1 GiB. Arch caps each
+archive at 4 GiB and acquires oversized archives serially after normal packages;
+the retained archive cache stays at 2 GiB. Other families retain their own limits.
+
+Cron opt-in is `BETTERMAN_ARCH_FULL=1`; manual opt-in is `arch_full: true`.
+Promotion independently requires `arch_full_promote: true` or
+`BETTERMAN_ARCH_FULL_PROMOTE=1`. All default off; persisted `arch-pkg-extraction`,
+index tiers and CAS enforce the server hold. The lead measures staging after merge.
+
+```bash
+pnpm ingest:full-benchmark --distro arch --workdir ../.cache/b2/arch-audit --packages 50 --curated
+pnpm ingest:full-benchmark --distro arch --workdir ../.cache/b2/arch-largest --packages 1 --largest
+```
+
+[Arch evidence, exact selections and projections](../docs/roadmap/b2-arch-evidence.md).
+
+## Full Alpine from archives (B2)
+
+`pnpm ingest:run --distro alpine --alpine-full` selects the pinned Alpine 3.23
+main/community APKINDEX/doc-subpackage corpus. Python 3.14 and host mandoc are
+required. The bundled index snapshots are SHA256-verified. APK v2's native Q1
+compressed-control SHA1 and `.PKGINFO` data SHA256 are verified before extraction;
+observed whole-archive SHA256 is recorded separately. Malformed signature/control
+tar, missing/invalid `.PKGINFO`, and decode errors become download integrity errors:
+corrupt caches are evicted and malformed CDN responses try the verified fallback.
+No hook, trigger or packaged
+executable runs. Doc owners require matching pinned origin/version and `docs`
+install-if metadata, not just a matching name suffix.
+
+Cron requires `BETTERMAN_ALPINE_FULL=1`; dispatch requires `alpine_full: true`.
+Promotion independently requires `alpine_full_promote: true` or
+`BETTERMAN_ALPINE_FULL_PROMOTE=1`. All default off; persisted
+`alpine-apk-extraction`, index tiers and CAS enforce the server hold.
+
+After the first staging acquisition, download the `alpine-package-sha256` workflow
+artifact. Its `alpine-package-sha256.json` contains `releaseSha256` and a
+`packageSha256` map from exact repository/architecture/version filenames to observed
+whole-file SHA256s for **every acquired archive**, including runtime/include/notice
+dependencies. The publisher exports it after notice collection; no-upload rehearsals
+also write it under their workdir. It never rewrites the checked-in lock.
+
+The lead must verify its index-set `releaseSha256`, review the acquisition, then
+commit the complete `packageSha256` map into `ingestion/data/alpine-v3.23.json`.
+The map is intentionally absent for the initial staging bootstrap. **Once the
+field is present, pins are required**: missing selected, runtime or later-discovered
+packages fail closed. Both native integrity and whole-file SHA256 are checked on
+new downloads and cache hits. Restored extraction receipts cannot override a
+reviewed SHA256. An empty map does not re-enable bootstrap. Adding/updating/removing
+the map is a reviewed lock change; no runtime option silently refreshes it. These
+local samples do not substitute for the lead's first staging pin review.
+
+Alpine mirrors may remove pinned older APKs. Refresh and review index/version pins
+in a new commit when necessary; never silently fall forward to a new version.
+
+```bash
+pnpm ingest:full-benchmark --distro alpine --workdir ../.cache/b2/alpine-audit --packages 50 --curated
+pnpm ingest:full-benchmark --distro alpine --workdir ../.cache/b2/alpine-sample --packages 200
+```
+
+[Alpine evidence, checksum semantics and limits](../docs/roadmap/b2-alpine-evidence.md).
+The lead dispatches staging measurement after merge; production still needs
+owner sign-off.

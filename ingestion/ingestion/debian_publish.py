@@ -25,7 +25,8 @@ from ingestion.ingest_runner import (
     _upload_pages,
     _upload_worker_count,
 )
-from ingestion.package_set import FULL_PACKAGE_SET_DEBIAN
+from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
+from ingestion.popularity import PopularityPolicy
 
 
 def ingest_debian(
@@ -35,25 +36,52 @@ def ingest_debian(
     ingest_secret: str,
     dataset_stage: str,
     git_sha: str,
+    distro: str = "debian",
     **_kwargs,
 ) -> IngestResult:
     import shutil
     import sys
 
     if sys.version_info < (3, 14) or not shutil.which("mandoc"):
-        raise RuntimeError("Debian archive ingestion requires Python 3.14 and mandoc")
+        raise RuntimeError("Full archive ingestion requires Python 3.14 and mandoc")
     client = ConvexIngestClient(convex_url, ingest_secret)
-    client.require_deployed_contract()  # Before acquisition or any writes.
+    contract = client.require_deployed_contract()  # Before acquisition or any writes.
+    identities = {
+        "ubuntu": "ubuntu-deb-extraction",
+        "fedora": "fedora-rpm-extraction",
+        "arch": "arch-pkg-extraction",
+        "alpine": "alpine-apk-extraction",
+    }
+    if distro in identities and identities[distro] not in contract.get("acquisitions", []):
+        raise RuntimeError(f"Deploy B2's v8 {distro} acquisition support before full ingestion")
+    # Every archive distro ships notices over Convex's 1 MiB document limit (Debian's
+    # libboost1.83-tools-dev is about 2.2 MB), so all of them use stored notices.
+    if contract.get("storedLicenseText") is not True:
+        raise RuntimeError(f"Deploy stored-license support before full {distro} ingestion")
     import os
 
     from ingestion.debian_indexes import PINS
     from ingestion.util import sha256_hex
 
-    base = Path(__file__).resolve().parents[2] / ".cache" / "debian"
-    root = Path(os.environ.get("BETTERMAN_DEBIAN_WORKDIR", str(base / "workspaces")))
+    if dataset_stage != "staging":
+        raise ValueError("Full imports require staging and gated promotion")
+    base = Path(__file__).resolve().parents[2] / ".cache" / distro
+    root = Path(os.environ.get(f"BETTERMAN_{distro.upper()}_WORKDIR", str(base / "workspaces")))
+    pins = (
+        PINS
+        if distro == "debian"
+        else PINS.with_name(
+            {
+                "ubuntu": "ubuntu-noble.json",
+                "fedora": "fedora-44.json",
+                "arch": "arch-20261001.json",
+                "alpine": "alpine-v3.23.json",
+            }[distro]
+        )
+    )
     # A different lock cannot reuse extracted state, even in the same runner path.
-    root = root / sha256_hex(PINS.read_bytes())
-    workspace = Workspace(root)
+    root = root / sha256_hex(pins.read_bytes())
+    workspace = Workspace(root, distro=distro)
     workspace.acquire()
     return publish_workspace(
         workspace, client, activate=activate, dataset_stage=dataset_stage, git_sha=git_sha
@@ -71,6 +99,10 @@ def publish_workspace(
 ) -> IngestResult:
     import time
 
+    distro = workspace.distro
+    notice_text = copyright_text
+    if distro in {"fedora", "arch", "alpine"}:
+        from ingestion.standard_licenses import license_text as notice_text
     workspace.timings = {}
     started = time.monotonic()
     with (
@@ -89,33 +121,53 @@ def publish_workspace(
         if not sample:
             workspace.require_command_owners()
             _require_command_pages(
-                distro="debian",
-                requested=FULL_PACKAGE_SET_DEBIAN,
+                distro=distro,
+                requested=FULL_PACKAGE_SET_BY_DISTRO[distro],
                 pages=canonical,
                 aliases=workspace.aliases,
                 sample=False,
             )
         release_id = _build_dataset_release_id(
-            git_sha=git_sha, mandoc_version="host", distro="debian"
+            git_sha=git_sha, mandoc_version="host", distro=distro
         )
         licenses = _LicenseSpool(spool.connection)
         used = {p.name for p in workspace.packages} | {
             p.source_package for p in refs if p.source_package
         }
         used |= {a["sourcePackage"] for a in workspace.alias_providers}
+        workspace.require_allowed_packages(used)
         published_packages = [workspace.available[name] for name in sorted(used)]
         for package in published_packages:
+            if not package.sha256:
+                raise RuntimeError("Missing verified archive SHA256 before publication")
             require_job_budget("copyright collection")
-            licenses[package.name] = copyright_text(workspace, package.name)
+            text = notice_text(workspace, package.name)
+            if text.strip():
+                licenses[package.name] = text
+        if distro == "alpine":
+            from ingestion.alpine_archives import write_sha256_pins
+
+            write_sha256_pins(workspace)
+        policy = PopularityPolicy.load()
+        sitemap = _build_sitemap_page_map(pages=canonical, policy=policy)
         manifest = {
+            "indexPolicy": policy.provenance(),
             "acquisition": workspace.pins["acquisition"],
             "imageRef": workspace.pins["mirror"],
             "imageDigest": workspace.pins["releaseSha256"],
-            "arch": "amd64",
-            "distro": "debian",
+            "arch": workspace.pins.get("architecture", "amd64"),
+            "distro": distro,
             "pins": workspace.pins,
-            "popularitySource": "popcon by_inst installed",
-            "alternatives": "postinst priority, popcon, package/path; curated awk/vi/nc policy",
+            **(
+                {"standardLicenseTextSource": workspace.standard_license_provenance}
+                if hasattr(workspace, "standard_license_provenance")
+                else {}
+            ),
+            "excludedPackages": workspace.pins.get("excludedPackages", {}),
+            "popularitySource": workspace.pins.get("popularitySource", "popcon by_inst installed"),
+            "alternatives": workspace.pins.get(
+                "alternatives", "postinst priority, popcon, package/path; curated awk/vi/nc policy"
+            ),
             "alternativesSkipped": workspace.alternatives_skipped,
             "packages": [
                 {
@@ -123,6 +175,39 @@ def publish_workspace(
                     "version": p.version,
                     "sha256": p.sha256,
                     "installed": p.installed,
+                    **getattr(workspace, "standard_license_metadata", {}).get(p.name, {}),
+                    **(
+                        {"unmatchedLicenseIdentifiers": unmatched}
+                        if (
+                            unmatched := getattr(
+                                workspace, "unmatched_license_identifiers", {}
+                            ).get(p.name)
+                        )
+                        else {}
+                    ),
+                    **(
+                        {
+                            "licenseExpression": p.license,
+                            (
+                                "sourceRpm"
+                                if distro == "fedora"
+                                else "origin"
+                                if distro == "alpine"
+                                else "packageBase"
+                            ): p.source,
+                        }
+                        if distro in {"fedora", "arch", "alpine"}
+                        else {}
+                    ),
+                    **(
+                        {
+                            "filename": p.filename,
+                            "controlChecksum": p.control_checksum,
+                            "dataSha256": p.data_sha256,
+                        }
+                        if distro == "alpine"
+                        else {}
+                    ),
                 }
                 for p in published_packages
             ],
@@ -135,7 +220,10 @@ def publish_workspace(
         batches = [declarations[i : i + 200] for i in range(0, len(declarations), 200)]
         # Check every notice before creating the release; never truncate.
         for _item in _iter_license_items(
-            licenses=licenses, distro="debian", dataset_release_id=release_id
+            licenses=licenses,
+            distro=distro,
+            dataset_release_id=release_id,
+            stored=True,
         ):
             pass
         workspace.timings["metadataSeconds"] = (
@@ -153,12 +241,13 @@ def publish_workspace(
             {
                 "datasetReleaseId": release_id,
                 "locale": "en",
-                "distro": "debian",
+                "distro": distro,
                 "imageRef": workspace.pins["mirror"],
                 "imageDigest": workspace.pins["releaseSha256"],
                 "ingestedAt": iso_utc_now(),
                 "packageManifest": manifest,
                 "pageCount": len(canonical),
+                "indexablePageCount": sum(value > 0 for value in sitemap.values()),
                 "providerCount": len(providers) + len(workspace.alias_providers),
                 "aliasCount": len(workspace.aliases),
                 "licenseCount": len(licenses),
@@ -182,16 +271,16 @@ def publish_workspace(
                 "/ingest/license-packages",
                 {"datasetReleaseId": release_id, "batchIndex": index, "packages": batch},
             )
-        sitemap = _build_sitemap_page_map(pages=canonical)
-        sitemap.update({page_id: 1 for page_id in providers})
+        sitemap.update({page_id: 0 for page_id in providers})
         workspace.timings["declarationSeconds"] = time.monotonic() - declaration_started
         _log("deb_declarations_complete", seconds=workspace.timings["declarationSeconds"])
 
         def payloads():
-            for payload in _resolved_page_payloads(spool, canonical, sitemap):
+            for payload in _resolved_page_payloads(spool, canonical, sitemap, policy=policy):
                 require_job_budget("page upload")
                 if payload["externalId"] in providers:
                     payload["providerOnly"] = True
+                    payload["indexable"] = False
                 yield payload
 
         upload_started = time.monotonic()
@@ -220,7 +309,10 @@ def publish_workspace(
         license_started = time.monotonic()
         pending = []
         for notice in _iter_license_items(
-            licenses=licenses, distro="debian", dataset_release_id=release_id
+            licenses=licenses,
+            distro=distro,
+            dataset_release_id=release_id,
+            stored=True,
         ):
             require_job_budget("license upload")
             if pending and (

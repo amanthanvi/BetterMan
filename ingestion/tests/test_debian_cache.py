@@ -76,7 +76,7 @@ def test_extracted_receipts_and_checksum_cache_resume_and_revalidate(tmp_path, m
         "gawk", "1", "pool/main/g/gawk.deb", hashlib.sha256(data).hexdigest(), len(data)
     )
     pins = tmp_path / "pins"
-    pins.write_text("test pins")
+    pins.write_text("{}")
     cache = tmp_path / "cache"
     monkeypatch.setenv("BETTERMAN_DEBIAN_CACHE_DIR", str(cache))
     monkeypatch.setattr(pipeline, "PINS", pins)
@@ -320,7 +320,7 @@ def test_redirect_policy_rejects_downgrades_unexpected_hosts_and_credentials(tar
         )
 
 
-def test_snapshot_same_host_https_redirect_and_contact_header(tmp_path, monkeypatch):
+def test_snapshot_same_host_https_redirect_and_neutral_header(tmp_path, monkeypatch):
     from urllib.request import Request
 
     target = "https://snapshot.debian.org/file/" + "a" * 40
@@ -335,7 +335,7 @@ def test_snapshot_same_host_https_redirect_and_contact_header(tmp_path, monkeypa
     assert request.full_url == target
 
     def fetch(req, **_kwargs):
-        assert "mailto:aman_thanvi@outlook.com" in req.get_header("User-agent")
+        assert req.get_header("User-agent") == "BetterMan-ingestion/1"
         return io.BytesIO(b"x")
 
     monkeypatch.setattr(indexes, "urlopen", fetch)

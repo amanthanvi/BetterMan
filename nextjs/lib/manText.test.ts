@@ -64,3 +64,28 @@ it('strips terminal controls from metadata and document text, preserving tabs an
   expect([...text].filter((character) => /\p{Cc}/u.test(character))).toEqual(expect.arrayContaining(['\n', '\t']))
   expect(text.replaceAll('\n', '').replaceAll('\t', '')).not.toMatch(/\p{Cc}/u)
 })
+
+it('does not fill OPTIONS ahead of NAME when the document already describes the options under DESCRIPTION', () => {
+  const heading = (text: string) => ({ type: 'heading' as const, id: text, level: 2, text })
+  const paragraph = (text: string) => ({ type: 'paragraph' as const, inlines: [{ type: 'text' as const, text }] })
+  const content = {
+    ...manual.content,
+    options: [
+      { anchorId: 'all', flags: '-a, --all', argument: null, description: 'do not ignore entries starting with .' },
+      { anchorId: 'color', flags: '--color', argument: 'WHEN', description: 'colorize the output' },
+    ],
+    blocks: [
+      heading('NAME'), paragraph('ls - list directory contents'),
+      heading('SYNOPSIS'), paragraph('ls [OPTION]... [FILE]...'),
+      heading('DESCRIPTION'),
+      { type: 'definition_list' as const, items: [
+        { termInlines: [{ type: 'text' as const, text: '-a, --all' }], definitionBlocks: [paragraph('do not ignore entries starting with .')] },
+        { termInlines: [{ type: 'text' as const, text: '--color' }], definitionBlocks: [paragraph('colorize the output')] },
+      ] },
+    ],
+  }
+  const text = renderManText({ ...manual, content })
+  expect(text).toContain('        TAR(1)\n\nNAME\n\nls - list directory contents')
+  expect(text).not.toContain('OPTIONS')
+  expect(text.split('do not ignore entries starting with .')).toHaveLength(2)
+})

@@ -3,6 +3,7 @@ import { convexTest, type TestConvex } from "convex-test";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
+import { INGEST_CONTRACT } from "./ingestContract";
 
 const modules = import.meta.glob("./**/*.ts");
 type Harness = TestConvex<typeof schema>;
@@ -33,7 +34,7 @@ function createRelease(t: Harness, datasetReleaseId: string, pageCount = 1) {
 function upload(t: Harness, datasetReleaseId: string, pages: ReturnType<typeof page>[]) {
   return t.fetch("/ingest/pages/storage", {
     method: "POST",
-    headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
+    headers: { authorization: "Bearer test-secret", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
     body: JSON.stringify({ datasetReleaseId, pages }),
   });
 }
