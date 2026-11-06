@@ -34,18 +34,30 @@ pnpm -C nextjs exec playwright install chromium
 
 The specs run against the production server from the `e2e` job in `.github/workflows/ci.yml`: `next build`, then `next start`. `pnpm next:dev` is the loop in `AGENTS.md` and in the render-man-page skill. It is the wrong server for this drive. Man-page CSP checks expect no Next dev runtime.
 
-Stop this checkout's `pnpm next:dev` before building. `convex dev --start` relaunches Next if you stop only the child. Leave a server from another checkout alone.
+Stop this checkout's `pnpm next:dev` before building. `convex dev --start` relaunches Next if you stop only the child. Leave a server from another checkout alone: keep a pid only when `readlink /proc/<pid>/cwd` is under this repo root. Cleanup uses that same check on the recorded Next and Convex pids.
 
 ```bash
 set -euo pipefail
 export PATH="${NVM_DIR:-$HOME/.nvm}/versions/node/v26.5.1/bin:${HOME}/.local/bin:${PATH}"
 cd "$(git rev-parse --show-toplevel)"
+REPO="$(readlink -f "$(pwd)")"
 
 EVIDENCE="$(pwd)/.agents/skills/verify-betterman/evidence"
 rm -rf "$EVIDENCE"
 mkdir -p "$EVIDENCE"
 chmod 700 "$EVIDENCE"
 
+# True when this pid's cwd is the repo root or a directory under it.
+in_this_checkout() {
+  local cwd
+  cwd="$(readlink "/proc/$1/cwd" 2>/dev/null || true)"
+  case "$cwd" in
+    "$REPO"|"$REPO"/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Stop pid and its children. Callers keep a pid only after in_this_checkout.
 kill_tree() {
   local pid="$1" child
   for child in $(ps -o pid= --ppid "$pid"); do
@@ -56,6 +68,7 @@ kill_tree() {
 
 while read -r pid; do
   [[ -n "$pid" ]] || continue
+  in_this_checkout "$pid" || continue
   echo "stopping pnpm next:dev pid $pid"
   kill_tree "$pid"
 done < <(ps -eo pid=,cmd= | awk '/pnpm next:dev/ && $0 !~ /awk/ { print $1 }')
@@ -114,6 +127,8 @@ done
 curl -fsS --max-time 2 http://127.0.0.1:3000/robots.txt >/dev/null
 ```
 
+`set -a; . ./.env.local` exports everything in `.env.local` into the build and Playwright env, and this is intended for the anonymous local Convex loop.
+
 `next build` can rewrite `nextjs/next-env.d.ts`. That file is generated. Do not commit it. Cleanup restores it when the diff is only that rewrite.
 
 If `git status` shows `convex/_generated` drift after `convex dev --once`, the committed copy is stale. Report it. Do not include it in this skill's change.
@@ -137,7 +152,7 @@ A missing `RATE_LIMIT_TAG_KEY` on the Next process answers 429. The value has to
 
 ## Drive
 
-One config layers screenshots and this evidence directory onto `nextjs/playwright.config.ts`. The product config stays the contract. `--config` is passed twice on purpose: the `e2e` script pins the product file, and the later flag selects the skill file.
+One config layers screenshots and this evidence directory onto `nextjs/playwright.config.ts`. The product config stays the contract. `--config` is passed twice on purpose: the `e2e` script pins the product file, and the later flag selects the skill file. `evidence.config.ts` sits outside `nextjs/` lint and tsconfig coverage on purpose.
 
 ```bash
 set -euo pipefail
@@ -174,8 +189,20 @@ When the server from Launch is already healthy, follow the Render and Counts sec
 ```bash
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
+REPO="$(readlink -f "$(pwd)")"
 EVIDENCE="$(pwd)/.agents/skills/verify-betterman/evidence"
 
+# True when this pid's cwd is the repo root or a directory under it.
+in_this_checkout() {
+  local cwd
+  cwd="$(readlink "/proc/$1/cwd" 2>/dev/null || true)"
+  case "$cwd" in
+    "$REPO"|"$REPO"/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Stop pid and its children. Callers keep a pid only after in_this_checkout.
 kill_tree() {
   local pid="$1" child
   for child in $(ps -o pid= --ppid "$pid"); do
@@ -188,6 +215,10 @@ for name in next convex; do
   file="$EVIDENCE/$name.pid"
   [[ -f "$file" ]] || continue
   pid="$(cat "$file")"
+  in_this_checkout "$pid" || {
+    echo "leaving $name pid $pid; cwd is outside this checkout"
+    continue
+  }
   echo "stopping $name pid $pid"
   kill_tree "$pid"
 done
