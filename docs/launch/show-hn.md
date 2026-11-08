@@ -26,7 +26,7 @@ Hi HN. BetterMan is a web reader for Unix manual pages. I've been working on it 
 
 **What it does.**
 
-- `betterman.sh/tar`, `/tar.1`, `/tar/-x` go to the page or flag. A bare name opens the section `man` itself would pick on that distro. `curl -L betterman.sh/tar.txt` returns plain text that starts with NAME and lists each option once. Browsers can add it as a search engine.
+- `betterman.sh/tar`, `/tar.1`, `/tar/-x` go to the page or flag. A bare name opens the section `man` itself would pick on that distro. `curl -L betterman.sh/tar.txt` returns plain text: a running header, then NAME, with each option listed once. Browsers can add it as a search engine.
 - Each page opens with a one-sentence summary, up to five examples (each labelled with its source) and the most-used flags. The upstream manual follows unchanged, with a filterable options index.
 - Search matches task phrases ("extract a tarball" finds tar(1)), manual citations such as `open(2)` and clustered flags.
 - *Explain*: paste a shell line, get each command and flag linked to its definition. Clustered flags are split. It is a deterministic parser, not a model. For input it can't parse safely it says so instead of guessing.
@@ -50,7 +50,7 @@ Hi HN. BetterMan is a web reader for Unix manual pages. I've been working on it 
 - Portability compares distros, not versions of a distro.
 - Explain covers a defined shell grammar. It will refuse some valid lines.
 - Generated summaries can be wrong or flat. Every page has a *report a problem* link that opens a prefilled GitHub issue.
-- Search engines may index pages in sections 1, 5, 7 and 8, plus pages from packages with at least 10,000 installations in Debian's popularity contest. That is 48,416 of Debian's 107,143 pages and 49,744 of Ubuntu's 104,763. Every other page is served and searchable but marked `noindex` and left out of sitemaps, to avoid 100k thin pages. Translated pages are `noindex`, with the English page as canonical. (Delete this line if you'd rather not discuss it.)
+- Search engines may index pages in sections 1, 5, 7 and 8, plus pages from packages with at least 10,000 installations in Debian's popularity contest. That is 48,416 of Debian's 107,143 pages and 49,744 of Ubuntu's 104,763. Every other page is served and searchable but marked `noindex` and left out of sitemaps, to avoid 100k thin pages. Translated pages are `noindex`, with the English page as canonical when that page is indexable. (Delete this line if you'd rather not discuss it.)
 - Parsing man pages is messy. Pages that mandoc warned about carry a note, and some will still render badly.
 - No CLI, API or editor extension for now. `/api/` is disallowed for crawlers.
 

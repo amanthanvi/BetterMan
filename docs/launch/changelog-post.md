@@ -41,7 +41,7 @@ Twenty short explainers cover section 7 topics such as signals, globbing and reg
 
 ## Short URLs and plain text
 
-`betterman.sh/tar`, `betterman.sh/tar.1` and `betterman.sh/tar/-x` go where you expect. A bare name opens the section `man` itself would pick on that distro, and `/man/<name>` lists every section. Add `.txt` for plain text: `curl -L betterman.sh/tar.txt`. Text pages start with NAME and list each option once. Browsers can add BetterMan as a search engine, with suggestions.
+`betterman.sh/tar`, `betterman.sh/tar.1` and `betterman.sh/tar/-x` go where you expect. A bare name opens the section `man` itself would pick on that distro, and `/man/<name>` lists every section. Add `.txt` for plain text: `curl -L betterman.sh/tar.txt`. After a running header, a text page opens with NAME and lists each option once. Browsers can add BetterMan as a search engine, with suggestions.
 
 ## Generated text is labelled
 
