@@ -85,7 +85,7 @@ proves the HTTP contract, not production exemptions or browser registration.
 
 ## Chromium fingerprint challenge (2026-11-06, review by 2026-11-20)
 
-The custom rule `Cost guard: challenge Chromium JA4 cb7bf5808d99 (review 2026-11-20)` (id `rule_probe_ja4_QjDurB`) sits last, after the four #388 bypass rules. Text and OpenSearch reads therefore never reach it. It **challenges** a request when both conditions hold:
+The custom rule `Cost guard: challenge Chromium JA4 cb7bf5808d99 (review 2026-11-20)` (id `rule_probe_ja4_QjDurB`) sits after the four #388 bypass rules, followed only by the deny rule in the next section. Text and OpenSearch reads therefore never reach it. It **challenges** a request when both conditions hold:
 
 - JA4 digest equals `t13d1517h2_8daaf6152771_cb7bf5808d99`.
 - User-Agent does not contain `bot`.
@@ -95,7 +95,7 @@ That digest is a common Chromium TLS handshake, not a scraper-only signature: Fo
 Why challenge it here:
 
 - `cb7bf5808d99` sent about 500 requests a day until 11-02. It then sent 30K, 61K and 132K on 11-03 to 11-05, but only 8 of the 3,415 Web Analytics beacons recorded on 11-04 and 11-05.
-- 3,349 of those beacons came from `t13d1516h2_8daaf6152771_d8a2da3f94cd`. They fell on a day when total beacons jumped from a few hundred to about 3,300, so they are not proof of where real visitors arrive.
+- 3,349 of those beacons came from `t13d1516h2_8daaf6152771_d8a2da3f94cd`. They fell on a day when total beacons jumped from a few hundred to about 3,300, so they are not proof of where real visitors arrive. On 11-07 and 11-08 that digest turned out to be mostly automation; see the next section.
 - Its User-Agents rotated across Chrome 150–154, from residential ISPs in many countries.
 - 73% of those requests got the app's 429. Each one still cost a proxy invocation, Fluid CPU and a Convex rate-limit call.
 
@@ -110,12 +110,45 @@ Limits:
 
 Checks:
 
-- The Firewall events API returned no data for this project, so watch the rule under **Firewall → Overview**.
-- Total Web Analytics cannot show harm from this rule: the fingerprint sent 8 of 3,415 beacons, and the 2026-11-05 total was a one-day spike. Instead, 24 hours after enabling the challenge, read the rule's challenge outcomes under **Firewall → Overview**. Many solved challenges mean real browsers present this fingerprint here, so set the rule to log. Mostly failed or unanswered challenges mean automation.
+- The Firewall events API reports only per-IP system actions, so watch the rule under **Firewall → Traffic**: choose it in the filter menu. Without Observability Plus the view covers the past day. Longer ranges open a prompt to include the project in Plus; cancel it.
+- Total Web Analytics cannot show harm from this rule: the fingerprint sent 8 of 3,415 beacons, and the 2026-11-05 total was a one-day spike. Read the rule's challenge outcomes instead. The Traffic view's legend shows only Challenged; the split comes from the query that view sends to `/api/observability-api/v1/metrics` (metric `vercel.firewall_action.count`, grouped by `wafAction`), which returns `challenge`, `challenge-solved` and `challenge-failed`. Mostly failed or unanswered challenges mean automation. Many solved challenges mean something that runs JavaScript presents this fingerprint, which can be headless automation (the next section's scraper solved 16,470 Bot Protection challenges in a day). Set the rule to log only with evidence of real visitors as well: volume near the site's usual few hundred page views a day, User-Agents that match the fingerprint's real Chrome versions, and `/favicon.svg` fetched far less often than pages. On 2026-11-08 the past day showed 60,810 challenged, 4 solved and 0 failed, so the challenge stayed.
 - By 2026-11-20, if matches have stayed near the 500-a-day baseline, set the rule inactive.
-- To roll back at any time, set the rule inactive or to log under **Firewall → Configure**, or re-activate an earlier configuration version.
+- To roll back at any time, set the rule inactive or to log under **Firewall → Configure**. Re-activating an earlier configuration version also undoes every later change, including the deny rule below, so compare it with the active configuration first.
 
-If the scraper changes fingerprint, group allowed traffic by **JA4 Digest** in the Firewall monitoring view (the last 24 hours). Alternatively, briefly re-include the project in Observability Plus and query `client_ja4_digest`. Compare Web Analytics beacons per request rather than raw counts: the busiest fingerprint can be a mainstream browser.
+If the scraper changes fingerprint, group allowed traffic by **JA4 Digest** in the Firewall monitoring view (the last 24 hours). Alternatively, briefly re-include the project in Observability Plus and query `client_ja4_digest`. Vercel allows 5 enables per project per week; a sixth answers 429 until the week resets. Compare Web Analytics beacons per request rather than raw counts: the busiest fingerprint can be a mainstream browser.
+
+## Impossible User-Agent deny (2026-11-08, review by 2026-11-20)
+
+The custom rule `Cost guard: deny impossible UAs on Chromium JA4 d8a2da3f94cd (review 2026-11-20)` (id `rule_cost_guard_deny_impossible_u_as_on_chromium_ja_4_d8a2da3f94cd_re_M1k7vJ`) sits last, after the challenge rule above. It **denies** a request when all three conditions hold:
+
+- JA4 digest equals `t13d1516h2_8daaf6152771_d8a2da3f94cd`.
+- User-Agent matches `Firefox/|Chrome/(1[0-2][0-9]|[1-9]?[0-9])\.`: Firefox, or Chrome 129 and older.
+- User-Agent does not contain `bot`.
+
+The digest alone is a mainstream Chrome handshake (real Chrome 146 presents it), so the rule never denies on the digest. It denies only User-Agents that this TLS stack cannot send: Firefox sends its own cipher list (17 ciphers, hash `5b57614c22b0`), and public JA4 sources tie this digest to Chrome 132–149, after Chrome's ALPS codepoint change. Chrome 129 and older send the older digests `02713d6af862` or `b1ff8ab2d16f`. A real visitor matches only if their browser presents a current Chromium handshake while claiming to be Firefox or an old Chrome, which takes a User-Agent switcher.
+
+Vercel's `re` operator matches anywhere in the value, not the whole value. On 2026-11-08 a temporary deny rule with this regex, scoped to a random User-Agent token, answered 403 to Firefox 121, Chrome 118 and 120 and Edge 119 User-Agents, and let Chrome 146 and 153 through. The rule was then removed.
+
+Why deny here:
+
+- On 11-07 and 11-08 the digest sent about 178K requests a day from residential ISPs in many countries (VNPT, PTCL, Jio, Turk Telekom). Its User-Agents rotated through Chrome 118–120, Firefox 120–121 and Chrome 146. Other modern Chrome versions sent about 300 requests a day.
+- It solved Bot Protection's challenge: 16,470 of the day's 16,540 solves. Another challenge would not stop it.
+- It fetched `/favicon.svg` and `/sw.js` on nearly every page view (about 29K each, beside 29K Web Analytics beacons), so it opens each page in a fresh browser profile. Those beacons are fake page views: Web Analytics events rose from 5.7K on 11-06 to 26.5K on 11-07.
+- Function Invocations rose from 82.7K on 11-06 to 191.7K on 11-07, and team spend from $1.27 to $2.17 a day.
+- A dry run over the 24 hours before the rule went live matched 149,173 of the digest's 177,564 requests (84%).
+
+Limits:
+
+- Its Chrome 146 traffic (about 28K a day) still passes, because real Chrome 146 visitors exist. Do not widen the regex to Chrome versions that this fingerprint really sends.
+- If the scraper switches to current User-Agents, the rule stops matching; re-identify it as in the previous section.
+- As with the challenge rule, the `bot` exemption is not identity verification.
+- Never add a persistent action.
+
+Checks:
+
+- Under **Firewall → Traffic**, choose the rule and read its User-Agents. Every denied User-Agent should be Firefox or Chrome 129 or older. If Chrome 130 or newer appears, or anything else suggests real visitors, set the rule to log.
+- By 2026-11-20, if the rule's denies have stayed near zero for a week, set it inactive.
+- To roll back, set the rule inactive or to log under **Firewall → Configure**. Do not re-activate an older configuration version for this: it also undoes every later change.
 
 ## Search index cost
 
