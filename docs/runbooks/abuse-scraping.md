@@ -85,12 +85,12 @@ proves the HTTP contract, not production exemptions or browser registration.
 
 ## Chromium fingerprint challenge (2026-11-06, review by 2026-11-20)
 
-The custom rule `Cost guard: challenge Chromium JA4 cb7bf5808d99 (review 2026-11-20)` (id `rule_probe_ja4_QjDurB`) sits after the four #388 bypass rules, followed only by the deny rule in the next section. Text and OpenSearch reads therefore never reach it. It **challenges** a request when both conditions hold:
+The custom rule `Cost guard: challenge Chromium JA4 cb7bf5808d99 (review 2026-11-20)` (id `rule_probe_ja4_QjDurB`) sits after the four #388 bypass rules, followed by the deny rule and the tripwire in the next two sections. Text and OpenSearch reads therefore never reach it. It **challenges** a request when both conditions hold:
 
 - JA4 digest equals `t13d1517h2_8daaf6152771_cb7bf5808d99`.
 - User-Agent does not contain `bot`.
 
-That digest is a common Chromium TLS handshake, not a scraper-only signature: FoxIO's JA4 README uses it as its Chrome example. Real Chromium browsers and headless Chromium both present it. Keep the action at challenge. Never deny, and never add a persistent action, because both would block real visitors on shared residential IPs.
+That digest is a common Chromium TLS handshake, not a scraper-only signature: FoxIO's JA4 README uses it as its Chrome example. Real Chromium browsers and headless Chromium both present it: on 2026-11-08 Chrome 157 presented it on its first TLS connection and `t13d1518h2_8daaf6152771_e2d80978ab2e` on resumed ones, so current Chrome meets this challenge on first contact and passes it automatically. Keep the action at challenge. Never deny, and never add a persistent action, because both would block real visitors on shared residential IPs.
 
 Why challenge it here:
 
@@ -119,7 +119,7 @@ If the scraper changes fingerprint, group allowed traffic by **JA4 Digest** in t
 
 ## Impossible User-Agent deny (2026-11-08, review by 2026-11-20)
 
-The custom rule `Cost guard: deny impossible UAs on Chromium JA4 d8a2da3f94cd (review 2026-11-20)` (id `rule_cost_guard_deny_impossible_u_as_on_chromium_ja_4_d8a2da3f94cd_re_M1k7vJ`) sits last, after the challenge rule above. It **denies** a request when all three conditions hold:
+The custom rule `Cost guard: deny impossible UAs on Chromium JA4 d8a2da3f94cd (review 2026-11-20)` (id `rule_cost_guard_deny_impossible_u_as_on_chromium_ja_4_d8a2da3f94cd_re_M1k7vJ`) sits after the challenge rule above, followed only by the tripwire in the next section. It **denies** a request when all three conditions hold:
 
 - JA4 digest equals `t13d1516h2_8daaf6152771_d8a2da3f94cd`.
 - User-Agent matches `Firefox/|Chrome/(1[0-2][0-9]|[1-9]?[0-9])\.`: Firefox, or Chrome 129 and older.
@@ -133,14 +133,14 @@ Why deny here:
 
 - On 11-07 and 11-08 the digest sent about 178K requests a day from residential ISPs in many countries (VNPT, PTCL, Jio, Turk Telekom). Its User-Agents rotated through Chrome 118–120, Firefox 120–121 and Chrome 146. Other modern Chrome versions sent about 300 requests a day.
 - It solved Bot Protection's challenge: 16,470 of the day's 16,540 solves. Another challenge would not stop it.
-- It fetched `/favicon.svg` and `/sw.js` on nearly every page view (about 29K each, beside 29K Web Analytics beacons), so it opens each page in a fresh browser profile. Those beacons are fake page views: Web Analytics events rose from 5.7K on 11-06 to 26.5K on 11-07.
+- It fetched `/favicon.svg` and `/sw.js` on nearly every page view (about 29K each, beside 29K Web Analytics beacons), so it opens each page in a fresh browser profile. `proxy.ts` runs on both files (its matcher excludes neither), so each fetch also cost an invocation. Those beacons are fake page views: Web Analytics events rose from 5.7K on 11-06 to 26.5K on 11-07.
 - Function Invocations rose from 82.7K on 11-06 to 191.7K on 11-07, and team spend from $1.27 to $2.17 a day.
 - A dry run over the 24 hours before the rule went live matched 149,173 of the digest's 177,564 requests (84%).
 
 Limits:
 
-- Its Chrome 146 traffic (about 28K a day) still passes, because real Chrome 146 visitors exist. Do not widen the regex to Chrome versions that this fingerprint really sends.
-- If the scraper switches to current User-Agents, the rule stops matching; re-identify it as in the previous section.
+- Its Chrome 146 User-Agent (about 25.5K requests a day, Windows and Linux) was almost entirely its service worker fetching `/sw.js`: page loads carried the spoofed User-Agent, but the service worker sent the browser's real one. Denying the page loads stops those fetches too, so the rule leaves Chrome 146 alone; real Chrome 146 visitors present this digest. Do not widen the regex to Chrome versions that this fingerprint really sends.
+- If the scraper switches to current User-Agents, this rule stops matching. The tripwire below catches it if it keeps overriding its User-Agent without client hints; otherwise re-identify it as in the previous section.
 - As with the challenge rule, the `bot` exemption is not identity verification.
 - Never add a persistent action.
 
@@ -149,6 +149,32 @@ Checks:
 - Under **Firewall → Traffic**, choose the rule and read its User-Agents. Every denied User-Agent should be Firefox or Chrome 129 or older. If Chrome 130 or newer appears, or anything else suggests real visitors, set the rule to log.
 - By 2026-11-20, if the rule's denies have stayed near zero for a week, set it inactive.
 - To roll back, set the rule inactive or to log under **Firewall → Configure**. Do not re-activate an older configuration version for this: it also undoes every later change.
+
+## Client-hints tripwire (2026-11-08, review by 2026-11-20)
+
+The custom rule `Tripwire: log Chromium TLS + desktop Chrome UA without client hints (review 2026-11-20)` (id `rule_tripwire_log_chromium_tls_desktop_chrome_ua_without_client_hints_97FSXl`) sits last. It **logs** a request when all five conditions hold:
+
+- JA4 digest contains `_8daaf6152771_`, the Chromium cipher list, on fresh and resumed connections alike.
+- User-Agent contains `Chrome/`.
+- The `sec-ch-ua` header is absent.
+- User-Agent does not match `Mobile|Android`.
+- User-Agent does not match `bot|compatible|Lighthouse`.
+
+Desktop Chromium always sends `sec-ch-ua`. Automation that sets its User-Agent through the DevTools protocol (`Network.setUserAgentOverride`) without client-hint metadata sends none of the `sec-ch-ua*` headers, whatever version it claims. On 2026-11-08 a local Chrome 157 sent the hints natively and with an override that carried metadata, and sent none with an override that did not, on the document and its subresources. So the tripwire catches a scraper that rotates to current User-Agents, which the deny rule above cannot. Mobile User-Agents are exempt because in-app browsers that replace their User-Agent may drop the hints. Declared crawlers and tools are exempt too.
+
+Live test the same day: in a solved-challenge session, the rule logged a local Chrome's desktop requests without hints, and ignored its mobile requests without hints and its desktop requests with hints. curl's non-Chromium handshake did not match.
+
+Limits:
+
+- Automation that sets client-hint metadata with its override, or runs an unmodified browser, passes.
+- Vercel records only a request's final action, so the log shows only requests that no later rule or managed ruleset challenges or denies. The deny rule above runs first, so the tripwire sees what that rule misses.
+- A developer who overrides the User-Agent in DevTools without client hints matches, and so does an automated run that sets a custom User-Agent without client-hint metadata (a bare CDP override, Puppeteer's `setUserAgent(ua)`).
+
+Checks:
+
+- Under **Firewall → Traffic**, choose the rule and read its User-Agents, fingerprints, networks and paths. Set it to deny only when it has logged a real sample that is clearly the scraper (many residential networks, User-Agents rotating, `/sw.js` or `/favicon.svg` about as often as pages) and nothing that looks like a real visitor (a few IPs browsing ordinary pages, an in-app browser, a declared tool). With no matches, or too few to judge, it stays at log. Scheduled checks on 2026-11-09 and 2026-11-20 apply this test.
+- Once it denies, set it back to log if a real visitor appears among its matches.
+- To roll back, set the rule inactive or to log under **Firewall → Configure**.
 
 ## Search index cost
 
