@@ -294,7 +294,7 @@ describe('answers from another release than the proxy key', () => {
 
 describe('/man/<name>', () => {
   it.each([undefined, true, false])('renders picker robots from the existing name resolution (%s)', async indexable => {
-    lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'ambiguous', indexable, options: [{ section: '3', description: 'library' }, { section: '3pm', description: 'module' }] }, servedRelease: release.datasetReleaseId })
+    lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'ambiguous', preferred: '3', indexable, options: [{ section: '3', description: 'library' }, { section: '3pm', description: 'module' }] }, servedRelease: release.datasetReleaseId })
     const result = await nameProps(context({ name: 'library' }).ctx)
     const { head } = propsOf(result) as { head: ManHeadData }
     expect(renderToStaticMarkup(<ManHeadTags {...head} />).includes('<meta name="robots" content="noindex"/>')).toBe(indexable === false)

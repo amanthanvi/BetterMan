@@ -79,7 +79,7 @@ describe("resolveManByName", () => {
       expect(resolved).toEqual(await t.action(api.content.getManByName, args));
     }
     expect(await t.query(api.queries.resolveManByName, { distro: "debian", name: "printf" })).toMatchObject({
-      kind: "ambiguous", options: [{ section: "1" }, { section: "3" }],
+      kind: "ambiguous", preferred: "1", options: [{ section: "1" }, { section: "3" }],
     });
   });
 

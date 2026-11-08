@@ -45,7 +45,8 @@ test('man query: a made-up package answers privately on every HTML and text form
       [`/man/tar/1?pkg=${pkg}`, 404],
       [`/man/tar?pkg=${pkg}`, 307],
       [`/man/tar/1.txt?pkg=${pkg}`, 404],
-      [`/tar.txt?pkg=${pkg}`, 308],
+      // A bare name's redirect depends on the release, so it is temporary.
+      [`/tar.txt?pkg=${pkg}`, 307],
       [`/tar.1.txt?pkg=${pkg}`, 404],
       [`/man/tar/1/og?pkg=${pkg}`, 404],
     ] as const) {
@@ -81,7 +82,7 @@ test('man query: canonical URLs render, and the reader still lands on the option
 })
 
 test('man query: short URLs still land, and drop tracking parameters in their one redirect', async ({ request }) => {
-  expect(await hop(request, '/tar?utm_source=hn&distro=ubuntu')).toMatchObject({ status: 308, location: '/man/tar?distro=ubuntu' })
+  expect(await hop(request, '/tar?utm_source=hn&distro=ubuntu')).toMatchObject({ status: 307, location: '/man/tar/1?distro=ubuntu' })
   expect(await hop(request, '/tar.1?ref=x')).toMatchObject({ status: 308, location: '/man/tar/1' })
   expect(await hop(request, '/tar/-c?utm_source=hn')).toMatchObject({ status: 307, location: '/man/tar/1?flag=-c#opt-create' })
   expect(await hop(request, '/2/open')).toMatchObject({ status: 308, location: '/man/open/2' })

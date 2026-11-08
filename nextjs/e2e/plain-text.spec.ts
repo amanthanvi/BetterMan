@@ -37,12 +37,13 @@ test('plain text: distro, missing pages, ambiguous names, and aliases', async ({
   const invalid = await request.get('/tar.txt?distro=invalid', { maxRedirects: 0 })
   expect(invalid.status()).toBe(308)
   expect(invalid.headers()['location']).toBe('/tar.txt')
-  const ambiguous = await request.get('/printf.txt')
-  expect(ambiguous.status()).toBe(409)
-  expect(await ambiguous.text()).toContain('/man/printf/3.txt')
-  for (const path of ['/gunzip.txt', '/man/gunzip/1.txt']) {
+  const ambiguous = await request.get('/printf.txt', { maxRedirects: 0 })
+  expect(ambiguous.status()).toBe(307)
+  expect(ambiguous.headers()['location']).toBe('/man/printf/1.txt')
+  expect(await (await request.get('/printf.txt')).text()).toContain('PRINTF(1)')
+  for (const [path, status] of [['/gunzip.txt', 307], ['/man/gunzip/1.txt', 308]] as const) {
     const alias = await request.get(path, { maxRedirects: 0 })
-    expect(alias.status()).toBe(308)
+    expect(alias.status(), path).toBe(status)
     expect(alias.headers()['location']).toBe('/man/gzip/1.txt')
     expect((await request.get(path)).headers()['content-type']).toContain('text/plain')
   }
