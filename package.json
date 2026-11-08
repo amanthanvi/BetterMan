@@ -34,19 +34,21 @@
 		"derived:benchmark": "node scripts/benchmark-derived.mjs",
 		"convex:derived-check": "node scripts/check-derived-data.mjs",
 		"convex:task-check": "node scripts/check-task-phrases.mjs",
-		"ingest:full-benchmark": "cd ingestion && uv run python -m scripts.check_full_archives"
+		"ingest:full-benchmark": "cd ingestion && uv run python -m scripts.check_full_archives",
+		"ingest:notice-audit": "cd ingestion && uv run python -m scripts.audit_notice_links",
+		"ingest:page-size-audit": "cd ingestion && uv run python -m scripts.audit_page_sizes"
 	},
 	"dependencies": {
 		"convex": "^1.48.0"
 	},
 	"devDependencies": {
 		"@edge-runtime/vm": "5.0.0",
-		"@types/node": "^26.6.4",
+		"@types/node": "^26.6.6",
 		"convex-test": "0.0.60",
 		"sigstore": "5.0.0",
 		"typescript": "6.0.3",
 		"vercel": "58.4.4",
-		"vite": "8.3.3",
+		"vite": "8.3.5",
 		"vitest": "5.0.5"
 	}
 }

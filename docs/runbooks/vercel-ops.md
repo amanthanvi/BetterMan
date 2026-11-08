@@ -139,6 +139,17 @@ vercel rollback <known-good-deployment-url-or-id>
 
 Prefer the workflow with a known-good Git SHA when possible so the production artifact remains reproducible from repository history.
 
+## Build cost controls
+
+Vercel bills Build CPU minutes for every deployment it builds or finalizes: build time plus build-cache upload, rounded up to a whole minute, times the machine's vCPUs. Production is built in GitHub Actions, so BetterMan keeps Vercel's builders idle:
+
+- `nextjs/vercel.json` sets `git.deploymentEnabled: false`. A commit that carries this file creates no Git deployment, on `main` or any branch; `scripts/vercel-config.test.mjs` keeps it that way. A branch cut before #502 still builds a preview on each push until it is rebased. Previously every merge built twice (a Git production build that was never promoted, because the project does not auto-assign domains, then the workflow's prebuilt deploy), and every branch push built a preview. A preview has no Convex URL, so its man pages and API answer 500/503; CI's `nextjs`, `container_build` and `e2e` jobs are the pre-merge check, and the staged deployment's smoke checks above are the pre-promotion one.
+- The project uses a fixed Standard build machine with on-demand concurrent builds off. Vercel bills Standard builds only when Elastic machines or on-demand concurrency are enabled. The team has one concurrent build slot (`concurrentBuilds: 1`), so a second build queues instead of running alongside. On 2026-11-05 a lone prebuilt upload recorded 4 CPU minutes and billed $0. With Elastic, the 15-second upload from `scripts/deploy-vercel.sh` billed 4 CPU minutes. **Prioritize production builds** stays on, so the production upload goes first in that queue. These are project settings, not repository files: if Build CPU minutes reappear on the usage page, check **Settings → Build and Deployment**.
+- The project is excluded from Observability Plus. Sentry reports errors, and base observability keeps one day of runtime logs. `abuse-scraping.md` explains how to re-include the project during an incident.
+- Preview and canceled deployments expire after a day, and production and errored ones after 30 days. Vercel always keeps the last 10 deployments created, the last 20 Ready production deployments (the rollback targets) and the last 20 Ready non-production deployments. It also keeps the latest preview of each active Git branch, and re-evaluating a deployment after an exception ends can take up to 30 days, so storage falls more slowly than the policy suggests. Vercel typically marks expired deployments for deletion within 48 hours; storage stops billing once they are deleted.
+
+The man page caching checks below run against a deployment URL. Use the immutable URL that `deploy-vercel` reports (`deployment_url`) for the first deployment that carries the change, then production after promotion. Deployment URLs are behind Vercel Authentication, so send the requests through `vercel curl <path> --deployment <url> -- -sI`, as in Verification below.
+
 ## Verification
 
 Anonymous command-line requests may receive a Vercel bot challenge (`429` with `x-vercel-mitigated: challenge`). Use authenticated Vercel CLI requests rather than weakening production bot controls:
@@ -218,20 +229,21 @@ was run by this implementation task.
 
 ## Man page edge caching (C4, #406)
 
-Man pages (`/man/<name>`, `/man/<name>/<section>`) send `CDN-Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400` (misses `s-maxage=600`) and `Cache-Control: public, max-age=0, must-revalidate`. The proxy (`nextjs/proxy.ts`) rewrites each one to `…?__bm_release=<active release id>`, so a promotion changes the cache key within a minute. No project setting is needed for this: Vercel's CDN honours `CDN-Cache-Control` from functions. Verify it on the first preview deployment that carries the change, and after the first promotion:
+Man pages (`/man/<name>`, `/man/<name>/<section>`) send `CDN-Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400` (misses `s-maxage=600`) and `Cache-Control: public, max-age=0, must-revalidate`. The proxy (`nextjs/proxy.ts`) rewrites each one to `…?__bm_release=<active release id>`, so a promotion changes the cache key within a minute. No project setting is needed for this: Vercel's CDN honours `CDN-Cache-Control` from functions. Verify it on the deployment URL of the first deployment that carries the change (see Build cost controls), and after the first promotion:
 
-1. `curl -sI https://<preview>/man/tar/1` twice: the second response shows `x-vercel-cache: HIT`, and the CSP's `script-src` has a `sha256-` source and no nonce.
-2. `curl -sI -H 'Cookie: bm-distro=ubuntu' https://<preview>/man/tar/1` answers `307` to `/man/tar/1?distro=ubuntu` with `cache-control: private, no-store`, even right after step 1's HIT (the proxy runs before the CDN).
+1. `vercel curl /man/tar/1 --deployment <url> -- -sI` twice: the second response shows `x-vercel-cache: HIT`, and the CSP's `script-src` has a `sha256-` source and no nonce.
+2. `vercel curl /man/tar/1 --deployment <url> -- -sI -H 'Cookie: bm-distro=ubuntu'` answers `307` to `/man/tar/1?distro=ubuntu` with `cache-control: private, no-store`, even right after step 1's HIT (the proxy runs before the CDN).
 3. After a promotion, the next request misses (`x-vercel-cache: MISS`) and its footer names the new release. If it still hits the old entry, the CDN is keying on the original URL rather than the rewrite. Pages then refresh within the hour (`s-maxage`), and the rewrite key needs replacing with a cache tag and a purge on promotion.
-4. **`_rsc` and the cache key.** Next strips its `_rsc` cache-busting parameter before the proxy runs, even without the `rsc` header, so the proxy cannot redirect it. The man renderers see it in `req.url` and answer a request that carries `_rsc` without the `rsc` header with `private, no-store`, so it should never fill the CDN. Check on a preview and after deploy (`HEAD` with `curl -sI`):
+4. **`_rsc` and the cache key.** Next strips its `_rsc` cache-busting parameter before the proxy runs, even without the `rsc` header, so the proxy cannot redirect it. The man renderers see it in `req.url` and answer a request that carries `_rsc` without the `rsc` header with `private, no-store`, so it should never fill the CDN. Check on the deployment URL and after promotion (`HEAD` requests through `vercel curl`):
 
    ```bash
-   B=https://<preview>
-   curl -sI "$B/man/tar/1" >/dev/null; curl -sI "$B/man/tar/1" | grep -i 'x-vercel-cache'          # HIT
-   curl -sI "$B/man/tar/1?_rsc=aaaaa" | grep -iE '^(cache-control|cdn-cache-control|x-vercel-cache)'  # private, no-store; no CDN-Cache-Control; MISS
-   curl -sI "$B/man/tar/1?_rsc=aaaaa" | grep -i 'x-vercel-cache'                                     # MISS again: nothing was stored
-   curl -sI "$B/man/tar/1?_rsc=bbbbb" | grep -i 'x-vercel-cache'                                     # MISS
-   curl -sI "$B/man/tar/1.txt?_rsc=aaaaa" | grep -i '^cache-control'                                 # private, no-store
+   B='https://<deployment-host>'   # or https://betterman.sh after promotion
+   h() { vercel curl "$1" --deployment "$B" --yes -- -sI; }
+   h /man/tar/1 >/dev/null; h /man/tar/1 | grep -i 'x-vercel-cache'                     # HIT
+   h '/man/tar/1?_rsc=aaaaa' | grep -iE '^(cache-control|cdn-cache-control|x-vercel-cache)'  # private, no-store; no CDN-Cache-Control; MISS
+   h '/man/tar/1?_rsc=aaaaa' | grep -i 'x-vercel-cache'                                  # MISS again: nothing was stored
+   h '/man/tar/1?_rsc=bbbbb' | grep -i 'x-vercel-cache'                                  # MISS
+   h '/man/tar/1.txt?_rsc=aaaaa' | grep -i '^cache-control'                              # private, no-store
    ```
 
    If the second `_rsc=aaaaa` request answers `HIT`, or any `_rsc` request returns the page's public `CDN-Cache-Control`, the renderer no longer sees `_rsc`: treat it as a regression of the query allowlist below. If `?_rsc=aaaaa` answers `HIT` straight after the bare URL's `HIT`, Vercel collapses `_rsc` into the page's key, which is harmless, but record it here.
@@ -252,7 +264,7 @@ A request with any other parameter (`utm_*`, `ref`, `_rsc` without a client fetc
 
 What the allowlist cannot know, the renderer settles: a `flag` the page does not define in the serving release gets a private `307` to the URL without it, and any answer to a `pkg` or `flag` other than the page that has them is `private, no-store`: a miss, an alias, a section picker, and the name-only text redirect (`/tar.txt?pkg=…`), which resolves the name without the package. A share image for a package or flag the page lacks is a private 404. So the cacheable URLs per page are bounded: its real providers × one variant per real option × `portability` × the languages × the distros.
 
-Adding a parameter means adding it to `MAN_QUERY` with a validator over a bounded set and to `manQueryParams` for the URLs that read it, then here. Verify on a preview: `curl -sI 'https://<preview>/man/tar/1?zz=1'` answers `308` to `/man/tar/1` with `private, no-store`; `curl -sI 'https://<preview>/man/tar/1?flag=-Q'` answers `307`; and `/man/tar/1?flag=%2Dc` after `/man/tar/1?flag=-c` shows `x-vercel-cache: HIT` (one entry for both spellings).
+Adding a parameter means adding it to `MAN_QUERY` with a validator over a bounded set and to `manQueryParams` for the URLs that read it, then here. Verify on the deployment URL: `vercel curl '/man/tar/1?zz=1' --deployment <url> -- -sI` answers `308` to `/man/tar/1` with `private, no-store`; `vercel curl '/man/tar/1?flag=-Q' --deployment <url> -- -sI` answers `307`; and `/man/tar/1?flag=%2Dc` after `/man/tar/1?flag=-c` shows `x-vercel-cache: HIT` (one entry for both spellings).
 
 **Deploy order.** Man pages need the Convex functions that report the serving release (`reportRelease`). New Convex with old Next is safe. New Next with old Convex answers 500, because the old validator rejects the argument. `deploy.yml` always pushes Convex before Vercel and stops if the Convex deploy fails, so keep that order for any manual deploy too.
 

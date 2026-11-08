@@ -177,6 +177,11 @@ def publish_workspace(
                     "installed": p.installed,
                     **getattr(workspace, "standard_license_metadata", {}).get(p.name, {}),
                     **(
+                        {"noticeLinkGaps": gaps}
+                        if (gaps := getattr(workspace, "notice_link_gaps", {}).get(p.name))
+                        else {}
+                    ),
+                    **(
                         {"unmatchedLicenseIdentifiers": unmatched}
                         if (
                             unmatched := getattr(

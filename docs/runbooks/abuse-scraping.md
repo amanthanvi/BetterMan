@@ -11,6 +11,8 @@
 - Request distribution by route.
 - Cache headers present (ETag + Cache-Control) and honored.
 
+The project is excluded from Observability Plus to save cost (see Build cost controls in `vercel-ops.md`). That leaves one day of runtime logs and no Query breakdown by IP, user agent, or route. Start from Firewall events. If you need those breakdowns, re-include the project under **Billing → Observability Plus → Manage projects** for the incident. It bills $1.20 per million events, and BetterMan generates about three events per request.
+
 **Mitigations**
 
 - Tighten rate limits (search stricter than page fetch).
@@ -80,6 +82,40 @@ headers, and suggestion results containing `tar`. Verify HTML and sitemaps using
 a verified-bot request, not just a spoofed User-Agent. Finally add BetterMan as a
 search engine in real Chrome and Firefox on production and type `ta`. Local E2E
 proves the HTTP contract, not production exemptions or browser registration.
+
+## Chromium fingerprint challenge (2026-11-06, review by 2026-11-20)
+
+The custom rule `Cost guard: challenge Chromium JA4 cb7bf5808d99 (review 2026-11-20)` (id `rule_probe_ja4_QjDurB`) sits last, after the four #388 bypass rules. Text and OpenSearch reads therefore never reach it. It **challenges** a request when both conditions hold:
+
+- JA4 digest equals `t13d1517h2_8daaf6152771_cb7bf5808d99`.
+- User-Agent does not contain `bot`.
+
+That digest is a common Chromium TLS handshake, not a scraper-only signature: FoxIO's JA4 README uses it as its Chrome example. Real Chromium browsers and headless Chromium both present it. Keep the action at challenge. Never deny, and never add a persistent action, because both would block real visitors on shared residential IPs.
+
+Why challenge it here:
+
+- `cb7bf5808d99` sent about 500 requests a day until 11-02. It then sent 30K, 61K and 132K on 11-03 to 11-05, but only 8 of the 3,415 Web Analytics beacons recorded on 11-04 and 11-05.
+- 3,349 of those beacons came from `t13d1516h2_8daaf6152771_d8a2da3f94cd`. They fell on a day when total beacons jumped from a few hundred to about 3,300, so they are not proof of where real visitors arrive.
+- Its User-Agents rotated across Chrome 150–154, from residential ISPs in many countries.
+- 73% of those requests got the app's 429. Each one still cost a proxy invocation, Fluid CPU and a Convex rate-limit call.
+
+Limits:
+
+- A challenge needs a browser that runs JavaScript, and a solved challenge lasts one hour.
+- A visitor with JavaScript disabled who presents this fingerprint cannot open HTML pages, though the text routes stay open.
+- Challenged API routes work only within a valid session. A visitor on this fingerprint who keeps a tab open past the hour gets a 403 from `/api/v1/search` and the licenses lookup until the page reloads. `/api/v1/suggest` is bypassed.
+- Requests stopped by the challenge incur no CDN Requests or Fast Data Transfer. Requests that pass it count as normal usage.
+- Bot conditions (`bot_name`, `bot_category`, `bot_status`) need a Priority project, and the API answers 402. The User-Agent condition is therefore a deliberate compatibility exemption for the crawlers seen on this fingerprint (DuckDuckBot, ShapBot). It is not identity verification: a scraper that adds `bot` to its User-Agent passes this rule. If app 429s on man pages climb again, re-identify the source.
+- Custom rules run before the managed rulesets, so this challenge applies before Bot Protection's verified-agent allowance. A verified agent on this fingerprint whose User-Agent lacks `bot`, such as Perplexity-User or Lighthouse, is challenged.
+
+Checks:
+
+- The Firewall events API returned no data for this project, so watch the rule under **Firewall → Overview**.
+- Total Web Analytics cannot show harm from this rule: the fingerprint sent 8 of 3,415 beacons, and the 2026-11-05 total was a one-day spike. Instead, 24 hours after enabling the challenge, read the rule's challenge outcomes under **Firewall → Overview**. Many solved challenges mean real browsers present this fingerprint here, so set the rule to log. Mostly failed or unanswered challenges mean automation.
+- By 2026-11-20, if matches have stayed near the 500-a-day baseline, set the rule inactive.
+- To roll back at any time, set the rule inactive or to log under **Firewall → Configure**, or re-activate an earlier configuration version.
+
+If the scraper changes fingerprint, group allowed traffic by **JA4 Digest** in the Firewall monitoring view (the last 24 hours). Alternatively, briefly re-include the project in Observability Plus and query `client_ja4_digest`. Compare Web Analytics beacons per request rather than raw counts: the busiest fingerprint can be a mainstream browser.
 
 ## Search index cost
 

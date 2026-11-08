@@ -160,6 +160,39 @@ package/version provenance and upstream source links; those entries are
 provenance records, not a blanket license for every source file.
 These dataset corrections take effect at the next monthly ingest.
 
+Full archive ingestion retains a blocked notice link's exact target only when a
+second pass finds a regular file in the same checksum-verified package. It never
+creates links or reads the host filesystem. Extraction receipt version 9
+invalidates earlier extractions. Unreadable, missing, special, duplicate or
+oversized targets stay blocked; Fedora, Arch and Alpine record them under each
+package's `noticeLinkGaps` beside `unmatchedLicenseIdentifiers`, show the gaps in
+the published license text, and use other readable notices or the declared-license
+standard texts. Readable links within the existing documentation roots keep
+their directory/cross-package resolution. Dangling links within those roots and
+Debian/Ubuntu copyright failures remain strict.
+Blank linked notice targets also record gaps, including in-root RPM hardlink
+targets whose deferred data was lost by libarchive's RPM-to-tar conversion.
+JVM manual paths never enter this notice-target retention path.
+
+The shared parser rejects an escaped stored-page JSON payload above 8 MiB before
+spooling it. The named failure enters `parseFailures` and the existing 2% archive
+parse gate; it never reaches the upload retry loop, and content is never
+truncated. This is a conservative ingestion budget for the storage HTTP action's
+64 MiB RAM, not Convex's 1 MiB document limit (page content lives in file storage).
+It applies to Debian, Ubuntu and translations too: a 16 MiB roff-source cap does
+not bound AST expansion. Contract v9 is unchanged.
+
+`pnpm ingest:notice-audit --distro fedora|arch --workdir <new-directory>` audits
+every manual-owning package with indexed notice paths using checksum-verified
+archives, without installation or upload. Its per-package checksum receipts
+allow resume. `pnpm ingest:full-benchmark` accepts repeated `--package <name>`
+arguments for exact pinned-package rehearsals. See the [staging-failure audit](
+../docs/ingestion-notice-page-audit.md) for measurements and limits.
+`pnpm ingest:page-size-audit --distro debian|ubuntu --workdir <new-directory>`
+scans checksum-verified archives selected from the pinned Contents indexes and
+ranks their decompressed regular man sources. Repeat with `--measure` to parse
+all retained sources at least 128 KiB using the size guard's own calculation.
+
 `git-commit.1` was captured from
 <https://manpages.debian.org/trixie/git-man/git-commit.1.en.gz> (Git 2.47.3).
 `dash-prose.1` is a synthetic negative fixture for option extraction.

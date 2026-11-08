@@ -87,11 +87,13 @@ export function sentryPrivacyIntegration() {
   }
 }
 
-/** Spread into every Sentry.init: errors, transactions, streamed spans and breadcrumbs. */
+/**
+ * Spread into every Sentry.init: errors, streamed spans and breadcrumbs.
+ * 11.10 streams spans by default and ignores `beforeSendTransaction` (removed in v12).
+ * `beforeSendSpan` covers those spans. The envelope hook covers the trace header.
+ */
 export const SENTRY_PRIVACY_HOOKS = {
   beforeSend: <T>(event: T) => scrubSentryEvent(event),
-  beforeSendTransaction: <T>(event: T) => scrubSentryEvent(event),
-  // Span streaming sends spans without a transaction event, so beforeSendTransaction never sees them.
   beforeSendSpan: <T>(span: T) => scrubSentryEvent(span),
   beforeBreadcrumb: <T>(breadcrumb: T) => scrubSentryEvent(breadcrumb),
   integrations: <T>(defaults: T[]) => [...defaults, sentryPrivacyIntegration() as unknown as T],
