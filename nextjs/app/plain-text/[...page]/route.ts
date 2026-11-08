@@ -80,6 +80,8 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
     )
     const headers = cacheHeaders(servedRelease(data), data.kind === 'page' && 'data' in data)
     if (data.kind === 'ambiguous') {
+      // 307: a later release can add a section that man(1) would open first.
+      if (data.preferred) return text('', 307, { ...headers, Location: textHref(`${manPath(name, data.preferred)}.txt`) })
       return text(`Multiple sections match ${name}. Choose a plain-text page:\n${data.options.map((option) => textHref(`${manPath(name, option.section)}.txt`)).join('\n')}\n`, 409)
     }
     if (data.kind === 'alias' || !('data' in data)) {

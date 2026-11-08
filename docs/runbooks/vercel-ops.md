@@ -298,3 +298,60 @@ build resumes its staging generation and retains queued rescan requests.
 `pnpm convex:task-check` reports progress and failures through the existing
 per-release status. No production workflow or migration was executed by the
 implementation agent.
+
+### Short URLs (A4)
+
+`/<name>` and `/<name>.txt` select the section that the distro’s default `man
+<name>` would open, even when full archives contain the name in many sections.
+`/man/<name>` remains the explicit section picker: all options, indexability and
+canonicals are unchanged. Explicit-section short forms keep their 308 redirects.
+
+The shared comparator in `convex/_manSections.ts` cites the upstream sources:
+
+- Linux (Debian, Ubuntu, Fedora, Arch, Alpine): Debian man-db’s `SECTION` order,
+  `1 n l 8 3 0 2 3type 3posix 3pm 3perl 3am 5 4 9 6 7`, from
+  [Debian’s build configuration](https://salsa.debian.org/debian/man-db/-/blob/master/debian/rules).
+  [man-db’s `compare_candidates`](https://gitlab.com/man-db/man-db/-/blob/main/src/man.c)
+  ranks explicitly listed extensions first by that list; unlisted extensions
+  share their first character’s rank, and extensions break ties lexically. Thus
+  `1` precedes `1plan9`, `3tcl` shares section 3’s rank, and explicitly listed
+  `3perl` follows section 2. Unknown sections sort last. In man-db, requesting
+  section `3` also matches `3perl`/`3tcl`, with exact `3` first; BetterMan’s
+  explicit section URLs still mean only that exact section.
+- FreeBSD: `1 8 2 3 3lua n 4 5 6 7 9 l`, from
+  [`man.sh`’s default MANSECT](https://github.com/freebsd/freebsd-src/blob/main/usr.bin/man/man.sh).
+- macOS: `1 1p 8 2 3 3p 4 5 6 7 9 0p tcl n l p o`, from
+  [Apple’s `man.conf`](https://github.com/apple-oss-distributions/man/blob/main/man/man.conf).
+
+FreeBSD/macOS use exact listed sections, then deterministic lexical ties for
+unlisted sections. These are BetterMan’s defaults, not a reader’s locally
+customized MANSECT, MANPATH, shell builtins or installed packages.
+
+The metadata resolver adds an optional `preferred` section to ambiguous results
+without changing their options. It ranks the existing at-most-20 page reads and
+loads no document content or extra database rows. The translated-name branch
+uses the same comparator; the plain-text export remains English, as documented
+in `docs/i18n.md`. Section-less option URLs first filter to pages whose option
+index contains the requested flag, then apply the same order among those hits;
+the existing ten-result search bound and fallback remain unchanged.
+
+HTML short-name choices and ambiguous text choices use **307**, because an
+archive promotion can change the preferred section and a browser-cached 308
+would pin yesterday’s choice. HTML short-name redirects remain private and use
+the proxy’s trusted release/translation headers for the existing cached
+metadata lookup. Text redirects keep the existing cache policy: public only
+when the answering release matches the proxy’s trusted release and the query
+is canonical; a redirect with an unproven `pkg` stays private. Text’s existing
+single-page and alias 308 redirects are unchanged. URL encoding and explicit
+`distro`/`pkg` parameters are retained.
+
+Every supported distro has an ordering, including deterministic unlisted-section
+ties, so current resolvers always supply `preferred` for ambiguity. The text
+409 list remains as a compatibility fallback when an older Convex build or
+cached response omits the optional field. No ingest contract change: still v9.
+
+After the lead deploys, spot-check `curl -sI https://betterman.sh/tar.txt` (307 to
+`/man/tar/1.txt` when tar is ambiguous), `curl -sL https://betterman.sh/tar.txt`
+(200 TAR(1) text), `/printf` (307 to section 1), and `/man/printf` (all sections).
+Repeat with `?distro=ubuntu` and check that a release mismatch or unproven package
+redirect is private. Do not merge this fix during an active dataset promotion.

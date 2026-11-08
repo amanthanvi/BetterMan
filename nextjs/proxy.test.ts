@@ -46,6 +46,18 @@ it('keeps production CSP self-only for analytics and issues a fresh nonce per re
   expect(first.headers.get('x-content-type-options')).toBe('nosniff')
 })
 
+it('passes trusted release provenance to short-name resolution and keeps its dynamic redirect private', async () => {
+  vi.stubEnv('BM_RESERVED_PATH_SEGMENTS', 'man/api/search/section')
+  const response = await proxy(new NextRequest('https://betterman.sh/tar', { headers: { 'x-bm-release': 'forged', 'x-bm-release-token': 'forged' } }))
+  expect(JSON.parse(response.headers.get('x-middleware-request-x-bm-release')!)).toEqual(releaseFor('debian'))
+  expect(response.headers.get('x-middleware-request-x-bm-release-token')).toBe('test-release-token')
+  expect(response.headers.get('cache-control')).toBe('private, no-store')
+  expect(response.headers.get('content-security-policy')).toContain('nonce-')
+  expect(response.headers.get('x-middleware-request-content-security-policy')).toBe(response.headers.get('content-security-policy'))
+  expect(response.headers.get('content-security-policy')).toContain(`'nonce-${response.headers.get('x-middleware-request-x-nonce')}'`)
+  expect(response.headers.get('x-middleware-rewrite')).toBeNull()
+})
+
 it('serves man pages under a hash-only CSP with no nonce, so the HTML can be cached', async () => {
   vi.stubEnv('NODE_ENV', 'production')
   const response = await proxy(new NextRequest('https://betterman.sh/man/tar/1'))

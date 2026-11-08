@@ -81,7 +81,7 @@ test('man query: canonical URLs render, and the reader still lands on the option
 })
 
 test('man query: short URLs still land, and drop tracking parameters in their one redirect', async ({ request }) => {
-  expect(await hop(request, '/tar?utm_source=hn&distro=ubuntu')).toMatchObject({ status: 308, location: '/man/tar?distro=ubuntu' })
+  expect(await hop(request, '/tar?utm_source=hn&distro=ubuntu')).toMatchObject({ status: 307, location: '/man/tar/1?distro=ubuntu' })
   expect(await hop(request, '/tar.1?ref=x')).toMatchObject({ status: 308, location: '/man/tar/1' })
   expect(await hop(request, '/tar/-c?utm_source=hn')).toMatchObject({ status: 307, location: '/man/tar/1?flag=-c#opt-create' })
   expect(await hop(request, '/2/open')).toMatchObject({ status: 308, location: '/man/open/2' })

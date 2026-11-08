@@ -5,6 +5,7 @@ import type { Distro } from '../../lib/distro'
 const mocks = vi.hoisted(() => ({
   cookieDistro: undefined as string | undefined,
   search: vi.fn(),
+  resolveManName: vi.fn(),
   releases: new Set<string>(['debian', 'ubuntu']),
   navigation: (kind: string) =>
     vi.fn((location?: string) => {
@@ -18,11 +19,13 @@ const navigation = vi.hoisted(() => ({
 }))
 
 vi.mock('next/headers', () => ({
+  headers: async () => new Headers(),
   cookies: async () => ({
     get: (name: string) => (name === 'bm-distro' && mocks.cookieDistro ? { value: mocks.cookieDistro } : undefined),
   }),
 }))
 vi.mock('next/navigation', () => navigation)
+vi.mock('../../lib/manLookup', () => ({ resolveManName: mocks.resolveManName }))
 vi.mock('../../lib/api', () => ({
   search: mocks.search,
   withDistroFallback: async (distro: Distro, fn: (distro: Distro) => Promise<SearchResponse>) => {
@@ -53,10 +56,28 @@ function results(...hits: Array<Partial<SearchResponse['results'][number]>>): Se
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.cookieDistro = undefined
+  mocks.resolveManName.mockResolvedValue({ result: null, servedRelease: null })
   vi.stubEnv('BM_RESERVED_PATH_SEGMENTS', ['api', 'man', 'search', 'section'].join('/'))
 })
 
 describe('short URL redirects', () => {
+  it.each([
+    [{ kind: 'page', name: 'tar', section: '1' }, '/man/tar/1'],
+    [{ kind: 'ambiguous', preferred: '1', options: [{ section: '1' }, { section: '3tcl' }] }, '/man/tar/1'],
+    [{ kind: 'alias', name: 'gzip', section: '1', pkg: 'gzip' }, '/man/gzip/1?pkg=gzip'],
+  ])('resolves a short name temporarily without changing the picker', async (result, destination) => {
+    mocks.resolveManName.mockResolvedValue({ result, servedRelease: 'r1' })
+    await expect(visit('/tar')).rejects.toHaveProperty('message', `307 ${destination}`)
+    expect(mocks.search).not.toHaveBeenCalled()
+  })
+
+  it('keeps encoded names, distro, language and package on a preferred redirect', async () => {
+    mocks.resolveManName.mockResolvedValue({ result: { kind: 'ambiguous', preferred: '3pm' }, servedRelease: null })
+    await expect(visit('/Foo%3A%3ABar', { distro: 'ubuntu', lang: 'de', pkg: 'perl', utm_source: 'hn' }))
+      .rejects.toHaveProperty('message', '307 /man/foo%3A%3Abar/3pm?distro=ubuntu&lang=de&pkg=perl')
+    expect(mocks.resolveManName).toHaveBeenCalledWith('foo::bar', 'ubuntu', undefined, null)
+  })
+
   it.each([
     ['/tar', {}, '308 /man/tar'],
     ['/tar', { distro: 'ubuntu' }, '308 /man/tar?distro=ubuntu'],
@@ -88,6 +109,15 @@ describe('short URL redirects', () => {
 })
 
 describe('short URL options', () => {
+  it.each([['debian', '3', 'library'], ['freebsd', '2', 'syscall']])('uses %s man order only among pages with the flag', async (distro, section, anchor) => {
+    mocks.releases.add(distro)
+    mocks.search.mockResolvedValue(results(
+      { section: '1' },
+      { section: '2', match: 'option', anchorId: 'syscall' },
+      { section: '3', match: 'option', anchorId: 'library' },
+    ))
+    await expect(visit('/tar/-x', { distro })).rejects.toHaveProperty('message', `307 /man/tar/${section}?distro=${distro}&flag=-x#${anchor}`)
+  })
   it('lands on the option row the option index names', async () => {
     mocks.search.mockResolvedValue(
       results({ name: 'tar', section: '1', match: 'option', anchorId: 'x' }),

@@ -10,6 +10,7 @@ import { analyticsConfig } from './lib/analyticsConfig'
 import { analyticsBootScriptHash } from './lib/analyticsBoot'
 import { manBootScriptHash } from './lib/manBoot'
 import { normalizeManQuery } from './lib/manQuery'
+import { decodeManParam, parseShortUrl } from './lib/shortUrl'
 import { encodeReleaseHeader, RELEASE_HEADER, RELEASE_PARAM, RELEASE_TOKEN_HEADER, releaseToken, servingRelease, servingReleases, TRANSLATION_HEADER, translationKey, UNKNOWN_RELEASE, type ReleaseInfo, type TranslationInfo } from './lib/manRelease'
 
 function createNonce(): string {
@@ -137,14 +138,15 @@ function rememberedLang(request: NextRequest): Lang | null {
  * URLs, and bare ones without such a cookie, are rewritten to carry the active
  * release, which keys the cache.
  */
-async function manProxy(request: NextRequest, cspEnabled: boolean, text = false): Promise<NextResponse> {
+async function manProxy(request: NextRequest, cspEnabled: boolean, text = false, short = false): Promise<NextResponse> {
   const url = request.nextUrl
   const explicit = normalizeDistro(url.searchParams.get('distro'))
   const preferred = normalizeDistro(request.cookies.get(DISTRO_COOKIE)?.value)
   // The plain-text export is upstream text and has no interface to translate.
   const remembered = text ? null : rememberedLang(request)
-  const csp = cspEnabled ? text
-    ? buildCsp([`'nonce-${createNonce()}'`], { strictDynamic: true })
+  const nonce = short ? createNonce() : null
+  const csp = cspEnabled ? text || short
+    ? buildCsp([`'nonce-${nonce ?? createNonce()}'`], { strictDynamic: true })
     : buildCsp(await cachedPageScriptHashes(), { strictDynamic: false }) : null
 
   const redirect = manQueryRedirect(request, csp)
@@ -176,6 +178,20 @@ async function manProxy(request: NextRequest, cspEnabled: boolean, text = false)
   if (translation) requestHeaders.set(TRANSLATION_HEADER, JSON.stringify(translation))
   // Proves to the renderer that this proxy, not the client, set the release.
   requestHeaders.set(RELEASE_TOKEN_HEADER, releaseToken())
+  // App Router short names resolve with the same trusted release/language, but
+  // their dynamic redirect stays private and needs no CDN rewrite key.
+  if (short) {
+    requestHeaders.delete(LANG_HEADER)
+    const urlLang = resolvePublicLang(url.searchParams.get(LANG_PARAM))
+    if (urlLang) requestHeaders.set(LANG_HEADER, urlLang)
+    if (csp && nonce) {
+      requestHeaders.set('x-nonce', nonce)
+      requestHeaders.set('Content-Security-Policy', csp)
+    }
+    const response = NextResponse.next({ request: { headers: requestHeaders } })
+    response.headers.set('Cache-Control', 'private, no-store')
+    return setSecurityHeaders(response, csp)
+  }
   if (isLoopback(request)) return setSecurityHeaders(NextResponse.next({ request: { headers: requestHeaders } }), csp)
   const target = url.clone()
   target.searchParams.set(RELEASE_PARAM, `${release?.datasetReleaseId ?? UNKNOWN_RELEASE}${translation ? translationKey(translation) : ''}`)
@@ -282,6 +298,10 @@ export async function proxy(request: NextRequest) {
     return manQueryRedirect(request, csp) ?? setSecurityHeaders(NextResponse.next(), csp)
   }
   const path = request.nextUrl.pathname
+  const reserved = process.env.BM_RESERVED_PATH_SEGMENTS
+  if (reserved && parseShortUrl(path.split('/').slice(1).map(decodeManParam), new Set(reserved.split('/')))?.kind === 'name') {
+    return await manProxy(request, cspEnabled, false, true)
+  }
   // Keep root concrete .txt routes in sync with the afterFiles rewrites in next.config.ts.
   if (/^\/man\/[^/]+\/[^/]+\.txt$/.test(path) || (/^\/[^/]+\.txt$/.test(path) && path !== '/robots.txt')) {
     return await manProxy(request, cspEnabled, true)

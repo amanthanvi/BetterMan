@@ -4,6 +4,8 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Short URLs choose the distro’s default man section across full archives, including translated names, while explicit section pickers keep every choice. Ambiguous text URLs redirect temporarily instead of returning 409; flag URLs still prefer pages defining the flag.
+
 - Firewall: a custom rule challenges the Chromium TLS fingerprint `t13d1517h2_8daaf6152771_cb7bf5808d99`, which sent 132K scraper requests on 2026-11-05 and only 8 Web Analytics beacons across 11-04 and 11-05. It never denies, so a JavaScript browser passes, for one hour per challenge. Text and OpenSearch reads stay exempt. Review it by 2026-11-20. See `docs/runbooks/abuse-scraping.md`.
 - Deployment: the Vercel GitHub integration no longer builds any branch. Every merge to `main` was built twice (an unpromoted Git production build, then the GitHub Actions prebuilt deploy), and every branch push built a preview that, lacking Convex configuration, answered 500 on man pages; together they were most of the cycle's Build CPU minutes. Production still deploys only through `deploy.yml`.
 - Sentry 11.10 streams spans by default and ignores `beforeSendTransaction`, so the privacy hooks no longer pass it. `beforeSendSpan` and the envelope hook still redact `cmd`, `q` and `name`.

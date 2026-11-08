@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test'
 
-test('short urls: a bare name answers a 308 to its name page and lands on the only section', async ({ page, request }) => {
+test('short urls: a bare name temporarily redirects to its preferred section', async ({ page, request }) => {
   const res = await request.get('/tar', { maxRedirects: 0 })
-  expect(res.status()).toBe(308)
-  expect(res.headers()['location']).toBe('/man/tar')
+  expect(res.status()).toBe(307)
+  expect(res.headers()['location']).toBe('/man/tar/1')
 
   const withDistro = await request.get('/tar?distro=ubuntu', { maxRedirects: 0 })
-  expect(withDistro.status()).toBe(308)
-  expect(withDistro.headers()['location']).toBe('/man/tar?distro=ubuntu')
+  expect(withDistro.status()).toBe(307)
+  expect(withDistro.headers()['location']).toBe('/man/tar/1?distro=ubuntu')
 
   await page.goto('/tar')
   await expect(page).toHaveURL(/\/man\/tar\/1$/)
@@ -15,11 +15,32 @@ test('short urls: a bare name answers a 308 to its name page and lands on the on
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/man\/tar\/1$/)
 })
 
-test('short urls: a name in several sections lands on the section picker', async ({ page }) => {
-  const res = await page.goto('/printf')
+test('short urls: an ambiguous name chooses the command; the explicit picker still lists every section', async ({ page, request }) => {
+  const short = await request.get('/printf', { maxRedirects: 0 })
+  expect(short.status()).toBe(307)
+  expect(short.headers()['location']).toBe('/man/printf/1')
+  await page.goto('/printf')
+  await expect(page).toHaveURL(/\/man\/printf\/1$/)
+
+  const text = await request.get('/printf.txt', { maxRedirects: 0 })
+  expect(text.status()).toBe(307)
+  expect(text.headers()['location']).toBe('/man/printf/1.txt')
+  expect((await request.get('/printf.txt')).status()).toBe(200)
+
+  const res = await page.goto('/man/printf')
   expect(res?.status()).toBe(200)
   await expect(page).toHaveURL(/\/man\/printf$/)
+  await expect(page.getByRole('link', { name: 'printf(1)' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'printf(3)' })).toBeVisible()
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/man\/printf$/)
+})
+
+test('short urls: flags prefer a matching section before applying man order', async ({ request }) => {
+  for (const [flag, section] of [['--help', '1'], ['--library', '3']]) {
+    const res = await request.get(`/printf/${flag}`, { maxRedirects: 0 })
+    expect(res.status()).toBe(307)
+    expect(res.headers()['location']).toBe(`/man/printf/${section}?flag=${flag}#description`)
+  }
 })
 
 test('short urls: name.section and section/name answer a 308 to the page', async ({ page, request }) => {

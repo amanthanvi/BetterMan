@@ -99,6 +99,17 @@ it('offers explicit text URLs for ambiguous names', async () => {
   expect(await res.text()).toContain('/man/printf/3.txt?distro=ubuntu')
 })
 
+it.each(['test', 'new-release'])('redirects an ordered ambiguous name temporarily with release-aware caching (%s)', async datasetReleaseId => {
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'ambiguous', preferred: '1', indexable: true, options: [{ section: '1', title: 'tar(1)', description: 'archive' }, { section: '3tcl', title: 'tar(3tcl)', description: 'Tcl' }], datasetReleaseId })
+  const res = await GET(req('?distro=ubuntu'), ctx(['tar']))
+  expect(res.status).toBe(307)
+  expect(res.headers.get('location')).toBe('/man/tar/1.txt?distro=ubuntu')
+  expect(res.headers.get('cache-control')).toBe(datasetReleaseId === 'test' ? 'public, max-age=60, s-maxage=3600, stale-while-revalidate=3600' : 'private, no-store')
+  const packaged = await GET(req('?pkg=tar'), ctx(['tar']))
+  expect(packaged.headers.get('location')).toBe('/man/tar/1.txt?pkg=tar')
+  expect(packaged.headers.get('cache-control')).toBe('private, no-store')
+})
+
 it('keeps only the request distro in redirects and choices, Debian included, after a fallback', async () => {
   vi.mocked(fetchManResolve).mockRejectedValueOnce(new FastApiError(404, 'RELEASE_NOT_FOUND', 'Missing'))
     .mockResolvedValueOnce({ kind: 'alias', name: 'gzip', section: '1', datasetReleaseId: 'r1' })

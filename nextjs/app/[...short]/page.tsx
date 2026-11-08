@@ -1,6 +1,11 @@
 import { notFound, permanentRedirect, redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 
+import { compareManSections } from '../../../convex/_manSections'
 import { search, withDistroFallback } from '../../lib/api'
+import { resolveManName } from '../../lib/manLookup'
+import { trustedRelease, trustedTranslation } from '../../lib/manRelease'
+import { packageName } from '../../lib/packageName'
 import { withDistro } from '../../lib/distro'
 import { explicitDistro, explicitLang, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
 import { normalizeManQuery } from '../../lib/manQuery'
@@ -57,9 +62,9 @@ async function optionHref(target: Extract<ShortUrl, { kind: 'option' }>, sp: Sea
   ).catch(() => null)
   if (!found) return pageHref
 
-  const hit = found.data.results.find(
+  const hit = found.data.results.filter(
     (result) => result.match === 'option' && result.anchorId && result.name.toLowerCase() === target.name,
-  )
+  ).sort((a, b) => compareManSections(found.distro, a.section, b.section))[0]
   if (!hit) return pageHref
   const page = withDistro(manPath(target.name, hit.section), urlDistro, urlLang)
   const flag = shareFlag(target.flag)
@@ -79,8 +84,22 @@ export default async function ShortUrlPage({
   if (!target) notFound()
 
   switch (target.kind) {
-    case 'name':
+    case 'name': {
+      const requestHeaders = Object.fromEntries(await headers())
+      const release = trustedRelease(requestHeaders)
+      const resolved = await resolveManName(target.name, await resolveRequestDistro(sp), release?.datasetReleaseId, trustedTranslation(requestHeaders))
+        .catch(() => null)
+      const result = resolved?.result
+      const section = result?.kind === 'ambiguous' ? result.preferred : result?.section
+      if (result && section) {
+        const name = result.kind === 'ambiguous' ? target.name : result.name
+        const path = manPath(name, section)
+        const query = result.kind === 'alias' ? { ...sp, pkg: packageName(result.pkg) ?? undefined } : sp
+        // This choice depends on the release; the explicit /man/<name> picker does not.
+        return redirect(`${path}${manQueryString(path, query)}`)
+      }
       return permanentRedirect(`${manPath(target.name)}${manQueryString(manPath(target.name), sp)}`)
+    }
     case 'page':
       return permanentRedirect(`${manPath(target.name, target.section)}${manQueryString(manPath(target.name, target.section), sp)}`)
     case 'option':
