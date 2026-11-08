@@ -23,12 +23,16 @@ from ingestion.standard_licenses import NO_LICENSE_TEXT
 from ingestion.util import sha256_hex
 
 
-def measure(root, distro, limit, curated=False, largest=False):
+def measure(root, distro, limit, curated=False, largest=False, package_names=None):
     notice_text = copyright_text
     if distro in {"fedora", "arch", "alpine"}:
         from ingestion.standard_licenses import license_text as notice_text
     started = time.monotonic()
     workspace = Workspace(root, limit=limit, distro=distro)
+    if package_names:
+        workspace.require_allowed_packages(package_names)
+        workspace.packages = [workspace.available[n] for n in sorted(set(package_names))]
+        workspace.curated_packages = []
     if largest:
         workspace.packages = sorted(workspace.all_manual_packages, key=lambda p: (-p.size, p.name))[
             :limit
@@ -143,6 +147,7 @@ def measure(root, distro, limit, curated=False, largest=False):
             ],
             "verifiedLicenses": len(packages_with_text),
             "standardLicenseMetadata": getattr(workspace, "standard_license_metadata", {}),
+            "noticeLinkGaps": getattr(workspace, "notice_link_gaps", {}),
             "standardLicenseTextSource": getattr(workspace, "standard_license_provenance", None),
             "maxLicenseBytes": max((len(notices[p].encode()) for p in notices), default=0),
             "packagesWithoutLicenseText": sorted(used - packages_with_text),
@@ -165,8 +170,21 @@ def main():
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--curated", action="store_true")
     mode.add_argument("--largest", action="store_true", help="Bounded largest-archive rehearsal")
+    mode.add_argument(
+        "--package",
+        action="append",
+        dest="package_names",
+        help="Rehearse only these exact pinned packages; repeat for several",
+    )
     args = parser.parse_args()
-    report = measure(args.workdir.resolve(), args.distro, args.packages, args.curated, args.largest)
+    report = measure(
+        args.workdir.resolve(),
+        args.distro,
+        args.packages,
+        args.curated,
+        args.largest,
+        args.package_names,
+    )
     print(json.dumps({k: v for k, v in report.items() if k != "packages"}, indent=2))
     if report["parseFailures"] or report["unresolved"]:
         raise SystemExit(1)

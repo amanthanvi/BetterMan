@@ -108,6 +108,8 @@ logger = logging.getLogger("betterman.ingestion")
 _PAGE_BATCH_FAILURE_LIMIT = 3
 # Reserve 1 KiB for Convex system fields and serialization overhead.
 _LICENSE_DOCUMENT_MAX_BYTES = 1024 * 1024 - 1024
+# The storage HTTP action has 64 MiB RAM and holds JSON strings plus digest bytes.
+MAX_STORED_PAGE_BYTES = 8 * 1024**2
 
 
 def _log(event: str, *, level: int = logging.INFO, **fields: object) -> None:
@@ -768,6 +770,35 @@ def _page_external_id(*, distro: str, name: str, section: str) -> str:
     return sha256_hex(f"{distro}/{name}/{section}".encode())[:32]
 
 
+def _stored_page_size(page: _PageRow) -> int:
+    """Measure escaped storage JSON including the post-parse link-growth reserve."""
+    content = {
+        key: encode_json(value).decode("utf-8") if value is not None else None
+        for key, value in (
+            ("docJson", page.doc),
+            ("synopsisJson", page.synopsis),
+            ("optionsJson", page.options),
+            ("seeAlsoJson", page.see_also),
+        )
+    }
+    size = len(encode_json({"contentSha256": page.content_sha256, "content": content}))
+    # Link resolution runs after this check: it can add a resolvedPageId to each SEE ALSO
+    # reference and turn an internal link's linkType into "unresolved". Reserve that growth.
+    see_also_growth = len(encode_json(',"resolvedPageId":"' + "0" * 32 + '"')) - 2
+    link_count = sum(1 for _ in _iter_internal_doc_links(page.doc))
+    size += len(page.see_also or ()) * see_also_growth + link_count * len("unresolved")
+    return size
+
+
+def _require_stored_page_size(page: _PageRow) -> None:
+    size = _stored_page_size(page)
+    if size > MAX_STORED_PAGE_BYTES:
+        raise ValueError(
+            f"{page.name}({page.section}): stored page payload {size} bytes exceeds "
+            f"{MAX_STORED_PAGE_BYTES}-byte limit ({page.source_path})"
+        )
+
+
 def _parse_source(src: ManSource, raw: bytes, context: _ParseContext) -> _PageRow:
     html_result = render_html(raw)
     parsed = parse_mandoc_html(html_result.html)
@@ -789,7 +820,7 @@ def _parse_source(src: ManSource, raw: bytes, context: _ParseContext) -> _PageRo
 
     title = f"{src.name}({src.section})"
 
-    return _PageRow(
+    page = _PageRow(
         page_id=_page_external_id(distro=context.distro, name=src.name, section=src.section),
         name=src.name,
         section=src.section,
@@ -808,6 +839,8 @@ def _parse_source(src: ManSource, raw: bytes, context: _ParseContext) -> _PageRo
         headings_text=parsed.headings_text,
         see_also_refs=[(ref.name, ref.section) for ref in (parsed.see_also or [])],
     )
+    _require_stored_page_size(page)
+    return page
 
 
 def _dump_models(items: list[OptionItem] | list[SeeAlsoRef] | None) -> list[dict] | None:
