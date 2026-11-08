@@ -360,16 +360,16 @@ the fallback path, replacing the subsequent picker lookup; matching flags need
 no additional metadata read. Explicit-section flag fallback and name-not-found
 behavior are retained. The ten-result search bound remains unchanged.
 
-All HTML name-only short redirects (single page, alias, preferred section,
-missing name or lookup failure) and ambiguous text choices use **307**, because an
+All name-only short redirects, HTML and text (single page, alias, preferred
+section, missing name or lookup failure), use **307**, because an
 archive promotion can change the preferred section and a browser-cached 308
 would pin yesterday’s choice. HTML short-name redirects remain private and use
 the proxy’s trusted release/translation headers for the existing cached
 metadata lookup. Text redirects keep the existing cache policy: public only
 when the answering release matches the proxy’s trusted release and the query
-is canonical; a redirect with an unproven `pkg` stays private. Text’s existing
-single-page and alias redirects, and explicit-section short URLs, retain
-**308**. Both resolver data-cache namespaces are bumped to `short-order-v1`, so
+is canonical; a redirect with an unproven `pkg` stays private. Explicit-section
+URLs (`/man/gunzip/1.txt`, `/tar.1`, `/tar.1.txt`) and query normalization retain
+**308**: their target does not depend on which sections a release has. Both resolver data-cache namespaces are bumped to `short-order-v1`, so
 preference-free results from the previous build cannot survive for an hour
 after deployment. URL encoding and explicit
 `distro`/`pkg` parameters are retained.

@@ -14,9 +14,12 @@ const FEDORA = "1 1p 8 2 3 3p 3pm 4 5 6 7 9 0p n l p o 1x 2x 3x 4x 5x 6x 7x 8x".
 // https://gitlab.archlinux.org/archlinux/packaging/packages/perl/-/blob/main/PKGBUILD#L186
 const ARCH = "1 1p n l 8 3 3p 0 0p 2 3type 5 4 9 6 7".split(" ");
 // Alpine uses mandoc 1.14.6: main.c:842-843 fs_search; :118 sec_prios and
-// :522-538 rank candidates by base section, adding 10 for a suffixed directory.
+// :522-538 rank candidates by their manN directory, adding 10 only for a suffixed
+// directory (man3p/). Alpine installs every page into an unsuffixed manN/ (perl 3pm,
+// man-pages-posix 1p/3p, openssl ossl), so ranking is by first digit; the exact
+// name.1 sorting before name.1p matches mandoc's fs_search order.
 // https://mandoc.bsd.lv/snapshots/mandoc-1.14.6.tar.gz (mandoc-1.14.6/main.c)
-const ALPINE = "1 8 6 2 3 5 7 4 9 3p".split(" ");
+const ALPINE = "1 8 6 2 3 5 7 4 9".split(" ");
 // https://github.com/freebsd/freebsd-src/blob/main/usr.bin/man/man.sh (man_default_sections)
 const FREEBSD = "1 8 2 3 3lua n 4 5 6 7 9 l".split(" ");
 // https://github.com/apple-oss-distributions/man/blob/main/man/man.conf (MANSECT)
@@ -33,7 +36,7 @@ export function compareManSections(distro: string, left: string, right: string):
   const rank = (section: string) => {
     if (distro === "alpine") {
       const base = order.indexOf(section[0]);
-      return base < 0 ? 20 : base + (section.length > 1 ? 10 : 0);
+      return base < 0 ? order.length : base;
     }
     const exact = order.indexOf(section);
     const index = exact < 0 && distro !== "freebsd" && distro !== "macos" ? order.indexOf(section[0]) : exact;

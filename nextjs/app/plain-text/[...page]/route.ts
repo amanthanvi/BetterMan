@@ -40,11 +40,15 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
   if (!name || page.length > 2 || !isManName(name) || (section !== undefined && !/^\d[a-z]{0,9}$/i.test(section))) {
     return text('Page not found\n', 404)
   }
+  // A bare name's target depends on the release (a later one can add a section man(1)
+  // opens first), so its redirects are temporary; explicit sections stay permanent.
+  let nameOnly = false
   if (section === undefined) {
     const target = parseShortUrl([name], new Set())
     if (!target || target.kind === 'option') return text('Page not found\n', 404)
     name = target.name
     if (target.kind === 'page') section = target.section
+    else nameOnly = true
   }
   const pkg = packageName(new URL(request.url).searchParams.get('pkg'))
   const textHref = (path: string, selected = pkg) => {
@@ -85,7 +89,7 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
       return text(`Multiple sections match ${name}. Choose a plain-text page:\n${data.options.map((option) => textHref(`${manPath(name, option.section)}.txt`)).join('\n')}\n`, 409)
     }
     if (data.kind === 'alias' || !('data' in data)) {
-      return text('', 308, { ...headers, Location: textHref(`${manPath(data.name, data.section)}.txt`, 'pkg' in data ? packageName(data.pkg) : undefined) })
+      return text('', nameOnly ? 307 : 308, { ...headers, Location: textHref(`${manPath(data.name, data.section)}.txt`, 'pkg' in data ? packageName(data.pkg) : undefined) })
     }
     const canonical = `${getPublicOrigin(request)}${manCanonicalPath(data.data, distro, pkg)}`
     return text(renderManText(data.data, distro), 200, { ...headers, ...(isIndexable(data.data.page) ? { Link: `<${canonical}>; rel="canonical"` } : {}), ...(!isIndexable(data.data.page) ? { 'X-Robots-Tag': 'noindex' } : {}) })

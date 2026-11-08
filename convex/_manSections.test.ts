@@ -40,13 +40,22 @@ it.each([
 it.each([
   ["fedora", "1 1p 8 2 3 3p 3pm 4 5 6 7 9 0p n l p o 1x 2x 3x 4x 5x 6x 7x 8x"],
   ["arch", "1 1p n l 8 3 3p 0 0p 2 3type 5 4 9 6 7"],
-  ["alpine", "1 8 6 2 3 5 7 4 9 3p"],
+  ["alpine", "1 8 6 2 3 5 7 4 9"],
 ])("uses the complete %s section order", (distro, order) => {
   const sections = order.split(" ");
   expect([...sections].reverse().sort((a, b) => compareManSections(distro, a, b))).toEqual(sections);
 });
 
-it("ranks Alpine suffixed section directories after every unsuffixed directory", () => {
-  const sections = ["3p", "1p", "9", "8"];
-  expect(sections.sort((a, b) => compareManSections("alpine", a, b))).toEqual(["8", "9", "1p", "3p"]);
+it.each([
+  ["read", ["2", "3p", "1p"], "1p"],
+  ["exit", ["3", "3p", "1p"], "1p"],
+  ["wait", ["2", "1p"], "1p"],
+  ["scr_dump", ["5", "3x"], "3x"],
+  ["utf8", ["7", "3pm"], "3pm"],
+  ["syslog", ["3", "2"], "2"],
+  ["ls", ["1p", "1"], "1"],
+])("picks what Alpine's mandoc opens for %s", (_name, sections, expected) => {
+  // Alpine installs suffixed pages into unsuffixed manN/ directories, so mandoc's
+  // suffixed-directory penalty never applies there.
+  expect([...sections].sort((a, b) => compareManSections("alpine", a, b))[0]).toBe(expected);
 });
