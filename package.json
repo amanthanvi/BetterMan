@@ -35,7 +35,8 @@
 		"convex:derived-check": "node scripts/check-derived-data.mjs",
 		"convex:task-check": "node scripts/check-task-phrases.mjs",
 		"ingest:full-benchmark": "cd ingestion && uv run python -m scripts.check_full_archives",
-		"ingest:notice-audit": "cd ingestion && uv run python -m scripts.audit_notice_links"
+		"ingest:notice-audit": "cd ingestion && uv run python -m scripts.audit_notice_links",
+		"ingest:page-size-audit": "cd ingestion && uv run python -m scripts.audit_page_sizes"
 	},
 	"dependencies": {
 		"convex": "^1.48.0"

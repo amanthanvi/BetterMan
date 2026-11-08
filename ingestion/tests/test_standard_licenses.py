@@ -183,6 +183,52 @@ def test_same_package_target_is_upstream_notice_not_standard_substitution(worksp
     assert not getattr(w, "notice_link_gaps", {})
 
 
+@pytest.mark.parametrize(
+    "target", ["opt/tool/exceptions.json.license", "usr/share/licenses/tool/EMPTY"]
+)
+@pytest.mark.parametrize("body", [b"", b" \t\n"])
+def test_rpm_hardlink_deferred_data_blank_target_is_a_recorded_gap(workspace, target, body):
+    import io
+    import tarfile
+
+    from ingestion import fedora_archives
+    from ingestion.debian_archives import ExtractedQuota
+    from ingestion.standard_licenses import license_text
+
+    w = workspace
+    package = w.register("tool", [])
+    # libarchive's RPM conversion puts a zero-size regular member first; the
+    # later hardlink carries no readable data through tarfile's streaming API.
+    raw = io.BytesIO()
+    with tarfile.open(fileobj=raw, mode="w") as archive:
+        first = tarfile.TarInfo(target)
+        first.size = len(body)
+        archive.addfile(first, io.BytesIO(body))
+        deferred = tarfile.TarInfo("opt/tool/deferred-data")
+        deferred.type, deferred.linkname = tarfile.LNKTYPE, target
+        archive.addfile(deferred)
+        notice = tarfile.TarInfo("usr/share/licenses/tool/LICENSE")
+        notice.type, notice.linkname = tarfile.LNKTYPE, target
+        archive.addfile(notice)
+    stream = io.BytesIO(raw.getvalue())
+    quota = ExtractedQuota(w.root / "files")
+    entries = fedora_archives.extract_payload(stream, package, w.root, quota=quota)
+    if fedora_archives.notice_targets(entries):
+        stream.seek(0)
+        entries = fedora_archives.retain_notice_targets(
+            stream, package, w.root, entries, quota=quota
+        )
+    w.store.add(package, entries)
+    assert w.resolve("tool", "usr/share/licenses/tool/LICENSE") == body
+    text = license_text(w, "tool")
+    assert "canonical MIT text" in text
+    assert any(
+        gap["path"] == "usr/share/licenses/tool/LICENSE" and gap["target"] == target
+        for gap in w.notice_link_gaps["tool"]
+    )
+    assert "Unreadable package notice links" in text
+
+
 @pytest.mark.parametrize("body", [b"\x1f\x8b", b"\xfd7zXZ\0broken", b"\x28\xb5\x2f\xfdbroken"])
 def test_unreadable_compressed_same_package_target_is_a_gap(workspace, body):
     from ingestion.standard_licenses import license_text

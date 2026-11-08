@@ -273,7 +273,7 @@ def notice_targets(entries):
     return {
         target
         for _pkg, path, kind, target, _file in entries
-        if kind == "blocked" and notice_path(path)
+        if kind == "blocked" and notice_path(path) and not MAN_PATH.fullmatch(path)
     }
 
 
@@ -300,7 +300,10 @@ def retain_notice_targets(stream, package, root, entries, *, quota):
             retained[path] = str(destination)
     return [
         (pkg, path, "notice-file", target, retained[target])
-        if kind == "blocked" and notice_path(path) and target in retained
+        if kind == "blocked"
+        and notice_path(path)
+        and not MAN_PATH.fullmatch(path)
+        and target in retained
         else (pkg, path, kind, target, file)
         for pkg, path, kind, target, file in entries
     ]
@@ -362,7 +365,12 @@ def _notice_texts(
         raise ValueError("License notice visit limit exceeded")
     remaining[0] -= 1
     try:
-        yield workspace.resolve(package, path).decode("utf-8", errors=decode_errors)
+        _owner, target, data = workspace.resolve(package, path, details=True)
+        text = data.decode("utf-8", errors=decode_errors)
+        if not text.strip() and target != path:
+            # RPM deferred hardlink data can surface as an empty regular member.
+            raise BlockedSource(package, path, target)
+        yield text
     except BlockedSource as exc:
         if workspace.distro not in {"fedora", "arch", "alpine"}:
             raise

@@ -770,8 +770,8 @@ def _page_external_id(*, distro: str, name: str, section: str) -> str:
     return sha256_hex(f"{distro}/{name}/{section}".encode())[:32]
 
 
-def _require_stored_page_size(page: _PageRow) -> None:
-    """Bound escaped storage JSON before the archive's 2% parse-failure gate."""
+def _stored_page_size(page: _PageRow) -> int:
+    """Measure escaped storage JSON including the post-parse link-growth reserve."""
     content = {
         key: encode_json(value).decode("utf-8") if value is not None else None
         for key, value in (
@@ -787,6 +787,11 @@ def _require_stored_page_size(page: _PageRow) -> None:
     see_also_growth = len(encode_json(',"resolvedPageId":"' + "0" * 32 + '"')) - 2
     link_count = sum(1 for _ in _iter_internal_doc_links(page.doc))
     size += len(page.see_also or ()) * see_also_growth + link_count * len("unresolved")
+    return size
+
+
+def _require_stored_page_size(page: _PageRow) -> None:
+    size = _stored_page_size(page)
     if size > MAX_STORED_PAGE_BYTES:
         raise ValueError(
             f"{page.name}({page.section}): stored page payload {size} bytes exceeds "
