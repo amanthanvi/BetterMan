@@ -9,7 +9,7 @@ vi.mock('next/cache', () => ({ unstable_cache: (fn: (...args: unknown[]) => Prom
   return result
 } }))
 vi.mock('./convexClient', () => ({ getConvexClient: () => ({ action: mocks.action, query: mocks.query }) }))
-import { fetchManByName, fetchManByNameAndSectionOrAlias } from './api'
+import { fetchManByName, fetchManByNameAndSectionOrAlias, fetchManResolve } from './api'
 import { resolveManName } from './manLookup'
 beforeEach(() => { vi.clearAllMocks(); mocks.cache.clear() })
 it('returns an oversized manual without a cache write or a second Convex call', async () => {
@@ -98,4 +98,19 @@ it('keeps a name miss private when its translated pointer differs from the key',
   expect(await resolveManName('tar', 'debian', 'en1', { lang: 'de', known: true, datasetReleaseId: 'de1' }))
     .toEqual({ result: null, servedRelease: null })
   expect(mocks.cache.size).toBe(0)
+})
+
+
+it.each([false, true])('does not reuse a pre-preference resolver cache entry (translated %s)', async translated => {
+  const oldKey = translated
+    ? ['betterman', 'convex', 'resolve-man-by-name-lang', 'v2']
+    : ['betterman', 'convex', 'resolve-man-by-name', 'b4-v1']
+  const args = translated ? ['debian', 'tar', 'de', 'en1', 'de1'] : ['debian', 'tar', 'en1']
+  const old = { kind: 'ambiguous', indexable: true, options: [], datasetReleaseId: translated ? 'de1' : 'en1' }
+  mocks.cache.set(JSON.stringify([oldKey, args]), old)
+  mocks.query.mockResolvedValue({ ...old, preferred: '1' })
+  const opts = { distro: 'debian' as const, name: 'tar', release: 'en1', ...(translated ? { lang: { lang: 'de', translated: 'de1' } } : {}) }
+  expect(await fetchManResolve(opts)).toMatchObject({ preferred: '1' })
+  expect(await fetchManResolve(opts)).toMatchObject({ preferred: '1' })
+  expect(mocks.query).toHaveBeenCalledTimes(1)
 })

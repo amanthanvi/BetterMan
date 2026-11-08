@@ -87,10 +87,12 @@ test('short urls: an unknown name lands on the man page 404', async ({ page }) =
   await expect(page.getByRole('heading', { name: 'No manual entry for tarx' })).toBeVisible()
 })
 
-test('short urls: an unknown flag still lands on the page', async ({ request }) => {
-  const res = await request.get('/tar/--bogus', { maxRedirects: 0 })
-  expect(res.status()).toBe(307)
-  expect(res.headers()['location']).toBe('/man/tar')
+test('short urls: an unknown flag still lands on the preferred page', async ({ request }) => {
+  for (const name of ['tar', 'printf']) {
+    const res = await request.get(`/${name}/--bogus`, { maxRedirects: 0 })
+    expect(res.status()).toBe(307)
+    expect(res.headers()['location']).toBe(`/man/${name}/1`)
+  }
 })
 
 test('short urls: reserved app paths are unaffected', async ({ request }) => {

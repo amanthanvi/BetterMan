@@ -8,8 +8,8 @@ it.each([
   ["printf", ["3o", "3", "1"], "1"],
   ["time", ["3tcl", "2", "3am", "1"], "1"],
   ["open", ["2freebsd", "3perl", "2"], "2"],
-])("orders Linux %s like man-db", (_name, sections, expected) => {
-  for (const distro of ["debian", "ubuntu", "fedora", "arch", "alpine"]) {
+])("orders Debian/Ubuntu %s like man-db", (_name, sections, expected) => {
+  for (const distro of ["debian", "ubuntu"]) {
     expect([...sections].sort((a, b) => compareManSections(distro, a, b))[0]).toBe(expected);
   }
 });
@@ -25,4 +25,28 @@ it.each([
 ])("uses %s's MANSECT order", (distro, order) => {
   const sections = order.split(" ");
   expect([...sections].reverse().sort((a, b) => compareManSections(distro, a, b))).toEqual(sections);
+});
+
+
+it.each([
+  ["fedora", "open", ["3p", "3pm", "2"], "2"],
+  ["fedora", "syslog", ["3", "2"], "2"],
+  ["alpine", "syslog", ["3", "2"], "2"],
+  ["arch", "open", ["2", "3perl"], "3perl"],
+])("orders %s %s using its own man configuration", (distro, _name, sections, expected) => {
+  expect([...sections].sort((a, b) => compareManSections(distro, a, b))[0]).toBe(expected);
+});
+
+it.each([
+  ["fedora", "1 1p 8 2 3 3p 3pm 4 5 6 7 9 0p n l p o 1x 2x 3x 4x 5x 6x 7x 8x"],
+  ["arch", "1 1p n l 8 3 3p 0 0p 2 3type 5 4 9 6 7"],
+  ["alpine", "1 8 6 2 3 5 7 4 9 3p"],
+])("uses the complete %s section order", (distro, order) => {
+  const sections = order.split(" ");
+  expect([...sections].reverse().sort((a, b) => compareManSections(distro, a, b))).toEqual(sections);
+});
+
+it("ranks Alpine suffixed section directories after every unsuffixed directory", () => {
+  const sections = ["3p", "1p", "9", "8"];
+  expect(sections.sort((a, b) => compareManSections("alpine", a, b))).toEqual(["8", "9", "1p", "3p"]);
 });

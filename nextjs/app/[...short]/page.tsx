@@ -44,10 +44,28 @@ function manQueryString(path: string, sp: SearchParams): string {
   return normalizeManQuery(path, qs) ?? qs
 }
 
+async function nameHref(name: string, sp: SearchParams): Promise<string> {
+  const requestHeaders = Object.fromEntries(await headers())
+  const release = trustedRelease(requestHeaders)
+  const resolved = await resolveManName(name, await resolveRequestDistro(sp), release?.datasetReleaseId, trustedTranslation(requestHeaders))
+    .catch(() => null)
+  const result = resolved?.result
+  const section = result?.kind === 'ambiguous' ? result.preferred : result?.section
+  if (result && section) {
+    const resolvedName = result.kind === 'ambiguous' ? name : result.name
+    const path = manPath(resolvedName, section)
+    const query = result.kind === 'alias' ? { ...sp, pkg: packageName(result.pkg) ?? undefined } : sp
+    // This choice depends on the release; the explicit /man/<name> picker does not.
+    return `${path}${manQueryString(path, query)}`
+  }
+  const path = manPath(name)
+  return `${path}${manQueryString(path, sp)}`
+}
+
 // The option index, as search reads it for `tar -x`, maps a flag to its row.
 // `?flag=` gives the landing page that option's share card (lib/manShare.ts).
 // Without a match, or when the search fails, the reader still lands on the
-// page (or its section picker), which settles its own status.
+// preferred page, which settles its own status.
 async function optionHref(target: Extract<ShortUrl, { kind: 'option' }>, sp: SearchParams): Promise<string> {
   const urlDistro = explicitDistro(sp)
   const urlLang = explicitLang(sp)
@@ -60,12 +78,10 @@ async function optionHref(target: Extract<ShortUrl, { kind: 'option' }>, sp: Sea
       limit: 10,
     }),
   ).catch(() => null)
-  if (!found) return pageHref
-
-  const hit = found.data.results.filter(
+  const hit = found && found.data.results.filter(
     (result) => result.match === 'option' && result.anchorId && result.name.toLowerCase() === target.name,
   ).sort((a, b) => compareManSections(found.distro, a.section, b.section))[0]
-  if (!hit) return pageHref
+  if (!hit) return target.section ? pageHref : await nameHref(target.name, sp)
   const page = withDistro(manPath(target.name, hit.section), urlDistro, urlLang)
   const flag = shareFlag(target.flag)
   return `${flag ? withShareFlag(page, flag) : page}#${hit.anchorId}`
@@ -84,22 +100,9 @@ export default async function ShortUrlPage({
   if (!target) notFound()
 
   switch (target.kind) {
-    case 'name': {
-      const requestHeaders = Object.fromEntries(await headers())
-      const release = trustedRelease(requestHeaders)
-      const resolved = await resolveManName(target.name, await resolveRequestDistro(sp), release?.datasetReleaseId, trustedTranslation(requestHeaders))
-        .catch(() => null)
-      const result = resolved?.result
-      const section = result?.kind === 'ambiguous' ? result.preferred : result?.section
-      if (result && section) {
-        const name = result.kind === 'ambiguous' ? target.name : result.name
-        const path = manPath(name, section)
-        const query = result.kind === 'alias' ? { ...sp, pkg: packageName(result.pkg) ?? undefined } : sp
-        // This choice depends on the release; the explicit /man/<name> picker does not.
-        return redirect(`${path}${manQueryString(path, query)}`)
-      }
-      return permanentRedirect(`${manPath(target.name)}${manQueryString(manPath(target.name), sp)}`)
-    }
+    case 'name':
+      // 307 also on failure: a transient error must not pin a crawler to the picker.
+      return redirect(await nameHref(target.name, sp))
     case 'page':
       return permanentRedirect(`${manPath(target.name, target.section)}${manQueryString(manPath(target.name, target.section), sp)}`)
     case 'option':

@@ -46,9 +46,9 @@ it('keeps production CSP self-only for analytics and issues a fresh nonce per re
   expect(first.headers.get('x-content-type-options')).toBe('nosniff')
 })
 
-it('passes trusted release provenance to short-name resolution and keeps its dynamic redirect private', async () => {
+it.each(['/tar', '/tar/-Q'])('passes trusted release provenance to short-name resolution and keeps its dynamic redirect private: %s', async path => {
   vi.stubEnv('BM_RESERVED_PATH_SEGMENTS', 'man/api/search/section')
-  const response = await proxy(new NextRequest('https://betterman.sh/tar', { headers: { 'x-bm-release': 'forged', 'x-bm-release-token': 'forged' } }))
+  const response = await proxy(new NextRequest(`https://betterman.sh${path}`, { headers: { 'x-bm-release': 'forged', 'x-bm-release-token': 'forged' } }))
   expect(JSON.parse(response.headers.get('x-middleware-request-x-bm-release')!)).toEqual(releaseFor('debian'))
   expect(response.headers.get('x-middleware-request-x-bm-release-token')).toBe('test-release-token')
   expect(response.headers.get('cache-control')).toBe('private, no-store')

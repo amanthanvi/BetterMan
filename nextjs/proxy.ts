@@ -178,7 +178,7 @@ async function manProxy(request: NextRequest, cspEnabled: boolean, text = false,
   if (translation) requestHeaders.set(TRANSLATION_HEADER, JSON.stringify(translation))
   // Proves to the renderer that this proxy, not the client, set the release.
   requestHeaders.set(RELEASE_TOKEN_HEADER, releaseToken())
-  // App Router short names resolve with the same trusted release/language, but
+  // App Router section-less short URLs use the same trusted release/language, but
   // their dynamic redirect stays private and needs no CDN rewrite key.
   if (short) {
     requestHeaders.delete(LANG_HEADER)
@@ -299,7 +299,8 @@ export async function proxy(request: NextRequest) {
   }
   const path = request.nextUrl.pathname
   const reserved = process.env.BM_RESERVED_PATH_SEGMENTS
-  if (reserved && parseShortUrl(path.split('/').slice(1).map(decodeManParam), new Set(reserved.split('/')))?.kind === 'name') {
+  const short = reserved ? parseShortUrl(path.split('/').slice(1).map(decodeManParam), new Set(reserved.split('/'))) : null
+  if (short?.kind === 'name' || (short?.kind === 'option' && short.section === null)) {
     return await manProxy(request, cspEnabled, false, true)
   }
   // Keep root concrete .txt routes in sync with the afterFiles rewrites in next.config.ts.

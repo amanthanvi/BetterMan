@@ -301,48 +301,77 @@ implementation agent.
 
 ### Short URLs (A4)
 
-`/<name>` and `/<name>.txt` select the section that the distro’s default `man
-<name>` would open, even when full archives contain the name in many sections.
+`/<name>` and `/<name>.txt` select a preferred section using the distro’s
+default `man <name>` section order, even when full archives contain the name in
+many sections. The language-first exception is described below.
 `/man/<name>` remains the explicit section picker: all options, indexability and
 canonicals are unchanged. Explicit-section short forms keep their 308 redirects.
 
 The shared comparator in `convex/_manSections.ts` cites the upstream sources:
 
-- Linux (Debian, Ubuntu, Fedora, Arch, Alpine): Debian man-db’s `SECTION` order,
-  `1 n l 8 3 0 2 3type 3posix 3pm 3perl 3am 5 4 9 6 7`, from
-  [Debian’s build configuration](https://salsa.debian.org/debian/man-db/-/blob/master/debian/rules).
-  [man-db’s `compare_candidates`](https://gitlab.com/man-db/man-db/-/blob/main/src/man.c)
-  ranks explicitly listed extensions first by that list; unlisted extensions
-  share their first character’s rank, and extensions break ties lexically. Thus
-  `1` precedes `1plan9`, `3tcl` shares section 3’s rank, and explicitly listed
-  `3perl` follows section 2. Unknown sections sort last. In man-db, requesting
-  section `3` also matches `3perl`/`3tcl`, with exact `3` first; BetterMan’s
-  explicit section URLs still mean only that exact section.
+- Debian/Ubuntu: `1 n l 8 3 0 2 3type 3posix 3pm 3perl 3am 5 4 9 6 7`, from
+  [Debian’s `debian/rules:35`](https://salsa.debian.org/debian/man-db/-/blob/master/debian/rules#L35).
+- Fedora: `1 1p 8 2 3 3p 3pm 4 5 6 7 9 0p n l p o 1x 2x 3x 4x 5x 6x 7x 8x`, from
+  [`man-db.spec:67`](https://src.fedoraproject.org/rpms/man-db/blob/rawhide/f/man-db.spec#_67).
+- Arch: `1 1p n l 8 3 3p 0 0p 2 3type 5 4 9 6 7`, from
+  [man-db’s `PKGBUILD:40`](https://gitlab.archlinux.org/archlinux/packaging/packages/man-db/-/blob/main/PKGBUILD#L40).
+  [Perl’s `PKGBUILD:186`](https://gitlab.archlinux.org/archlinux/packaging/packages/perl/-/blob/main/PKGBUILD#L186)
+  uses `-Dman3ext=3perl`, which inherits section 3’s rank here, before section 2.
+- Alpine: mandoc’s `1 8 6 2 3 5 7 4 9 3p`, from
+  [`mandoc-1.14.6/main.c:842–843` (`fs_search`)](https://mandoc.bsd.lv/snapshots/mandoc-1.14.6.tar.gz).
+  Candidate selection also uses `sec_prios` at line 118 and lines 522–538:
+  base section priority plus 10 for a suffixed section directory. Accordingly,
+  section `3p` sorts after all unsuffixed sections; suffixed directories retain
+  their base section order. This is separate from man-db’s extension ranking.
 - FreeBSD: `1 8 2 3 3lua n 4 5 6 7 9 l`, from
   [`man.sh`’s default MANSECT](https://github.com/freebsd/freebsd-src/blob/main/usr.bin/man/man.sh).
 - macOS: `1 1p 8 2 3 3p 4 5 6 7 9 0p tcl n l p o`, from
   [Apple’s `man.conf`](https://github.com/apple-oss-distributions/man/blob/main/man/man.conf).
 
+[man-db’s `compare_candidates`](https://gitlab.com/man-db/man-db/-/blob/main/src/man.c)
+ranks explicitly listed extensions first by the distro’s list; unlisted
+extensions share their first character’s rank, and extensions break ties
+lexically. Thus `1` precedes `1plan9`; `3tcl` shares section 3’s rank. Debian’s
+explicitly listed `3perl` follows section 2, while Arch’s unlisted `3perl` ranks
+with section 3 before section 2. Unknown sections sort last. In man-db,
+requesting section `3` also matches `3perl`/`3tcl`, with exact `3` first;
+BetterMan’s explicit section URLs still mean only that exact section.
+
 FreeBSD/macOS use exact listed sections, then deterministic lexical ties for
-unlisted sections. These are BetterMan’s defaults, not a reader’s locally
-customized MANSECT, MANPATH, shell builtins or installed packages.
+unlisted sections. These are section-level defaults; BetterMan does not model
+local MANSECT, MANPATH, architecture or filesystem-layout overrides.
 
 The metadata resolver adds an optional `preferred` section to ambiguous results
 without changing their options. It ranks the existing at-most-20 page reads and
 loads no document content or extra database rows. The translated-name branch
-uses the same comparator; the plain-text export remains English, as documented
-in `docs/i18n.md`. Section-less option URLs first filter to pages whose option
-index contains the requested flag, then apply the same order among those hits;
-the existing ten-result search bound and fallback remain unchanged.
+uses the same comparator within the language’s pages. **Language-first limit:**
+`/printf?lang=de` selects German printf(3) when that is the only German page,
+even if English printf(1) exists. This differs from man-db’s section-before-
+language ranking (Debian #519547). Comparing both locales would require another
+bounded release/name lookup and changes to the resolver’s provenance and picker
+contract; it is deferred here. English fallback still applies when the language
+has no matching name. The plain-text export remains English (`docs/i18n.md`).
 
-HTML short-name choices and ambiguous text choices use **307**, because an
+Section-less option URLs first filter to pages whose option index contains the
+requested flag, then apply the same order among those hits. If no flag matches,
+or search fails, they use the same preferred destination as `/<name>`, without
+adding the unknown flag or an anchor. This needs one bounded metadata lookup on
+the fallback path, replacing the subsequent picker lookup; matching flags need
+no additional metadata read. Explicit-section flag fallback and name-not-found
+behavior are retained. The ten-result search bound remains unchanged.
+
+All HTML name-only short redirects (single page, alias, preferred section,
+missing name or lookup failure) and ambiguous text choices use **307**, because an
 archive promotion can change the preferred section and a browser-cached 308
 would pin yesterday’s choice. HTML short-name redirects remain private and use
 the proxy’s trusted release/translation headers for the existing cached
 metadata lookup. Text redirects keep the existing cache policy: public only
 when the answering release matches the proxy’s trusted release and the query
 is canonical; a redirect with an unproven `pkg` stays private. Text’s existing
-single-page and alias 308 redirects are unchanged. URL encoding and explicit
+single-page and alias redirects, and explicit-section short URLs, retain
+**308**. Both resolver data-cache namespaces are bumped to `short-order-v1`, so
+preference-free results from the previous build cannot survive for an hour
+after deployment. URL encoding and explicit
 `distro`/`pkg` parameters are retained.
 
 Every supported distro has an ordering, including deterministic unlisted-section

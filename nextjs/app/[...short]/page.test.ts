@@ -61,6 +61,13 @@ beforeEach(() => {
 })
 
 describe('short URL redirects', () => {
+  it('keeps a transient name lookup failure temporary', async () => {
+    mocks.resolveManName.mockRejectedValueOnce(new Error('Convex unavailable'))
+    await expect(visit('/time', { distro: 'fedora', pkg: 'time' }))
+      .rejects.toHaveProperty('message', '307 /man/time?distro=fedora&pkg=time')
+    expect(navigation.permanentRedirect).not.toHaveBeenCalled()
+  })
+
   it.each([
     [{ kind: 'page', name: 'tar', section: '1' }, '/man/tar/1'],
     [{ kind: 'ambiguous', preferred: '1', options: [{ section: '1' }, { section: '3tcl' }] }, '/man/tar/1'],
@@ -79,16 +86,16 @@ describe('short URL redirects', () => {
   })
 
   it.each([
-    ['/tar', {}, '308 /man/tar'],
-    ['/tar', { distro: 'ubuntu' }, '308 /man/tar?distro=ubuntu'],
+    ['/tar', {}, '307 /man/tar'],
+    ['/tar', { distro: 'ubuntu' }, '307 /man/tar?distro=ubuntu'],
     ['/tar.1', {}, '308 /man/tar/1'],
     ['/ssh_config.5', { distro: 'fedora', x: ['1', '2'] }, '308 /man/ssh_config/5?distro=fedora'],
-    ['/tar', { utm_source: 'hn', distro: ['ubuntu', 'arch'], pkg: 'tar' }, '308 /man/tar?distro=ubuntu&pkg=tar'],
+    ['/tar', { utm_source: 'hn', distro: ['ubuntu', 'arch'], pkg: 'tar' }, '307 /man/tar?distro=ubuntu&pkg=tar'],
     ['/tar.1', { portability: 'text', flag: '-x', lang: 'de' }, '308 /man/tar/1?portability=text&flag=-x&lang=de'],
     ['/2/open', {}, '308 /man/open/2'],
-    ['/c%2B%2B', {}, '308 /man/c%2B%2B'],
+    ['/c%2B%2B', {}, '307 /man/c%2B%2B'],
     ['/Foo%3A%3ABar.3pm', {}, '308 /man/foo%3A%3Abar/3pm'],
-  ])('%s %j answers %s without a lookup', async (path, sp, expected) => {
+  ])('%s %j answers %s without an option search', async (path, sp, expected) => {
     await expect(visit(path, sp)).rejects.toHaveProperty('message', expected)
     expect(mocks.search).not.toHaveBeenCalled()
   })
@@ -109,6 +116,15 @@ describe('short URL redirects', () => {
 })
 
 describe('short URL options', () => {
+  it.each([false, true])('uses the name preference when the flag search has no hit (failure %s)', async failed => {
+    if (failed) mocks.search.mockRejectedValueOnce(new Error('Search unavailable'))
+    else mocks.search.mockResolvedValueOnce(results({ name: 'time', section: '3', match: 'task' }))
+    mocks.resolveManName.mockResolvedValueOnce({ result: { kind: 'ambiguous', preferred: '1', options: [{ section: '1' }, { section: '3' }] }, servedRelease: 'r1' })
+    await expect(visit('/time/-Q', { distro: 'ubuntu', pkg: 'time', lang: 'de' }))
+      .rejects.toHaveProperty('message', '307 /man/time/1?distro=ubuntu&pkg=time&lang=de')
+    expect(mocks.resolveManName).toHaveBeenCalledWith('time', 'ubuntu', undefined, null)
+  })
+
   it.each([['debian', '3', 'library'], ['freebsd', '2', 'syscall']])('uses %s man order only among pages with the flag', async (distro, section, anchor) => {
     mocks.releases.add(distro)
     mocks.search.mockResolvedValue(results(

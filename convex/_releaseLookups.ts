@@ -65,6 +65,7 @@ export async function resolvePageByName(
     .take(20);
   if (pages.length === 1) return { kind: "page" as const, page: pages[0] };
   if (pages.length > 1) {
+    // shortcut: rank the first 20 lexical sections; revisit if real names exceed this bound.
     const preferred = pages.map(page => page.section).sort((a, b) => compareManSections(args.release.distro, a, b))[0];
     return {
       kind: "ambiguous" as const,
