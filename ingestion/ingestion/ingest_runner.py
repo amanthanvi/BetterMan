@@ -782,6 +782,11 @@ def _require_stored_page_size(page: _PageRow) -> None:
         )
     }
     size = len(encode_json({"contentSha256": page.content_sha256, "content": content}))
+    # Link resolution runs after this check: it can add a resolvedPageId to each SEE ALSO
+    # reference and turn an internal link's linkType into "unresolved". Reserve that growth.
+    see_also_growth = len(encode_json(',"resolvedPageId":"' + "0" * 32 + '"')) - 2
+    link_count = sum(1 for _ in _iter_internal_doc_links(page.doc))
+    size += len(page.see_also or ()) * see_also_growth + link_count * len("unresolved")
     if size > MAX_STORED_PAGE_BYTES:
         raise ValueError(
             f"{page.name}({page.section}): stored page payload {size} bytes exceeds "

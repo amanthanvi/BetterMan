@@ -12,6 +12,28 @@ from ingestion.debian_pipeline import Workspace
 from ingestion.fedora_archives import _rpm_payload, notice_path
 
 
+def read_receipt(path: Path, sha256: str) -> dict | None:
+    """A finished receipt for this archive, or None (missing, partial or stale) to re-inspect."""
+    try:
+        row = json.loads(path.read_text())
+    except (FileNotFoundError, ValueError):
+        return None
+    if (
+        not isinstance(row, dict)
+        or row.get("sha256") != sha256
+        or not isinstance(row.get("links"), list)
+    ):
+        return None
+    return row
+
+
+def write_receipt(path: Path, row: dict) -> None:
+    # Write then rename, so an interrupted audit never leaves half a receipt to trust.
+    partial = path.with_name(path.name + ".partial")
+    partial.write_text(json.dumps(row, sort_keys=True) + "\n")
+    partial.replace(path)
+
+
 def inspect_payload(stream):
     links, regular = [], set()
     with tarfile.open(fileobj=stream, mode="r|*") as archive:
@@ -50,8 +72,8 @@ def audit(workdir, distro, workers=4):
 
     def inspect(package):
         receipt = output / f"{package.sha256}.json"
-        if receipt.exists():
-            return json.loads(receipt.read_text())
+        if (row := read_receipt(receipt, package.sha256)) is not None:
+            return row
         with TemporaryDirectory(prefix="verified-", dir=workdir) as directory:
             archive = Path(directory) / "archive"
             pins = workspace.pins
@@ -76,7 +98,7 @@ def audit(workdir, distro, workers=4):
             "bytes": package.size,
             "links": links,
         }
-        receipt.write_text(json.dumps(row, sort_keys=True) + "\n")
+        write_receipt(receipt, row)
         return row
 
     rows, errors = [], []
