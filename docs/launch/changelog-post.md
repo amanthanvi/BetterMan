@@ -5,7 +5,7 @@
 > - Voice follows [PRODUCT.md](../../PRODUCT.md) and [DESIGN.md](../../DESIGN.md): quiet, precise, tool-like, no hype. No exclamation marks, no superlatives.
 > - The numbers were filled from production on 2026-11-01 (values in [launch-checklist.md](launch-checklist.md#placeholders)). Only the launch date is left for the owner. Re-verify each claim on production first (checklist step 6).
 > - The coverage sentence in "All of Debian, and more systems" says what production had on 2026-11-01: Ubuntu full, Fedora, Arch and Alpine curated, with full imports in progress (B2, #394). Change it if that moves before launch.
-> - The concept explainers claim comes from `main` (#471), not from a production check; confirm `/concept/signals` loads before publishing.
+> - The concept explainers claim was checked on production on 2026-11-08: all twenty `/concept/<slug>` pages answer 200, and `/concept/signals` links signal(7) first.
 > - Word count of the post body below: about 600.
 > - Not published, not posted. The owner publishes.
 
@@ -41,7 +41,7 @@ Twenty short explainers cover section 7 topics such as signals, globbing and reg
 
 ## Short URLs and plain text
 
-`betterman.sh/tar`, `betterman.sh/tar.1` and `betterman.sh/tar/-x` go where you expect. Add `.txt` for plain text: `curl -L betterman.sh/tar.txt`. Text pages start with NAME and list each option once. Browsers can add BetterMan as a search engine, with suggestions.
+`betterman.sh/tar`, `betterman.sh/tar.1` and `betterman.sh/tar/-x` go where you expect. A bare name opens the section `man` itself would pick on that distro, and `/man/<name>` lists every section. Add `.txt` for plain text: `curl -L betterman.sh/tar.txt`. Text pages start with NAME and list each option once. Browsers can add BetterMan as a search engine, with suggestions.
 
 ## Generated text is labelled
 

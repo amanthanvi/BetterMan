@@ -35,6 +35,6 @@ Not looked up: Ubuntu and Alpine community channels, Unix & Linux Stack Exchange
 
 ## Notes for the owner
 
-- **Check [launch-checklist.md](launch-checklist.md) step 5 first.** The Firewall rules for non-browser access went live on 2026-10-30, and on 2026-11-01 `/tar.txt` answered 308 to `/man/tar/1.txt`, which answered 200. Re-run the anonymous checks on launch day before a post claims `curl -L betterman.sh/tar.txt` works. The short URL redirects, so plain `curl` without `-L` prints nothing.
+- **Check [launch-checklist.md](launch-checklist.md) step 5 first.** The Firewall rules for non-browser access went live on 2026-10-30, and since #505 `/tar.txt` answers 307 to `/man/tar/1.txt`, which answers 200. Re-run the anonymous checks on launch day before a post claims `curl -L betterman.sh/tar.txt` works. The short URL redirects, so plain `curl` without `-L` prints nothing.
 - **Disclosure.** Mention that you built it. In r/ and mailing-list posts, mention generated text and the model (DeepSeek V4.1 Flash).
 - **Replies.** Answer in the thread, not in a new post. Log reports from every channel as GitHub issues so the 48-hour review has one list.
