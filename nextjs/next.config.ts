@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto'
 import path from 'node:path'
 
 import { reservedPathSegments } from './lib/reservedPathSegments'
-import { nonHtmlSecurityHeaders } from './lib/securityHeaders'
+import { nonHtmlSecurityHeaders, serviceWorkerSecurityHeaders } from './lib/securityHeaders'
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -20,6 +20,15 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/assets/:path*',
+        headers: securityHeaders,
+      },
+      // Fetched on every fresh page load, so they skip the proxy (proxy.ts matcher) and get their headers here.
+      {
+        source: '/sw.js',
+        headers: Object.entries(serviceWorkerSecurityHeaders()).map(([key, value]) => ({ key, value })),
+      },
+      {
+        source: '/favicon.svg',
         headers: securityHeaders,
       },
       {

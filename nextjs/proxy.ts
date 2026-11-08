@@ -343,7 +343,8 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     {
-      source: '/((?!api(?:/|$)|assets(?:/|$)|_bm(?:/|$)|_next/static|_next/image|favicon.ico).*)',
+      // /sw.js and /favicon.svg get static security headers from next.config.ts instead.
+      source: '/((?!api(?:/|$)|assets(?:/|$)|_bm(?:/|$)|_next/static|_next/image|favicon.ico|favicon\\.svg$|sw\\.js$).*)',
       missing: [
         { type: 'header', key: 'next-router-prefetch' },
         { type: 'header', key: 'purpose', value: 'prefetch' },

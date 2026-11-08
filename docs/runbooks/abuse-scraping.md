@@ -133,7 +133,7 @@ Why deny here:
 
 - On 11-07 and 11-08 the digest sent about 178K requests a day from residential ISPs in many countries (VNPT, PTCL, Jio, Turk Telekom). Its User-Agents rotated through Chrome 118–120, Firefox 120–121 and Chrome 146. Other modern Chrome versions sent about 300 requests a day.
 - It solved Bot Protection's challenge: 16,470 of the day's 16,540 solves. Another challenge would not stop it.
-- It fetched `/favicon.svg` and `/sw.js` on nearly every page view (about 29K each, beside 29K Web Analytics beacons), so it opens each page in a fresh browser profile. `proxy.ts` runs on both files (its matcher excludes neither), so each fetch also cost an invocation. Those beacons are fake page views: Web Analytics events rose from 5.7K on 11-06 to 26.5K on 11-07.
+- It fetched `/favicon.svg` and `/sw.js` on nearly every page view (about 29K each, beside 29K Web Analytics beacons), so it opens each page in a fresh browser profile. `proxy.ts` ran on both files, so each fetch also cost an invocation; since 2026-11-08 its matcher skips them and `next.config.ts` sets their security headers, with a worker CSP that keeps `connect-src 'self'` on `/sw.js`. Those beacons are fake page views: Web Analytics events rose from 5.7K on 11-06 to 26.5K on 11-07.
 - Function Invocations rose from 82.7K on 11-06 to 191.7K on 11-07, and team spend from $1.27 to $2.17 a day.
 - A dry run over the 24 hours before the rule went live matched 149,173 of the digest's 177,564 requests (84%).
 
