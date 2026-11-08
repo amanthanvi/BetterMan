@@ -207,7 +207,7 @@ describe("translated pages (#395)", () => {
       void _id; void _creationTime;
       await ctx.db.insert("manPages", { ...fields, externalId: "nur-de-3", section: "3" });
     });
-    expect(await t.query(api.queries.resolveManByName, { distro: "debian", name: "nur-de", locale: "de" })).toMatchObject({ kind: "ambiguous", indexable: false });
+    expect(await t.query(api.queries.resolveManByName, { distro: "debian", name: "nur-de", locale: "de" })).toMatchObject({ kind: "ambiguous", indexable: false, preferred: "1" });
     expect(await t.query(api.queries.resolveManByName, { distro: "debian", name: "nur-de" })).toMatchObject({ kind: "not_found" });
   });
 

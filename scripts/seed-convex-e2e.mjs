@@ -191,6 +191,7 @@ function makePages(distro) {
     section: '1',
     title: 'printf(1)',
     description: 'format and print data',
+    options: [{ flags: '--help', argument: null, description: 'Show command help.', anchorId: 'description' }],
     toc: [{ id: 'description', title: 'DESCRIPTION', level: 2 }],
     blocks: [{ type: 'heading', id: 'description', level: 2, text: 'DESCRIPTION' }, { type: 'paragraph', inlines: [{ type: 'text', text: 'printf formats and prints data.' }] }],
   })
@@ -200,6 +201,10 @@ function makePages(distro) {
     section: '3',
     title: 'printf(3)',
     description: 'formatted output conversion',
+    options: [
+      { flags: '--help', argument: null, description: 'Show library help.', anchorId: 'description' },
+      { flags: '--library', argument: null, description: 'A library-only fixture flag.', anchorId: 'description' },
+    ],
     toc: [{ id: 'description', title: 'DESCRIPTION', level: 2 }],
     blocks: [
       { type: 'heading', id: 'description', level: 2, text: 'DESCRIPTION' },

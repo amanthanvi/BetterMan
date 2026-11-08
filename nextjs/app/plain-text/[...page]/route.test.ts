@@ -48,7 +48,7 @@ it('resolves the short form to the HTML section cache and ignores browser distro
   const request = req()
   request.headers.set('cookie', 'bm-distro=ubuntu')
   const res = await GET(request, ctx(['TAR']))
-  expect(res.status).toBe(308)
+  expect(res.status).toBe(307)
   expect(res.headers.get('location')).toBe('/man/tar/1.txt')
   expect(fetchManResolve).toHaveBeenCalledExactlyOnceWith({ distro: 'debian', name: 'tar', release: 'test' })
   expect(fetchManByNameAndSectionOrAlias).not.toHaveBeenCalled()
@@ -99,6 +99,17 @@ it('offers explicit text URLs for ambiguous names', async () => {
   expect(await res.text()).toContain('/man/printf/3.txt?distro=ubuntu')
 })
 
+it.each(['test', 'new-release'])('redirects an ordered ambiguous name temporarily with release-aware caching (%s)', async datasetReleaseId => {
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'ambiguous', preferred: '1', indexable: true, options: [{ section: '1', title: 'tar(1)', description: 'archive' }, { section: '3tcl', title: 'tar(3tcl)', description: 'Tcl' }], datasetReleaseId })
+  const res = await GET(req('?distro=ubuntu'), ctx(['tar']))
+  expect(res.status).toBe(307)
+  expect(res.headers.get('location')).toBe('/man/tar/1.txt?distro=ubuntu')
+  expect(res.headers.get('cache-control')).toBe(datasetReleaseId === 'test' ? 'public, max-age=60, s-maxage=3600, stale-while-revalidate=3600' : 'private, no-store')
+  const packaged = await GET(req('?pkg=tar'), ctx(['tar']))
+  expect(packaged.headers.get('location')).toBe('/man/tar/1.txt?pkg=tar')
+  expect(packaged.headers.get('cache-control')).toBe('private, no-store')
+})
+
 it('keeps only the request distro in redirects and choices, Debian included, after a fallback', async () => {
   vi.mocked(fetchManResolve).mockRejectedValueOnce(new FastApiError(404, 'RELEASE_NOT_FOUND', 'Missing'))
     .mockResolvedValueOnce({ kind: 'alias', name: 'gzip', section: '1', datasetReleaseId: 'r1' })
@@ -115,7 +126,7 @@ it('keeps only the request distro in redirects and choices, Debian included, aft
 it('keeps aliases in plain text and honors distro', async () => {
   vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'alias', name: 'gzip', section: '1', datasetReleaseId: 'r1' })
   const res = await GET(req('?distro=ubuntu'), ctx(['gunzip']))
-  expect(res.status).toBe(308)
+  expect(res.status).toBe(307)
   expect(res.headers.get('location')).toBe('/man/gzip/1.txt?distro=ubuntu')
 })
 
@@ -221,7 +232,7 @@ const reqAt = (path: string) => new Request(`https://betterman.sh${path}`, { hea
 it.each(['random1', 'random2', 'no-such-package'])('keeps a name-only redirect that carries the unproven package %s private', async (pkg) => {
   vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'page', name: 'tar', section: '1', title: 'tar(1)', description: 'archive', datasetReleaseId: 'test' })
   const res = await GET(reqAt(`/tar.txt?pkg=${pkg}`), ctx(['tar']))
-  expect(res.status).toBe(308)
+  expect(res.status).toBe(307)
   expect(res.headers.get('location')).toBe(`/man/tar/1.txt?pkg=${pkg}`)
   expect(res.headers.get('cache-control')).toBe('private, no-store')
 })
@@ -243,4 +254,14 @@ it.each(['random1', 'random2'])('keeps an alias reached with the unproven packag
 
 it('answers a bare _rsc privately', async () => {
   expect((await GET(reqAt('/man/tar/1.txt?_rsc=abc'), ctx())).headers.get('cache-control')).toBe('private, no-store')
+})
+
+it('keeps explicit-section alias redirects permanent and makes bare-name ones temporary', async () => {
+  const alias = { kind: 'alias', name: 'gzip', section: '1', datasetReleaseId: 'r1' } as const
+  vi.mocked(fetchManResolve).mockResolvedValue(alias)
+  vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue(alias)
+  const bare = await GET(req(), ctx(['gunzip']))
+  const explicit = await GET(req(), ctx(['gunzip', '1']))
+  expect([bare.status, bare.headers.get('location')]).toEqual([307, '/man/gzip/1.txt'])
+  expect([explicit.status, explicit.headers.get('location')]).toEqual([308, '/man/gzip/1.txt'])
 })
