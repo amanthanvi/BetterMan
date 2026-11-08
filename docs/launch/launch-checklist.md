@@ -1,34 +1,45 @@
 # BetterMan 2 launch checklist
 
-Draft for [#410](https://github.com/amanthanvi/BetterMan/issues/410) (BM2 D1). Nothing here has been run, posted or published. The owner executes it.
+Draft for [#410](https://github.com/amanthanvi/BetterMan/issues/410) (BM2 D1). Items ticked below are done; nothing has been posted or published. The owner executes the rest.
 
-The launch is one coordinated day after full Debian (about 115,000 manuals) is live in production. It waits on the owner's sign-off after the Nov 1 staging measurement ([b1-debian-evidence.md](../roadmap/b1-debian-evidence.md), [multi-distro-ops.md](../runbooks/multi-distro-ops.md#debian-archive-imports-explicit-approval-switches)). Until then the drafts in this folder stay drafts.
+Full Debian (107,143 manuals) was promoted to production on 2026-10-31, after the staging checks and within the cost estimates ([b1-debian-evidence.md](../roadmap/b1-debian-evidence.md), [multi-distro-ops.md](../runbooks/multi-distro-ops.md#debian-archive-imports-explicit-approval-switches)). The launch is one coordinated day after that.
 
 Steps marked **OWNER** need the owner's account, secret or authority. An agent must not do them.
 
 ## Placeholders
 
-Fill these once, then search the four drafts for `{{`. No draft should contain one when posted.
+The production numbers below were filled into the drafts on 2026-11-01. They were verified on production at 08:30 UTC that day from `/api/v1/info`. Re-check them on launch day (step 6).
+
+| Value | Filled with | Where it is used |
+| --- | --- | --- |
+| Debian pages, release | 107,143 pages from about 17,300 packages (17,325 per-package license records), trixie (13), the full main archive | `show-hn.md`, `changelog-post.md` |
+| Ubuntu | 104,763 pages, 24.04 noble, full main and universe archive | same |
+| Fedora | 10,271 pages, release 44, curated set | same |
+| Arch | 12,789 pages, curated set | same |
+| Alpine | 12,163 pages, 3.23, curated set | same |
+| FreeBSD | 12,096 pages, 15.1, base system | same |
+| macOS | 447 pages | same |
+| Other Linux coverage | Ubuntu is a full import like Debian; Fedora, Arch and Alpine are curated sets for now, with full imports in progress | same |
+| Generation model | DeepSeek V4.1 Flash (`deepseek-v4.1-flash`), as the page's generated mark shows it | same |
+| Indexing policy | See step 6 | `show-hn.md` |
+| Translations | 6 languages, 9,552 pages from Debian's manpages-l10n packages | same |
+
+Three values are still open. They are filled at posting time:
 
 | Placeholder | Meaning | Source |
 | --- | --- | --- |
-| `{{DEBIAN_PAGES}}` | Manual pages in the live Debian release (the plan says about 115,000) | `pageCount` from `/api/v1/info` after promotion |
-| `{{DEBIAN_PACKAGES}}` | Debian packages those pages come from | The inspected release's evidence (see step 3) |
-| `{{DEBIAN_RELEASE}}` | Debian release name (the roadmap says trixie) | The release record |
-| `{{UBUNTU_PAGES}}`, `{{FEDORA_PAGES}}`, `{{ARCH_PAGES}}`, `{{ALPINE_PAGES}}`, `{{FREEBSD_PAGES}}`, `{{MACOS_PAGES}}` | Per-distro page counts | `pageCount` from `/api/v1/info?distro=…` |
-| `{{OTHER_LINUX_COVERAGE}}` | One sentence on how deep Ubuntu, Fedora, Arch and Alpine go at launch (see the warning below) | Step 2 |
-| `{{GENERATION_MODEL}}` | Model that wrote the generated text, as shown on the pages | A page's generated mark |
-| `{{INDEXING_POLICY}}` | What search engines may index at launch (see step 6) | Step 6 |
 | `{{LAUNCH_DATE}}` | Launch day (UTC) | Owner |
 | `{{CHANGELOG_URL}}` | Where the on-site post lives, if built | Follow-up in `changelog-post.md` |
 | `{{HN_URL}}` | The posted Show HN | Owner, after posting |
 
-**Warning on Ubuntu, Fedora, Arch and Alpine.** The roadmap makes them full too, but that is [B2 (#394)](https://github.com/amanthanvi/BetterMan/issues/394), still open on 2026-10-30. Today they are curated sets. Write `{{OTHER_LINUX_COVERAGE}}` from what production reports at launch, never from the plan.
+Before posting, search the drafts for two opening curly braces; only these three may remain.
+
+**Ubuntu, Fedora, Arch and Alpine.** The roadmap makes all four full; that is [B2 (#394)](https://github.com/amanthanvi/BetterMan/issues/394). On 2026-11-01 production reported Ubuntu as a full import and Fedora, Arch and Alpine as curated sets. The drafts say that. Re-read the counts on launch day and change the sentence if a full import has landed, never from the plan.
 
 ## 0. Gate: confirm the launch conditions
 
 - [ ] [#410](https://github.com/amanthanvi/BetterMan/issues/410) names B1, C3–C5 and the core of B5–B7 as prerequisites. Check each is closed or consciously deferred: `gh issue list --state all --search 'BM2 in:title' --json number,title,state`.
-- [ ] **OWNER:** sign-off on the full-Debian staging measurement (storage, reads, license coverage, cost). Convex spend changes need owner sign-off per [betterman-2.md](../roadmap/betterman-2.md).
+- [x] **OWNER:** sign-off on the full-Debian staging measurement (storage, reads, license coverage, cost). Done: full Debian was promoted on 2026-10-31 after the staging checks, within the cost estimates. Convex spend changes need owner sign-off per [betterman-2.md](../roadmap/betterman-2.md).
 
 ## 1. Performance budgets green
 
@@ -39,7 +50,7 @@ Fill these once, then search the four drafts for `{{`. No draft should contain o
 - [ ] No budget was raised to get here: `git log -p --follow -- perf-budgets.json` since the last release. The `diff_guards` job (`scripts/check-perf-budget-changes.mjs`) requires an explanation for any change.
 - [ ] Other required gates are green: `pnpm next:lint`, `pnpm next:grammar`, `pnpm next:test`, `pnpm convex:test`, `pnpm ingest:test`.
 
-Budgets use fixture data, not 115,000 pages. They do not prove that the full corpus is cheap to read. The staging measurement and step 6 cover that.
+Budgets use fixture data, not 107,143 pages. They do not prove that the full corpus is cheap to read. The staging measurement and step 6 cover that.
 
 ## 2. Staging and production parity, per distro
 
@@ -78,27 +89,29 @@ Goal: know which release each distro serves in production, which one waits in st
   | freebsd | | | | |
   | macos | | | | |
 
-  Expected: every distro except Debian has the same ID in both stages. Debian differs until step 3, and its staging release shows the full page count.
+  Expected: every distro has the same ID in both stages, except one with a newer release waiting in staging. Record why for each difference. Debian was promoted on 2026-10-31, so its production release shows the full page count.
 - [ ] Sitemaps answer for every distro: `curl -fsS https://betterman.sh/sitemap.xml | head` and `curl -fsS https://betterman.sh/sitemap-<distro>.xml | head`.
 - [ ] No ingest or prune is running: `gh run list --workflow update-docs.yml --limit 5` and `gh run list --workflow prune-releases.yml --limit 3`. Never deploy Convex during a dataset run.
 
 ## 3. Promote full Debian
 
-Source: [multi-distro-ops.md](../runbooks/multi-distro-ops.md#debian-archive-imports-explicit-approval-switches). The first full release stays in staging until the owner authorizes a separate promotion-only dispatch. Leave `BETTERMAN_DEBIAN_FULL_PROMOTE` unset.
+**Done on 2026-10-31:** the owner authorized the promotion after the staging checks and full Debian is live. The steps below stay as the record and as the recipe for a later full release or a rollback. Their other boxes are not ticked because the evidence lives in #410, not here.
+
+Source: [multi-distro-ops.md](../runbooks/multi-distro-ops.md#debian-archive-imports-explicit-approval-switches). A full release stays in staging until the owner authorizes a separate promotion-only dispatch. Leave `BETTERMAN_DEBIAN_FULL_PROMOTE` unset.
 
 - [ ] **Save the rollback target first.** The current Debian prod ID from step 2 (the curated release) goes in the issue. Without it step 8 cannot run. The workflow also records it in its summary, but save your own copy.
 - [ ] Do not prune before launch. If a prune is unavoidable, preview first (`gh workflow run prune-releases`, no `apply`) and use `-f apply=true -f keep_per_distro=2` so the curated Debian release survives as a rollback target ([multi-distro-ops.md](../runbooks/multi-distro-ops.md#prune-superseded-releases-github-actions)).
-- [ ] **Inspect the staging release** against the run's evidence: page count, packages, storage, reads, license coverage and cost, in the format of [b1-debian-evidence.md](../roadmap/b1-debian-evidence.md). Record the exact staging ID. Fill `{{DEBIAN_PAGES}}`, `{{DEBIAN_PACKAGES}}` and `{{DEBIAN_RELEASE}}` from it.
+- [ ] **Inspect the staging release** against the run's evidence: page count, packages, storage, reads, license coverage and cost, in the format of [b1-debian-evidence.md](../roadmap/b1-debian-evidence.md). Record the exact staging ID. The Debian figures in the placeholders table above came from this inspection and the live `/api/v1/info`.
 - [ ] **nc policy.** Full Debian switches `nc(1)` from netcat-openbsd to netcat-traditional. The OpenBSD manual must stay reachable at `/man/nc_openbsd/1` and `/man/nc/1?pkg=netcat-openbsd`. The runbook asks for this check before approval; see [b1-debian-nc-owner.md](../roadmap/b1-debian-nc-owner.md). Since staging is not publicly readable, verify the audit evidence before promotion and the two URLs on prod immediately after.
 - [ ] **Inspect all seven staging pointers.** Promote-only dispatches attempt every distro and ignore selectors ([multi-distro-ops.md](../runbooks/multi-distro-ops.md)). Use the `convex:related-check` output from step 2.
-- [ ] **OWNER:** authorize the promotion. Then dispatch with the release you inspected:
+- [x] **OWNER:** authorize the promotion. Done 2026-10-31. Then dispatch with the release you inspected:
 
   ```bash
   gh workflow run update-dataset -f ingest=false -f promote=true -f debian_full_promote=true \
-    -f 'expected_release_ids={"debian":"{{STAGING_DEBIAN_RELEASE_ID}}"}'
+    -f 'expected_release_ids={"debian":"<staging-debian-release-id>"}'
   ```
 
-  `{{STAGING_DEBIAN_RELEASE_ID}}` is the ID you recorded. Supply the other six IDs too if you want the whole dispatch pinned.
+  `<staging-debian-release-id>` is the ID you recorded. Supply the other six IDs too if you want the whole dispatch pinned.
 - [ ] Watch it: `gh run list --workflow update-docs.yml --limit 5`, then `gh run watch <RUN_ID>`. A `409 STAGING_RELEASE_CONFLICT` means staging changed; stop, verify, and start a new dispatch. Do not retry blindly.
 - [ ] Confirm the new prod ID equals the pinned one: `curl -fsS https://betterman.sh/api/v1/info`. Re-run `pnpm convex:prod-check` with `BETTERMAN_EXPECTED_RELEASE_IDS` and `pnpm convex:related-check`.
 - [ ] Spot-check (pages, short URLs, plain text, search, explain):
@@ -127,14 +140,14 @@ Source: [vercel-ops.md](../runbooks/vercel-ops.md#man-page-edge-caching-c4-406).
   | OpenSearch descriptor | Equals `/opensearch.xml` |
   | OpenSearch suggestions | Equals `/api/v1/suggest` |
 
-  First identify the challenge source in Firewall events. Add no broad `/man/` HTML bypass. Then verify anonymously, with no challenge cookie: `/tar.txt`, `/tar.1.txt`, `/man/tar/1.txt`, `/opensearch.xml`, `/api/v1/suggest?q=ta&format=opensearch`. Add BetterMan as a search engine in real Chrome and Firefox and type `ta`. The post and Show HN claim `curl betterman.sh/tar.txt` works, so this must pass before posting. The challenge came from the managed **Bot Protection** ruleset (action: challenge). Before the rules, an anonymous `curl -I https://betterman.sh/tar.txt` returned `429` with `x-vercel-mitigated: challenge`. After them, anonymous GET/HEAD on all five URLs answer with no challenge: `/tar.txt` 308 to `/man/tar/1.txt`, the rest 200 with `nosniff`, and a missing page gives 404. HTML (`/man/tar/1`), sitemaps and POST stay challenged. Still to do on launch day: add BetterMan as a search engine in real Chrome and Firefox and type `ta`.
+  First identify the challenge source in Firewall events. Add no broad `/man/` HTML bypass. Then verify anonymously, with no challenge cookie: `/tar.txt`, `/tar.1.txt`, `/man/tar/1.txt`, `/opensearch.xml`, `/api/v1/suggest?q=ta&format=opensearch`. Add BetterMan as a search engine in real Chrome and Firefox and type `ta`. The post and Show HN claim `curl betterman.sh/tar.txt` works, so this must pass before posting. The challenge came from the managed **Bot Protection** ruleset (action: challenge). Before the rules, an anonymous `curl -I https://betterman.sh/tar.txt` returned `429` with `x-vercel-mitigated: challenge`. After them, anonymous GET/HEAD on all five URLs answer with no challenge: `/tar.txt` 308 to `/man/tar/1.txt`, the rest 200 with `nosniff`, and a missing page gives 404. HTML (`/man/tar/1`), sitemaps and POST stay challenged. Re-checked on 2026-11-01: `/tar.txt` answered 308 to `/man/tar/1.txt`, which answered 200. Full Debian then made most names ambiguous, and `/tar.txt` answered 409 until #505 resolved a bare name by `man`'s own section order. Since #505, a name-only redirect is `307` (the target can change with a release) and an explicit section stays `308`: `/tar.txt` answers 307 to `/man/tar/1.txt`, so `curl -L betterman.sh/tar.txt` works. Still to do on launch day: add BetterMan as a search engine in real Chrome and Firefox and type `ta`.
+- [x] **Chromium fingerprint challenge (#503, review by 2026-11-20).** A custom rule challenges HTML requests from one common Chromium TLS fingerprint ([abuse-scraping.md](../runbooks/abuse-scraping.md#chromium-fingerprint-challenge-2026-11-06-review-by-2026-11-20)). Chrome visitors on it see the Vercel checkpoint once, then the page; text routes, OpenSearch and suggestions are bypassed. The owner chose on 2026-11-08 to keep it unchanged for the launch. Read its challenge outcomes 24 hours after posting.
 - [x] **OWNER:** enable **Web Analytics** in the BetterMan Vercel project (done 2026-10-30; the API confirms it is enabled). Collection starts with the first production deploy after enablement ([analytics.md](../analytics.md)).
 - [ ] **OWNER:** after the first production deploy, verify `/` and `/man/tar/1` include the analytics bootstrap/script and the Web Analytics dashboard shows pageviews. A deploy built before enablement needs a redeploy because the configuration is baked at build time.
-- [ ] **OWNER (lead, after merge):** delete `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` from the Vercel project environment.
-- [ ] **OWNER:** cancel the Plausible subscription. Decide whether to export its history first; deleting the site is irreversible.
-- [ ] **OWNER:** confirm `NEXT_PUBLIC_SENTRY_DSN` is set in the production Vercel environment.
-- [ ] **OWNER:** confirm the Convex plan and spend limit cover the full-Debian storage and read numbers from step 3.
-- [ ] **OWNER: posting.** Show HN, the submissions and any on-site post. Drafts are in this folder. Agents do not post, submit, email or create accounts.
+- [x] **OWNER (lead, after merge):** delete `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` from the Vercel project environment. Done; it is deleted.
+- [ ] **OWNER, optional (skipped for now):** set `NEXT_PUBLIC_SENTRY_DSN` in the production Vercel environment. The owner passed on this for launch, so do not treat an unset DSN as a blocker. See the Sentry item in step 8.
+- [x] **OWNER:** confirm the Convex plan and spend limit cover the full-Debian storage and read numbers from step 3. Done: the team is on **Professional**, and a **$10/month warning-only** spending limit is set, with no disable threshold, because a disable threshold would take every project offline. The Convex usage page shows all usage within Pro's included amounts.
+- [ ] **OWNER: posting.** Show HN, the submissions and any on-site post. Drafts are in this folder. The owner approved posting the filled drafts from the owner's own accounts, and chose (2026-11-08) to post Show HN after the short-URL fix (#505) is live and these drafts merge, confirming sign-in and availability right before posting. Agents create no accounts and send no email.
 
 ## 6. Pre-launch claim check
 
@@ -145,8 +158,8 @@ The drafts make factual claims. Re-verify each on production on launch day, and 
 - [ ] A man page shows its "In brief" block, and every generated item carries its "generated" mark with model and date. tldr-pages examples are labelled and linked, and `/licenses` credits tldr-pages.
 - [ ] Portability markers appear on a flag that differs between distros (for example in `/explain?cmd=…`).
 - [ ] Page weight and cost claims match a fresh `pnpm perf:check`, not an old number.
-- [ ] No claim about languages, concept explainers or a CLI. None of these ship yet (B3 #395, B8 #400; roadmap: no CLI). Share cards, per-flag cards and the print stylesheet ship with C6 (#408).
-- [ ] **Indexing.** The roadmap's index-by-demand policy (long tail `noindex`) is B4 ([#396](https://github.com/amanthanvi/BetterMan/issues/396)), open when this was drafted. Until a release carries the `indexable` flag, `nextjs/lib/manRobots.ts` indexes every page, so about 115,000 pages would be indexable. Check a long-tail page's `robots` meta and `/sitemap-debian.xml` on production, then decide: **OWNER**, ship B4 first, or launch with the open policy and accept the thin-page risk in [betterman-2.md](../roadmap/betterman-2.md). Write `{{INDEXING_POLICY}}` in `show-hn.md` to match.
+- [ ] Claims about languages and concept explainers match production: six languages (de, fr, es, pt-BR, ja, ru) with 9,552 translated pages (B3 #395), and twenty concept explainers at `/concept/<slug>` (B8 #400). Checked on production on 2026-11-08 in a browser past the Vercel checkpoint: all twenty concept pages answer 200, `/man/tar/1?distro=debian&lang=de` is the German translation crediting manpages-l10n with the English page as canonical, and `/man/rsync/1?distro=debian&lang=de` falls back to English. Check `?lang=de` on a page with a translation and one without (English fallback), and `/concept/signals`. Still no claim about a CLI (roadmap: none). Share cards, per-flag cards and the print stylesheet ship with C6 (#408).
+- [ ] **Indexing.** The index-by-demand policy is B4 ([#396](https://github.com/amanthanvi/BetterMan/issues/396)), and it is live. Search engines may index pages in sections 1, 5, 7 and 8, plus pages from packages with at least 10,000 installations in Debian's popularity contest. That makes 48,416 of Debian's 107,143 pages and 49,744 of Ubuntu's 104,763 indexable. Every other page is served and searchable, but marked `noindex` and left out of sitemaps. Translated pages are `noindex`, with the English page as canonical when that page is indexable (otherwise there is no canonical link). Check a long-tail page's `robots` meta and `/sitemap-debian.xml` on production, and keep the line in `show-hn.md` in step with what you see.
 - [ ] The cold-cache path survives launch traffic: request a page with a name not requested before and confirm it renders.
 
 ## 7. Rollback plan
@@ -180,9 +193,9 @@ Decide thresholds before posting. Suggested triggers: widespread 404 or 500 on p
 
 Open these dashboards before posting and keep them open. Suggested checks, hourly for the first 6 hours, then every 4–6 hours.
 
-- [ ] **Sentry** (**OWNER** account). Filter to `environment:production`. Watch new issues and the rate of any single issue. The browser reports the environment from `NEXT_PUBLIC_SENTRY_ENVIRONMENT` (see CHANGELOG). Event payloads strip `cmd`, `q` and `name` query params (`nextjs/lib/sentryScrub.ts`), so shell lines should not appear in reports. If one does, treat it as a privacy bug.
+- [ ] **Sentry** (optional; skipped for launch, so there may be nothing to watch unless the owner sets the DSN, see step 5; rely on the Vercel item below otherwise). If it is on: (**OWNER** account) filter to `environment:production`. Watch new issues and the rate of any single issue. The browser reports the environment from `NEXT_PUBLIC_SENTRY_ENVIRONMENT` (see CHANGELOG). Event payloads strip `cmd`, `q` and `name` query params (`nextjs/lib/sentryScrub.ts`), so shell lines should not appear in reports. If one does, treat it as a privacy bug.
 - [ ] **Vercel Web Analytics** (**OWNER** project access; production only). Pageviews, top pages, sources (HN, Reddit, search), country. Custom events: `explain used`, `palette opened`, `pref changed`. Search text is never sent. C7 (#409) evidence restarts from this deploy. Note which pages the traffic lands on and which return 404.
-- [ ] **Convex usage** (**OWNER** dashboard). Function calls, database bandwidth and storage against plan limits. Pay attention to `queries:search` bytes per call ([abuse-scraping.md](../runbooks/abuse-scraping.md#search-index-cost)) and whether the edge cache is absorbing man-page reads.
+- [ ] **Convex usage** (**OWNER** dashboard). Function calls, database bandwidth and storage against plan limits. The spending limit is $10/month and warns only; it disables nothing, so watch the dashboard yourself. Pay attention to `queries:search` bytes per call ([abuse-scraping.md](../runbooks/abuse-scraping.md#search-index-cost)) and whether the edge cache is absorbing man-page reads.
 - [ ] **Vercel** (**OWNER** account). Firewall events for challenges and 429s, function invocations and errors, and the cache hit ratio for `/man/*`.
 - [ ] **Abuse and rate limits.** [abuse-scraping.md](../runbooks/abuse-scraping.md). Origin limits are 300 page reads and 60 searches per IP per minute (from that runbook). Tighten, or block abusive IPs at the edge, if a scraper appears.
 - [ ] **Smoke test** every few hours: `pnpm convex:prod-check` (with the pinned IDs), `curl -sI https://betterman.sh/man/tar/1` (still `HIT`), `/search?q=tar`, `/explain?cmd=ls%20-la`.
