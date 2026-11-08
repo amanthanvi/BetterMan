@@ -45,7 +45,8 @@ test('man query: a made-up package answers privately on every HTML and text form
       [`/man/tar/1?pkg=${pkg}`, 404],
       [`/man/tar?pkg=${pkg}`, 307],
       [`/man/tar/1.txt?pkg=${pkg}`, 404],
-      [`/tar.txt?pkg=${pkg}`, 308],
+      // A bare name's redirect depends on the release, so it is temporary.
+      [`/tar.txt?pkg=${pkg}`, 307],
       [`/tar.1.txt?pkg=${pkg}`, 404],
       [`/man/tar/1/og?pkg=${pkg}`, 404],
     ] as const) {
