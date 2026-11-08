@@ -54,7 +54,8 @@ async function nameHref(name: string, sp: SearchParams): Promise<string> {
   if (result && section) {
     const resolvedName = result.kind === 'ambiguous' ? name : result.name
     const path = manPath(resolvedName, section)
-    const query = result.kind === 'alias' ? { ...sp, pkg: packageName(result.pkg) ?? undefined } : sp
+    // An alias's own target package wins; without one, the caller's ?pkg= still applies (as in .txt).
+    const query = result.kind === 'alias' ? { ...sp, pkg: packageName(result.pkg) ?? sp.pkg } : sp
     // This choice depends on the release; the explicit /man/<name> picker does not.
     return `${path}${manQueryString(path, query)}`
   }

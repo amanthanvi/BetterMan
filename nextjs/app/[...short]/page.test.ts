@@ -78,6 +78,13 @@ describe('short URL redirects', () => {
     expect(mocks.search).not.toHaveBeenCalled()
   })
 
+  it('keeps the caller package when an alias names none, and the alias package when it does', async () => {
+    mocks.resolveManName.mockResolvedValue({ result: { kind: 'alias', name: 'gzip', section: '1' }, servedRelease: 'r1' })
+    await expect(visit('/gunzip', { pkg: 'gzip' })).rejects.toHaveProperty('message', '307 /man/gzip/1?pkg=gzip')
+    mocks.resolveManName.mockResolvedValue({ result: { kind: 'alias', name: 'gzip', section: '1', pkg: 'pigz' }, servedRelease: 'r1' })
+    await expect(visit('/gunzip', { pkg: 'gzip' })).rejects.toHaveProperty('message', '307 /man/gzip/1?pkg=pigz')
+  })
+
   it('keeps encoded names, distro, language and package on a preferred redirect', async () => {
     mocks.resolveManName.mockResolvedValue({ result: { kind: 'ambiguous', preferred: '3pm' }, servedRelease: null })
     await expect(visit('/Foo%3A%3ABar', { distro: 'ubuntu', lang: 'de', pkg: 'perl', utm_source: 'hn' }))
