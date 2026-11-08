@@ -159,7 +159,7 @@ it('keys text exports without applying the HTML distro cookie', async () => {
   expect(release.servingRelease).toHaveBeenCalledWith('debian')
 })
 
-it.each(['/api', '/api/v1/info', '/api/v1/man/tar/1', '/assets', '/_bm/man.0123456789abcdef.js'])('skips API and asset routes: %s', (url) => {
+it.each(['/api', '/api/v1/info', '/api/v1/man/tar/1', '/assets', '/_bm/man.0123456789abcdef.js', '/sw.js', '/favicon.svg'])('skips API and asset routes: %s', (url) => {
   expect(unstable_doesMiddlewareMatch({ config, url })).toBe(false)
 })
 
@@ -168,7 +168,7 @@ it.each(['/man/tar/1', '/man/tar'])('runs for man page prefetches as well: %s', 
   expect(unstable_doesMiddlewareMatch({ config, url, headers: { purpose: 'prefetch' } })).toBe(true)
 })
 
-it.each(['/', '/apiary', '/api-docs', '/assets-guide', '/man/api/3', '/tar', '/tar.1', '/2/open', '/tar/-x', '/opensearch.xml'])('sets CSP on pages: %s', (url) => {
+it.each(['/', '/apiary', '/api-docs', '/assets-guide', '/man/api/3', '/tar', '/tar.1', '/2/open', '/tar/-x', '/opensearch.xml', '/sw', '/sw.jsx'])('sets CSP on pages: %s', (url) => {
   expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true)
 })
 
