@@ -438,12 +438,11 @@ def _notice_texts(
                     )
                     yield text
                     return
-            if (
-                workspace.distro in {"fedora", "arch", "alpine"}
-                and not directory_alias
-                and exc.path != path
-            ):
+            if workspace.distro in {"fedora", "arch"} and not directory_alias and exc.path != path:
                 # Resolution followed a notice link, but no target file or children exist.
+                # Fedora and Arch index every packaged path, so the target is truly absent.
+                # Alpine has no file index: the target may sit in a package not yet acquired,
+                # so a missing target there still fails closed.
                 _record_notice_gap(workspace, gap_package, package, path, exc.path)
                 return
             raise

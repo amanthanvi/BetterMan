@@ -487,6 +487,13 @@ def test_missing_notice_link_uses_notice_or_labelled_standard_and_shows_gap(
     if other_notice:
         members.append(("usr/share/licenses/tool/NOTICE", b"actual notice", None))
     w.register("tool", members, license="MIT AND LicenseRef-Private")
+    if distro == "alpine":
+        # Alpine has no file index, so a missing link target still fails closed.
+        from ingestion.debian_archives import MissingSource
+
+        with pytest.raises(MissingSource, match="missing.txt"):
+            license_text(w, "tool")
+        return
     text = license_text(w, "tool")
     assert ("actual notice" if other_notice else "canonical MIT text") in text
     assert w.notice_link_gaps["tool"] == [
@@ -622,6 +629,20 @@ def test_publisher_records_standard_provenance_and_remaining_gaps_without_contra
                     target,
                 ),
             )
+        if kind == "link":
+            # This fixture is Alpine, which has no file index: a missing link target fails closed.
+            from ingestion.debian_archives import MissingSource
+
+            with pytest.raises(MissingSource, match="absent"):
+                debian_publish.publish_workspace(
+                    w,
+                    Client(),
+                    activate=False,
+                    dataset_stage="staging",
+                    git_sha="test",
+                    sample=True,
+                )
+            return
         result = debian_publish.publish_workspace(
             w, Client(), activate=False, dataset_stage="staging", git_sha="test", sample=True
         )
