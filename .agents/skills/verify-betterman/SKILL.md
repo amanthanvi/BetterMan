@@ -42,22 +42,21 @@ export PATH="${NVM_DIR:-$HOME/.nvm}/versions/node/v26.5.1/bin:${HOME}/.local/bin
 cd "$(git rev-parse --show-toplevel)"
 REPO="$(readlink -f "$(pwd)")"
 
-# Launch pushes functions and sets env vars on the deployment Convex selects from the
-# shell, then .env.local, then .env. Stop unless that is the anonymous or local loop.
-convex_setting() {
-  local value="${!1:-}" file
-  for file in .env.local .env; do
-    [[ -z "$value" ]] || break
-    value="$({ sed -nE "s/^[[:space:]]*(export[[:space:]]+)?$1[[:space:]]*=[[:space:]]*[\"']?//p" "$file" 2>/dev/null || true; } | head -n 1)"
-  done
-  printf '%s' "$value"
+# Launch pushes functions and sets env vars on the deployment Convex selects. Read it the way
+# Convex does: the shell, then .env.local, then .env, with Convex's own dotenv. Stop unless
+# that is the anonymous or local loop.
+node - <<'NODE'
+const { readFileSync } = require('node:fs')
+const dotenv = require(require.resolve('dotenv', { paths: [require.resolve('convex/package.json')] }))
+const files = ['.env.local', '.env'].map((file) => { try { return dotenv.parse(readFileSync(file)) } catch { return {} } })
+const get = (name) => [process.env, ...files].find((source) => Object.hasOwn(source, name))?.[name] ?? ''
+const deployment = get('CONVEX_DEPLOYMENT')
+if (get('CONVEX_DEPLOY_KEY') || get('CONVEX_DEPLOYMENT_TOKEN') || get('CONVEX_SELF_HOSTED_URL')
+  || (deployment && !/^(anonymous|local):/.test(deployment))) {
+  console.error('a cloud or self-hosted Convex deployment is configured; launch only on the anonymous local loop')
+  process.exit(2)
 }
-deployment="$(convex_setting CONVEX_DEPLOYMENT)"
-if [[ -n "$(convex_setting CONVEX_DEPLOY_KEY)" || -n "$(convex_setting CONVEX_SELF_HOSTED_URL)" ]] ||
-  [[ -n "$deployment" && ! "$deployment" =~ ^(anonymous|local): ]]; then
-  echo "a cloud or self-hosted Convex deployment is configured; launch only on the anonymous local loop" >&2
-  exit 2
-fi
+NODE
 
 # The pid's working directory: /proc on Linux, lsof on macOS.
 pid_cwd() {
@@ -150,10 +149,13 @@ export NEXT_PUBLIC_CONVEX_URL="$CONVEX_URL"
 export PUBLIC_BASE_URL="http://127.0.0.1:3000"
 CONVEX_HTTP_URL="${CONVEX_SITE_URL:-$VITE_CONVEX_SITE_URL}" node scripts/seed-convex-e2e.mjs 2>&1 | tee "$EVIDENCE/seed.log"
 
-# Cleanup undoes Next's rewrite of this generated file only if it was clean before the build.
-if git diff --quiet -- nextjs/next-env.d.ts; then touch "$EVIDENCE/next-env.clean"; fi
+next_env_clean=0
+git diff --quiet -- nextjs/next-env.d.ts && next_env_clean=1
 rm -rf nextjs/.next
 pnpm next:build 2>&1 | tee "$EVIDENCE/build.log"
+# Cleanup undoes Next's rewrite of this generated file only if it was clean before the
+# build and is unchanged since.
+if [[ "$next_env_clean" == 1 ]]; then git hash-object nextjs/next-env.d.ts >"$EVIDENCE/next-env.built"; fi
 
 nohup pnpm -C nextjs exec next start -p 3000 >"$EVIDENCE/next.log" 2>&1 &
 echo $! >"$EVIDENCE/next.pid"
@@ -166,9 +168,9 @@ done
 curl -fsS --max-time 2 http://127.0.0.1:3000/robots.txt >/dev/null
 ```
 
-`set -a; . ./.env.local` exports everything in `.env.local` into the build and Playwright env, and this is intended for the anonymous local Convex loop. Launch refuses to start when `CONVEX_DEPLOY_KEY` or `CONVEX_SELF_HOSTED_URL` is set, or `CONVEX_DEPLOYMENT` names a cloud deployment, in the shell, `.env.local` or `.env` (the places Convex reads), because it pushes functions and sets env vars there. It also refuses while the last launch's recorded servers are still running.
+`set -a; . ./.env.local` exports everything in `.env.local` into the build and Playwright env, and this is intended for the anonymous local Convex loop. Launch refuses to start when `CONVEX_DEPLOY_KEY`, `CONVEX_DEPLOYMENT_TOKEN` or `CONVEX_SELF_HOSTED_URL` is set, or `CONVEX_DEPLOYMENT` names a cloud deployment, as Convex resolves them from the shell, `.env.local` and `.env`, because it pushes functions and sets env vars there. It also refuses while the last launch's recorded servers are still running.
 
-`next build` can rewrite `nextjs/next-env.d.ts`. That file is generated. Do not commit it. Cleanup restores it only when it was unchanged before the build, and otherwise leaves it for you.
+`next build` can rewrite `nextjs/next-env.d.ts`. That file is generated. Do not commit it. Cleanup restores it only when it was clean before the build and nobody has changed it since, and otherwise leaves it for you.
 
 If `git status` shows `convex/_generated` drift after `convex dev --once`, the committed copy is stale. Report it. Do not include it in this skill's change.
 
@@ -271,9 +273,11 @@ for name in next convex; do
   kill_tree "$pid"
 done
 
-if [[ -f "$EVIDENCE/next-env.clean" ]] && ! git diff --quiet -- nextjs/next-env.d.ts; then
+built="$EVIDENCE/next-env.built"
+if [[ -f "$built" && "$(git hash-object nextjs/next-env.d.ts)" == "$(cat "$built")" ]]; then
   git checkout -- nextjs/next-env.d.ts
 fi
+rm -f "$built"
 git status --short -- nextjs/next-env.d.ts convex/_generated
 echo "evidence remains at $EVIDENCE"
 ```
