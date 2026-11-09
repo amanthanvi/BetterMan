@@ -257,6 +257,8 @@ export default defineSchema({
     descNorm: v.string(),
     searchText: v.string(),
     snippetText: v.string(),
+    // The page's B4 popcon prior (#397): breaks ties between equally ranked hits.
+    popularityScore: v.optional(v.number()),
   })
     .index("by_releaseId_and_nameNorm", ["releaseId", "nameNorm"])
     .index("by_releaseId_and_section_and_nameNorm", [

@@ -146,6 +146,7 @@ it("combines package batches, symbols, signatures, optional arguments and provid
       providers: await ctx.db.query("manPageProviders").withIndex("by_releaseId_and_externalId", q => q.eq("releaseId", releaseId)).take(2),
       aliasProviders: await ctx.db.query("manPageAliasProviders").withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", releaseId)).take(2),
       packages: await ctx.db.query("licensePackages").withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", releaseId)).take(2),
+      search: await ctx.db.query("manPageSearchDocuments").withIndex("by_releaseId_and_nameNorm", (q) => q.eq("releaseId", releaseId)).take(3),
     }));
     expect(state.release).toMatchObject({ sealed: true, indexablePageCount: 1, uploadedPackageBatchCount: 1 });
     expect(state.input).toMatchObject({ status: "ready", extractorVersion: 123456 });
@@ -156,6 +157,8 @@ it("combines package batches, symbols, signatures, optional arguments and provid
     expect(state.providers).toMatchObject([{sourcePackage: "alternate-tar"}]);
     expect(state.aliasProviders).toMatchObject([{targetPackage: "alternate-tar"}]);
     expect(state.packages.map((pkg) => pkg.packageName)).toEqual(["tar"]);
+    // Search ranks ties by the page's popularity prior (#397).
+    expect(state.search.map((doc) => [doc.name, doc.popularityScore])).toEqual([["tar", 5000]]);
   } finally {
     vi.useRealTimers();
   }
@@ -178,6 +181,8 @@ it("rejects missing/contradictory demand fields and refuses to seal a wrong tier
   await expect(t.mutation(internal.ingest.insertPages, { datasetReleaseId: "demand", pages: [{ ...page, indexable: true, popularityScore: 100 }] })).rejects.toThrow("INVALID_INDEX_POLICY");
   const rows = [page, { ...page, externalId: "two", name: "two" }].map(p => ({ ...p, indexable: false, popularityScore: 0 }));
   await t.mutation(internal.ingest.insertPages, { datasetReleaseId: "demand", pages: rows });
+  expect((await t.run(ctx => ctx.db.query("manPageSearchDocuments").withIndex("by_releaseId_and_nameNorm", q => q.eq("releaseId", releaseId)).take(3)))
+    .map(doc => doc.popularityScore)).toEqual([0, 0]);
   await expect(t.mutation(internal.ingest.activateRelease, { datasetReleaseId: "demand", stage: "staging", activatedAt: "now" })).rejects.toThrow("RELEASE_MANIFEST_INCOMPLETE");
   expect((await t.run(ctx => ctx.db.get(releaseId)))?.sealed).not.toBe(true);
 });

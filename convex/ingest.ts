@@ -543,6 +543,7 @@ export const insertPages = internalMutation({
         descNorm: page.description.toLowerCase(),
         searchText: compactManPageSearchText(page),
         snippetText: truncateText(page.snippetText, MAX_SNIPPET_TEXT_CHARS),
+        popularityScore: page.popularityScore,
       });
       await persistOptionSignature(ctx, pageId, page.options, page.extractorVersion ?? null);
       await insertOptionFlags(ctx, { releaseId: release._id, pageId, page, rows: optionFlagRows(page.options) });
@@ -660,6 +661,7 @@ export const insertStoredPages = internalMutation({
         descNorm: page.description.toLowerCase(),
         searchText: compactManPageSearchText(page),
         snippetText: truncateText(page.snippetText, MAX_SNIPPET_TEXT_CHARS),
+        popularityScore: page.popularityScore,
       });
       if (page.optionsSignature !== undefined) await persistPackedSignature(ctx, pageId, page.optionsSignature, page.extractorVersion ?? null);
       await insertOptionFlags(ctx, { releaseId: release._id, pageId, page, rows: page.optionFlags ?? [] });
