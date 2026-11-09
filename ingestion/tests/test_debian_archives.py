@@ -125,8 +125,6 @@ def test_oversized_page_is_recorded_before_archive_parse_gate(archive_workspace,
     monkeypatch.setattr(ingest_runner, "MAX_STORED_PAGE_BYTES", 10_000)
     monkeypatch.setattr(pipeline, "ProcessPoolExecutor", ThreadPoolExecutor)
     monkeypatch.setattr(debian_publish, "_ingest_worker_count", lambda: 1)
-    sources = w.sources
-    w.sources = lambda: (item for item in sources() if item[2] in {"salt", "shared"})
 
     class NoUpload:
         def post(self, *args):
@@ -337,6 +335,102 @@ def test_archive_publisher_uses_bounded_pipeline_and_declares_every_provider(
         == "provider-high"
     )
     assert any(path == "activate" for path, _ in calls)
+
+
+@pytest.mark.parametrize("failure", ["parse", "oversized"])
+def test_archive_publish_drops_aliases_to_failed_targets(
+    archive_workspace, monkeypatch, caplog, failure
+):
+    import json
+    from concurrent.futures import ThreadPoolExecutor
+
+    from ingestion import debian_publish, ingest_runner
+    from ingestion.debian_indexes import PINS
+
+    obj = archive_workspace
+    obj.pins = json.loads(PINS.read_text())
+    # Keep a single rejected page below the real 2% parse gate.
+    obj.store.db.execute(
+        "WITH RECURSIVE n(i) AS (VALUES(1) UNION ALL SELECT i+1 FROM n WHERE i<60) "
+        "INSERT INTO entries SELECT pkg,'usr/share/man/man1/healthy-'||i||'.1',kind,target,file "
+        "FROM entries,n WHERE pkg='provider-low' AND path LIKE '%target.1.gz'"
+    )
+    monkeypatch.setattr(pipeline, "ProcessPoolExecutor", ThreadPoolExecutor)
+    monkeypatch.setattr(debian_publish, "_ingest_worker_count", lambda: 1)
+    monkeypatch.setattr(debian_publish, "_upload_worker_count", lambda: 1)
+    if failure == "oversized":
+        monkeypatch.setattr(ingest_runner, "MAX_STORED_PAGE_BYTES", 10_000)
+    sources = obj.sources
+
+    def reject_target():
+        for pkg, path, name, section, alias, raw in sources():
+            if name == "target" and not alias:
+                raw = (
+                    b".so unavailable.1\n"
+                    if failure == "parse"
+                    else b".TH TARGET 1\n.SH NAME\ntarget - large\n.SH BODY\n" + b"long " * 4000
+                )
+            yield pkg, path, name, section, alias, raw
+
+    monkeypatch.setattr(obj, "sources", reject_target)
+    calls, targets = [], set()
+
+    class Client:
+        def post(self, path, payload):
+            calls.append((path, payload))
+            if path == "/ingest/pages/storage":
+                targets.update(
+                    (p["name"], p["section"], p["sourcePackage"]) for p in payload["pages"]
+                )
+                return {"inserted": len(payload["pages"]), "skipped": 0}
+            if path == "/ingest/aliases":
+                for alias in payload["aliases"]:
+                    # insertAliases checks exact package identity even for providerOnly rows.
+                    target = (alias["targetName"], alias["targetSection"], alias["targetPackage"])
+                    if target not in targets:
+                        raise RuntimeError("ALIAS_TARGET_NOT_FOUND")
+            return {}
+
+        def activate_release(self, payload):
+            calls.append(("activate", payload))
+
+    debian_publish.publish_workspace(
+        obj, Client(), activate=True, dataset_stage="staging", git_sha="fixture", sample=True
+    )
+    release = next(body for path, body in calls if path == "/ingest/release")
+    pages = [p for path, body in calls if path == "/ingest/pages/storage" for p in body["pages"]]
+    aliases = [a for path, body in calls if path == "/ingest/aliases" for a in body["aliases"]]
+    assert release["providerCount"] == sum(bool(p.get("providerOnly")) for p in pages) + len(
+        aliases
+    )
+    assert release["aliasCount"] == sum(not a["providerOnly"] for a in aliases)
+    assert len(release["packageManifest"]["parseFailures"]) == 1
+    assert all(a["targetName"] != "target" for a in aliases)
+    events = [json.loads(record.message) for record in caplog.records]
+    dropped = [e for e in events if e["event"] == "alias_target_dropped"]
+    assert {e["name"] for e in dropped} == {"cross"}
+    assert all(
+        e["targetName"] == "target" and e["targetPackage"] == "provider-low" for e in dropped
+    )
+    assert calls[-1][0] == "activate"
+
+
+def test_archive_alias_with_unexplained_missing_target_fails_closed(archive_workspace):
+    from ingestion.ingest_runner import _PageSpool
+
+    obj = archive_workspace
+    sources = obj.sources
+
+    def inconsistent_sources():
+        yield from sources()
+        obj.alias_candidates[0]["targetPackage"] = "unaccounted-for-package"
+
+    obj.sources = inconsistent_sources
+    with _PageSpool(obj.root / "inconsistent.sqlite3") as spool:
+        with pytest.raises(
+            RuntimeError, match="neither parsed nor rejected.*unaccounted-for-package"
+        ):
+            pipeline.parse_workspace(obj, spool, workers=1)
 
 
 def test_debian_publisher_uploads_notices_over_one_mib_whole(archive_workspace, monkeypatch):
@@ -1213,15 +1307,17 @@ def test_published_alias_owner_is_its_served_target_package(
         assert obj.require_command_owners() == {"gawk": "provider-low"}
 
 
+@pytest.mark.parametrize("distro", ["debian", "ubuntu", "fedora", "arch", "alpine"])
 @pytest.mark.parametrize("alias_route_page", [False, True])
 def test_alias_owner_requires_its_exact_target_to_parse(
-    archive_workspace, tmp_path, monkeypatch, alias_route_page
+    archive_workspace, tmp_path, monkeypatch, alias_route_page, distro
 ):
     from dataclasses import replace
 
     from ingestion.ingest_runner import _PageSpool, _require_command_pages
 
     obj = archive_workspace
+    obj.distro = distro
     obj.store.db.execute("DELETE FROM entries WHERE kind='control' OR pkg='gawk'")
     if alias_route_page:
         obj.store.db.execute(
@@ -1253,7 +1349,7 @@ def test_alias_owner_requires_its_exact_target_to_parse(
         assert len(failures) == 1 and failures[0]["package"] == "provider-high"
         assert obj.published_route_owners[("shared", "1")] == "provider-low"
         assert not any(a.name == "gawk" for a in obj.aliases)
-        assert all(a["providerOnly"] for a in obj.alias_providers if a["name"] == "gawk")
+        assert not any(a["targetPackage"] == "provider-high" for a in obj.alias_providers)
         if alias_route_page:
             assert obj.published_route_owners[("gawk", "1")] == "provider-low"
             with pytest.raises(RuntimeError, match="wrong command-page owner.*gawk"):

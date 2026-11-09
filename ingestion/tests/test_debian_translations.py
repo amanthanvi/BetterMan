@@ -323,6 +323,45 @@ def test_publish_declares_a_staging_translation_with_documented_versions(tmp_pat
     assert result.published
 
 
+@pytest.mark.parametrize("failure", ["parse", "oversized"])
+def test_translation_drops_alias_to_rejected_target(tmp_path, monkeypatch, caplog, failure):
+    from concurrent.futures import ThreadPoolExecutor
+
+    from ingestion import ingest_runner
+
+    caplog.set_level("INFO", logger="betterman.ingestion")
+    obj = workspace(
+        tmp_path,
+        {
+            "manpages-de": (
+                {
+                    "usr/share/man/de/man1/tar.1.gz": TAR_DE,
+                    "usr/share/man/de/man1/gtar.1.gz": b".so man1/tar.1\n",
+                },
+                10,
+            )
+        },
+    )
+    monkeypatch.setattr(l10n, "ProcessPoolExecutor", ThreadPoolExecutor)
+    sources = obj.translated_sources
+
+    def reject_target(locale):
+        for pkg, path, name, section, alias, target, raw in sources(locale):
+            if name == "tar":
+                raw = b".so unavailable.1\n" if failure == "parse" else raw
+            yield pkg, path, name, section, alias, target, raw
+
+    monkeypatch.setattr(obj, "translated_sources", reject_target)
+    if failure == "oversized":
+        monkeypatch.setattr(ingest_runner, "MAX_STORED_PAGE_BYTES", 1)
+    with ingest_runner._PageSpool(tmp_path / "pages.sqlite3") as spool:
+        aliases, failures, _ = l10n.parse_translation(obj, "de", spool, workers=1)
+        assert len(failures) == 1
+        assert not aliases and not list(spool.refs())
+    events = [json.loads(record.message) for record in caplog.records]
+    assert any(e["event"] == "alias_unresolved" and "gtar.1" in e["path"] for e in events)
+
+
 def test_publish_uploads_translated_package_notices_over_one_mib_whole(tmp_path, monkeypatch):
     # Same stored-notice path as the archive publisher: Debian notices can exceed 1 MiB.
     obj = workspace(tmp_path, {"manpages-de": ({"usr/share/man/de/man1/tar.1.gz": TAR_DE}, 10)})

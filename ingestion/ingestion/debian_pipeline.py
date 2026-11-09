@@ -40,6 +40,7 @@ from ingestion.ingest_runner import (
     _NAME_RE,
     _AliasRow,
     _bounded_futures,
+    _log,
     _PageRow,
     _PageSpool,
     _parse_source,
@@ -928,6 +929,7 @@ def parse_workspace(workspace: Workspace, spool: _PageSpool, *, workers=4):
     providers = set()
     seen_routes = set()
     failed = []
+    rejected_targets = set()
     with ProcessPoolExecutor(max_workers=workers) as executor:
         for item, future in _bounded_futures(
             executor, parse_archive_source, iter(inputs()), workers * 2
@@ -941,11 +943,26 @@ def parse_workspace(workspace: Workspace, spool: _PageSpool, *, workers=4):
                 seen_routes.add(key)
             except Exception as exc:  # noqa: BLE001
                 failed.append({"package": item.package, "path": item.path, "error": str(exc)})
+                rejected_targets.add((item.name, item.section, item.package))
     refs = list(spool.refs())
     canonical = {(p.name, p.section): p for p in refs if p.page_id not in providers}
     parsed_targets = {(p.name, p.section, p.source_package) for p in refs}
-    by_route = {}
+    rejected_targets.update(
+        (match[1].lower(), match[2].lower(), item["package"])
+        for item in workspace.missing
+        if (match := MAN_PATH.fullmatch(item["path"]))
+    )
+    publishable_aliases = []
     for item in workspace.alias_candidates:
+        target = (item["targetName"], item["targetSection"], item["targetPackage"])
+        if target in parsed_targets:
+            publishable_aliases.append(item)
+        elif target in rejected_targets:
+            _log("alias_target_dropped", level=logging.WARNING, **item)
+        else:
+            raise RuntimeError(f"Alias target was neither parsed nor rejected: {item}")
+    by_route = {}
+    for item in publishable_aliases:
         key = (item["name"], item["section"])
         # A different package's page cannot stand in for a failed alias target.
         if (
@@ -973,7 +990,7 @@ def parse_workspace(workspace: Workspace, spool: _PageSpool, *, workers=4):
             "providerOnly": (a["name"], a["section"]) not in alias_keys
             or by_route.get((a["name"], a["section"])) != a
         }
-        for a in workspace.alias_candidates
+        for a in publishable_aliases
     ]
     workspace.published_route_owners = {
         (p.name, p.section): p.source_package for p in refs if p.page_id not in providers
