@@ -337,6 +337,7 @@ export async function prune(run, options, { log = console.log, retry = {} } = {}
   }))
 
   let pruned = []
+  const failed = []
   if (options.apply) {
     const results = await mapWithConcurrency(selection.prune, options.concurrency, async (release) => {
       try {
@@ -344,7 +345,11 @@ export async function prune(run, options, { log = console.log, retry = {} } = {}
         log(JSON.stringify({ event: 'prune_release', ...result }))
         return { release, result }
       } catch (error) {
-        if (!isDerivedPinnedError(error)) throw error
+        if (!isDerivedPinnedError(error)) {
+          const failure = { datasetReleaseId: release.datasetReleaseId, error: describeError(error) }
+          log(JSON.stringify({ event: 'prune_release_failed', ...failure }))
+          return { release, result: null, failure }
+        }
         const skipped = { ...release, reason: 'derived dependency pin acquired after preview' }
         log(JSON.stringify({ event: 'prune_skipped', datasetReleaseId: release.datasetReleaseId, reason: skipped.reason }))
         return { release: skipped, result: null }
@@ -352,15 +357,17 @@ export async function prune(run, options, { log = console.log, retry = {} } = {}
     })
     for (const entry of results) {
       if (entry.result) pruned.push(entry.result)
+      else if (entry.failure) failed.push(entry.failure)
       else selection.skipped.push(entry.release)
     }
-    const raced = new Set(results.filter((entry) => !entry.result).map((entry) => entry.release.datasetReleaseId))
+    const raced = new Set(results.filter((entry) => !entry.result && !entry.failure).map((entry) => entry.release.datasetReleaseId))
     selection.prune = selection.prune.filter((release) => !raced.has(release.datasetReleaseId))
   }
   // The sweep walks the whole blob table, so it is opt-in for previews.
   const orphans = options.sweepOrphans ? await cleanupOrphanBlobs(run, { dryRun: !options.apply, log, retry }) : null
   const manifestFiles = options.sweepOrphans ? await cleanupOrphanManifestFiles(run, { dryRun: !options.apply, log, retry }) : null
   const derivedCaches = options.sweepOrphans ? await cleanupOrphanDerivedCaches(run, { dryRun: !options.apply, log, retry }) : null
+  if (failed.length) throw new Error(`Failed to prune ${failed.length} release(s): ${failed.map(entry => entry.datasetReleaseId).join(', ')}`)
   return { inactive: inactive.length, selection, pruned, orphans, manifestFiles, derivedCaches }
 }
 

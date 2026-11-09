@@ -215,6 +215,34 @@ test('bounded concurrency preserves order and stops handing out work after a fai
   await assert.rejects(mapWithConcurrency([1, 2], 1, async () => { throw null }), (error) => error === null)
 })
 
+test('exhausted release retries are logged, later releases and sweeps finish, then pruning fails', async () => {
+  const calls = []
+  const logs = []
+  const run = async (name, args) => {
+    calls.push([name, args])
+    if (name === 'maintenance:previewInactiveReleases') return { inactive: ['broken', 'later', 'also-broken'].map(datasetReleaseId =>
+      release({ datasetReleaseId, ingestedAt: at(20), pruning: true })), isDone: true }
+    if (name === 'maintenance:deleteInactiveReleaseBatch') {
+      if (args.datasetReleaseId !== 'later') throw new Error('system operations timeout')
+      return { datasetReleaseId: 'later', deleted: 1, deletedRelease: true, hasMore: false }
+    }
+    return { scanned: 0, orphans: 0, deleted: 0, isDone: true }
+  }
+  await assert.rejects(prune(run, parseOptions({ BETTERMAN_PRUNE_APPLY: 'true', BETTERMAN_PRUNE_CONCURRENCY: '1' }, now), {
+    log: line => logs.push(JSON.parse(line)), retry: noPause,
+  }), /Failed to prune 2 release\(s\): broken, also-broken/)
+  assert.deepEqual(calls.filter(([name, args]) => name === 'maintenance:deleteInactiveReleaseBatch' && args.datasetReleaseId === 'broken')
+    .map(([, args]) => args.maxDocs), [1000, 500, 250, 125, 62, 31, 15, 7, 5, 5])
+  assert.deepEqual(logs.filter(row => row.event === 'prune_release_failed'), [
+    { event: 'prune_release_failed', datasetReleaseId: 'broken', error: 'system operations timeout' },
+    { event: 'prune_release_failed', datasetReleaseId: 'also-broken', error: 'system operations timeout' },
+  ])
+  assert.deepEqual(logs.filter(row => row.event === 'prune_release').map(row => row.datasetReleaseId), ['later'])
+  for (const name of ['cleanupOrphanContentBlobsBatch', 'cleanupOrphanManifestFilesBatch', 'cleanupOrphanDerivedCachesBatch']) {
+    assert.ok(calls.some(([called]) => called === `maintenance:${name}`))
+  }
+})
+
 test('dry run never deletes or sweeps, apply deletes only the selected releases then sweeps', async () => {
   const inactive = [
     release({ ingestedAt: at(12), datasetReleaseId: 'legacy', manifestBasis: 'legacy_unverified_aliases', manifestVerified: false, manifestError: 'LEGACY_ALIAS_EXPECTATION_UNKNOWN' }),
