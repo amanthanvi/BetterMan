@@ -20,7 +20,7 @@ URL: `https://betterman.sh`
 
 ## First comment
 
-Hi HN. BetterMan is a web reader for Unix manual pages. I've been working on it for a while; version 2 is a large rework, which is why I'm posting it now. It has 107,143 pages from about 17,300 Debian trixie (13) packages, plus Ubuntu (104,763), Fedora (10,271), Arch (12,789), Alpine (12,163), FreeBSD (12,096) and macOS (447). There are no accounts. Bookmarks, history and reading preferences stay in your browser.
+Hi HN. BetterMan is a web reader for Unix manual pages. I've been working on it for a while; version 2 is a large rework, which is why I'm posting it now. It has 107,143 pages from about 17,300 Debian trixie (13) packages, plus full archive imports of Ubuntu (104,763), Fedora (87,890), Arch (49,306) and Alpine (41,920), FreeBSD (12,096) and macOS (447). There are no accounts. Bookmarks, history and reading preferences stay in your browser.
 
 **Why.** I look up flags constantly, and the existing options each do part of the job. man7.org and manpages.debian.org are faithful but plain. tldr shows the examples but not the manual. explainshell parses a command line but is a separate tool. I wanted one place where the exact manual is the base, and everything I add sits on top of it, marked as mine.
 
@@ -45,7 +45,7 @@ Hi HN. BetterMan is a web reader for Unix manual pages. I've been working on it 
 **Limits.**
 
 - Translations cover 9,552 pages, so most pages are English only.
-- Ubuntu 24.04 is a full archive import like Debian, while Fedora 44, Arch and Alpine 3.23 are curated sets of commonly used packages (about 10,000–13,000 pages each) for now, with full imports still in progress. FreeBSD (15.1) is base-system manuals. macOS is limited to pages whose license allows it.
+- Ubuntu 24.04, Fedora 44, Arch and Alpine 3.23 are full archive imports like Debian. FreeBSD (15.1) is base-system manuals. macOS is limited to pages whose license allows it.
 - One current release per distro. There is no history, so you can't read what tar(1) said in an older release.
 - Portability compares distros, not versions of a distro.
 - Explain covers a defined shell grammar. It will refuse some valid lines.

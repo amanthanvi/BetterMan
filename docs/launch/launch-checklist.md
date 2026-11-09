@@ -14,12 +14,12 @@ The production numbers below were filled into the drafts on 2026-11-01. They wer
 | --- | --- | --- |
 | Debian pages, release | 107,143 pages from about 17,300 packages (17,325 per-package license records), trixie (13), the full main archive | `show-hn.md`, `changelog-post.md` |
 | Ubuntu | 104,763 pages, 24.04 noble, full main and universe archive | same |
-| Fedora | 10,271 pages, release 44, curated set | same |
-| Arch | 12,789 pages, curated set | same |
-| Alpine | 12,163 pages, 3.23, curated set | same |
+| Fedora | 87,890 pages, release 44, full archive | same |
+| Arch | 49,306 pages, full archive | same |
+| Alpine | 41,920 pages, 3.23, full main and community archive | same |
 | FreeBSD | 12,096 pages, 15.1, base system | same |
 | macOS | 447 pages | same |
-| Other Linux coverage | Ubuntu is a full import like Debian; Fedora, Arch and Alpine are curated sets for now, with full imports in progress | same |
+| Other Linux coverage | Ubuntu, Fedora, Arch and Alpine are full archive imports like Debian (B2 #394, promoted 2026-11-01 and 2026-11-09) | same |
 | Generation model | DeepSeek V4.1 Flash (`deepseek-v4.1-flash`), as the page's generated mark shows it | same |
 | Indexing policy | See step 6 | `show-hn.md` |
 | Translations | 6 languages, 9,552 pages from Debian's manpages-l10n packages | same |
@@ -34,7 +34,7 @@ Three values are still open. They are filled at posting time:
 
 Before posting, search the drafts for two opening curly braces; only these three may remain.
 
-**Ubuntu, Fedora, Arch and Alpine.** The roadmap makes all four full; that is [B2 (#394)](https://github.com/amanthanvi/BetterMan/issues/394). On 2026-11-01 production reported Ubuntu as a full import and Fedora, Arch and Alpine as curated sets. The drafts say that. Re-read the counts on launch day and change the sentence if a full import has landed, never from the plan.
+**Ubuntu, Fedora, Arch and Alpine.** The roadmap makes all four full; that is [B2 (#394)](https://github.com/amanthanvi/BetterMan/issues/394). On 2026-11-09 production reported all four as full archive imports (Ubuntu since 2026-10-31; Fedora, Arch and Alpine promoted 2026-11-09), and #394 is closed. The drafts say that. Re-read the counts on launch day: the monthly cron refreshes them, and Alpine's pins must be refreshed before each run (`ingestion/README.md`).
 
 ## 0. Gate: confirm the launch conditions
 
@@ -100,7 +100,7 @@ Goal: know which release each distro serves in production, which one waits in st
 Source: [multi-distro-ops.md](../runbooks/multi-distro-ops.md#debian-archive-imports-explicit-approval-switches). A full release stays in staging until the owner authorizes a separate promotion-only dispatch. Leave `BETTERMAN_DEBIAN_FULL_PROMOTE` unset.
 
 - [ ] **Save the rollback target first.** The current Debian prod ID from step 2 (the curated release) goes in the issue. Without it step 8 cannot run. The workflow also records it in its summary, but save your own copy.
-- [ ] Do not prune before launch. If a prune is unavoidable, preview first (`gh workflow run prune-releases`, no `apply`) and use `-f apply=true -f keep_per_distro=2` so the curated Debian release survives as a rollback target ([multi-distro-ops.md](../runbooks/multi-distro-ops.md#prune-superseded-releases-github-actions)).
+- [x] Prune before launch: done 2026-11-09 by owner decision, with `keep_per_distro=1` after a preview (runs 42625562417 and 42625825050). It removed superseded September and October releases and two abandoned incomplete uploads. Kept: one verified inactive release per distro, including a curated Debian release as a rollback target, plus releases whose derived data is still pinned, such as the 2026-10-31 full Debian and Ubuntu. Preview again before any further prune ([multi-distro-ops.md](../runbooks/multi-distro-ops.md#prune-superseded-releases-github-actions)).
 - [ ] **Inspect the staging release** against the run's evidence: page count, packages, storage, reads, license coverage and cost, in the format of [b1-debian-evidence.md](../roadmap/b1-debian-evidence.md). Record the exact staging ID. The Debian figures in the placeholders table above came from this inspection and the live `/api/v1/info`.
 - [ ] **nc policy.** Full Debian switches `nc(1)` from netcat-openbsd to netcat-traditional. The OpenBSD manual must stay reachable at `/man/nc_openbsd/1` and `/man/nc/1?pkg=netcat-openbsd`. The runbook asks for this check before approval; see [b1-debian-nc-owner.md](../roadmap/b1-debian-nc-owner.md). Since staging is not publicly readable, verify the audit evidence before promotion and the two URLs on prod immediately after.
 - [ ] **Inspect all seven staging pointers.** Promote-only dispatches attempt every distro and ignore selectors ([multi-distro-ops.md](../runbooks/multi-distro-ops.md)). Use the `convex:related-check` output from step 2.
