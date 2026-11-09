@@ -10,4 +10,4 @@ Open a bare name such as `/tar`, a section form such as `/tar.1`, or a flag form
 
 ## Proves
 
-`/tar` answers 308 to `/man/tar`, and the browser lands on `/man/tar/1` with the heading tar(1). `/printf` lands on the section picker. A flag URL lands on that option's row. `/licenses` stays the licenses page.
+`/tar` answers 307 to `/man/tar/1`, the preferred section, and shows the heading tar(1). `/printf` goes to `/man/printf/1`; the explicit picker `/man/printf` still lists every section. `/tar.1` answers 308 to the page. A flag URL lands on that option's row. `/licenses` stays the licenses page.

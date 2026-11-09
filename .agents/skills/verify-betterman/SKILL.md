@@ -42,18 +42,22 @@ export PATH="${NVM_DIR:-$HOME/.nvm}/versions/node/v26.5.1/bin:${HOME}/.local/bin
 cd "$(git rev-parse --show-toplevel)"
 REPO="$(readlink -f "$(pwd)")"
 
-# Launch pushes functions and sets env vars on whichever deployment Convex selects.
-# Stop unless that is the anonymous (or local) loop.
-deployment="${CONVEX_DEPLOYMENT:-$({ sed -n 's/^CONVEX_DEPLOYMENT=//p' .env.local 2>/dev/null || true; } | head -n 1)}"
-if [[ -n "${CONVEX_DEPLOY_KEY:-}" || ( -n "$deployment" && ! "$deployment" =~ ^(anonymous|local): ) ]]; then
-  echo "a cloud Convex deployment is configured; launch only on the anonymous local loop" >&2
+# Launch pushes functions and sets env vars on the deployment Convex selects from the
+# shell, then .env.local, then .env. Stop unless that is the anonymous or local loop.
+convex_setting() {
+  local value="${!1:-}" file
+  for file in .env.local .env; do
+    [[ -z "$value" ]] || break
+    value="$({ sed -nE "s/^[[:space:]]*(export[[:space:]]+)?$1[[:space:]]*=[[:space:]]*[\"']?//p" "$file" 2>/dev/null || true; } | head -n 1)"
+  done
+  printf '%s' "$value"
+}
+deployment="$(convex_setting CONVEX_DEPLOYMENT)"
+if [[ -n "$(convex_setting CONVEX_DEPLOY_KEY)" || -n "$(convex_setting CONVEX_SELF_HOSTED_URL)" ]] ||
+  [[ -n "$deployment" && ! "$deployment" =~ ^(anonymous|local): ]]; then
+  echo "a cloud or self-hosted Convex deployment is configured; launch only on the anonymous local loop" >&2
   exit 2
 fi
-
-EVIDENCE="$(pwd)/.agents/skills/verify-betterman/evidence"
-rm -rf "$EVIDENCE"
-mkdir -p "$EVIDENCE"
-chmod 700 "$EVIDENCE"
 
 # The pid's working directory: /proc on Linux, lsof on macOS.
 pid_cwd() {
@@ -82,6 +86,22 @@ kill_tree() {
   done
   kill "$pid" 2>/dev/null || true
 }
+
+EVIDENCE="$(pwd)/.agents/skills/verify-betterman/evidence"
+# A recorded server that is still up belongs to the last launch, and replacing the
+# evidence would lose its pid. Run Clean up first.
+for name in next convex; do
+  file="$EVIDENCE/$name.pid"
+  [[ -f "$file" ]] || continue
+  pid="$(cat "$file")"
+  if kill -0 "$pid" 2>/dev/null && in_this_checkout "$pid"; then
+    echo "the last launch's $name (pid $pid) is still running; run Clean up first" >&2
+    exit 2
+  fi
+done
+rm -rf "$EVIDENCE"
+mkdir -p "$EVIDENCE"
+chmod 700 "$EVIDENCE"
 
 while read -r pid; do
   [[ -n "$pid" ]] || continue
@@ -130,6 +150,8 @@ export NEXT_PUBLIC_CONVEX_URL="$CONVEX_URL"
 export PUBLIC_BASE_URL="http://127.0.0.1:3000"
 CONVEX_HTTP_URL="${CONVEX_SITE_URL:-$VITE_CONVEX_SITE_URL}" node scripts/seed-convex-e2e.mjs 2>&1 | tee "$EVIDENCE/seed.log"
 
+# Cleanup undoes Next's rewrite of this generated file only if it was clean before the build.
+if git diff --quiet -- nextjs/next-env.d.ts; then touch "$EVIDENCE/next-env.clean"; fi
 rm -rf nextjs/.next
 pnpm next:build 2>&1 | tee "$EVIDENCE/build.log"
 
@@ -144,9 +166,9 @@ done
 curl -fsS --max-time 2 http://127.0.0.1:3000/robots.txt >/dev/null
 ```
 
-`set -a; . ./.env.local` exports everything in `.env.local` into the build and Playwright env, and this is intended for the anonymous local Convex loop. Launch refuses to start when `CONVEX_DEPLOY_KEY` is set or `CONVEX_DEPLOYMENT` (from the shell or `.env.local`) names a cloud deployment, because it pushes functions and sets env vars there.
+`set -a; . ./.env.local` exports everything in `.env.local` into the build and Playwright env, and this is intended for the anonymous local Convex loop. Launch refuses to start when `CONVEX_DEPLOY_KEY` or `CONVEX_SELF_HOSTED_URL` is set, or `CONVEX_DEPLOYMENT` names a cloud deployment, in the shell, `.env.local` or `.env` (the places Convex reads), because it pushes functions and sets env vars there. It also refuses while the last launch's recorded servers are still running.
 
-`next build` can rewrite `nextjs/next-env.d.ts`. That file is generated. Do not commit it. Cleanup restores it when the diff is only that rewrite.
+`next build` can rewrite `nextjs/next-env.d.ts`. That file is generated. Do not commit it. Cleanup restores it only when it was unchanged before the build, and otherwise leaves it for you.
 
 If `git status` shows `convex/_generated` drift after `convex dev --once`, the committed copy is stale. Report it. Do not include it in this skill's change.
 
@@ -249,10 +271,10 @@ for name in next convex; do
   kill_tree "$pid"
 done
 
-rm -rf nextjs/test-results nextjs/playwright-report
-if ! git diff --quiet -- nextjs/next-env.d.ts; then
+if [[ -f "$EVIDENCE/next-env.clean" ]] && ! git diff --quiet -- nextjs/next-env.d.ts; then
   git checkout -- nextjs/next-env.d.ts
 fi
+git status --short -- nextjs/next-env.d.ts convex/_generated
 echo "evidence remains at $EVIDENCE"
 ```
 
