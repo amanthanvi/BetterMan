@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Ingestion: record dangling Fedora and Arch notice-file links as visible license gaps after verified resolution (Alpine, which has no file index, still fails closed), retaining other package notices or labelled standard texts; fixes Arch python-dkim's stale pre-PEP-639 license link without guessing a replacement path.
 - Refresh Alpine's superseded APKINDEX snapshots and reviewed whole-file package pins; identify missing pinned APKs with fail-closed refresh guidance and rehearse the full publisher locally without uploads.
 
 - Full archive imports drop and log aliases whose exact target package/page was rejected before upload, keeping provider and alias declarations consistent; failed alias uploads now name the batch routes.

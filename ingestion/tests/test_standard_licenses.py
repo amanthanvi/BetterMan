@@ -473,15 +473,61 @@ def test_debian_and_ubuntu_still_fail_without_copyright(workspace, distro):
         license_text(workspace, "missing")
 
 
-def test_missing_individual_notice_does_not_trigger_standard_substitution(workspace):
-    from ingestion.debian_archives import MissingSource
+@pytest.mark.parametrize("distro", ["fedora", "arch", "alpine"])
+@pytest.mark.parametrize("other_notice", [False, True])
+def test_missing_notice_link_uses_notice_or_labelled_standard_and_shows_gap(
+    workspace, distro, other_notice
+):
     from ingestion.standard_licenses import license_text
 
-    workspace.register(
-        "broken-file", [("usr/share/licenses/broken-file/LICENSE", b"", "missing.txt")]
-    )
+    w = workspace
+    w.distro = distro
+    path = "usr/share/licenses/tool/LICENSE"
+    members = [(path, b"", "missing.txt")]
+    if other_notice:
+        members.append(("usr/share/licenses/tool/NOTICE", b"actual notice", None))
+    w.register("tool", members, license="MIT AND LicenseRef-Private")
+    if distro == "alpine":
+        # Alpine has no file index, so a missing link target still fails closed.
+        from ingestion.debian_archives import MissingSource
+
+        with pytest.raises(MissingSource, match="missing.txt"):
+            license_text(w, "tool")
+        return
+    text = license_text(w, "tool")
+    assert ("actual notice" if other_notice else "canonical MIT text") in text
+    assert w.notice_link_gaps["tool"] == [
+        {"package": "tool", "path": path, "target": "usr/share/licenses/tool/missing.txt"}
+    ]
+    assert "tool:" + path + " -> usr/share/licenses/tool/missing.txt" in text
+    if other_notice:
+        assert "tool" not in getattr(w, "standard_license_metadata", {})
+    else:
+        assert "Standard text for the declared license MIT" in text
+        assert w.unmatched_license_identifiers["tool"] == ["LicenseRef-Private"]
+
+
+@pytest.mark.parametrize("distro", ["debian", "ubuntu", "fedora", "arch", "alpine"])
+def test_direct_missing_notice_stays_strict(workspace, distro):
+    from ingestion.debian_archives import MissingSource
+    from ingestion.fedora_archives import _notice_texts
+
+    workspace.distro = distro
+    workspace.register("tool", [])
     with pytest.raises(MissingSource):
-        license_text(workspace, "broken-file")
+        list(_notice_texts(workspace, "tool", "usr/share/licenses/tool/LICENSE"))
+
+
+@pytest.mark.parametrize("distro", ["debian", "ubuntu"])
+def test_debian_ubuntu_dangling_notice_links_stay_strict(workspace, distro):
+    from ingestion.debian_archives import MissingSource
+    from ingestion.fedora_archives import _notice_texts
+
+    workspace.distro = distro
+    path = "usr/share/licenses/tool/LICENSE"
+    workspace.register("tool", [(path, b"", "missing.txt")])
+    with pytest.raises(MissingSource):
+        list(_notice_texts(workspace, "tool", path))
 
 
 @pytest.mark.parametrize("distro", ["fedora", "arch", "alpine"])
@@ -533,8 +579,11 @@ def test_blocked_shared_text_is_recorded_before_canonical_fallback(workspace):
     ]
 
 
+@pytest.mark.parametrize(
+    ("kind", "target"), [("blocked", "etc/shared-license"), ("link", "usr/share/licenses/absent")]
+)
 def test_publisher_records_standard_provenance_and_remaining_gaps_without_contract_change(
-    tmp_path, monkeypatch
+    tmp_path, monkeypatch, kind, target
 ):
     import dataclasses
     import io
@@ -576,10 +625,24 @@ def test_publisher_records_standard_provenance_and_remaining_gaps_without_contra
                 (
                     package.name,
                     "usr/share/licenses/fixture/BLOCKED",
-                    "blocked",
-                    "etc/shared-license",
+                    kind,
+                    target,
                 ),
             )
+        if kind == "link":
+            # This fixture is Alpine, which has no file index: a missing link target fails closed.
+            from ingestion.debian_archives import MissingSource
+
+            with pytest.raises(MissingSource, match="absent"):
+                debian_publish.publish_workspace(
+                    w,
+                    Client(),
+                    activate=False,
+                    dataset_stage="staging",
+                    git_sha="test",
+                    sample=True,
+                )
+            return
         result = debian_publish.publish_workspace(
             w, Client(), activate=False, dataset_stage="staging", git_sha="test", sample=True
         )
@@ -596,7 +659,7 @@ def test_publisher_records_standard_provenance_and_remaining_gaps_without_contra
             {
                 "package": "fixture",
                 "path": "usr/share/licenses/fixture/BLOCKED",
-                "target": "etc/shared-license",
+                "target": target,
             }
         ]
         assert manifest["standardLicenseTextSource"]["release"] == "v3.29.0"
@@ -614,7 +677,7 @@ def test_publisher_records_standard_provenance_and_remaining_gaps_without_contra
         assert (
             "Missing license identifiers after shared and SPDX sources: LicenseRef-Private" in text
         )
-        assert "fixture:usr/share/licenses/fixture/BLOCKED -> etc/shared-license" in text
+        assert "fixture:usr/share/licenses/fixture/BLOCKED -> " + target in text
     finally:
         w.store.db.close()
         w.owners.close()

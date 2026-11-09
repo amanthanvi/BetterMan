@@ -62,7 +62,10 @@ Fedora/Arch/Alpine record these under `packages[].noticeLinkGaps` alongside
 notices before #489's declared-license standard texts. A package with neither
 notice nor standard text keeps #489's visible warning and recorded identifiers.
 Readable directory/cross-package links within the existing documentation roots
-retain #488 behavior. Dangling links within those roots and Debian/Ubuntu
+retain #488 behavior. [The Arch follow-up](roadmap/b2-arch-missing-notice-evidence.md)
+also records dangling notice-file links within those roots after resolution
+(Fedora and Arch; Alpine has no file index and still fails closed);
+top-level directory aliases keep their existing fallback rules. Debian/Ubuntu
 copyright checks remain strict.
 
 ## Alpine salt(7)

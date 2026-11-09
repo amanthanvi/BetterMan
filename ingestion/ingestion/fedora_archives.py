@@ -348,6 +348,15 @@ def extract(archive, package, root, *, quota=None, **_kwargs):
     return entries
 
 
+def _record_notice_gap(workspace, gap_package, package, path, target):
+    if not hasattr(workspace, "notice_link_gaps"):
+        workspace.notice_link_gaps = {}
+    gap = {"package": package, "path": path, "target": target}
+    gaps = workspace.notice_link_gaps.setdefault(gap_package, [])
+    if gap not in gaps:
+        gaps.append(gap)
+
+
 def _notice_texts(
     workspace,
     package,
@@ -374,12 +383,7 @@ def _notice_texts(
     except BlockedSource as exc:
         if workspace.distro not in {"fedora", "arch", "alpine"}:
             raise
-        if not hasattr(workspace, "notice_link_gaps"):
-            workspace.notice_link_gaps = {}
-        gap = {"package": exc.package, "path": exc.path, "target": exc.target}
-        gaps = workspace.notice_link_gaps.setdefault(gap_package, [])
-        if gap not in gaps:
-            gaps.append(gap)
+        _record_notice_gap(workspace, gap_package, exc.package, exc.path, exc.target)
     except MissingSource as exc:
         key = (exc.package, exc.path)
         if key in seen or len(seen) >= 64:
@@ -404,12 +408,11 @@ def _notice_texts(
             )
         )
         if not children:
-            # A distro's existing verified SPDX fallback may satisfy an absent
-            # top-level directory alias, never a missing individual notice.
+            # Keep the existing top-level directory-alias fallback separate from file gaps.
+            directory_alias = path.startswith("usr/share/licenses/") and path.count("/") == 3
             if (
                 directory_fallback is not None
-                and path.startswith("usr/share/licenses/")
-                and path.count("/") == 3
+                and directory_alias
                 and exc.path.startswith("usr/share/licenses/")
                 and exc.path.count("/") == 3
             ):
@@ -435,6 +438,13 @@ def _notice_texts(
                     )
                     yield text
                     return
+            if workspace.distro in {"fedora", "arch"} and not directory_alias and exc.path != path:
+                # Resolution followed a notice link, but no target file or children exist.
+                # Fedora and Arch index every packaged path, so the target is truly absent.
+                # Alpine has no file index: the target may sit in a package not yet acquired,
+                # so a missing target there still fails closed.
+                _record_notice_gap(workspace, gap_package, package, path, exc.path)
+                return
             raise
         for owner, child in children:
             if notice_path(child):

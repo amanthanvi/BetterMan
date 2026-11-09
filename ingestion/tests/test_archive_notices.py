@@ -128,11 +128,28 @@ def test_dnsconfd_exact_pinned_repair_reads_the_rpm_dist_info_notice(notice_work
     assert fedora_archives.copyright_text(w, "dnsconfd") == "MIT notice"
 
 
-@pytest.mark.parametrize("distro", ["fedora", "arch", "alpine"])
+def test_arch_python_dkim_pep639_notice_survives_dangling_legacy_link(notice_workspace):
+    w = notice_workspace
+    w.distro = "arch"
+    # python-dkim 1.1.8-3, SHA256 8341ba9a30cba5540e48df80daf2f6f751974bf9edeafc20c3ff4ea2bc8f5e48.
+    # These paths and the absolute dangling link match the verified pinned archive.
+    path = "usr/share/licenses/python-dkim/LICENSE"
+    missing = "usr/lib/python3.14/site-packages/dkimpy-1.1.8.dist-info/LICENSE"
+    actual = "usr/lib/python3.14/site-packages/dkimpy-1.1.8.dist-info/licenses/LICENSE"
+    w.register(
+        "python-dkim",
+        [(actual, b"upstream ZLIB notice", None), (path, b"", "/" + missing)],
+        license="ZLIB",
+    )
+    assert arch_archives.copyright_text(w, "python-dkim") == "upstream ZLIB notice"
+    assert w.notice_link_gaps["python-dkim"] == [
+        {"package": "python-dkim", "path": path, "target": missing}
+    ]
+
+
+@pytest.mark.parametrize("distro", ["fedora", "arch"])
 @pytest.mark.parametrize("readable", [False, True])
-def test_missing_notice_file_is_not_hidden_by_other_notices_or_spdx(
-    notice_workspace, distro, readable
-):
+def test_missing_notice_link_is_recorded_beside_other_notices(notice_workspace, distro, readable):
     w = notice_workspace
     w.distro = distro
     members = [("usr/share/licenses/tool/LICENSE", b"", "missing/LICENSE")]
@@ -140,13 +157,26 @@ def test_missing_notice_file_is_not_hidden_by_other_notices_or_spdx(
         members.insert(0, ("usr/share/licenses/tool/NOTICE", b"other notice", None))
     w.register("tool", members)
     w.register("licenses", [("usr/share/licenses/spdx/MIT.txt", b"MIT license", None)])
-    collector = {
-        "arch": arch_archives.copyright_text,
-        "alpine": alpine_archives.copyright_text,
-        "fedora": fedora_archives.copyright_text,
-    }[distro]
+    collector = {"arch": arch_archives.copyright_text, "fedora": fedora_archives.copyright_text}
+    text = collector[distro](w, "tool")
+    if readable:
+        assert "other notice" in text
+    assert w.notice_link_gaps["tool"] == [
+        {
+            "package": "tool",
+            "path": "usr/share/licenses/tool/LICENSE",
+            "target": "usr/share/licenses/tool/missing/LICENSE",
+        }
+    ]
+
+
+def test_alpine_missing_notice_link_still_fails_closed(notice_workspace):
+    # Alpine has no file index, so a missing target may be in a package not yet acquired.
+    w = notice_workspace
+    w.distro = "alpine"
+    w.register("tool", [("usr/share/licenses/tool/LICENSE", b"", "missing/LICENSE")])
     with pytest.raises(MissingSource, match="missing/LICENSE"):
-        collector(w, "tool")
+        alpine_archives.copyright_text(w, "tool")
 
 
 def test_blocked_notice_link_is_recorded_beside_readable_notice(notice_workspace):
