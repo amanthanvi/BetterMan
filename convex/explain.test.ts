@@ -209,6 +209,21 @@ describe('symbol search and ranking', () => {
     expect(result.results.slice(0,3).map(t => t.section)).toEqual(['1', '8', '3']);
     expect(result.results.slice(0,3).every(t => t.name === 'lookup')).toBe(true);
   });
+  it('breaks name-prefix ties by popularity, after exact names and before the long tail (#397)', async () => {
+    const t = await explainFixture();
+    await t.run(async ctx => {
+      const original = await ctx.db.query('manPageSearchDocuments').first();
+      const {_id, _creationTime, ...row} = original!;void _id;void _creationTime;
+      const originalPage = await ctx.db.get(row.pageId);
+      const { _id: pageId, _creationTime: created, ...pageFields } = originalPage!; void pageId; void created;
+      for (const [name, popularityScore] of [['pop', 0], ['popa', 10], ['popular', 5000], ['pop_tail', 9000], ['popb', 2000]] as const) {
+        const pageId = await ctx.db.insert('manPages', { ...pageFields, name, section: '1', externalId: name, popularityScore });
+        await ctx.db.insert('manPageSearchDocuments', { ...row, pageId, name, nameNorm: name, section: '1', descNorm: '', popularityScore });
+      }
+    });
+    const result = await t.query(api.queries.search, { distro: 'debian', q: 'pop', section: null, limit: 20, offset: 0 });
+    expect(result.results.map(hit => hit.name)).toEqual(['pop', 'popular', 'popb', 'popa', 'pop_tail']);
+  });
 });
 
 describe('stable prefix pagination', () => {

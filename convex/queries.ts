@@ -540,7 +540,7 @@ type SearchHit = {
 };
 
 // pageId is internal: the top-hit brief reads the page it ranked.
-type RankedHit = SearchHit & { rank: number; pageId?: Id<"manPages"> };
+type RankedHit = SearchHit & { rank: number; pageId?: Id<"manPages">; popularityScore?: number };
 
 function searchDocumentHit(doc: Doc<"manPageSearchDocuments">, queryText: string, rank: number): RankedHit {
   return {
@@ -551,6 +551,7 @@ function searchDocumentHit(doc: Doc<"manPageSearchDocuments">, queryText: string
     highlights: [deterministicSnippet(doc.snippetText, queryText)].filter(Boolean),
     rank,
     pageId: doc.pageId,
+    popularityScore: doc.popularityScore,
   };
 }
 
@@ -560,6 +561,9 @@ function compareHits(a: RankedHit, b: RankedHit): number {
   const sectionPriority = (section: string) => section === '1' || section === '8' ? 0 : section.startsWith('3') ? 2 : 1;
   const section = sectionPriority(a.section) - sectionPriority(b.section);
   if (section) return section;
+  // Popularity prior (#397): within a tie, the more installed page first.
+  const popularity = (b.popularityScore ?? 0) - (a.popularityScore ?? 0);
+  if (popularity) return popularity;
   const len = a.name.length - b.name.length;
   if (len) return len;
   const name = a.name.localeCompare(b.name);
@@ -800,7 +804,7 @@ async function taskHits(
       return args.section === null ? base : base.eq("section", args.section);
     })
     .take(MAX_TASK_ROWS);
-  const hits: Array<RankedHit & { popularityScore?: number }> = [];
+  const hits: RankedHit[] = [];
   for (const row of rows) {
     // The phrase sharing the most content words with the query is the evidence;
     // a phrase sharing none (only stop words matched) is not a task match.
