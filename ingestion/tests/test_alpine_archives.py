@@ -560,3 +560,20 @@ def test_full_local_rehearsal_runs_publisher_and_saves_manifest_without_network_
     assert manifest["pins"] == pins
     assert json.loads((root / "report.json").read_text()) == report
     assert (root / "alpine-package-sha256.json").is_file()
+
+
+def test_full_rehearsal_checks_declared_counts_against_delivered_rows():
+    from collections import Counter
+
+    from scripts.check_full_archives import LocalPublication, check_declarations
+
+    sink = LocalPublication(None)
+    sink.post("/ingest/pages/storage", {"pages": [{}, {}, {"providerOnly": True}]})
+    sink.post("/ingest/aliases", {"aliases": [{"providerOnly": False}, {"providerOnly": True}]})
+    sink.post("/ingest/licenses", {"licenses": [{}]})
+    declared = {"pageCount": 2, "aliasCount": 1, "providerCount": 3, "licenseCount": 1}
+    check_declarations(declared, sink.counts)
+    for key, wrong in (("pageCount", 3), ("aliasCount", 2), ("providerCount", 2)):
+        with pytest.raises(AssertionError, match=key):
+            check_declarations(declared | {key: wrong}, sink.counts)
+    assert check_declarations(declared, Counter(sink.counts)) is None

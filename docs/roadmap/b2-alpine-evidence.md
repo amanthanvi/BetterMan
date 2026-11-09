@@ -99,14 +99,21 @@ the previous election is absent. No popularity or unrelated distro pins change.
 
 Refresh procedure (an explicit reviewed change, never runtime recovery):
 
-1. Fetch both repository indexes over HTTPS, compare mirror bytes, and record
-   the new sizes/SHA256s and index-set descriptor hash. Inspect duplicate package
+1. Fetch both repository indexes over HTTPS, compare mirror bytes, verify each
+   index's `.SIGN.RSA.*` signature against Alpine's x86_64 signing key from aports
+   (`openssl dgst -sha1 -verify <key> -signature <sig> <second gzip stream>`), and
+   record the new sizes/SHA256s and index-set descriptor hash. For the 2026-11-09
+   refresh, both `alpine-v3.23-{main,community}-20261109.tar.gz` verify against
+   `alpine-devel@lists.alpinelinux.org-6165ee59.rsa.pub` (key SHA256 prefix
+   `207e4696d3c05f7c`). Inspect duplicate package
    identities and update only superseded explicit version elections.
 2. In the isolated candidate checkout, bootstrap the new index set through the
    existing native Q1 control checksum, identity/size and SHA256 datahash verifier.
    A previous whole-file map must be replaced as part of this reviewed refresh,
    never silently ignored by a running importer.
 3. Run `pnpm ingest:full-benchmark --distro alpine --full --workdir <fresh-dir>`.
+   It also fails when the release's declared page, alias, provider or license counts
+   differ from the rows the publisher sent, the counts activation verifies.
    This runs the actual `publish_workspace` implementation with a local sink,
    keeping command ownership, the 2% parse gate, the 8 MiB page gate, complete
    license preflight and serialization. It saves `release.json` (including the

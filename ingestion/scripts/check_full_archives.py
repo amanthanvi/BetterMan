@@ -47,9 +47,30 @@ class LocalPublication:
             self.release = payload
             (self.root / "release.json").write_bytes(raw)
         else:
+            rows = payload[field[path]]
             with self.lock:
-                self.counts[field[path]] += len(payload[field[path]])
+                self.counts[field[path]] += len(rows)
+                self.counts[field[path] + "ProviderOnly"] += sum(
+                    bool(row.get("providerOnly")) for row in rows if isinstance(row, dict)
+                )
         return {}
+
+
+def check_declarations(release, counts):
+    """Compare the release's declared counts, which activation verifies, with what was sent.
+
+    Canonical pages and canonical aliases are the rows without providerOnly. Every
+    provider page and every alias provider row (canonical or not) is a provider.
+    """
+    delivered = {
+        "pageCount": counts["pages"] - counts["pagesProviderOnly"],
+        "aliasCount": counts["aliases"] - counts["aliasesProviderOnly"],
+        "providerCount": counts["pagesProviderOnly"] + counts["aliases"],
+        "licenseCount": counts["licenses"],
+    }
+    wrong = {key: (release[key], sent) for key, sent in delivered.items() if release[key] != sent}
+    if wrong:
+        raise AssertionError(f"declared != delivered (declared, delivered): {wrong}")
 
 
 def measure_full(root, distro):
@@ -67,7 +88,7 @@ def measure_full(root, distro):
     release = local.release
     manifest = release["packageManifest"]
     assert local.counts["pages"] == result.succeeded
-    assert local.counts["licenses"] == release["licenseCount"]
+    check_declarations(release, local.counts)
     assert local.counts["packages"] == len(manifest["packages"])
     assert local.counts["aliases"] == len(workspace.alias_providers)
     failures = manifest["parseFailures"]

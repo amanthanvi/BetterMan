@@ -641,7 +641,12 @@ reviewed SHA256. An empty map does not re-enable bootstrap. Adding/updating/remo
 the map is a reviewed lock change; no runtime option silently refreshes it.
 
 Alpine mirrors may remove pinned older APKs. Refresh and review index/version pins
-in a new commit when necessary; never silently fall forward to a new version.
+in a new commit when necessary; never silently fall forward to a new version. Pins
+usually go stale within weeks, so refresh them before each monthly run while
+`BETTERMAN_ALPINE_FULL=1` is set. With stale pins the scheduled Alpine leg fails
+before release creation, naming the missing archive, and production keeps the last
+full Alpine release; turning the variable off instead would let the cron promote the
+curated set over it.
 
 ```bash
 pnpm ingest:full-benchmark --distro alpine --workdir ../.cache/b2/alpine-audit --packages 50 --curated
