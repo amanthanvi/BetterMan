@@ -34,7 +34,7 @@ pnpm -C nextjs exec playwright install chromium
 
 The specs run against the production server from the `e2e` job in `.github/workflows/ci.yml`: `next build`, then `next start`. `pnpm next:dev` is the loop in `AGENTS.md` and in the render-man-page skill. It is the wrong server for this drive. Man-page CSP checks expect no Next dev runtime.
 
-Stop this checkout's `pnpm next:dev` before building. `convex dev --start` relaunches Next if you stop only the child. Leave a server from another checkout alone: keep a pid only when `readlink /proc/<pid>/cwd` is under this repo root. Cleanup uses that same check on the recorded Next and Convex pids.
+Stop this checkout's `pnpm next:dev` before building. `convex dev --start` relaunches Next if you stop only the child. Leave a server from another checkout alone: keep a pid only when its working directory (`/proc/<pid>/cwd` on Linux, `lsof` on macOS) is under this repo root. Cleanup uses that same check on the recorded Next and Convex pids.
 
 ```bash
 set -euo pipefail
@@ -42,15 +42,32 @@ export PATH="${NVM_DIR:-$HOME/.nvm}/versions/node/v26.5.1/bin:${HOME}/.local/bin
 cd "$(git rev-parse --show-toplevel)"
 REPO="$(readlink -f "$(pwd)")"
 
+# Launch pushes functions and sets env vars on whichever deployment Convex selects.
+# Stop unless that is the anonymous (or local) loop.
+deployment="${CONVEX_DEPLOYMENT:-$({ sed -n 's/^CONVEX_DEPLOYMENT=//p' .env.local 2>/dev/null || true; } | head -n 1)}"
+if [[ -n "${CONVEX_DEPLOY_KEY:-}" || ( -n "$deployment" && ! "$deployment" =~ ^(anonymous|local): ) ]]; then
+  echo "a cloud Convex deployment is configured; launch only on the anonymous local loop" >&2
+  exit 2
+fi
+
 EVIDENCE="$(pwd)/.agents/skills/verify-betterman/evidence"
 rm -rf "$EVIDENCE"
 mkdir -p "$EVIDENCE"
 chmod 700 "$EVIDENCE"
 
+# The pid's working directory: /proc on Linux, lsof on macOS.
+pid_cwd() {
+  if [[ -d "/proc/$1" ]]; then
+    readlink "/proc/$1/cwd" 2>/dev/null || true
+  else
+    { lsof -a -p "$1" -d cwd -Fn 2>/dev/null || true; } | sed -n 's/^n//p'
+  fi
+}
+
 # True when this pid's cwd is the repo root or a directory under it.
 in_this_checkout() {
   local cwd
-  cwd="$(readlink "/proc/$1/cwd" 2>/dev/null || true)"
+  cwd="$(pid_cwd "$1")"
   case "$cwd" in
     "$REPO"|"$REPO"/*) return 0 ;;
     *) return 1 ;;
@@ -60,7 +77,7 @@ in_this_checkout() {
 # Stop pid and its children. Callers keep a pid only after in_this_checkout.
 kill_tree() {
   local pid="$1" child
-  for child in $(ps -o pid= --ppid "$pid"); do
+  for child in $(pgrep -P "$pid" || true); do
     kill_tree "$child"
   done
   kill "$pid" 2>/dev/null || true
@@ -71,7 +88,7 @@ while read -r pid; do
   in_this_checkout "$pid" || continue
   echo "stopping pnpm next:dev pid $pid"
   kill_tree "$pid"
-done < <(ps -eo pid=,cmd= | awk '/pnpm next:dev/ && $0 !~ /awk/ { print $1 }')
+done < <(ps -eo pid=,command= | awk '/pnpm next:dev/ && $0 !~ /awk/ { print $1 }')
 
 for _ in $(seq 1 30); do
   if ! curl -fsS --max-time 1 http://127.0.0.1:3000/robots.txt >/dev/null 2>&1; then
@@ -127,7 +144,7 @@ done
 curl -fsS --max-time 2 http://127.0.0.1:3000/robots.txt >/dev/null
 ```
 
-`set -a; . ./.env.local` exports everything in `.env.local` into the build and Playwright env, and this is intended for the anonymous local Convex loop.
+`set -a; . ./.env.local` exports everything in `.env.local` into the build and Playwright env, and this is intended for the anonymous local Convex loop. Launch refuses to start when `CONVEX_DEPLOY_KEY` is set or `CONVEX_DEPLOYMENT` (from the shell or `.env.local`) names a cloud deployment, because it pushes functions and sets env vars there.
 
 `next build` can rewrite `nextjs/next-env.d.ts`. That file is generated. Do not commit it. Cleanup restores it when the diff is only that rewrite.
 
@@ -164,7 +181,7 @@ export E2E_BASE_URL="http://127.0.0.1:3000"
 pnpm -C nextjs e2e --config "$CONFIG" 2>&1 | tee "$EVIDENCE/e2e.log"
 ```
 
-A passing run stores one screenshot per test under `evidence/test-results/` and the HTML report under `evidence/playwright-report/`. Traces are kept when a test fails (`trace: retain-on-failure`).
+A passing run stores a screenshot for each test that opens a page (request-only tests have none) under `evidence/test-results/` and the HTML report under `evidence/playwright-report/`. Traces are kept when a test fails (`trace: retain-on-failure`). A later run rewrites the HTML report, so cite the summary from `evidence/e2e.log`.
 
 Capture a trace of a passing reader path as well:
 
@@ -192,10 +209,19 @@ cd "$(git rev-parse --show-toplevel)"
 REPO="$(readlink -f "$(pwd)")"
 EVIDENCE="$(pwd)/.agents/skills/verify-betterman/evidence"
 
+# The pid's working directory: /proc on Linux, lsof on macOS.
+pid_cwd() {
+  if [[ -d "/proc/$1" ]]; then
+    readlink "/proc/$1/cwd" 2>/dev/null || true
+  else
+    { lsof -a -p "$1" -d cwd -Fn 2>/dev/null || true; } | sed -n 's/^n//p'
+  fi
+}
+
 # True when this pid's cwd is the repo root or a directory under it.
 in_this_checkout() {
   local cwd
-  cwd="$(readlink "/proc/$1/cwd" 2>/dev/null || true)"
+  cwd="$(pid_cwd "$1")"
   case "$cwd" in
     "$REPO"|"$REPO"/*) return 0 ;;
     *) return 1 ;;
@@ -205,7 +231,7 @@ in_this_checkout() {
 # Stop pid and its children. Callers keep a pid only after in_this_checkout.
 kill_tree() {
   local pid="$1" child
-  for child in $(ps -o pid= --ppid "$pid"); do
+  for child in $(pgrep -P "$pid" || true); do
     kill_tree "$child"
   done
   kill "$pid" 2>/dev/null || true
