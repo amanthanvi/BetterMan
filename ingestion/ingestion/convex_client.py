@@ -363,6 +363,24 @@ class ConvexIngestClient:
             else:
                 return result
             if not retryable or attempt == attempts:
+                if path == "/ingest/aliases" and isinstance(payload, dict):
+                    routes = [
+                        {
+                            key: alias[key]
+                            for key in (
+                                "name",
+                                "section",
+                                "targetName",
+                                "targetSection",
+                                "sourcePackage",
+                                "sourcePath",
+                                "targetPackage",
+                            )
+                            if key in alias
+                        }
+                        for alias in payload.get("aliases", [])
+                    ]
+                    error = RuntimeError(f"{error}; alias batch: {json.dumps(routes)}")
                 raise error from cause
             logger.warning("Convex ingest %s attempt %d failed, retrying: %s", path, attempt, error)
             time.sleep(_RETRY_BACKOFF_SECONDS * attempt)

@@ -17,6 +17,10 @@ it('stores stub providers without page/search duplicates, verifies counts and re
   }]}) });
   expect(res.status).toBe(200);
   const alias = {name:'acosf',section:'3',targetName:'acos',targetSection:'3',targetPackage:'math-doc',sourcePackage:'math-doc',sourcePath:'man3/acosf.3',providerOnly:false};
+  // A surviving route in another package cannot replace a rejected provider target.
+  for (const providerOnly of [false, true]) {
+    await expect(t.mutation(internal.ingest.insertAliases, {datasetReleaseId:'stub-providers', aliases:[{...alias, targetPackage:'failed-doc', providerOnly}]})).rejects.toThrow('ALIAS_TARGET_NOT_FOUND');
+  }
   await t.mutation(internal.ingest.insertAliases,{datasetReleaseId:'stub-providers',aliases:[alias]});
   await expect(t.mutation(internal.ingest.activateRelease,{datasetReleaseId:'stub-providers',stage:'prod',activatedAt:'now'})).rejects.toThrow('RELEASE_MANIFEST_INCOMPLETE');
   await t.mutation(internal.ingest.insertAliases,{datasetReleaseId:'stub-providers',aliases:[{...alias,sourcePackage:'other-doc',providerOnly:true}]});

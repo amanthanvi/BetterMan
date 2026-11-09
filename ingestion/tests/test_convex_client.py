@@ -171,6 +171,36 @@ def test_post_distinguishes_pending_activation(monkeypatch):
 
 
 @pytest.mark.parametrize(
+    "failure", [_http_error(400, b"ALIAS_TARGET_NOT_FOUND"), URLError("offline")]
+)
+def test_alias_failure_names_the_batch_without_credentials(monkeypatch, failure):
+    request = Mock(side_effect=failure)
+    monkeypatch.setattr("ingestion.convex_client.urlopen", request)
+    monkeypatch.setattr("ingestion.convex_client.time.sleep", Mock())
+    alias = {
+        "name": "cross",
+        "section": "1",
+        "targetName": "target",
+        "targetSection": "3",
+        "sourcePackage": "source-doc",
+        "sourcePath": "usr/share/man/man1/cross.1.gz",
+        "targetPackage": "target-doc",
+        "unrelated": "private-value",
+    }
+    client = ConvexIngestClient("https://test.convex.site", "private-credential")
+    with pytest.raises(RuntimeError) as caught:
+        client.post("/ingest/aliases", {"datasetReleaseId": "release", "aliases": [alias]})
+    message = str(caught.value)
+    assert "alias batch:" in message
+    for key, value in alias.items():
+        if key != "unrelated":
+            assert value in message
+    assert "private-credential" not in message and "private-value" not in message
+    assert "https://test.convex.site" not in message
+    assert request.call_count == (1 if isinstance(failure, HTTPError) else 3)
+
+
+@pytest.mark.parametrize(
     ("path", "status", "body"),
     [
         ("/ingest/activate", 409, b'{"pending":false}'),
