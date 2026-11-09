@@ -169,8 +169,9 @@ package's `noticeLinkGaps` beside `unmatchedLicenseIdentifiers`, show the gaps i
 the published license text, and use other readable notices or the declared-license
 standard texts. Readable links within the existing documentation roots keep
 their directory/cross-package resolution. If a notice-file link within those
-roots still has no target or directory children after resolution, record it as a
-notice-link gap too; keep any other readable package notices before using standard
+roots still has no target or directory children after resolution, Fedora and Arch
+(whose indexes list every packaged path) record it as a notice-link gap too, while
+Alpine, which has no file index, still fails closed; keep any other readable package notices before using standard
 texts. Top-level license-directory aliases keep their existing fallback rules.
 Direct missing notices, unreadable regular stored files and Debian/Ubuntu copyright
 failures remain strict.
