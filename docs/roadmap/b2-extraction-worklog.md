@@ -1,5 +1,24 @@
 # B2 extraction worklog
 
+## 2026-11-09 Alpine stale-pin recovery
+
+Goal: one non-draft fix PR from origin/main cac144cd, with a complete local
+no-upload Alpine rehearsal. No merge, workflow dispatch, Convex/Vercel access,
+secrets/environment output, or child agents. Preserve prior histories below.
+Verified: traced original full acquisition fails HTTP 404 for apk-tools-doc
+3.0.8-r0 and expat-doc 2.9.0-r0 on both mirrors; apk-tools-doc 3.0.9-r0 is present
+in matching current indexes. Refreshed snapshots/version election and committed
+4,532 native-receipt-checked whole-file pins. Added missing-archive guidance and a
+local publisher sink. Both bootstrap and fresh final-lock full rehearsals finish
+with zero fatal errors: 43,129 page records, 4,498 licenses, 3,505 standard fills,
+115 license gaps, 117 nonfatal source/parse omissions including 3 oversized pages.
+Final replay: 351.78 s, zero downloaded bytes, both native and whole-file checks.
+Lint, 1,246 ingestion tests and 125 ops tests pass. Evidence/report are committed
+with the fix; remaining delivery is one non-draft PR. Independent review belongs
+to the lead; this implementation child starts no agents. No merge or dispatch.
+
+## Earlier B2 implementation history
+
 Goal: #394, #467 Ubuntu → #470 Fedora → #473 Arch → #476 Alpine. Pending
 #445 v7; all B2 exact v8; translations v9. Main contains #469/#471. No merge,
 dispatch, production/shared config/data/secret/variable writes. Lead owns staging,

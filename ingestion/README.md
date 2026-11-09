@@ -632,21 +632,32 @@ also write it under their workdir. It never rewrites the checked-in lock.
 
 The lead must verify its index-set `releaseSha256`, review the acquisition, then
 commit the complete `packageSha256` map into `ingestion/data/alpine-v3.23.json`.
-The map is intentionally absent for the initial staging bootstrap. **Once the
-field is present, pins are required**: missing selected, runtime or later-discovered
+The November 9 refresh commits the map exported by a complete native-verified
+local rehearsal; its provenance and review procedure are in the Alpine evidence.
+**Once the field is present, pins are required**: missing selected, runtime or later-discovered
 packages fail closed. Both native integrity and whole-file SHA256 are checked on
 new downloads and cache hits. Restored extraction receipts cannot override a
 reviewed SHA256. An empty map does not re-enable bootstrap. Adding/updating/removing
-the map is a reviewed lock change; no runtime option silently refreshes it. These
-local samples do not substitute for the lead's first staging pin review.
+the map is a reviewed lock change; no runtime option silently refreshes it.
 
 Alpine mirrors may remove pinned older APKs. Refresh and review index/version pins
-in a new commit when necessary; never silently fall forward to a new version.
+in a new commit when necessary; never silently fall forward to a new version. Pins
+usually go stale within weeks, so refresh them before each monthly run while
+`BETTERMAN_ALPINE_FULL=1` is set. With stale pins the scheduled Alpine leg fails
+before release creation, naming the missing archive, and production keeps the last
+full Alpine release; turning the variable off instead would let the cron promote the
+curated set over it.
 
 ```bash
 pnpm ingest:full-benchmark --distro alpine --workdir ../.cache/b2/alpine-audit --packages 50 --curated
 pnpm ingest:full-benchmark --distro alpine --workdir ../.cache/b2/alpine-sample --packages 200
+pnpm ingest:full-benchmark --distro alpine --workdir ../.cache/b2/alpine-full --full
 ```
+
+`--full` exercises the actual publisher with a local sink, including command/parse
+gates, licenses, serialized page payloads and release manifest. It writes
+`release.json`, `report.json` and the Alpine pin proposal in the workdir without
+constructing a Convex client, uploading, or activating a release.
 
 [Alpine evidence, checksum semantics and limits](../docs/roadmap/b2-alpine-evidence.md).
 The lead dispatches staging measurement after merge; production still needs

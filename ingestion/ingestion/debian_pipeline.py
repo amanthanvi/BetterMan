@@ -18,6 +18,7 @@ import uuid
 from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, ThreadPoolExecutor, wait
 from itertools import islice
 from pathlib import Path
+from urllib.error import HTTPError
 
 from ingestion.convex_client import ingest_activation_deadline
 from ingestion.debian_alternatives import parse_alternatives
@@ -376,6 +377,15 @@ class Workspace:
                 **({"localized_roots": self.localized_roots} if self.localized_roots else {}),
             )
             extracted = time.monotonic()
+        except HTTPError as error:
+            if self.distro == "alpine" and error.code == 404:
+                error.close()
+                raise RuntimeError(
+                    f"Alpine pinned archive unavailable: {package.filename}; pins may be "
+                    "superseded on both mutable mirrors. Refresh the checked-in APKINDEX "
+                    "snapshots and reviewed package SHA256 pins; never substitute unverified bytes."
+                ) from error
+            raise
         finally:
             with self._disk_lock:
                 self._reserved -= package.size

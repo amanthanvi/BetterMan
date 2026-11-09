@@ -9,6 +9,7 @@ import json
 import sqlite3
 import tarfile
 from pathlib import Path
+from urllib.error import HTTPError
 
 import pytest
 
@@ -173,6 +174,42 @@ def test_native_workspace_resume_restores_observed_hashes_without_redownloading(
         workspace.store.db.close()
         workspace.owners.close()
     assert calls == [1]
+
+
+@pytest.mark.parametrize("status", [404, 403])
+def test_missing_pinned_apk_fails_closed_with_refresh_guidance(tmp_path, monkeypatch, status):
+    from ingestion.debian_pipeline import Workspace
+
+    _, package, _, _ = fixture(tmp_path)
+    pins = {
+        "mirror": "https://dl-cdn.alpinelinux.org",
+        "fallbackMirror": "https://dl-3.alpinelinux.org",
+        "archiveSuffix": ".apk",
+    }
+    mock_catalog(monkeypatch, package, pins)
+    calls = []
+
+    def unavailable(request, **kwargs):
+        calls.append(request.full_url)
+        raise HTTPError(request.full_url, status, "unavailable", {}, io.BytesIO())
+
+    monkeypatch.setattr(indexes, "urlopen", unavailable)
+    workspace = Workspace(tmp_path / "workspace", distro="alpine")
+    try:
+        error = RuntimeError if status == 404 else HTTPError
+        with pytest.raises(error) as caught:
+            workspace.acquire(workers=1)
+        if status == 404:
+            assert package.filename in str(caught.value)
+            assert "superseded" in str(caught.value)
+            assert "reviewed package SHA256 pins" in str(caught.value)
+        assert calls == [f"{pins[key]}/{package.filename}" for key in ("mirror", "fallbackMirror")]
+        assert not workspace.acquired
+        assert not list(workspace.cache.glob("*.apk"))
+        assert not list(workspace.cache.glob("*.part"))
+    finally:
+        workspace.store.db.close()
+        workspace.owners.close()
 
 
 def test_curated_doc_owner_requires_matching_origin_version_and_docs_install_if():
@@ -383,6 +420,22 @@ def test_catalog_binds_reviewed_hashes_to_exact_pinned_filenames(tmp_path):
         alpine.catalog(tmp_path / "unknown", path)
 
 
+def test_committed_alpine_lock_has_consistent_index_identity_and_full_selection_pins(tmp_path):
+    from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
+
+    source = Path(__file__).parents[1] / "data/alpine-v3.23.json"
+    pins, selected, available = alpine.catalog(tmp_path / "catalog", source)
+    descriptor = json.dumps(pins["repositories"], sort_keys=True, separators=(",", ":"))
+    assert hashlib.sha256(descriptor.encode()).hexdigest() == pins["releaseSha256"]
+    assert pins["packageSha256"]
+    for package in selected:
+        alpine.require_sha256_pin(pins, package)
+    alpine.require_sha256_pin(pins, available["spdx-licenses-text"])
+    for name in FULL_PACKAGE_SET_BY_DISTRO["alpine"]:
+        if name in available:
+            alpine.require_sha256_pin(pins, available[name])
+
+
 @pytest.mark.parametrize(
     "contract",
     [{"schemaVersion": 8}, {"schemaVersion": 8, "acquisitions": ["alpine-apk-extraction"]}],
@@ -470,3 +523,57 @@ def test_alpine_staging_publisher_exports_pins_native_provenance_and_complete_no
     finally:
         workspace.store.db.close()
         workspace.owners.close()
+
+
+def test_full_local_rehearsal_runs_publisher_and_saves_manifest_without_network_client(
+    tmp_path, monkeypatch
+):
+    from ingestion import debian_publish, standard_licenses
+    from ingestion.debian_pipeline import Workspace
+    from scripts.check_full_archives import measure_full
+
+    archive, package, _, _ = fixture(tmp_path)
+    pins = {
+        "mirror": "https://dl-cdn.alpinelinux.org",
+        "archiveSuffix": ".apk",
+        "releaseSha256": "a" * 64,
+        "acquisition": "alpine-apk-extraction",
+    }
+    mock_catalog(monkeypatch, package, pins)
+    raw = archive.read_bytes()
+    monkeypatch.setattr(indexes, "urlopen", lambda *a, **kw: io.BytesIO(raw))
+    monkeypatch.setattr(
+        debian_publish, "ConvexIngestClient", lambda *a, **kw: pytest.fail("no network client")
+    )
+    monkeypatch.setattr(Workspace, "require_command_owners", lambda self: {})
+    monkeypatch.setattr(debian_publish, "_require_command_pages", lambda **kw: None)
+    monkeypatch.setattr(standard_licenses, "load_texts", lambda _: {"license": {}, "exception": {}})
+    root = tmp_path / "workspace"
+    report = measure_full(root, "alpine")
+    release = json.loads((root / "release.json").read_bytes())
+    manifest = release["packageManifest"]
+    assert report["pages"] == report["canonicalPages"] == 1
+    assert report["licenses"] == 1
+    assert report["fatalErrors"] == 0
+    assert report["parseFailures"] == report["oversizedPages"] == []
+    assert manifest["packages"][0]["sha256"] == hashlib.sha256(raw).hexdigest()
+    assert manifest["pins"] == pins
+    assert json.loads((root / "report.json").read_text()) == report
+    assert (root / "alpine-package-sha256.json").is_file()
+
+
+def test_full_rehearsal_checks_declared_counts_against_delivered_rows():
+    from collections import Counter
+
+    from scripts.check_full_archives import LocalPublication, check_declarations
+
+    sink = LocalPublication(None)
+    sink.post("/ingest/pages/storage", {"pages": [{}, {}, {"providerOnly": True}]})
+    sink.post("/ingest/aliases", {"aliases": [{"providerOnly": False}, {"providerOnly": True}]})
+    sink.post("/ingest/licenses", {"licenses": [{}]})
+    declared = {"pageCount": 2, "aliasCount": 1, "providerCount": 3, "licenseCount": 1}
+    check_declarations(declared, sink.counts)
+    for key, wrong in (("pageCount", 3), ("aliasCount", 2), ("providerCount", 2)):
+        with pytest.raises(AssertionError, match=key):
+            check_declarations(declared | {key: wrong}, sink.counts)
+    assert check_declarations(declared, Counter(sink.counts)) is None

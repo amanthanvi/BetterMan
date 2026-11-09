@@ -1,0 +1,633 @@
+{
+  "baseSha": "cac144cd6acee577aaf0c94702777803c002c067",
+  "command": "pnpm ingest:full-benchmark --distro alpine --full --workdir /tmp/betterman-alpine-final-20261109",
+  "platform": "macOS arm64; Python 3.14.10; Homebrew mandoc 1.14.6_1",
+  "releaseSha256": "619682f92ab56d43c0b8241c1f30445ea87147ce6f214598aee7351323bd8873",
+  "pinsSha256": "bec33ff4fe59518e93135fe86e59c14405ff6bc8fc18003e39c85d9d82b411e2",
+  "packageSha256MapSha256": "9c6fee6e04000b8fdc3d3e105d95b754a084b1622ff8e0bf126d48117bb577a5",
+  "verifiedArchiveBytes": 1753394935,
+  "recordedNoticeLinkGapCount": 0,
+  "distro": "alpine",
+  "scope": "full local acquisition and publisher rehearsal; no upload or activation",
+  "fullPackages": 4498,
+  "acquiredPackages": 4532,
+  "downloadedBytes": 0,
+  "archiveFallbacks": 0,
+  "indexSeconds": 0.4209056670079008,
+  "acquireSeconds": 110.65027820802061,
+  "publisherSeconds": 240.7041896249866,
+  "pages": 43129,
+  "canonicalPages": 41920,
+  "aliases": 16945,
+  "licenses": 4498,
+  "standardTextFills": 3505,
+  "recordedLicenseGaps": 115,
+  "noticeLinkGaps": {},
+  "parseFailures": [
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-build.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-cache.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-clean.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man5/dune-config.5.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-coq.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-describe.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-diagnostics.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-exec.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-external-lib-deps.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-fmt.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-format-dune-file.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-help.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-init.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-install.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-installed-libraries.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-internal.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-monitor.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-ocaml.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-ocaml-merlin.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-package.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-pkg.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-printenv.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-promote.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-promotion.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-rpc.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-rules.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-runtest.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-show.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-shutdown.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-subst.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-test.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-tools.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-top.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-uninstall.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-upgrade.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "dune-doc",
+      "path": "usr/share/man/man1/dune-utop.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "got-doc",
+      "path": "usr/share/man/man1/got.1.gz",
+      "error": "mandoc failed (-6): Assertion failed: (n->tag == NULL), function tag_put, file tag.c, line 185."
+    },
+    {
+      "package": "ocp-index-doc",
+      "path": "usr/share/man/man1/ocp-grep.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "ocp-indent-doc",
+      "path": "usr/share/man/man1/ocp-indent.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "ocp-index-doc",
+      "path": "usr/share/man/man1/ocp-index.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-admin.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-admin-add-constraint.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-admin-add-hashes.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-admin-cache.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-admin-check.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-admin-compare-versions.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-admin-filter.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-admin-help.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-admin-index.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-admin-lint.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-admin-list.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-admin-make.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-admin-migrate-extrafiles.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-admin-update-extrafiles.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-admin-upgrade.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-clean.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-config.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-env.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-exec.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-help.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-info.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-init.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-install.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-installer.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-lint.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-list.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-lock.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-option.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-pin.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-reinstall.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-remote.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-remove.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-repository.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-search.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-show.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-source.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-switch.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-tree.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-uninstall.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-unpin.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-update.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-upgrade.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-var.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "opam-doc",
+      "path": "usr/share/man/man1/opam-why.1.gz",
+      "error": "Unresolved roff include request"
+    },
+    {
+      "package": "salt-doc",
+      "path": "usr/share/man/man7/salt.7.gz",
+      "error": "salt(7): stored page payload 42415930 bytes exceeds 8388608-byte limit (usr/share/man/man7/salt.7.gz)"
+    },
+    {
+      "package": "salt-lts-doc",
+      "path": "usr/share/man/man7/salt.7.gz",
+      "error": "salt(7): stored page payload 42718600 bytes exceeds 8388608-byte limit (usr/share/man/man7/salt.7.gz)"
+    },
+    {
+      "package": "txr-doc",
+      "path": "usr/share/man/man1/txr.1.gz",
+      "error": "txr(1): stored page payload 9392049 bytes exceeds 8388608-byte limit (usr/share/man/man1/txr.1.gz)"
+    },
+    {
+      "package": "units-doc",
+      "path": "usr/share/man/man1/units.1.gz",
+      "error": "Unresolved dynamic roff include request"
+    }
+  ],
+  "missingSources": [
+    {
+      "package": "containers-common-doc",
+      "path": "usr/share/man/man5/.containerignore.5.gz",
+      "error": "Unsupported route name"
+    },
+    {
+      "package": "hfsprogs-doc",
+      "path": "usr/share/man/man8/fsck.hfs.8.gz",
+      "error": "Documentation link/stub cycle"
+    },
+    {
+      "package": "krb5-doc",
+      "path": "usr/share/man/man5/.k5identity.5.gz",
+      "error": "Unsupported route name"
+    },
+    {
+      "package": "krb5-doc",
+      "path": "usr/share/man/man5/.k5login.5.gz",
+      "error": "Unsupported route name"
+    },
+    {
+      "package": "libxau-doc",
+      "path": "usr/share/man/man3/XauDisposeAuth.3.gz",
+      "error": "Roff include escapes manual root"
+    },
+    {
+      "package": "libxau-doc",
+      "path": "usr/share/man/man3/XauFileName.3.gz",
+      "error": "Roff include escapes manual root"
+    },
+    {
+      "package": "libxau-doc",
+      "path": "usr/share/man/man3/XauGetAuthByAddr.3.gz",
+      "error": "Roff include escapes manual root"
+    },
+    {
+      "package": "libxau-doc",
+      "path": "usr/share/man/man3/XauGetBestAuthByAddr.3.gz",
+      "error": "Roff include escapes manual root"
+    },
+    {
+      "package": "libxau-doc",
+      "path": "usr/share/man/man3/XauLockAuth.3.gz",
+      "error": "Roff include escapes manual root"
+    },
+    {
+      "package": "libxau-doc",
+      "path": "usr/share/man/man3/XauReadAuth.3.gz",
+      "error": "Roff include escapes manual root"
+    },
+    {
+      "package": "libxau-doc",
+      "path": "usr/share/man/man3/XauUnlockAuth.3.gz",
+      "error": "Roff include escapes manual root"
+    },
+    {
+      "package": "libxau-doc",
+      "path": "usr/share/man/man3/XauWriteAuth.3.gz",
+      "error": "Roff include escapes manual root"
+    },
+    {
+      "package": "lsof-doc",
+      "path": "usr/share/man/man8/lsof.8.gz",
+      "error": "Roff include escapes manual root"
+    },
+    {
+      "package": "php83-doc",
+      "path": "usr/share/man/man1/phar83.phar.1.gz",
+      "error": "php83-doc:usr/share/man/man1/phar.1"
+    },
+    {
+      "package": "php83-doc",
+      "path": "usr/share/man/man1/php-cgi83.1.gz",
+      "error": "php83-doc:usr/share/man/man1/php.1"
+    },
+    {
+      "package": "php84-doc",
+      "path": "usr/share/man/man1/phar84.phar.1.gz",
+      "error": "php84-doc:usr/share/man/man1/phar.1"
+    },
+    {
+      "package": "php84-doc",
+      "path": "usr/share/man/man1/php-cgi84.1.gz",
+      "error": "php84-doc:usr/share/man/man1/php.1"
+    },
+    {
+      "package": "php85-doc",
+      "path": "usr/share/man/man1/phar85.phar.1.gz",
+      "error": "php85-doc:usr/share/man/man1/phar.1"
+    },
+    {
+      "package": "php85-doc",
+      "path": "usr/share/man/man1/php-cgi85.1.gz",
+      "error": "php85-doc:usr/share/man/man1/php.1"
+    },
+    {
+      "package": "radare2-doc",
+      "path": "usr/share/man/man3/r_asm.3.gz",
+      "error": "radare2-doc:usr/share/man/man3/r_asm.3.gz: Unsupported roff include request"
+    },
+    {
+      "package": "shorewall6-doc",
+      "path": "usr/share/man/man5/shorewall6-blacklist.5.gz",
+      "error": "shorewall6-doc:usr/share/man/man5/shorewall-blacklist.5"
+    },
+    {
+      "package": "shorewall6-doc",
+      "path": "usr/share/man/man5/shorewall6-masq.5.gz",
+      "error": "shorewall6-doc:usr/share/man/man5/shorewall-masq.5"
+    },
+    {
+      "package": "shorewall6-doc",
+      "path": "usr/share/man/man5/shorewall6-routestopped.5.gz",
+      "error": "shorewall6-doc:usr/share/man/man5/shorewall-routestopped.5"
+    },
+    {
+      "package": "shorewall6-doc",
+      "path": "usr/share/man/man5/shorewall6-tcrules.5.gz",
+      "error": "shorewall6-doc:usr/share/man/man5/shorewall-tcrules.5"
+    },
+    {
+      "package": "shorewall6-doc",
+      "path": "usr/share/man/man5/shorewall6-tos.5.gz",
+      "error": "shorewall6-doc:usr/share/man/man5/shorewall-tos.5"
+    },
+    {
+      "package": "sox-doc",
+      "path": "usr/share/man/man7/soxeffect.7.gz",
+      "error": "Documentation link leaves archive documentation roots: sox-doc:usr/share/man/man7/soxeffect.7.gz -> usr/share/man/man1/sox.1.gz.gz"
+    },
+    {
+      "package": "zzz-doc",
+      "path": "usr/share/man/man8/ZZZ.8.gz",
+      "error": "Documentation link/stub cycle"
+    }
+  ],
+  "oversizedPages": [
+    {
+      "package": "salt-doc",
+      "path": "usr/share/man/man7/salt.7.gz",
+      "error": "salt(7): stored page payload 42415930 bytes exceeds 8388608-byte limit (usr/share/man/man7/salt.7.gz)"
+    },
+    {
+      "package": "salt-lts-doc",
+      "path": "usr/share/man/man7/salt.7.gz",
+      "error": "salt(7): stored page payload 42718600 bytes exceeds 8388608-byte limit (usr/share/man/man7/salt.7.gz)"
+    },
+    {
+      "package": "txr-doc",
+      "path": "usr/share/man/man1/txr.1.gz",
+      "error": "txr(1): stored page payload 9392049 bytes exceeds 8388608-byte limit (usr/share/man/man1/txr.1.gz)"
+    }
+  ],
+  "fatalErrors": 0
+}

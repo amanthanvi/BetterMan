@@ -4,6 +4,8 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Refresh Alpine's superseded APKINDEX snapshots and reviewed whole-file package pins; identify missing pinned APKs with fail-closed refresh guidance and rehearse the full publisher locally without uploads.
+
 - Full archive imports drop and log aliases whose exact target package/page was rejected before upload, keeping provider and alias declarations consistent; failed alias uploads now name the batch routes.
 - Search: among equally ranked name matches, the more installed page now comes first (B5, #397). The order is exact name, then `name(section)`, then sections 1 and 8 before other sections with section 3 last, then the B4 popcon prior, then the shorter name; `ls_*`-style long tails stay demoted. Ingestion copies each page's prior onto its search document, so a release ranks this way from its next import; releases already live keep the previous order until then. No query reads more documents.
 - Cost: `/sw.js` and `/favicon.svg`, fetched on every fresh page load, no longer run the proxy, so they cost no function invocation. `next.config.ts` gives them static security headers instead: `nosniff`, HSTS, and a CSP of `default-src 'none'` for the favicon. The service worker gets `default-src 'self'`, because a worker runs under its own script's CSP and must still fetch pages, the API and assets.

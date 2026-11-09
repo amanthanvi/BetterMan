@@ -4,10 +4,13 @@ import argparse
 import json
 import resource
 import sys
+import threading
 import time
+from collections import Counter
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from ingestion.convex_client import encode_json
 from ingestion.debian_indexes import MAN_PATH
 from ingestion.debian_licenses import copyright_text
 from ingestion.debian_pipeline import Workspace, parse_workspace
@@ -21,6 +24,105 @@ from ingestion.ingest_runner import (
 from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
 from ingestion.standard_licenses import NO_LICENSE_TEXT
 from ingestion.util import sha256_hex
+
+
+class LocalPublication:
+    """Exercise publisher serialization and declarations without a network client."""
+
+    def __init__(self, root):
+        self.root = root
+        self.release = None
+        self.counts = Counter()
+        self.lock = threading.Lock()
+
+    def post(self, path, payload):
+        field = {
+            "/ingest/license-packages": "packages",
+            "/ingest/pages/storage": "pages",
+            "/ingest/aliases": "aliases",
+            "/ingest/licenses": "licenses",
+        }
+        raw = encode_json(payload)
+        if path == "/ingest/release":
+            self.release = payload
+            (self.root / "release.json").write_bytes(raw)
+        else:
+            rows = payload[field[path]]
+            with self.lock:
+                self.counts[field[path]] += len(rows)
+                self.counts[field[path] + "ProviderOnly"] += sum(
+                    bool(row.get("providerOnly")) for row in rows if isinstance(row, dict)
+                )
+        return {}
+
+
+def check_declarations(release, counts):
+    """Compare the release's declared counts, which activation verifies, with what was sent.
+
+    Canonical pages and canonical aliases are the rows without providerOnly. Every
+    provider page and every alias provider row (canonical or not) is a provider.
+    """
+    delivered = {
+        "pageCount": counts["pages"] - counts["pagesProviderOnly"],
+        "aliasCount": counts["aliases"] - counts["aliasesProviderOnly"],
+        "providerCount": counts["pagesProviderOnly"] + counts["aliases"],
+        "licenseCount": counts["licenses"],
+    }
+    wrong = {key: (release[key], sent) for key, sent in delivered.items() if release[key] != sent}
+    if wrong:
+        raise AssertionError(f"declared != delivered (declared, delivered): {wrong}")
+
+
+def measure_full(root, distro):
+    from ingestion.debian_publish import publish_workspace
+
+    started = time.monotonic()
+    workspace = Workspace(root, distro=distro)
+    indexed = time.monotonic()
+    workspace.acquire()
+    acquired = time.monotonic()
+    local = LocalPublication(root)
+    result = publish_workspace(
+        workspace, local, activate=False, dataset_stage="staging", git_sha="local-no-upload"
+    )
+    release = local.release
+    manifest = release["packageManifest"]
+    assert local.counts["pages"] == result.succeeded
+    check_declarations(release, local.counts)
+    assert local.counts["packages"] == len(manifest["packages"])
+    assert local.counts["aliases"] == len(workspace.alias_providers)
+    failures = manifest["parseFailures"]
+    report = {
+        "distro": distro,
+        "scope": "full local acquisition and publisher rehearsal; no upload or activation",
+        "fullPackages": len(workspace.all_manual_packages),
+        "acquiredPackages": len(workspace.acquired),
+        "downloadedBytes": workspace.downloaded,
+        "archiveFallbacks": workspace.archive_fallbacks,
+        "indexSeconds": indexed - started,
+        "acquireSeconds": acquired - indexed,
+        "publisherSeconds": time.monotonic() - acquired,
+        "pages": result.succeeded,
+        "canonicalPages": release["pageCount"],
+        "aliases": release["aliasCount"],
+        "licenses": release["licenseCount"],
+        "standardTextFills": sum(
+            bool(p.get("standardLicenseIdentifiers")) for p in manifest["packages"]
+        ),
+        "recordedLicenseGaps": sum(
+            bool(p.get("missingLicenseIdentifiers") or p.get("licenseExpressionError"))
+            for p in manifest["packages"]
+        ),
+        "noticeLinkGaps": getattr(workspace, "notice_link_gaps", {}),
+        "parseFailures": failures,
+        "missingSources": manifest["missingSources"],
+        "oversizedPages": [p for p in failures if "stored page payload" in p["error"]],
+        "fatalErrors": 0,
+    }
+    workspace.store.db.close()
+    workspace.owners.close()
+    (root / "report.json").write_text(json.dumps(report, indent=2) + "\n")
+    return report
 
 
 def measure(root, distro, limit, curated=False, largest=False, package_names=None):
@@ -168,6 +270,7 @@ def main():
     parser.add_argument("--workdir", type=Path, required=True)
     parser.add_argument("--packages", type=int, default=50)
     mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--full", action="store_true", help="Rehearse the complete publisher locally")
     mode.add_argument("--curated", action="store_true")
     mode.add_argument("--largest", action="store_true", help="Bounded largest-archive rehearsal")
     mode.add_argument(
@@ -177,6 +280,9 @@ def main():
         help="Rehearse only these exact pinned packages; repeat for several",
     )
     args = parser.parse_args()
+    if args.full:
+        print(json.dumps(measure_full(args.workdir.resolve(), args.distro), indent=2))
+        return
     report = measure(
         args.workdir.resolve(),
         args.distro,

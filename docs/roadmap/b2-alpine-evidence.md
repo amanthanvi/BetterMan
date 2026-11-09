@@ -12,8 +12,11 @@ measurement; production promotion still requires owner sign-off.
 `ingestion/data/alpine-v3.23.json` pins **Alpine 3.23 main/community, x86_64/noarch**.
 The complete APKINDEX snapshots are committed, so metadata never silently floats:
 
-- main, 523,581 bytes: `0f803a0c7157052e4c14ecf765702da225fc1d435c94c9c0dbd9e2be96a0490d`
-- community, 2,383,376 bytes: `1f38c61240cdab5edc6e0f75bc37e264eedde51e2289cb3009e7a811e71a9471`
+- main (2026-11-09), 523,557 bytes: `3638a3a176d7e01359e0daafba4dbcd7636ec5ea018a2c2676c75e5c3ecab915`
+- community (2026-11-09), 2,383,409 bytes: `7200ccfa6297716d2301cee85dffa297bab54122d762fc773d6908fafd7357e9`
+
+The November 9 refresh below supersedes the original October 30 index pins and
+the historical sample measurements further down this document.
 
 `releaseSha256` hashes the canonical index-set descriptor, not an invented upstream
 Release file. Each bundled index is checked for its exact SHA256 and size before
@@ -54,6 +57,153 @@ an older APK. Both mirrors must serve bytes matching the pinned chain/size; if
 neither can, acquisition fails before release creation. Refresh indexes and reviewed
 version pins in a new commit before a later run when required. Do not substitute
 a newer package or mutable index to get past the failure.
+
+## November 9, 2026: superseded-pin recovery
+
+Base: `cac144cd6acee577aaf0c94702777803c002c067`. The failed
+[full staging run](https://github.com/amanthanvi/BetterMan/actions/runs/42584747396)
+logged `deb_archive_fallback: http_404` followed by a terminal HTTP 404. A local
+full selection against that lock reproduced the same failure after 1,286 archive
+receipts; `apk-tools-doc` was the first unacquired package in selection order.
+GET requests independently confirmed **404 on both exact pinned URLs**:
+
+- `https://dl-cdn.alpinelinux.org/alpine/v3.23/main/x86_64/apk-tools-doc-3.0.8-r0.apk`
+- `https://dl-3.alpinelinux.org/alpine/v3.23/main/x86_64/apk-tools-doc-3.0.8-r0.apk`
+
+Both mirrors return **200** for the replacement `apk-tools-doc-3.0.9-r0.apk`.
+The October 30 and November 9 indexes differ by 101 removed main identities and
+258 removed community identities, including additional doc packages independently
+confirmed missing on both mirrors (`expat-doc-2.9.0-r0`, `libarchive-doc-3.8.10-r0`,
+`linux-lts-doc-6.18.59-r0`, `nsd-doc-4.13.0-r0`, and others). This establishes
+superseded package versions, rather than a changed URL layout or checksum bypass.
+The original Actions log contains no package URL, so the exact first failed
+request in that historical concurrent run cannot be recovered from its log.
+An additional traced local acquisition using the original lock and the actual
+unbounded full selection captured both `apk-tools-doc-3.0.8-r0.apk` and
+`expat-doc-2.9.0-r0.apk` returning 404 on primary and fallback; which worker
+reports first depends on cache and concurrency.
+
+The October 30 index SHA256s were main
+`0f803a0c7157052e4c14ecf765702da225fc1d435c94c9c0dbd9e2be96a0490d` and community
+`1f38c61240cdab5edc6e0f75bc37e264eedde51e2289cb3009e7a811e71a9471`.
+The replacement files are `alpine-v3.23-{main,community}-20261109.tar.gz`, with
+the sizes and hashes listed above. They were fetched over HTTPS from
+`<mirror>/<main|community>/x86_64/APKINDEX.tar.gz` on **both** configured mirrors;
+each pair was byte-identical before copying into the checkout. Hashing the
+canonical `repositories` array (`json.dumps(..., sort_keys=True,
+separators=(",", ":"))`) gives new `releaseSha256`
+`619682f92ab56d43c0b8241c1f30445ea87147ce6f214598aee7351323bd8873`.
+The existing four .NET 10 elections remain available and unchanged;
+`netstandard21-targeting-pack` changes from `9.0.122-r0` to `9.0.123-r0` because
+the previous election is absent. No popularity or unrelated distro pins change.
+
+Refresh procedure (an explicit reviewed change, never runtime recovery):
+
+1. Fetch both repository indexes over HTTPS, compare mirror bytes, verify each
+   index's `.SIGN.RSA.*` signature against Alpine's x86_64 signing key from aports
+   (`openssl dgst -sha1 -verify <key> -signature <sig> <second gzip stream>`), and
+   record the new sizes/SHA256s and index-set descriptor hash. For the 2026-11-09
+   refresh, both `alpine-v3.23-{main,community}-20261109.tar.gz` verify against
+   `alpine-devel@lists.alpinelinux.org-6165ee59.rsa.pub` (key SHA256 prefix
+   `207e4696d3c05f7c`). Inspect duplicate package
+   identities and update only superseded explicit version elections.
+2. In the isolated candidate checkout, bootstrap the new index set through the
+   existing native Q1 control checksum, identity/size and SHA256 datahash verifier.
+   A previous whole-file map must be replaced as part of this reviewed refresh,
+   never silently ignored by a running importer.
+3. Run `pnpm ingest:full-benchmark --distro alpine --full --workdir <fresh-dir>`.
+   It also fails when the release's declared page, alias, provider or license counts
+   differ from the rows the publisher sent, the counts activation verifies.
+   This runs the actual `publish_workspace` implementation with a local sink,
+   keeping command ownership, the 2% parse gate, the 8 MiB page gate, complete
+   license preflight and serialization. It saves `release.json` (including the
+   complete release manifest), `report.json` and `alpine-package-sha256.json`.
+   No Convex client is constructed; no upload or activation happens.
+4. Check the export's `releaseSha256`, every acquired package's native proof and
+   exact filename, then commit the **complete** exported `packageSha256` map into
+   the lock. Replay from a fresh workspace with that final lock, reusing only
+   archives that pass both native verification and the committed whole-file pins.
+
+Unlike Debian/Ubuntu's timestamped snapshots, Arch's dated archive, and Fedora's
+release tree plus archive fallback, these two Alpine hosts mirror a mutable
+versioned repository. Fixed pins demonstrably decayed within ten days here.
+The small durable improvement is fail-closed guidance naming the unavailable
+archive and the reviewed refresh required; neither an updated mutable index nor
+new package bytes can enter ingestion automatically. Long-term reproducibility
+would require an owner-approved immutable mirror retaining the **verified full
+acquired set** (including notice/include dependencies), with its storage and
+retention policy reviewed separately. This PR does not introduce that service.
+
+### Full no-upload rehearsal
+
+On macOS arm64, Python 3.14.10 and host mandoc 1.14.6, the refreshed native-chain
+bootstrap completed the full publisher in **388.46 seconds**: 146.06 seconds of
+acquisition/extraction and 242.01 seconds of publisher work. This was a mixed-cache
+run, downloading 1,127,372,293 bytes, not a cold-transfer benchmark. It verified
+**4,532 acquired archives / 1,753,394,935 bytes**, including **4,498 documentation
+candidates / 1,640,153,324 bytes**. Neither mirror fallback nor a fatal error
+occurred. All curated command-owner checks and the existing parse gate passed.
+
+Results: **43,129 page records** (**41,920 canonical**), **16,945 aliases**,
+**4,498 license records**, **3,505 packages with standard-text fills**, **115
+packages with recorded missing-license identifiers/expression gaps**, and **zero
+notice-link gaps**. A license record can contain a clearly labelled missing-text
+warning; these counts do not claim all packages have complete license texts.
+The release manifest retains the identifiers, expressions, failures and source
+paths, rather than hiding those gaps.
+
+The full corpus records **90 parse failures plus 27 missing/unsupported sources**,
+**117 / 60,191 (0.194%)**, below the unchanged 2% acceptance threshold. Of the 90:
+85 have unresolved roff include requests, one has a dynamic include request,
+one is host mandoc's `tag_put` assertion on `got(1)`, and three exceed the unchanged
+8 MiB encoded stored-page limit:
+
+| Package | Page | Stored bytes | Result |
+| --- | --- | ---: | --- |
+| salt-doc | salt(7) | 42,415,930 | Recorded and dropped |
+| salt-lts-doc | salt(7) | 42,718,600 | Recorded and dropped |
+| txr-doc | txr(1) | 9,392,049 | Recorded and dropped |
+
+The 27 source gaps include three URL-grammar exclusions, two link/stub cycles,
+nine includes escaping manual roots, and thirteen absent/unsupported targets.
+These are nonfatal, recorded omissions under the existing contract; unsafe or
+unresolved source bytes never become rendered manuals. The host renderer failure
+is a local-platform limitation, not evidence that Alpine CI's renderer will behave
+identically.
+
+The complete export's **4,532 exact filenames/digests** were cross-checked against
+every persisted native receipt: control checksum matches the checked index,
+data SHA256 is present, verified data offset is positive, and observed whole-file
+digest exactly equals the export. All documentation candidates are covered.
+The canonical sorted `packageSha256` map hashes to
+`9c6fee6e04000b8fdc3d3e105d95b754a084b1622ff8e0bf126d48117bb577a5`.
+It is now committed for owner review, rather than deferred to another staging run.
+The complete final lock hashes to
+`bec33ff4fe59518e93135fe86e59c14405ff6bc8fc18003e39c85d9d82b411e2`.
+A **fresh-workspace full replay with the final whole-file lock** also completed
+with **zero fatal errors**, the same page/license/gap counts and all command,
+parse, license-preflight and serialization gates intact. It took **351.78 seconds**
+(index 0.42 s, native plus whole-file verification/extraction 110.65 s, publisher
+240.70 s), transferred **zero bytes** using the verified archive cache, and had
+**zero fallbacks**. It did not reuse extracted receipts or parsed pages from the
+bootstrap workspace. Its saved release manifest contains the exact final lock,
+and its complete exported map equals the committed map. This proves cached bytes
+pass both integrity layers; the preceding bootstrap supplies the download evidence.
+
+[Final machine-readable report, including every recorded source/parse omission](b2-alpine-full-20261109.json).
+Local artifacts are `/tmp/betterman-alpine-final-20261109/{release.json,report.json,alpine-package-sha256.json}`.
+The release manifest is generated through the real publisher, not a parallel
+benchmark implementation. The local sink checks serialized page, package, alias
+and license counts against the publisher declarations.
+
+Validation on this change: `pnpm ingest:lint` passes; `pnpm ingest:test` passes
+**1,246 tests**, 89.81% coverage, with one nonfatal unclosed-SQLite ResourceWarning
+in an existing Debian fixture; `pnpm ops:test` passes **125 tests**. Regressions
+cover both-mirror missing APKs without accepting partial bytes, unchanged handling
+of other HTTP failures, index-set identity/complete selected-runtime-license pins,
+and the complete local publisher path without constructing a network client.
+No `convex/` files changed, so Convex checks were not run. No production/shared
+service was contacted, no workflow was dispatched, and nothing was merged.
 
 ## Selection and command attribution
 
@@ -132,6 +282,9 @@ companions. PR whitespace, mixed-config, budget, public-API and Proof guards run
 on the committed family diff. No full cloud import or production operation ran.
 
 ## Independent-review fixes and pin rollout
+
+The following records the original bootstrap rollout. The November 9 full local
+refresh and complete whole-file map above supersede its deferred-pin step.
 
 Malformed signature/control tar data (including missing or non-UTF-8 `.PKGINFO`)
 now raises `DownloadIntegrityError`, as do existing gzip/native checksum errors.
