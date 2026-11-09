@@ -47,14 +47,17 @@ def notice_workspace(tmp_path):
     def acquire(packages, **_kwargs):
         for package in packages:
             workspace.downloads.append(package.name)
+            stream = payload(archives[package.name])
+            quota = ExtractedQuota(tmp_path / "files")
+            entries = fedora_archives.extract_payload(stream, package, tmp_path, quota=quota)
+            if fedora_archives.notice_targets(entries):
+                stream.seek(0)
+                entries = fedora_archives.retain_notice_targets(
+                    stream, package, tmp_path, entries, quota=quota
+                )
             workspace.store.add(
                 package,
-                fedora_archives.extract_payload(
-                    payload(archives[package.name]),
-                    package,
-                    tmp_path,
-                    quota=ExtractedQuota(tmp_path / "files"),
-                ),
+                entries,
             )
             workspace.acquired.add(package.name)
 
@@ -146,7 +149,7 @@ def test_missing_notice_file_is_not_hidden_by_other_notices_or_spdx(
         collector(w, "tool")
 
 
-def test_blocked_notice_link_is_not_ignored_beside_readable_notice(notice_workspace):
+def test_blocked_notice_link_is_recorded_beside_readable_notice(notice_workspace):
     w = notice_workspace
     w.register(
         "tool",
@@ -155,8 +158,8 @@ def test_blocked_notice_link_is_not_ignored_beside_readable_notice(notice_worksp
             ("usr/share/licenses/tool/LICENSE", b"", "../../../../../etc/passwd"),
         ],
     )
-    with pytest.raises(ValueError, match="leaves archive documentation roots"):
-        fedora_archives.copyright_text(w, "tool")
+    assert fedora_archives.copyright_text(w, "tool") == "other notice"
+    assert w.notice_link_gaps["tool"][0]["target"] == "etc/passwd"
 
 
 def test_arch_missing_directory_without_spdx_text_fails_closed(notice_workspace):
@@ -395,7 +398,7 @@ def test_alpine_missing_directory_with_no_matching_spdx_fails_closed(notice_work
         alpine_archives.copyright_text(w, "tool-doc")
 
 
-def test_alpine_directory_owner_with_blocked_notice_cannot_use_spdx(notice_workspace):
+def test_alpine_directory_owner_with_blocked_notice_records_a_gap(notice_workspace):
     import dataclasses
 
     w = notice_workspace
@@ -407,11 +410,11 @@ def test_alpine_directory_owner_with_blocked_notice_cannot_use_spdx(notice_works
     )
     w.register("spdx-licenses-text", [("usr/share/spdx/text/MIT.txt", b"MIT text", None)])
     w.owners.execute("DELETE FROM owners")
-    with pytest.raises(ValueError, match="leaves archive documentation roots"):
-        alpine_archives.copyright_text(w, "tool-doc")
+    assert alpine_archives.copyright_text(w, "tool-doc") == "MIT text"
+    assert w.notice_link_gaps["tool-doc"][0]["target"] == "etc/passwd"
 
 
-def test_alpine_blocked_matching_spdx_text_is_not_skipped(notice_workspace):
+def test_alpine_blocked_matching_spdx_text_records_a_gap(notice_workspace):
     w = notice_workspace
     w.distro = "alpine"
     w.register(
@@ -424,8 +427,8 @@ def test_alpine_blocked_matching_spdx_text_is_not_skipped(notice_workspace):
             ("usr/share/spdx/text/MIT.txt", b"", "/etc/passwd"),
         ],
     )
-    with pytest.raises(ValueError, match="leaves archive documentation roots"):
-        alpine_archives.copyright_text(w, "tool-doc")
+    assert alpine_archives.copyright_text(w, "tool-doc") == "BSD text"
+    assert w.notice_link_gaps["tool-doc"][0]["target"] == "etc/passwd"
 
 
 def test_alpine_metadata_owner_directory_alias_can_reach_spdx_fallback(notice_workspace):

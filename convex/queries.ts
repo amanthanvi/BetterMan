@@ -256,6 +256,7 @@ export const resolveManByName = query({
     }),
     v.object({
       kind: v.literal("ambiguous"),
+      preferred: v.optional(v.string()),
       indexable: v.boolean(),
       options: v.array(v.object({ section: v.string(), title: v.string(), description: v.string() })),
       datasetReleaseId: v.string(),

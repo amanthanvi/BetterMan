@@ -128,7 +128,7 @@ def declared_identifiers(expression, distro):
 
 
 def standard_text(workspace, package):
-    from ingestion.fedora_archives import notice_path
+    from ingestion.fedora_archives import _notice_texts, notice_path
 
     expression = workspace.available[package].license
     owner = {"arch": "licenses", "alpine": "spdx-licenses-text"}.get(workspace.distro)
@@ -159,11 +159,17 @@ def standard_text(workspace, package):
     if owner in workspace.acquired:
         wanted = {name for name, _kind in terms}
         for (path,) in workspace.store.db.execute(
-            "SELECT path FROM entries WHERE pkg=? AND kind IN ('file','link','blocked')", (owner,)
+            "SELECT path FROM entries WHERE pkg=? "
+            "AND kind IN ('file','link','blocked','notice-file')",
+            (owner,),
         ):
             name = Path(path).name.removesuffix(".txt")
             if name in wanted and notice_path(path):
-                shared[name] = workspace.resolve(owner, path).decode("utf-8", errors="strict")
+                shared[name] = "\n\n".join(
+                    _notice_texts(
+                        workspace, owner, path, gap_package=package, decode_errors="strict"
+                    )
+                )
     groups, attached = {}, set()
     pins = json.loads(PINS.read_text())
     # Verified distro texts take precedence; equal bodies share one displayed block.
@@ -231,7 +237,12 @@ def license_text(workspace, package):
         ):
             return "\n\n".join(
                 fedora_archives._notice_texts(
-                    workspace, owner, path, directory_fallback=directory, remaining=remaining
+                    workspace,
+                    owner,
+                    path,
+                    directory_fallback=directory,
+                    remaining=remaining,
+                    gap_package=package,
                 )
             )
         deferred.append((owner, path))
@@ -240,5 +251,11 @@ def license_text(workspace, package):
     own = fedora_archives.copyright_text(workspace, package, directory_fallback=directory)
     if own.strip():
         # Existing mixed notice/directory recovery retains its exact upstream behavior.
-        return collectors[workspace.distro].copyright_text(workspace, package) if deferred else own
-    return standard_text(workspace, package)
+        text = collectors[workspace.distro].copyright_text(workspace, package) if deferred else own
+    else:
+        text = standard_text(workspace, package)
+    gaps = getattr(workspace, "notice_link_gaps", {}).get(package, [])
+    if gaps:
+        text += "\n\nUnreadable package notice links:\n"
+        text += "\n".join(f"{g['package']}:{g['path']} -> {g['target']}" for g in gaps)
+    return text

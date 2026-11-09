@@ -1,6 +1,7 @@
 """Archive trust boundaries are independent of package installation tools."""
 
 import io
+import shutil
 import tarfile
 
 import pytest
@@ -25,6 +26,137 @@ def payload(members):
                 item.size = len(body)
                 archive.addfile(item, io.BytesIO(body))
     return io.BytesIO(raw.getvalue())
+
+
+def test_blocked_error_names_package_link_and_target(tmp_path):
+    entries = extract_payload(
+        payload([("usr/share/licenses/fixture/LICENSE", b"", "/etc/license")]),
+        package(),
+        tmp_path,
+        quota=ExtractedQuota(tmp_path / "files"),
+    )
+    store = ArchiveStore(tmp_path)
+    store.add(package(), entries)
+    try:
+        with pytest.raises(
+            ValueError, match="fixture:usr/share/licenses/fixture/LICENSE -> etc/license"
+        ):
+            store.resolve("fixture", "usr/share/licenses/fixture/LICENSE")
+    finally:
+        store.db.close()
+
+
+@pytest.mark.parametrize("target_first", [False, True])
+def test_notice_target_retained_only_from_same_archive_regular_member(tmp_path, target_first):
+    from ingestion.fedora_archives import retain_notice_targets
+
+    members = [
+        ("usr/share/licenses/fixture/LICENSE", b"", "/opt/tool/legal.txt"),
+        ("opt/tool/legal.txt", b"packager selected notice", None),
+    ]
+    stream = payload(members[::-1] if target_first else members)
+    quota = ExtractedQuota(tmp_path / "files")
+    entries = extract_payload(stream, package(), tmp_path, quota=quota)
+    stream.seek(0)
+    entries = retain_notice_targets(stream, package(), tmp_path, entries, quota=quota)
+    store = ArchiveStore(tmp_path)
+    store.add(package(), entries)
+    try:
+        assert store.resolve("fixture", members[0][0]) == b"packager selected notice"
+        assert not any(p.is_symlink() for p in tmp_path.rglob("*"))
+        assert quota.used == len(b"packager selected notice")
+    finally:
+        store.db.close()
+
+
+@pytest.mark.parametrize(
+    "kind", [tarfile.SYMTYPE, tarfile.LNKTYPE, tarfile.FIFOTYPE, tarfile.DIRTYPE]
+)
+def test_special_notice_target_stays_blocked(tmp_path, kind):
+    from ingestion.fedora_archives import retain_notice_targets
+
+    raw = io.BytesIO()
+    with tarfile.open(fileobj=raw, mode="w") as archive:
+        link = tarfile.TarInfo("usr/share/licenses/fixture/LICENSE")
+        link.type, link.linkname = tarfile.SYMTYPE, "/opt/legal"
+        archive.addfile(link)
+        target = tarfile.TarInfo("opt/legal")
+        target.type, target.linkname = kind, "/etc/passwd"
+        archive.addfile(target)
+    stream = io.BytesIO(raw.getvalue())
+    quota = ExtractedQuota(tmp_path / "files")
+    entries = extract_payload(stream, package(), tmp_path, quota=quota)
+    stream.seek(0)
+    assert retain_notice_targets(stream, package(), tmp_path, entries, quota=quota) == entries
+    assert entries[0][2] == "blocked"
+    assert quota.used == 0
+
+
+@pytest.mark.parametrize("other_notice", [False, True])
+def test_jvm_manual_named_license_never_becomes_retained_notice_file(tmp_path, other_notice):
+    from ingestion.fedora_archives import notice_targets, retain_notice_targets
+
+    path = "usr/lib/jvm/jdk/man/man1/license.1"
+    members = [
+        (path, b"", "/opt/source.1"),
+        ("usr/bin/tool", b"", "/opt/source.1"),
+        ("opt/source.1", b".so /etc/passwd\n", None),
+    ]
+    if other_notice:
+        members.append(("usr/share/licenses/fixture/LICENSE", b"", "/opt/source.1"))
+    stream = payload(members)
+    quota = ExtractedQuota(tmp_path / "files")
+    entries = extract_payload(stream, package(), tmp_path, quota=quota)
+    assert notice_targets(entries) == ({"opt/source.1"} if other_notice else set())
+    stream.seek(0)
+    retained = retain_notice_targets(stream, package(), tmp_path, entries, quota=quota)
+    assert retained[0][2] == retained[1][2] == "blocked"
+    if not other_notice:
+        assert retained == entries and quota.used == 0
+    store = ArchiveStore(tmp_path)
+    store.add(package(), retained)
+    try:
+        with pytest.raises(ValueError, match="leaves archive documentation roots"):
+            store.resolve("fixture", path)
+    finally:
+        store.db.close()
+
+
+@pytest.mark.skipif(shutil.which("bsdtar") is None, reason="libarchive is not installed")
+def test_libarchive_conversion_of_rpm_style_deferred_cpio_hardlinks(tmp_path):
+    from ingestion.fedora_archives import _rpm_payload
+
+    archive = tmp_path / "deferred.cpio"
+    raw = bytearray()
+    target = "usr/share/licenses/fixture/EMPTY"
+    link = "usr/share/licenses/fixture/LICENSE"
+    for name, body, inode, count in [
+        (target, b"", 1, 2),
+        (link, b"actual notice\n", 1, 2),
+        ("TRAILER!!!", b"", 0, 1),
+    ]:
+        encoded = name.encode() + b"\0"
+        fields = (inode, 0o100644, 0, 0, count, 0, len(body), 0, 0, 0, 0, len(encoded), 0)
+        raw.extend(b"070701" + b"".join(f"{value:08x}".encode() for value in fields) + encoded)
+        raw.extend(b"\0" * (-len(raw) % 4))
+        raw.extend(body)
+        raw.extend(b"\0" * (-len(raw) % 4))
+    archive.write_bytes(raw)
+    entries = _rpm_payload(
+        archive,
+        lambda stream: extract_payload(
+            stream, package(), tmp_path, quota=ExtractedQuota(tmp_path / "files")
+        ),
+    )
+    store = ArchiveStore(tmp_path)
+    store.add(package(), entries)
+    try:
+        # This is the pre-existing in-root loss too: libarchive converts the
+        # first member to a blank regular file and the data member to a hardlink.
+        assert store.resolve("fixture", link) == b""
+        assert {path: kind for _, path, kind, _, _ in entries} == {target: "file", link: "link"}
+    finally:
+        store.db.close()
 
 
 def test_rpm_payload_keeps_only_docs_and_never_creates_links_or_runs_scripts(tmp_path):

@@ -14,6 +14,20 @@ it('sets non-HTML security headers without invoking middleware for static assets
   ]))
 })
 
+it('gives the proxy-skipped service worker and favicon their own security headers', async () => {
+  expect(await nextConfig.headers!()).toEqual(expect.arrayContaining([
+    // The worker's fetch() passes pages through, so its CSP keeps same-origin connections.
+    { source: '/sw.js', headers: expect.arrayContaining([
+      { key: 'Content-Security-Policy', value: "default-src 'self'; frame-ancestors 'none'" },
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+    ]) },
+    { source: '/favicon.svg', headers: expect.arrayContaining([
+      { key: 'Content-Security-Policy', value: "default-src 'none'; frame-ancestors 'none'" },
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+    ]) },
+  ]))
+})
+
 it('keeps test files out of the Pages Router public route tree', () => {
   const files = readdirSync(new URL('./pages/', import.meta.url), { recursive: true, encoding: 'utf8' })
   expect(files.filter((file) => /\.(?:test|spec)\./.test(file))).toEqual([])

@@ -12,8 +12,11 @@ from ingestion.debian_archives import MAX_SOURCE_BYTES, ExtractedQuota
 from ingestion.debian_indexes import BINARY_PATH, MAN_PATH, download, popularity, safe_path
 from ingestion.fedora_archives import (
     ArchivePackage,
+    _notice_texts,
     extract_payload,
     notice_path,
+    notice_targets,
+    retain_notice_targets,
     validate_package,
 )
 from ingestion.fedora_archives import (
@@ -120,8 +123,13 @@ def catalog(root: Path, pins_path: Path):
 
 
 def extract(archive, package, root, *, quota=None, **_kwargs):
+    quota = quota or ExtractedQuota(root / "files")
     with archive.open("rb") as stream:
-        return extract_payload(stream, package, root, quota=quota or ExtractedQuota(root / "files"))
+        entries = extract_payload(stream, package, root, quota=quota)
+        if notice_targets(entries):
+            stream.seek(0)
+            entries = retain_notice_targets(stream, package, root, entries, quota=quota)
+        return entries
 
 
 def copyright_text(workspace, package):
@@ -151,7 +159,8 @@ def spdx_notice(workspace, package):
     matched = set()
     texts = []
     for (path,) in workspace.store.db.execute(
-        "SELECT path FROM entries WHERE pkg='licenses' AND kind IN ('file','link','blocked')"
+        "SELECT path FROM entries WHERE pkg='licenses' "
+        "AND kind IN ('file','link','blocked','notice-file')"
     ):
         identifier = Path(path).name.removesuffix(".txt")
         # Legacy Arch GPL/LGPL names specify no version; retain all canonical
@@ -161,7 +170,7 @@ def spdx_notice(workspace, package):
         if legacy:
             declared.update({legacy[1], legacy[1] + legacy[2].removesuffix(".0")})
         if declared & identifiers and notice_path(path):
-            text = workspace.resolve("licenses", path).decode("utf-8", errors="replace")
+            text = "\n\n".join(_notice_texts(workspace, "licenses", path, gap_package=package))
             if text.strip():
                 matched.update(declared & identifiers)
                 if text not in texts:

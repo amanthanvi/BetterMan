@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 const release = vi.hoisted(() => ({ servingRelease: vi.fn(), servingReleases: vi.fn() }))
 vi.mock('./lib/manRelease', async (importOriginal) => ({
@@ -19,6 +19,15 @@ beforeEach(() => {
   release.servingReleases.mockReset().mockImplementation(async (distro: string, lang: string) => ({
     release: releaseFor(distro), translation: distro === 'debian' ? `${lang}+${distro}` : null,
   }))
+})
+afterEach(() => vi.unstubAllEnvs())
+
+it('gives a short name the same trusted translated-release pair as the picker', async () => {
+  vi.stubEnv('BM_RESERVED_PATH_SEGMENTS', 'man/api/search/section')
+  const { key, forwarded } = await rewrite('https://betterman.sh/tar?lang=de')
+  expect(key).toBeNull()
+  expect(release.servingReleases).toHaveBeenCalledExactlyOnceWith('debian', 'de')
+  expect(trustedTranslation(forwarded)).toEqual({ lang: 'de', datasetReleaseId: 'de+debian', known: true })
 })
 
 async function rewrite(url: string, headers: Record<string, string> = {}) {

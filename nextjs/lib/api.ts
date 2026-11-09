@@ -265,7 +265,7 @@ const cachedManByName = unstable_cache(
 const cachedResolveManByName = unstable_cache(
   async (distro: Distro, name: string, _release: string | null) =>
     cacheableManPage(await convex().query(api.queries.resolveManByName, { distro, name }), _release),
-  ['betterman', 'convex', 'resolve-man-by-name', 'b4-v1'],
+  ['betterman', 'convex', 'resolve-man-by-name', 'short-order-v1'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -288,7 +288,7 @@ const cachedResolveManByNameIn = unstable_cache(
     if (!nameResolutionAnsweredBy(value, english, translated)) throw new UncacheableManPage(value)
     return cacheableManPage(value)
   },
-  ['betterman', 'convex', 'resolve-man-by-name-lang', 'v2'],
+  ['betterman', 'convex', 'resolve-man-by-name-lang', 'short-order-v1'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 

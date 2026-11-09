@@ -46,6 +46,18 @@ it('keeps production CSP self-only for analytics and issues a fresh nonce per re
   expect(first.headers.get('x-content-type-options')).toBe('nosniff')
 })
 
+it.each(['/tar', '/tar/-Q'])('passes trusted release provenance to short-name resolution and keeps its dynamic redirect private: %s', async path => {
+  vi.stubEnv('BM_RESERVED_PATH_SEGMENTS', 'man/api/search/section')
+  const response = await proxy(new NextRequest(`https://betterman.sh${path}`, { headers: { 'x-bm-release': 'forged', 'x-bm-release-token': 'forged' } }))
+  expect(JSON.parse(response.headers.get('x-middleware-request-x-bm-release')!)).toEqual(releaseFor('debian'))
+  expect(response.headers.get('x-middleware-request-x-bm-release-token')).toBe('test-release-token')
+  expect(response.headers.get('cache-control')).toBe('private, no-store')
+  expect(response.headers.get('content-security-policy')).toContain('nonce-')
+  expect(response.headers.get('x-middleware-request-content-security-policy')).toBe(response.headers.get('content-security-policy'))
+  expect(response.headers.get('content-security-policy')).toContain(`'nonce-${response.headers.get('x-middleware-request-x-nonce')}'`)
+  expect(response.headers.get('x-middleware-rewrite')).toBeNull()
+})
+
 it('serves man pages under a hash-only CSP with no nonce, so the HTML can be cached', async () => {
   vi.stubEnv('NODE_ENV', 'production')
   const response = await proxy(new NextRequest('https://betterman.sh/man/tar/1'))
@@ -147,7 +159,7 @@ it('keys text exports without applying the HTML distro cookie', async () => {
   expect(release.servingRelease).toHaveBeenCalledWith('debian')
 })
 
-it.each(['/api', '/api/v1/info', '/api/v1/man/tar/1', '/assets', '/_bm/man.0123456789abcdef.js'])('skips API and asset routes: %s', (url) => {
+it.each(['/api', '/api/v1/info', '/api/v1/man/tar/1', '/assets', '/_bm/man.0123456789abcdef.js', '/sw.js', '/favicon.svg'])('skips API and asset routes: %s', (url) => {
   expect(unstable_doesMiddlewareMatch({ config, url })).toBe(false)
 })
 
@@ -156,7 +168,7 @@ it.each(['/man/tar/1', '/man/tar'])('runs for man page prefetches as well: %s', 
   expect(unstable_doesMiddlewareMatch({ config, url, headers: { purpose: 'prefetch' } })).toBe(true)
 })
 
-it.each(['/', '/apiary', '/api-docs', '/assets-guide', '/man/api/3', '/tar', '/tar.1', '/2/open', '/tar/-x', '/opensearch.xml'])('sets CSP on pages: %s', (url) => {
+it.each(['/', '/apiary', '/api-docs', '/assets-guide', '/man/api/3', '/tar', '/tar.1', '/2/open', '/tar/-x', '/opensearch.xml', '/sw', '/sw.jsx'])('sets CSP on pages: %s', (url) => {
   expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true)
 })
 

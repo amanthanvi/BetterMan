@@ -11,6 +11,7 @@ import re
 import sqlite3
 import tarfile
 import threading
+import zlib
 from pathlib import Path
 
 from ingestion.debian_indexes import (
@@ -40,7 +41,7 @@ DOC_ROOTS = (
     "usr/share/librarian-puppet/",
     "usr/share/scala-",
 )
-EXTRACTOR_VERSION = 7
+EXTRACTOR_VERSION = 9
 
 
 class ExtractedQuota:
@@ -82,6 +83,14 @@ class MissingSource(FileNotFoundError):
     def __init__(self, package: str, path: str):
         self.package, self.path = package, path
         super().__init__(f"{package}:{path}")
+
+
+class BlockedSource(ValueError):
+    def __init__(self, package: str, path: str, target: str):
+        self.package, self.path, self.target = package, path, target
+        super().__init__(
+            f"Documentation link leaves archive documentation roots: {package}:{path} -> {target}"
+        )
 
 
 class MemberReader:
@@ -221,12 +230,18 @@ def source_bytes(path: Path) -> bytes:
         if magic[:3] == b"BZh"
         else open
     )
+    read_errors = (lzma.LZMAError, zlib.error)
     if magic[:4] == b"\x28\xb5\x2f\xfd":
+        from compression.zstd import ZstdError
         from compression.zstd import open as zstd_open
 
         opener = zstd_open
-    with opener(path, "rb") as stream:
-        data = stream.read(MAX_SOURCE_BYTES + 1)
+        read_errors += (ZstdError,)
+    try:
+        with opener(path, "rb") as stream:
+            data = stream.read(MAX_SOURCE_BYTES + 1)
+    except read_errors as exc:
+        raise ValueError("Unreadable compressed documentation source") from exc
     if len(data) > MAX_SOURCE_BYTES:
         raise ValueError("Decompressed man source exceeds limit")
     return data
@@ -347,7 +362,13 @@ class ArchiveStore:
             raise MissingSource(package, path)
         owner, kind, target, file = entry
         if kind == "blocked":
-            raise ValueError("Documentation link leaves archive documentation roots")
+            raise BlockedSource(owner, path, target)
+        if kind == "notice-file":
+            try:
+                data = source_bytes(Path(file))
+            except (OSError, ValueError, EOFError) as exc:
+                raise BlockedSource(owner, path, target) from exc
+            return (owner, target, data) if details else data
         if kind in {"link", "generated-link"}:
             return self.resolve(owner, target, seen, details=details, follow_stubs=follow_stubs)
         data = source_bytes(Path(file))
