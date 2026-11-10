@@ -12,12 +12,15 @@ const exec = promisify(execFile)
 // deleteInactiveReleaseBatch removes at most 2,000 documents per transaction,
 // and cleanupOrphanContentBlobsBatch scans at most 100 blobs. Batches start
 // below the maximum and halve on failure so a heavy page (large inline
-// payloads, many chunks) degrades instead of stalling the run.
+// payloads, many chunks) degrades instead of stalling the run. After
+// GROW_AFTER clean batches they double again, up to their start (see
+// adaptiveLimit).
 const PREVIEW_LIMIT = 10
 const DELETE_LIMIT = { start: 1000, min: 5 }
 const ORPHAN_LIMIT = { start: 50, min: 5 }
 const MAX_BATCHES_PER_RELEASE = 100_000
 const MAX_ATTEMPTS = 10
+const GROW_AFTER = 10
 
 export function parseOptions(env = process.env, now = Date.now()) {
   const apply = env.BETTERMAN_PRUNE_APPLY === 'true'
@@ -163,17 +166,42 @@ export function limitForAttempt({ start, min }, attempt) {
 }
 
 // Once a smaller batch succeeds, later batches keep that size rather than
-// re-escalating and paying the failed attempts again on every batch.
-export function adaptiveLimit(bounds) {
+// re-escalating and paying the failed attempts again on every batch. The size
+// doubles back toward the start after `growAfter` batches in a row succeed on
+// their first attempt: the failures are often transient, and without regrowth
+// one bad streak pinned a release at the minimum for hours (#528). When the
+// first batch at a grown size fails, that size is probably too big for the
+// data, not unlucky, so the streak needed before the next try doubles (up to
+// `maxGrowAfter`). A probe that succeeds resets it.
+export function adaptiveLimit(bounds, { growAfter = GROW_AFTER, maxGrowAfter = GROW_AFTER * 32 } = {}) {
   let start = bounds.start
   let lastAttempted = start
+  let lastAttempt = 1
+  let cleanStreak = 0
+  let required = growAfter
+  let probing = false
   return {
     forAttempt(attempt) {
+      lastAttempt = attempt
       lastAttempted = limitForAttempt({ start, min: bounds.min }, attempt)
       return lastAttempted
     },
     succeeded() {
-      start = lastAttempted
+      const probed = probing
+      probing = false
+      if (lastAttempt > 1) {
+        if (probed) required = Math.min(maxGrowAfter, required * 2)
+        start = lastAttempted
+        cleanStreak = 0
+        return
+      }
+      if (probed) required = growAfter
+      cleanStreak += 1
+      if (cleanStreak >= required && start < bounds.start) {
+        start = Math.min(bounds.start, start * 2)
+        cleanStreak = 0
+        probing = true
+      }
     },
     get current() {
       return start
@@ -225,7 +253,7 @@ export async function pruneRelease(run, datasetReleaseId, { log = console.log, r
     for (const [table, count] of Object.entries(result.deletedByTable ?? {})) {
       deletedByTable[table] = (deletedByTable[table] ?? 0) + count
     }
-    if (batch % 25 === 0) log(JSON.stringify({ event: 'prune_progress', datasetReleaseId, batches: batch + 1, deleted }))
+    if (batch % 25 === 0) log(JSON.stringify({ event: 'prune_progress', datasetReleaseId, batches: batch + 1, deleted, maxDocs: limit.current }))
     if (result.deletedRelease) return { datasetReleaseId, batches: batch + 1, deleted, storageDeletes, deletedByTable }
     if (!result.hasMore) throw new Error(`Deletion stalled without removing ${datasetReleaseId}`)
     // A batch that deletes nothing while claiming more work would loop forever.
