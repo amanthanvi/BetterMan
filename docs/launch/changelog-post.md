@@ -4,7 +4,7 @@
 >
 > - Voice follows [PRODUCT.md](../../PRODUCT.md) and [DESIGN.md](../../DESIGN.md): quiet, precise, tool-like, no hype. No exclamation marks, no superlatives.
 > - The numbers were filled from production on 2026-11-01 (values in [launch-checklist.md](launch-checklist.md#placeholders)). Only the launch date is left for the owner. Re-verify each claim on production first (checklist step 6).
-> - The coverage sentence in "All of Debian, and more systems" says what production had on 2026-11-01: Ubuntu full, Fedora, Arch and Alpine curated, with full imports in progress (B2, #394). Change it if that moves before launch.
+> - The coverage sentence in "All of Debian, and more systems" says what production had on 2026-11-09: Ubuntu, Fedora, Arch and Alpine all full archive imports (B2, #394, closed). Re-read the counts on launch day; the monthly cron refreshes them.
 > - The concept explainers claim was checked on production on 2026-11-08: all twenty `/concept/<slug>` pages answer 200, and `/concept/signals` links signal(7) first.
 > - Word count of the post body below: about 600.
 > - Not published, not posted. The owner publishes.
@@ -29,7 +29,7 @@ A flag that is missing from some systems, or behaves differently on them, carrie
 
 ## All of Debian, and more systems
 
-BetterMan now serves 107,143 manuals from about 17,300 Debian trixie (13) packages, the full main archive. Where several packages ship the same page, the most-installed one gets the plain URL and a *provided by* switch lists the others. Ubuntu, Fedora, Arch, Alpine, FreeBSD and macOS are here too. Ubuntu 24.04 is a full archive import like Debian (104,763 manuals), while Fedora 44, Arch and Alpine 3.23 are curated sets of commonly used packages (about 10,000–13,000 manuals each) for now, with full imports still in progress. FreeBSD 15.1 has 12,096 base-system manuals and macOS 447.
+BetterMan now serves 107,143 manuals from about 17,300 Debian trixie (13) packages, the full main archive. Where several packages ship the same page, the most-installed one gets the plain URL and a *provided by* switch lists the others. Ubuntu, Fedora, Arch, Alpine, FreeBSD and macOS are here too. Ubuntu 24.04 (104,763 manuals), Fedora 44 (87,890), Arch (49,306) and Alpine 3.23 (41,920) are full archive imports like Debian. FreeBSD 15.1 has 12,096 base-system manuals and macOS 447.
 
 ## Translations
 
@@ -51,7 +51,7 @@ Examples from [tldr-pages](https://github.com/tldr-pages/tldr), under CC BY 4.0,
 
 ## Not there yet
 
-Most manuals have no translation and show in English. Fedora, Arch and Alpine are still curated sets, and full imports are in progress. Neither is dated.
+Most manuals have no translation and show in English. Translations come only from Debian; other distros' translated manuals are not imported yet. Neither is dated.
 
 ## Feedback
 
