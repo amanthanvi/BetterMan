@@ -2,7 +2,7 @@
 
 > Drafting notes, delete before posting.
 >
-> - Not posted. The owner submits it, from their own account, and answers in the thread.
+> - **Posted 2026-11-10 at 02:12 UTC** from the owner's account, with the first title: https://news.ycombinator.com/item?id=50435241. The first comment (below, in HN formatting, with the "(Delete this line …)" drafting aside removed) is https://news.ycombinator.com/item?id=50435249. Never post it again; the owner answers in the thread.
 > - The numbers were filled from production on 2026-11-01 (values in [launch-checklist.md](launch-checklist.md#placeholders)). Check each statement against production again on launch day (checklist step 6); remove any that is no longer true.
 > - Rules, from [the Show HN page](https://news.ycombinator.com/showhn.html) and the [guidelines](https://news.ycombinator.com/newsguidelines.html): the title starts with "Show HN"; the project must be easy to try with no sign-up; explain how and why you built it; do not ask anyone to upvote or comment; it is a major overhaul, not a minor release, so say so plainly. Do not use a different or shortened URL, and do not post it twice.
 > - Link the URL field to `https://betterman.sh`, not to a blog post. Post the comment below right after submitting, as the first comment.

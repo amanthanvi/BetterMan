@@ -24,15 +24,15 @@ The production numbers below were filled into the drafts on 2026-11-01. They wer
 | Indexing policy | See step 6 | `show-hn.md` |
 | Translations | 6 languages, 9,552 pages from Debian's manpages-l10n packages | same |
 
-Three values are still open. They are filled at posting time:
+Two of the three posting-time values are filled. `{{CHANGELOG_URL}}` stays open until the owner publishes the changelog post:
 
 | Placeholder | Meaning | Source |
 | --- | --- | --- |
-| `{{LAUNCH_DATE}}` | Launch day (UTC) | Owner |
+| `{{LAUNCH_DATE}}` | Launch day (UTC): **2026-11-10**, filled | Owner |
 | `{{CHANGELOG_URL}}` | Where the on-site post lives, if built | Follow-up in `changelog-post.md` |
-| `{{HN_URL}}` | The posted Show HN | Owner, after posting |
+| `{{HN_URL}}` | The posted Show HN: **https://news.ycombinator.com/item?id=50435241**, filled | Owner, after posting |
 
-Before posting, search the drafts for two opening curly braces; only these three may remain.
+Before publishing, search the drafts for two opening curly braces; only `{{CHANGELOG_URL}}` may remain.
 
 **Ubuntu, Fedora, Arch and Alpine.** The roadmap makes all four full; that is [B2 (#394)](https://github.com/amanthanvi/BetterMan/issues/394). On 2026-11-09 production reported all four as full archive imports (Ubuntu since 2026-10-31; Fedora, Arch and Alpine promoted 2026-11-09), and #394 is closed. The drafts say that. Re-read the counts on launch day: the monthly cron refreshes them, and Alpine's pins must be refreshed before each run (`ingestion/README.md`).
 
@@ -147,19 +147,19 @@ Source: [vercel-ops.md](../runbooks/vercel-ops.md#man-page-edge-caching-c4-406).
 - [x] **OWNER (lead, after merge):** delete `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` from the Vercel project environment. Done; it is deleted.
 - [ ] **OWNER, optional (skipped for now):** set `NEXT_PUBLIC_SENTRY_DSN` in the production Vercel environment. The owner passed on this for launch, so do not treat an unset DSN as a blocker. See the Sentry item in step 8.
 - [x] **OWNER:** confirm the Convex plan and spend limit cover the full-Debian storage and read numbers from step 3. Done: the team is on **Professional**, and a **$10/month warning-only** spending limit is set, with no disable threshold, because a disable threshold would take every project offline. The Convex usage page shows all usage within Pro's included amounts.
-- [ ] **OWNER: posting.** Show HN, the submissions and any on-site post. Drafts are in this folder. The owner approved posting the filled drafts from the owner's own accounts, and chose (2026-11-08) to post Show HN after the short-URL fix (#505) is live and these drafts merge, confirming sign-in and availability right before posting. Agents create no accounts and send no email.
+- [ ] **OWNER: posting.** Show HN, the submissions and any on-site post. Drafts are in this folder. The owner approved posting the filled drafts from the owner's own accounts, and chose (2026-11-08) to post Show HN after the short-URL fix (#505) is live and these drafts merge, confirming sign-in and availability right before posting. Agents create no accounts and send no email. **Show HN posted 2026-11-10 at 02:12 UTC** after the step 6 checks below ([item 50435241](https://news.ycombinator.com/item?id=50435241), title option 1, first comment from `show-hn.md`). Still to do: the changelog post and the other submissions, spaced over days per [submissions.md](submissions.md).
 
 ## 6. Pre-launch claim check
 
 The drafts make factual claims. Re-verify each on production on launch day, and delete or soften any that fails.
 
-- [ ] Page counts and the distro list match `/api/v1/info` for each distro.
-- [ ] `curl -fsSL https://betterman.sh/tar.txt | head` returns plain text.
-- [ ] A man page shows its "In brief" block, and every generated item carries its "generated" mark with model and date. tldr-pages examples are labelled and linked, and `/licenses` credits tldr-pages.
+- [x] Page counts and the distro list match `/api/v1/info` for each distro. 2026-11-10: all seven matched the drafts (debian 107,143, ubuntu 104,763, fedora 87,890, arch 49,306, alpine 41,920, freebsd 12,096, macos 447).
+- [x] `curl -fsSL https://betterman.sh/tar.txt | head` returns plain text. 2026-11-10: 307 to `/man/tar/1.txt`, then 200 `text/plain` TAR(1).
+- [ ] A man page shows its "In brief" block, and every generated item carries its "generated" mark with model and date. tldr-pages examples are labelled and linked, and `/licenses` credits tldr-pages. 2026-11-10: `/man/tar/1` showed In brief, the generated mark `deepseek-v4.1-flash, 2026-11-02` and tldr-pages examples; the `/licenses` credit was not re-checked.
 - [ ] Portability markers appear on a flag that differs between distros (for example in `/explain?cmd=…`).
 - [ ] Page weight and cost claims match a fresh `pnpm perf:check`, not an old number.
-- [ ] Claims about languages and concept explainers match production: six languages (de, fr, es, pt-BR, ja, ru) with 9,552 translated pages (B3 #395), and twenty concept explainers at `/concept/<slug>` (B8 #400). Checked on production on 2026-11-08 in a browser past the Vercel checkpoint: all twenty concept pages answer 200, `/man/tar/1?distro=debian&lang=de` is the German translation crediting manpages-l10n with the English page as canonical, and `/man/rsync/1?distro=debian&lang=de` falls back to English. Check `?lang=de` on a page with a translation and one without (English fallback), and `/concept/signals`. Still no claim about a CLI (roadmap: none). Share cards, per-flag cards and the print stylesheet ship with C6 (#408).
-- [ ] **Indexing.** The index-by-demand policy is B4 ([#396](https://github.com/amanthanvi/BetterMan/issues/396)), and it is live. Search engines may index pages in sections 1, 5, 7 and 8, plus pages from packages with at least 10,000 installations in Debian's popularity contest. That makes 48,416 of Debian's 107,143 pages and 49,744 of Ubuntu's 104,763 indexable. Every other page is served and searchable, but marked `noindex` and left out of sitemaps. Translated pages are `noindex`, with the English page as canonical when that page is indexable (otherwise there is no canonical link). Check a long-tail page's `robots` meta and `/sitemap-debian.xml` on production, and keep the line in `show-hn.md` in step with what you see.
+- [x] Claims about languages and concept explainers match production: six languages (de, fr, es, pt-BR, ja, ru) with 9,552 translated pages (B3 #395), and twenty concept explainers at `/concept/<slug>` (B8 #400). Checked on production on 2026-11-08 in a browser past the Vercel checkpoint: all twenty concept pages answer 200, `/man/tar/1?distro=debian&lang=de` is the German translation crediting manpages-l10n with the English page as canonical, and `/man/rsync/1?distro=debian&lang=de` falls back to English. Check `?lang=de` on a page with a translation and one without (English fallback), and `/concept/signals`. Still no claim about a CLI (roadmap: none). Share cards, per-flag cards and the print stylesheet ship with C6 (#408). Re-checked 2026-11-10 before posting: `tar ?lang=de` is noindex with the English canonical, `rsync ?lang=de` answers 200 in English, `/concept/signals` answers 200.
+- [x] **Indexing.** The index-by-demand policy is B4 ([#396](https://github.com/amanthanvi/BetterMan/issues/396)), and it is live. Search engines may index pages in sections 1, 5, 7 and 8, plus pages from packages with at least 10,000 installations in Debian's popularity contest. That makes 48,416 of Debian's 107,143 pages and 49,744 of Ubuntu's 104,763 indexable. Every other page is served and searchable, but marked `noindex` and left out of sitemaps. Translated pages are `noindex`, with the English page as canonical when that page is indexable (otherwise there is no canonical link). Check a long-tail page's `robots` meta and `/sitemap-debian.xml` on production, and keep the line in `show-hn.md` in step with what you see. Re-checked 2026-11-10 before posting: XCreateWindow(3) is noindex with no canonical, and `/sitemap-debian.xml` answers 200.
 - [ ] The cold-cache path survives launch traffic: request a page with a name not requested before and confirm it renders.
 
 ## 7. Rollback plan
