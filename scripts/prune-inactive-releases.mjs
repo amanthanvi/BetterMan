@@ -17,6 +17,7 @@ const SWEEPS = ['all', 'blobs', 'manifests', ...DERIVED_TABLES]
 const MAX_BATCHES_PER_RELEASE = 100_000
 const MAX_ATTEMPTS = 10
 const GROW_AFTER = 10
+const deployKeys = new Set()
 
 export function parseOptions(env = process.env, now = Date.now()) {
   const apply = env.BETTERMAN_PRUNE_APPLY === 'true'
@@ -28,9 +29,12 @@ export function parseOptions(env = process.env, now = Date.now()) {
   const sweepOnly = parseFlag(env.BETTERMAN_PRUNE_SWEEP_ONLY, false, 'BETTERMAN_PRUNE_SWEEP_ONLY')
   const sweep = env.BETTERMAN_PRUNE_SWEEP?.trim() || 'all'
   if (!SWEEPS.includes(sweep)) throw new Error('Invalid sweep selection')
-  const startCursor = env.BETTERMAN_PRUNE_START_CURSOR || null
+  const startCursor = env.BETTERMAN_PRUNE_START_CURSOR ?? null
+  if (startCursor !== null && (!startCursor.trim() || startCursor.trim() === 'null')) throw new Error('A start cursor must be nonempty and not null')
   if (startCursor && sweep === 'all') throw new Error('A start cursor requires a single sweep')
   const sweepOrphans = parseFlag(env.BETTERMAN_PRUNE_SWEEP_ORPHANS, apply || sweepOnly, 'BETTERMAN_PRUNE_SWEEP_ORPHANS')
+  if (sweepOnly && !sweepOrphans) throw new Error('sweep_only requires sweeps enabled')
+  if ((sweep !== 'all' || startCursor !== null) && !sweepOnly) throw new Error('A selected sweep or start cursor requires sweep_only')
   const concurrency = parseCount(env.BETTERMAN_PRUNE_CONCURRENCY, 4, 'BETTERMAN_PRUNE_CONCURRENCY', 1)
   return {
     apply, keepPerDistro, minAgeMs: minAgeHours * 3_600_000,
@@ -265,7 +269,7 @@ export async function pruneRelease(run, datasetReleaseId, { log = console.log, r
 
 // Each request remains one bounded transaction. Checkpoints replay at most 50
 // pages after a hard cancellation; replay is safe because deletion is idempotent.
-async function sweepTable(run, { table, functionName, bounds, totals, counters, dryRun, startCursor = null, log = console.log, retry = {}, onPage }) {
+async function sweepTable(run, { table, functionName, bounds, totals, counters, dryRun = true, startCursor = null, log = console.log, retry = {}, onPage }) {
   let cursor = startCursor
   let pages = 0
   const limit = adaptiveLimit(bounds)
@@ -276,7 +280,7 @@ async function sweepTable(run, { table, functionName, bounds, totals, counters, 
     for (; pages < 1_000_000;) {
       const result = await withRetry(attempt => run(`maintenance:${functionName}`, {
         ...(DERIVED_TABLES.includes(table) ? { table } : {}), cursor, limit: limit.forAttempt(attempt), dryRun,
-      }), { ...retry, log, label: `orphan sweep ${table} cursor ${cursor}` })
+      }), { ...retry, log, label: `orphan sweep ${table} cursor ${cursor}`, shouldRetry: error => !isDerivedPinnedError(error) })
       limit.succeeded()
       if (typeof result?.isDone !== 'boolean' || !Number.isSafeInteger(result.scanned) || result.scanned < 0) throw new Error(`Invalid ${table} sweep response`)
       if (!result.isDone && (typeof result.continueCursor !== 'string' || !result.continueCursor || result.continueCursor === cursor)) {
@@ -304,7 +308,7 @@ export async function cleanupOrphanBlobs(run, options = {}) {
 }
 
 export async function cleanupOrphanManifestFiles(run, options = {}) {
-  const { dryRun, log = console.log } = options
+  const { dryRun = true, log = console.log } = options
   const totals = { scanned: 0, orphans: 0, storageDeletes: 0 }
   let previewed = 0
   await sweepTable(run, { ...options, table: '_storage', functionName: 'cleanupOrphanManifestFilesBatch',
@@ -400,46 +404,62 @@ export async function prune(run, options, { log = console.log, retry = {} } = {}
   return { inactive: inactive.length, selection, pruned, orphans, manifestFiles, derivedCaches }
 }
 
-// Surface the provider's error text without echoing credentials. Deploy keys
-// look like `prod:name|token`; the CLI never prints them, but redact anyway.
+// Redact known literal credentials before formatting or truncating provider errors.
 export function describeError(error) {
-  const stderr = typeof error?.stderr === 'string' ? error.stderr : ''
-  const lines = stderr.replace(/\[[0-9;]*m/g, '').split('\n').map((line) => line.trim()).filter(Boolean)
-  const detail = lines.length ? lines.slice(-3).join(' | ') : (error?.message ?? String(error))
-  const redacted = detail.replace(/\b(prod|dev|preview|project):[A-Za-z0-9_:-]+\|\S+/g, '$1:<redacted>')
-  return error?.code !== undefined ? `exit ${error.code}: ${redacted}` : redacted
+  let detail = typeof error?.stderr === 'string' && error.stderr ? error.stderr : (error?.message ?? String(error))
+  if (error?.cause) detail += `: ${error.cause.code ?? error.cause.message ?? String(error.cause)}`
+  for (const key of deployKeys) detail = detail.replaceAll(key, '<redacted>')
+  detail = detail.replace(/\b(prod|dev|preview|project):[A-Za-z0-9_:-]+\|\S+/g, '$1:<redacted>')
+    .replace(/<!doctype\b[\s\S]*|<html\b[\s\S]*/i, '[HTML response omitted]')
+  const lines = detail.replace(/\u001b\[[0-9;]*m/g, '').split('\n').map(line => line.trim()).filter(Boolean)
+  const redacted = lines.slice(-3).join(' | ').slice(0, 500)
+  return typeof error?.code === 'number' && typeof error?.stderr === 'string' ? `exit ${error.code}: ${redacted}` : redacted
 }
 
 // Same admin endpoint as convex run in the installed SDK; no per-page process.
 // The SDK loads lazily so the pure helpers (and ci_contracts' dependency-free
 // `pnpm ops:test`) never need node_modules; tests can inject `Client`.
-export async function convexRunner(env = process.env, { fetch, Client } = {}) {
-  if (!env.CONVEX_DEPLOY_KEY?.trim()) throw new Error('CONVEX_DEPLOY_KEY is required')
+export async function convexRunner(env = process.env, { fetch = globalThis.fetch, Client } = {}) {
+  const key = env.CONVEX_DEPLOY_KEY
+  if (key) deployKeys.add(key)
+  if (!key?.trim()) throw new Error('CONVEX_DEPLOY_KEY is required')
   if (!env.CONVEX_URL?.trim()) throw new Error('CONVEX_URL is required (deployment URL)')
-  Client ??= (await import('convex/browser')).ConvexHttpClient
-  const client = new Client(env.CONVEX_URL, { logger: false, fetch })
-  client.setAdminAuth(env.CONVEX_DEPLOY_KEY)
-  return (functionName, args) => {
-    client.setFetchOptions({ signal: AbortSignal.timeout(120_000) })
-    return client.function(functionName, undefined, args)
+  const match = /^(prod|dev|preview):([a-z0-9-]+)\|[\x21-\x7e]+$/.exec(key)
+  if (!match) throw new Error('Invalid deploy key format')
+  let url
+  try { url = new URL(env.CONVEX_URL) } catch { throw new Error('Invalid CONVEX_URL') }
+  if (url.protocol !== 'https:' || url.hostname !== `${match[2]}.convex.cloud` || url.port || url.username || url.password) {
+    throw new Error('CONVEX_URL deployment must match deploy key deployment')
   }
+  Client ??= (await import('convex/browser')).ConvexHttpClient
+  const client = new Client(env.CONVEX_URL, { logger: false,
+    fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(120_000) }),
+  })
+  client.setAdminAuth(key)
+  return (functionName, args) => client.function(functionName, undefined, args)
+}
+
+export function formatSummary(result, options) {
+  const deleted = result.pruned.reduce((sum, item) => sum + item.deleted, 0)
+  const files = result.pruned.reduce((sum, item) => sum + item.storageDeletes, 0)
+  const releaseNote = options.sweepOnly ? `${options.apply ? 'Apply' : 'Dry run'} sweep only: releases not checked`
+    : options.apply
+      ? `Pruned ${result.pruned.length} inactive release(s) (${deleted} documents, ${files} stored files), retained ${result.selection.retained.length}, skipped ${result.selection.skipped.length}`
+      : `Dry run: ${result.selection.prune.length} inactive release(s) would be pruned, ${result.selection.retained.length} retained, ${result.selection.skipped.length} skipped`
+  const sweeps = []
+  if (result.orphans) sweeps.push(`Content blobs: ${result.orphans.orphans} orphan(s), ${result.orphans.blobDeletes} removed`)
+  if (result.manifestFiles) sweeps.push(`Manifest files: ${result.manifestFiles.orphans} orphan(s), ${result.manifestFiles.storageDeletes} removed`)
+  if (result.derivedCaches) sweeps.push(`Derived caches: ${result.derivedCaches.orphans} orphan(s), ${result.derivedCaches.deleted} removed, ${result.derivedCaches.unknownSkipped} unknown-format key(s) preserved`)
+  return `${releaseNote}; ${sweeps.join('; ') || 'orphan sweeps skipped'}.`
 }
 
 async function main() {
   const options = parseOptions()
   const result = await prune(await convexRunner(), options)
-  const deleted = result.pruned.reduce((sum, item) => sum + item.deleted, 0)
-  const files = result.pruned.reduce((sum, item) => sum + item.storageDeletes, 0)
-  const orphanNote = result.orphans === null ? 'orphan sweep skipped'
-    : options.apply ? `removed ${result.orphans.blobDeletes} orphan content blob(s) and ${result.orphans.storageDeletes} stored file(s)`
-      : `${result.orphans.orphans} pre-existing orphan content blob(s) found`
-  const message = options.apply
-    ? `Pruned ${result.pruned.length} inactive release(s) (${deleted} documents, ${files} stored files), retained ${result.selection.retained.length}, skipped ${result.selection.skipped.length}; ${orphanNote}.`
-    : `Dry run: ${result.selection.prune.length} inactive release(s) would be pruned, ${result.selection.retained.length} retained, ${result.selection.skipped.length} skipped; ${orphanNote}.`
-  const cacheNote = result.derivedCaches === null ? '' : ` Derived caches: ${result.derivedCaches.orphans} orphan(s), ${result.derivedCaches.deleted} removed, ${result.derivedCaches.unknownSkipped} unknown-format key(s) preserved.`
-  console.log(message + cacheNote)
+  const message = formatSummary(result, options)
+  console.log(message)
   if (result.manifestFiles) console.log(JSON.stringify({ event: 'manifest_orphans', ...result.manifestFiles }))
-  if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `${message}${cacheNote}\n`)
+  if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `${message}\n`)
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

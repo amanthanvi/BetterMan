@@ -505,21 +505,21 @@ const sdkInstalled = await import('convex/browser').then(() => true, () => false
 
 test('runner wires one admin client with a fresh timeout per call and validates its settings', async () => {
   await assert.rejects(convexRunner({}), /CONVEX_DEPLOY_KEY/)
-  await assert.rejects(convexRunner({ CONVEX_DEPLOY_KEY: 'test-only' }), /CONVEX_URL/)
+  await assert.rejects(convexRunner({ CONVEX_DEPLOY_KEY: 'prod:example|test-only' }), /CONVEX_URL/)
   const made = []
   class Client {
     constructor(url, options) { this.url = url; this.options = options; this.calls = []; this.signals = []; made.push(this) }
     setAdminAuth(key) { this.key = key }
-    setFetchOptions(options) { this.signals.push(options.signal) }
-    async function(name, componentPath, args) { this.calls.push([name, componentPath, args]); return { ok: name } }
+
+    async function(name, componentPath, args) { this.calls.push([name, componentPath, args]); await this.options.fetch('https://example.convex.cloud', {}); return { ok: name } }
   }
-  const run = await convexRunner({ CONVEX_URL: 'https://example.convex.cloud', CONVEX_DEPLOY_KEY: 'test-only' }, { Client })
+  const run = await convexRunner({ CONVEX_URL: 'https://example.convex.cloud', CONVEX_DEPLOY_KEY: 'prod:example|test-only' }, { Client, fetch: async (_, init) => { made[0].signals.push(init.signal) } })
   assert.deepEqual(await run('maintenance:a', { x: 1 }), { ok: 'maintenance:a' })
   await run('maintenance:b', {})
   assert.equal(made.length, 1)
   assert.equal(made[0].url, 'https://example.convex.cloud')
   assert.equal(made[0].options.logger, false)
-  assert.equal(made[0].key, 'test-only')
+  assert.equal(made[0].key, 'prod:example|test-only')
   assert.deepEqual(made[0].calls, [['maintenance:a', undefined, { x: 1 }], ['maintenance:b', undefined, {}]])
   assert.equal(made[0].signals.length, 2)
   assert.ok(made[0].signals.every((signal) => signal instanceof AbortSignal))
@@ -528,7 +528,7 @@ test('runner wires one admin client with a fresh timeout per call and validates 
 
 test('persistent admin client calls internal functions without spawning CLI processes', { skip: sdkInstalled ? false : 'convex package not installed' }, async () => {
   const requests = []
-  const run = await convexRunner({ CONVEX_URL: 'http://127.0.0.1:3210', CONVEX_DEPLOY_KEY: 'test-only' }, {
+  const run = await convexRunner({ CONVEX_URL: 'https://example.convex.cloud', CONVEX_DEPLOY_KEY: 'prod:example|test-only' }, {
     fetch: async (url, init) => {
       requests.push({ url, ...init, body: JSON.parse(init.body) })
       return new Response(JSON.stringify({ status: 'success', value: { scanned: 100 }, logLines: ['must not be printed'] }))
@@ -537,8 +537,8 @@ test('persistent admin client calls internal functions without spawning CLI proc
   assert.deepEqual(await run('maintenance:cleanupOrphanContentBlobsBatch', { cursor: 'saved', limit: 100, dryRun: true }), { scanned: 100 })
   await run('maintenance:previewInactiveReleases', { cursor: null })
   assert.equal(requests.length, 2)
-  assert.equal(requests[0].url, 'http://127.0.0.1:3210/api/function')
-  assert.equal(requests[0].headers.Authorization, 'Convex test-only')
+  assert.equal(requests[0].url, 'https://example.convex.cloud/api/function')
+  assert.equal(requests[0].headers.Authorization, 'Convex prod:example|test-only')
   assert.equal(requests[0].body.path, 'maintenance:cleanupOrphanContentBlobsBatch')
   assert.deepEqual(requests[0].body.args, { cursor: 'saved', limit: 100, dryRun: true })
   assert.ok(requests[0].signal instanceof AbortSignal)
@@ -561,4 +561,128 @@ test('workflow exposes safe sweep selection and checkpoint inputs with protected
   assert.match(workflow, /start_cursor:/)
   assert.match(workflow, /CONVEX_URL: \$\{\{ vars\.CONVEX_URL \}\}/)
   for (const input of ['SWEEP_ONLY', 'SWEEP', 'START_CURSOR']) assert.ok(workflow.includes(`BETTERMAN_PRUNE_${input}:`))
+})
+
+for (const apply of [false, true]) for (const [sweep, names] of [
+  ['all', ['cleanupOrphanContentBlobsBatch', 'cleanupOrphanManifestFilesBatch', ...Array(3).fill('cleanupOrphanDerivedCachesBatch')]],
+  ['blobs', ['cleanupOrphanContentBlobsBatch']], ['manifests', ['cleanupOrphanManifestFilesBatch']],
+  ...['derivedSignatureCache', 'derivedLegacySignatures', 'manPageSymbols'].map(table => [table, ['cleanupOrphanDerivedCachesBatch']]),
+]) test(`sweep-only ${sweep} apply=${apply} calls exactly the selected tables`, async () => {
+  const calls = []
+  const options = parseOptions({ BETTERMAN_PRUNE_APPLY: String(apply), BETTERMAN_PRUNE_SWEEP_ONLY: 'true', BETTERMAN_PRUNE_SWEEP: sweep,
+    ...(sweep !== 'all' ? { BETTERMAN_PRUNE_START_CURSOR: 'saved' } : {}) })
+  await prune(async (name, args) => { calls.push([name, args]); return { scanned: 0, isDone: true } }, options, quiet)
+  assert.deepEqual(calls.map(([name]) => name), names.map(name => `maintenance:${name}`))
+  assert.ok(calls.every(([, args]) => args.dryRun === !apply && args.cursor === (sweep === 'all' ? null : 'saved')))
+  if (names[0] === 'cleanupOrphanDerivedCachesBatch') assert.equal(calls[0][1].table, sweep)
+})
+
+test('rejects ignored, unsafe and empty resume inputs', () => {
+  for (const env of [
+    { BETTERMAN_PRUNE_SWEEP_ONLY: 'true', BETTERMAN_PRUNE_SWEEP_ORPHANS: 'false' },
+    { BETTERMAN_PRUNE_SWEEP: 'blobs' },
+    { BETTERMAN_PRUNE_APPLY: 'true', BETTERMAN_PRUNE_SWEEP: 'blobs' },
+    ...['saved', 'null', '', '   '].map(cursor => ({ BETTERMAN_PRUNE_SWEEP: 'blobs', BETTERMAN_PRUNE_START_CURSOR: cursor })),
+    ...['null', '', '   '].map(cursor => ({ BETTERMAN_PRUNE_SWEEP_ONLY: 'true', BETTERMAN_PRUNE_SWEEP: 'blobs', BETTERMAN_PRUNE_START_CURSOR: cursor })),
+  ]) assert.throws(() => parseOptions(env), /sweep|cursor/i)
+})
+
+for (const sweep of [cleanupOrphanBlobs, cleanupOrphanManifestFiles, cleanupOrphanDerivedCaches]) test(`${sweep.name} defaults to safe dry run`, async () => {
+  for (const dryRun of [undefined, true, false]) {
+    await sweep(async (_, args) => { assert.equal(args.dryRun, dryRun !== false); return { scanned: 0, isDone: true } }, { ...quiet, retry: noPause, dryRun })
+  }
+})
+
+for (const key of ['prod:example|fake\nsecret', 'fake-no-prefix-secret', 'prod:example|fake\0secret']) test(`invalid deploy key case ${JSON.stringify(key)} is rejected and redacted`, async () => {
+  class Client { constructor() { assert.fail('must validate before constructing client') } }
+  await assert.rejects(convexRunner({ CONVEX_URL: 'https://example.convex.cloud', CONVEX_DEPLOY_KEY: key }, { Client }), error => {
+    assert.ok(!error.message.includes(key)); return /deploy.key.*format/i.test(error.message)
+  })
+  assert.ok(!describeError(new Error(`header ${key}`)).includes(key))
+  const logs = []
+  await assert.rejects(withRetry(async () => { throw new Error(`header ${key}`) }, { attempts: 2, pause: async () => {}, log: line => logs.push(JSON.parse(line)) }))
+  assert.ok(logs.every(row => !row.error.includes(key)))
+})
+
+test('rejects deployment hostname mismatch before constructing client', async () => {
+  await assert.rejects(convexRunner({ CONVEX_URL: 'https://other.convex.cloud', CONVEX_DEPLOY_KEY: 'prod:example|fake' }, {
+    Client: class { constructor() { assert.fail('must validate hostname first') } },
+  }), /deployment.*match/i)
+})
+
+test('describes timeout, network causes and HTML briefly', () => {
+  assert.equal(describeError(new DOMException('The operation was aborted due to timeout', 'TimeoutError')), 'The operation was aborted due to timeout')
+  assert.match(describeError(new TypeError('fetch failed', { cause: Object.assign(new Error('connection reset'), { code: 'ECONNRESET' }) })), /fetch failed.*ECONNRESET/)
+  const html = describeError(new Error(`Bad Gateway: <!DOCTYPE html><html>${'private upstream page '.repeat(1000)}</html>`))
+  assert.ok(html.length < 600)
+  assert.doesNotMatch(html, /<html>|private upstream/)
+})
+
+test('summary names only the work performed', async () => {
+  const { formatSummary } = await import('./prune-inactive-releases.mjs')
+  for (const sweep of ['blobs', 'manifests', 'manPageSymbols']) {
+    const options = parseOptions({ BETTERMAN_PRUNE_SWEEP_ONLY: 'true', BETTERMAN_PRUNE_SWEEP: sweep })
+    const result = await prune(async () => ({ scanned: 0, orphans: 0, deleted: 0, isDone: true }), options, quiet)
+    const message = formatSummary(result, options)
+    assert.match(message, /release.*not checked/i)
+    assert.doesNotMatch(message, /would be pruned|sweep skipped/)
+    assert.match(message, sweep === 'blobs' ? /Content blobs/ : sweep === 'manifests' ? /Manifest files/ : /Derived caches/)
+  }
+})
+
+for (const realSDK of [false, true]) for (const scenario of ['502', '560', 'timeout', '401']) {
+  test(`${realSDK ? 'SDK' : 'injected Client'} ${scenario} errors preserve retry and failure semantics`, { skip: realSDK && !sdkInstalled ? 'convex package not installed' : false }, async () => {
+    let calls = 0
+    const signals = []
+    const logs = []
+    class Client {
+      constructor(_, options) { this.fetch = options.fetch }
+      setAdminAuth() {}
+      async function() {
+        const response = await this.fetch('https://example.convex.cloud', {})
+        if (!response.ok) {
+          if (response.status === 560) throw new Error((await response.json()).errorMessage)
+          throw new Error(await response.text())
+        }
+        return (await response.json()).value
+      }
+    }
+    const run = await convexRunner({ CONVEX_URL: 'https://example.convex.cloud', CONVEX_DEPLOY_KEY: 'prod:example|synthetic' }, {
+      ...(realSDK ? {} : { Client }),
+      fetch: async (_, init) => {
+        calls++; signals.push(init.signal)
+        if (scenario === 'timeout') throw new DOMException('request timeout', 'TimeoutError')
+        if (scenario === '560') return new Response(JSON.stringify({ status: 'error', errorMessage: 'RELEASE_DERIVED_BUILD_IN_PROGRESS' }), { status: 560 })
+        if (scenario === '401') return new Response('Unauthorized', { status: 401 })
+        return calls === 1 ? new Response('<html>Bad Gateway</html>', { status: 502 })
+          : new Response(JSON.stringify({ status: 'success', value: { scanned: 0, isDone: true } }))
+      },
+    })
+    const operation = cleanupOrphanBlobs(run, { retry: { attempts: 3, pause: async () => {} }, log: line => logs.push(JSON.parse(line)) })
+    if (scenario === '502') { await operation; assert.equal(calls, 2); assert.ok(logs.some(row => row.event === 'sweep_done')) }
+    else { await assert.rejects(operation); assert.equal(calls, scenario === '560' ? 1 : 3); assert.ok(logs.some(row => row.event === 'sweep_failed')) }
+    assert.equal(new Set(signals).size, calls)
+    assert.ok(signals.every(signal => signal instanceof AbortSignal))
+    assert.equal(logs.filter(row => row.event === 'retry').length, scenario === '560' ? 0 : scenario === '502' ? 1 : 2)
+  })
+}
+
+test('CLI exits nonzero after 401 retries and emits sweep_failed', { skip: !sdkInstalled ? 'convex package not installed' : false }, async () => {
+  const { spawnSync } = await import('node:child_process')
+  const preload = `import timers from 'node:timers/promises'; import { syncBuiltinESMExports } from 'node:module'; timers.setTimeout = async () => {}; syncBuiltinESMExports(); globalThis.fetch = async () => new Response('Unauthorized', { status: 401 });`
+  const result = spawnSync(process.execPath, ['--import', `data:text/javascript,${encodeURIComponent(preload)}`, 'scripts/prune-inactive-releases.mjs'], {
+    encoding: 'utf8', timeout: 10000,
+    env: { ...process.env, CONVEX_URL: 'https://example.convex.cloud', CONVEX_DEPLOY_KEY: 'prod:example|synthetic', BETTERMAN_PRUNE_SWEEP_ONLY: 'true', BETTERMAN_PRUNE_SWEEP: 'blobs', BETTERMAN_PRUNE_START_CURSOR: undefined },
+  })
+  assert.equal(result.status, 1)
+  const events = result.stdout.trim().split('\n').map(line => JSON.parse(line))
+  assert.equal(events.filter(row => row.event === 'retry').length, 9)
+  assert.ok(events.some(row => row.event === 'sweep_failed' && /Unauthorized/.test(row.error)))
+  assert.match(result.stderr, /Release pruning failed: Unauthorized/)
+})
+
+
+test('workflow unsets an omitted cursor before calling the strict driver', () => {
+  const workflow = readRepositoryFile('.github/workflows/prune-releases.yml')
+  assert.match(workflow, /if \[ -z "\$BETTERMAN_PRUNE_START_CURSOR" \]; then unset BETTERMAN_PRUNE_START_CURSOR; fi\n\s+pnpm convex:prune-releases/)
 })

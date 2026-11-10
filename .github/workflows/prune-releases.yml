@@ -1,8 +1,9 @@
 name: prune-releases
 
 # Removes sealed, inactive dataset releases that can no longer serve as
-# rollback targets, in bounded Convex batches, then deletes orphaned content
-# blobs and their stored files. Dry run by default; set apply=true to delete.
+# rollback targets in bounded Convex batches, then sweeps orphan blobs, manifest
+# files and derived caches. sweep_only skips release operations; selected sweeps
+# can resume from checkpoints. Dry run by default; set apply=true to delete.
 # Shares the update-dataset concurrency group so it never overlaps ingestion or
 # promotion. Do not dispatch while a manual /ingest/activate rollback is in
 # progress: pruning marks a release before deleting it and that mark is final.
@@ -45,7 +46,7 @@ on:
         type: boolean
         default: false
       sweep:
-        description: Tables to sweep (independent of release deletion)
+        description: Tables to sweep (a selection requires sweep_only=true)
         type: choice
         default: all
         options:
@@ -56,7 +57,7 @@ on:
           - derivedLegacySignatures
           - manPageSymbols
       start_cursor:
-        description: Resume cursor from sweep_progress (requires a single sweep)
+        description: Non-null resume cursor from sweep_progress (requires sweep_only and one sweep)
         type: string
         required: false
 
@@ -104,4 +105,7 @@ jobs:
           BETTERMAN_PRUNE_MIN_AGE_HOURS: ${{ inputs.min_age_hours }}
           BETTERMAN_PRUNE_UNSEALED_MIN_AGE_HOURS: ${{ inputs.unsealed_min_age_hours }}
           BETTERMAN_PRUNE_SWEEP_ORPHANS: ${{ inputs.sweep_orphans != 'auto' && inputs.sweep_orphans || '' }}
-        run: pnpm convex:prune-releases
+        run: |
+          # An omitted workflow input arrives as empty; do not pass it as a cursor.
+          if [ -z "$BETTERMAN_PRUNE_START_CURSOR" ]; then unset BETTERMAN_PRUNE_START_CURSOR; fi
+          pnpm convex:prune-releases
