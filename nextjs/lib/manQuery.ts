@@ -21,14 +21,12 @@ export const MAN_QUERY = {
   pkg: (value: string) => packageName(value) === value,
   portability: (value: string) => value === 'text',
   flag: (value: string) => shareFlag(value) === value,
-  // B9's language switch (#401); English is the bare URL, so `?lang=en` normalizes away. The list is lib/i18n/locales.ts's.
+  // B9's language switch (#401); English is the bare URL, so `?lang=en` normalizes away. Only public languages
+  // (reviewed, or previewed through BM_I18N_PREVIEW; lib/i18n/gate.ts) are valid, so a held one redirects to the bare URL.
   lang: (value: string) => value !== 'en' && publicLangs().some((lang) => lang === value),
 } as const satisfies Record<string, (value: string) => boolean>
 
 export type ManQueryParam = keyof typeof MAN_QUERY
-
-/** The languages a man page URL may name: every language but English, from the one list (lib/i18n/locales.ts). */
-export const MAN_LANGUAGES: readonly string[] = publicLangs().filter((lang) => lang !== 'en')
 
 /**
  * The one spelling a valid value has, or null. A language is canonical in its own case (`pt-BR`), but a

@@ -94,14 +94,37 @@ class TranslationWorkflowTest(unittest.TestCase):
             env = {'BETTERMAN_WORKFLOW_EVENT': 'workflow_dispatch', 'BETTERMAN_TRANSLATION_LOCALE': locale,
                    'BETTERMAN_DEBIAN_TRANSLATIONS_INPUT': 'true'}
             self.assertEqual([r['locale'] for r in self.matrix(**env)], [locale])
+            # The repo-wide promotion switch leaves a held catalog staging-only...
+            self.assertEqual(self.matrix(**env, BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE='1'),
+                [{'distro': f'debian-{locale}', 'locale': locale, 'ingest': True, 'promote': False, 'timeout': 120}])
+            self.assertEqual(self.matrix(**{**env, 'BETTERMAN_DEBIAN_TRANSLATIONS_INPUT': 'false'}, BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE='1'), [])
+            # ...and asking to promote it is refused at plan time.
             with self.assertRaisesRegex(ValueError, 'catalog review'):
-                self.matrix(**env, BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE='1')
+                self.matrix(**env, BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT='true', BETTERMAN_EXPECTED_RELEASE_ID_INPUT=f'{locale}-1')
             with self.assertRaisesRegex(ValueError, 'catalog review'):
                 w.promote(locale)
         self.assertEqual(self.requests, [])
         self.assertNotIn('ro', [r['locale'] for r in self.matrix(BETTERMAN_WORKFLOW_EVENT='workflow_dispatch', BETTERMAN_DEBIAN_TRANSLATIONS_INPUT='true')])
         with patch.object(w, 'review_status', return_value='needs-review'):
             self.assertEqual(self.matrix(BETTERMAN_DEBIAN_TRANSLATIONS='1'), [])
+
+    def test_a_broken_catalog_status_holds_only_that_locale(self):
+        real = w.review_status
+        def status(locale):
+            if locale == 'fr':
+                raise ValueError('Missing or ambiguous catalog review status for fr (nextjs/lib/i18n/catalog/fr/meta.ts)')
+            return real(locale)
+        out = io.StringIO()
+        with patch.object(w, 'review_status', side_effect=status), patch('sys.stdout', out):
+            rows = self.matrix(BETTERMAN_DEBIAN_TRANSLATIONS='1')
+        self.assertEqual([r['locale'] for r in rows], ['de', 'es', 'pt-BR', 'ja', 'ru'])
+        self.assertIn('::warning::Missing or ambiguous catalog review status for fr', out.getvalue())
+        # An explicit dispatch for the broken locale still fails loudly.
+        with patch.object(w, 'review_status', side_effect=status), self.assertRaisesRegex(ValueError, 'for fr'):
+            self.matrix(BETTERMAN_WORKFLOW_EVENT='workflow_dispatch', BETTERMAN_TRANSLATION_LOCALE='fr', BETTERMAN_DEBIAN_TRANSLATIONS_INPUT='true')
+        # A schedule with both gates off reads no catalog at all.
+        with patch.object(w, 'review_status', side_effect=AssertionError('read')):
+            self.assertEqual(self.matrix(), [])
 
     def test_promotion_refuses_without_authorization_before_any_request(self):
         with self.assertRaises(ValueError):

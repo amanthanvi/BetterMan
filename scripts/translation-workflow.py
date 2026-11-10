@@ -31,11 +31,24 @@ LOCALES = ["de", "fr", "es", "pt-BR", "ja", "ru", "ro", "pl"]
 
 # Catalog metadata is also the TypeScript public-language gate's source of truth.
 def review_status(locale):
-    meta = (Path(__file__).resolve().parents[1] / "nextjs/lib/i18n/catalog" / locale / "meta.ts").read_text()
+    path = Path(__file__).resolve().parents[1] / "nextjs/lib/i18n/catalog" / locale / "meta.ts"
+    try:
+        meta = path.read_text(encoding="utf-8")
+    except OSError as error:
+        raise ValueError(f"Cannot read the catalog review status for {locale} (nextjs/lib/i18n/catalog/{locale}/meta.ts)") from error
     statuses = re.findall(r"^  status: '(reviewed|needs-review)',?$", meta, re.MULTILINE)
     if len(statuses) != 1:
-        raise ValueError("Missing or ambiguous catalog review status")
+        raise ValueError(f"Missing or ambiguous catalog review status for {locale} (nextjs/lib/i18n/catalog/{locale}/meta.ts)")
     return statuses[0]
+
+
+def reviewed(locale):
+    """For schedules and `all`: an unreadable status holds that one locale, not the whole plan."""
+    try:
+        return review_status(locale) == "reviewed"
+    except ValueError as error:
+        print(f"::warning::{error}; skipping {locale}")
+        return False
 
 
 HELD = {"TRANSLATED_PROMOTION_HELD", "FULL_DEBIAN_PROMOTION_HELD"}
@@ -80,11 +93,16 @@ def selection():
         raise ValueError("Unsupported translation locale target")
     pinned_release()  # Fail the plan before any job when a dispatch lacks its pin.
     ingest, promote = ingestion_enabled(), promotion_enabled()
+    if not (ingest or promote):
+        return {"include": []}
     if target == "all" or not dispatch():
-        locales = [locale for locale in LOCALES if review_status(locale) == "reviewed"]
+        locales = [locale for locale in LOCALES if reviewed(locale)]
     else:
         locales = [target]
-    if promote and any(review_status(locale) != "reviewed" for locale in locales):
+    # A held catalog never promotes. Asking for it explicitly is an error; the
+    # repo-wide promotion switch just leaves it staging-only.
+    held = {locale for locale in locales if review_status(locale) != "reviewed"}
+    if held and dispatch() and os.environ.get("BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT") == "true":
         raise ValueError("Refusing promotion before catalog review")
     return {
         "include": [
@@ -93,10 +111,11 @@ def selection():
                 "distro": key(locale),
                 "locale": locale,
                 "ingest": ingest,
-                "promote": promote,
+                "promote": promote and locale not in held,
                 "timeout": 120 if ingest else 10,
             }
-            for locale in (locales if ingest or promote else [])
+            for locale in locales
+            if ingest or (promote and locale not in held)
         ]
     }
 
