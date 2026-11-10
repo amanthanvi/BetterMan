@@ -189,7 +189,9 @@ test('grows the deletion batch back after a run of clean batches (#528)', async 
   const grown = sizes.slice(10)
   // Ten clean batches at each size, then double, never past the starting size.
   assert.deepEqual([...new Set(grown)], [5, 10, 20, 40, 80, 160, 320, 640, 1000])
-  assert.equal(grown.filter((size) => size === 5).length, 10)
+  for (const size of [5, 10, 20, 40, 80, 160, 320, 640]) {
+    assert.equal(grown.filter((value) => value === size).length, 10, `ten clean batches at ${size} before doubling`)
+  }
   assert.equal(Math.max(...sizes), 1000)
   assert.equal(sizes.at(-1), 1000)
 
