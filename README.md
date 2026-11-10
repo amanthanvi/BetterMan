@@ -24,7 +24,7 @@ Unix manual pages, typeset for the screen.
 
 <br>
 
-BetterMan is a web reader for man pages. Each page starts with a one-line summary, a few examples and the flags people reach for most, then gives you the upstream manual unchanged, with a filterable index of its options. You don't need an account. Bookmarks, history and reading preferences are kept in your browser.
+BetterMan is a web reader for man pages. Where the data exists, a page starts with a one-line summary, a few examples and the flags people reach for most. Then comes the upstream manual, unchanged, with an index of its options that you can filter on longer pages. You don't need an account. Bookmarks and history stay in your browser's storage. Reading preferences are saved in a cookie, so the server can render pages with your settings.
 
 ## What it does
 
@@ -34,11 +34,11 @@ BetterMan is a web reader for man pages. Each page starts with a one-line summar
 - When a flag behaves differently on another system, it gets a portability marker. The markers come from diffing the real manuals. If several packages ship a page with the same name (`nc`, `awk` and `vi` are the usual suspects), a switch lets you pick the package.
 - On a man page the pager keys work: <kbd>j</kbd> and <kbd>k</kbd> scroll, <kbd>/</kbd> finds, <kbd>n</kbd> and <kbd>N</kbd> step through matches, and <kbd>[</kbd> and <kbd>]</kbd> move between sections. <kbd>⌘</kbd> <kbd>K</kbd> opens the command palette anywhere, and <kbd>?</kbd> lists every shortcut.
 - About 9,500 pages are translated into German, French, Spanish, Brazilian Portuguese, Japanese or Russian, taken from Debian's manpages-l10n packages. Pages without a translation fall back to English. The interface is translated into the same six languages.
-- Man pages are plain server-rendered HTML. The only JavaScript is an inline script that applies your theme before the first paint and a small static bundle. Pages you've read recently work offline, the site installs as an app, and there's a print stylesheet and a dark theme.
+- Man pages are plain server-rendered HTML. The only JavaScript is an inline script that applies your theme before the first paint and a small static bundle. After your first visit, the last 80 pages you open are cached for offline reading. The site installs as an app, and there's a print stylesheet and a dark theme.
 
 ## Explain
 
-Paste a shell line into Explain and it labels each command, flag and argument and links it to its definition in the manual. Clustered flags such as `-xzvf` are split into `-x -z -v -f`. Three small squares next to each flag show whether GNU/Linux, FreeBSD and macOS have it, with a half-filled square where it behaves differently.
+Paste a shell line into Explain and it labels each command, flag and argument. Where it finds the definition in a manual, it links to it. Clustered flags such as `-xzvf` are split into `-x -z -v -f`. Three small squares next to each flag show whether GNU/Linux, FreeBSD and macOS have it, with a half-filled square where it behaves differently.
 
 Explain is a parser for a defined subset of shell grammar, and no language model is involved. When it can't parse a line safely it tells you so, which means it will turn down some valid input.
 
@@ -55,7 +55,7 @@ Explain is a parser for a defined subset of shell grammar, and no language model
 
 ## Generated text
 
-The manual itself comes from upstream and is parsed without edits. The one-line summaries, the task phrases search uses, and extra examples for pages with fewer than three are generated when the dataset is built, so no model runs when you load a page. Each generated line names the model and the date. Every flag in a generated example is checked against that page's options table, and the example is dropped if any flag is missing. Commands that destroy data, such as `rm`, `dd` and `mkfs`, get no generated text.
+The manual itself comes from upstream and is parsed without edits. The one-line summaries, the task phrases search uses, and extra examples for pages with fewer than three are generated when the dataset is built, so no model runs when you load a page. Everything generated is labelled as generated. On a man page, the label also names the model and the date. Every flag in a generated example is checked against that page's options table, and the example is dropped if any flag is missing. Commands that destroy data, such as `rm`, `dd` and `mkfs`, get no generated text.
 
 Examples from [tldr-pages](https://github.com/tldr-pages/tldr) are credited and link to the upstream file. If you find a mistake, the Report a problem link on every page opens a prefilled GitHub issue.
 
@@ -79,11 +79,16 @@ You need Node 26, pnpm 10.34, Python 3.14 and [uv](https://docs.astral.sh/uv/).
 pnpm install
 pnpm convex:check                       # provisions a local Convex deployment, writes .env.local
 npx convex env set RATE_LIMIT_TAG_KEY dev
-RATE_LIMIT_TAG_KEY=dev pnpm next:dev    # Convex watcher + Next.js at http://localhost:3000
+
+set -a; . ./.env.local; set +a          # Next.js runs in nextjs/ and won't read the root .env.local
+export CONVEX_URL="${CONVEX_URL:-$VITE_CONVEX_URL}"
+export NEXT_PUBLIC_CONVEX_URL="$CONVEX_URL"
+export RATE_LIMIT_TAG_KEY=dev
+pnpm next:dev                           # Convex watcher + Next.js at http://localhost:3000
 ```
 
 > [!NOTE]
-> Next.js and Convex must share the same `RATE_LIMIT_TAG_KEY`. If they don't, search and page API routes return 429.
+> Next.js and Convex must share the same `RATE_LIMIT_TAG_KEY`. If they don't, search and page API routes return 429. Without the exported Convex URL, every route that reads Convex throws.
 
 The local database starts empty. With `pnpm next:dev` running, load the test fixture from a second terminal:
 
@@ -107,12 +112,12 @@ BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev \
 | | `pnpm next:e2e` | End-to-end tests (Playwright, app must be on port 3000) |
 | | `pnpm next:build` | Production build |
 | Convex | `pnpm convex:check` | Validates schema and functions |
-| | `pnpm convex:test` / `convex:typecheck` | Integration tests and type checks |
+| | `pnpm convex:test` / `pnpm convex:typecheck` | Integration tests and type checks |
 | | `pnpm convex:related-check` | Confirms active releases are verified, sealed and complete (needs a deploy key) |
-| Ingestion | `pnpm ingest:test` / `ingest:lint` | Tests and Ruff |
+| Ingestion | `pnpm ingest:test` / `pnpm ingest:lint` | Tests and Ruff |
 | | `pnpm ingest:sample` | Ingests five pages into the configured Convex stage |
 | Ops | `pnpm perf:check` | Enforces the [performance budgets](docs/performance-budgets.md) |
-| | `pnpm deps:provenance` / `ops:test` | Verifies Vercel provenance and tests operational gates |
+| | `pnpm deps:provenance` / `pnpm ops:test` | Verifies Vercel provenance and tests operational gates |
 
 </details>
 
