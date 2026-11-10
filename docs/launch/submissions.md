@@ -1,6 +1,6 @@
 # Where to share BetterMan 2
 
-Draft for [#410](https://github.com/amanthanvi/BetterMan/issues/410). Rules were read on 2026-10-30 from the pages linked in each row. Rules change, so re-read the linked page before posting. Show HN was posted on 2026-11-10 (https://news.ycombinator.com/item?id=50435241). Nothing else has been submitted, emailed or signed up for. The owner does every submission, from their own accounts.
+Draft for [#410](https://github.com/amanthanvi/BetterMan/issues/410). Rules were read on 2026-10-30 from the pages linked in each row. Rules change, so re-read the linked page before posting. Show HN was posted on 2026-11-10 (https://news.ycombinator.com/item?id=50435241). Nothing else has been submitted, emailed or signed up for: on 2026-11-10 the owner chose not to post to the other channels for now. The changelog post is the [v2.0.0 GitHub Release](https://github.com/amanthanvi/BetterMan/releases/tag/v2.0.0). The owner does every submission, from their own accounts.
 
 Where a page could not be read, the row says so. Do not treat those rows as cleared.
 

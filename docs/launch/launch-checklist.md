@@ -24,15 +24,15 @@ The production numbers below were filled into the drafts on 2026-11-01. They wer
 | Indexing policy | See step 6 | `show-hn.md` |
 | Translations | 6 languages, 9,552 pages from Debian's manpages-l10n packages | same |
 
-Two of the three posting-time values are filled. `{{CHANGELOG_URL}}` stays open until the owner publishes the changelog post:
+All three posting-time values are filled:
 
 | Placeholder | Meaning | Source |
 | --- | --- | --- |
 | `{{LAUNCH_DATE}}` | Launch day (UTC): **2026-11-10**, filled | Owner |
-| `{{CHANGELOG_URL}}` | Where the on-site post lives, if built | Follow-up in `changelog-post.md` |
+| `{{CHANGELOG_URL}}` | Where the changelog post lives: **https://github.com/amanthanvi/BetterMan/releases/tag/v2.0.0**, filled (a GitHub Release, the owner's choice) | Follow-up in `changelog-post.md` |
 | `{{HN_URL}}` | The posted Show HN: **https://news.ycombinator.com/item?id=50435241**, filled | Owner, after posting |
 
-Before publishing, search the drafts for two opening curly braces; only `{{CHANGELOG_URL}}` may remain.
+Search the drafts for two opening curly braces; none should remain outside this table.
 
 **Ubuntu, Fedora, Arch and Alpine.** The roadmap makes all four full; that is [B2 (#394)](https://github.com/amanthanvi/BetterMan/issues/394). On 2026-11-09 production reported all four as full archive imports (Ubuntu since 2026-10-31; Fedora, Arch and Alpine promoted 2026-11-09), and #394 is closed. The drafts say that. Re-read the counts on launch day: the monthly cron refreshes them, and Alpine's pins must be refreshed before each run (`ingestion/README.md`).
 
@@ -147,7 +147,7 @@ Source: [vercel-ops.md](../runbooks/vercel-ops.md#man-page-edge-caching-c4-406).
 - [x] **OWNER (lead, after merge):** delete `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` from the Vercel project environment. Done; it is deleted.
 - [ ] **OWNER, optional (skipped for now):** set `NEXT_PUBLIC_SENTRY_DSN` in the production Vercel environment. The owner passed on this for launch, so do not treat an unset DSN as a blocker. See the Sentry item in step 8.
 - [x] **OWNER:** confirm the Convex plan and spend limit cover the full-Debian storage and read numbers from step 3. Done: the team is on **Professional**, and a **$10/month warning-only** spending limit is set, with no disable threshold, because a disable threshold would take every project offline. The Convex usage page shows all usage within Pro's included amounts.
-- [ ] **OWNER: posting.** Show HN, the submissions and any on-site post. Drafts are in this folder. The owner approved posting the filled drafts from the owner's own accounts, and chose (2026-11-08) to post Show HN after the short-URL fix (#505) is live and these drafts merge, confirming sign-in and availability right before posting. Agents create no accounts and send no email. **Show HN posted 2026-11-10 at 02:12 UTC** after the step 6 checks below ([item 50435241](https://news.ycombinator.com/item?id=50435241), title option 1, first comment from `show-hn.md`). Still to do: the changelog post and the other submissions, spaced over days per [submissions.md](submissions.md).
+- [x] **OWNER: posting.** Show HN, the submissions and any on-site post. Drafts are in this folder. The owner approved posting the filled drafts from the owner's own accounts, and chose (2026-11-08) to post Show HN after the short-URL fix (#505) is live and these drafts merge, confirming sign-in and availability right before posting. Agents create no accounts and send no email. **Show HN posted 2026-11-10 at 02:12 UTC** after the step 6 checks below ([item 50435241](https://news.ycombinator.com/item?id=50435241), title option 1, first comment from `show-hn.md`). The changelog post went up the same day as the [v2.0.0 GitHub Release](https://github.com/amanthanvi/BetterMan/releases/tag/v2.0.0). The owner chose (2026-11-10) not to post to the other channels in [submissions.md](submissions.md) for now.
 
 ## 6. Pre-launch claim check
 
