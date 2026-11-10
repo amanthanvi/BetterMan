@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { ConvexHttpClient } from 'convex/browser'
 import { appendFile } from 'node:fs/promises'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { pathToFileURL } from 'node:url'
@@ -412,10 +411,13 @@ export function describeError(error) {
 }
 
 // Same admin endpoint as convex run in the installed SDK; no per-page process.
-export function convexRunner(env = process.env, { fetch } = {}) {
+// The SDK loads lazily so the pure helpers (and ci_contracts' dependency-free
+// `pnpm ops:test`) never need node_modules; tests can inject `Client`.
+export async function convexRunner(env = process.env, { fetch, Client } = {}) {
   if (!env.CONVEX_DEPLOY_KEY?.trim()) throw new Error('CONVEX_DEPLOY_KEY is required')
   if (!env.CONVEX_URL?.trim()) throw new Error('CONVEX_URL is required (deployment URL)')
-  const client = new ConvexHttpClient(env.CONVEX_URL, { logger: false, fetch })
+  Client ??= (await import('convex/browser')).ConvexHttpClient
+  const client = new Client(env.CONVEX_URL, { logger: false, fetch })
   client.setAdminAuth(env.CONVEX_DEPLOY_KEY)
   return (functionName, args) => {
     client.setFetchOptions({ signal: AbortSignal.timeout(120_000) })
@@ -425,7 +427,7 @@ export function convexRunner(env = process.env, { fetch } = {}) {
 
 async function main() {
   const options = parseOptions()
-  const result = await prune(convexRunner(), options)
+  const result = await prune(await convexRunner(), options)
   const deleted = result.pruned.reduce((sum, item) => sum + item.deleted, 0)
   const files = result.pruned.reduce((sum, item) => sum + item.storageDeletes, 0)
   const orphanNote = result.orphans === null ? 'orphan sweep skipped'

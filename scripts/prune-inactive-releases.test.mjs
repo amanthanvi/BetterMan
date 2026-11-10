@@ -500,9 +500,35 @@ test('sweep-only selects one table, resumes it and never previews or deletes rel
   assert.throws(() => parseOptions({ BETTERMAN_PRUNE_SWEEP: 'typo' }), /Invalid sweep/)
 })
 
-test('persistent admin client calls internal functions without spawning CLI processes', async () => {
+// ci_contracts runs `pnpm ops:test` without installing packages; the fake-client test below covers the wiring there.
+const sdkInstalled = await import('convex/browser').then(() => true, () => false)
+
+test('runner wires one admin client with a fresh timeout per call and validates its settings', async () => {
+  await assert.rejects(convexRunner({}), /CONVEX_DEPLOY_KEY/)
+  await assert.rejects(convexRunner({ CONVEX_DEPLOY_KEY: 'test-only' }), /CONVEX_URL/)
+  const made = []
+  class Client {
+    constructor(url, options) { this.url = url; this.options = options; this.calls = []; this.signals = []; made.push(this) }
+    setAdminAuth(key) { this.key = key }
+    setFetchOptions(options) { this.signals.push(options.signal) }
+    async function(name, componentPath, args) { this.calls.push([name, componentPath, args]); return { ok: name } }
+  }
+  const run = await convexRunner({ CONVEX_URL: 'https://example.convex.cloud', CONVEX_DEPLOY_KEY: 'test-only' }, { Client })
+  assert.deepEqual(await run('maintenance:a', { x: 1 }), { ok: 'maintenance:a' })
+  await run('maintenance:b', {})
+  assert.equal(made.length, 1)
+  assert.equal(made[0].url, 'https://example.convex.cloud')
+  assert.equal(made[0].options.logger, false)
+  assert.equal(made[0].key, 'test-only')
+  assert.deepEqual(made[0].calls, [['maintenance:a', undefined, { x: 1 }], ['maintenance:b', undefined, {}]])
+  assert.equal(made[0].signals.length, 2)
+  assert.ok(made[0].signals.every((signal) => signal instanceof AbortSignal))
+  assert.notEqual(made[0].signals[0], made[0].signals[1])
+})
+
+test('persistent admin client calls internal functions without spawning CLI processes', { skip: sdkInstalled ? false : 'convex package not installed' }, async () => {
   const requests = []
-  const run = convexRunner({ CONVEX_URL: 'http://127.0.0.1:3210', CONVEX_DEPLOY_KEY: 'test-only' }, {
+  const run = await convexRunner({ CONVEX_URL: 'http://127.0.0.1:3210', CONVEX_DEPLOY_KEY: 'test-only' }, {
     fetch: async (url, init) => {
       requests.push({ url, ...init, body: JSON.parse(init.body) })
       return new Response(JSON.stringify({ status: 'success', value: { scanned: 100 }, logLines: ['must not be printed'] }))
@@ -517,8 +543,6 @@ test('persistent admin client calls internal functions without spawning CLI proc
   assert.deepEqual(requests[0].body.args, { cursor: 'saved', limit: 100, dryRun: true })
   assert.ok(requests[0].signal instanceof AbortSignal)
   assert.notEqual(requests[0].signal, requests[1].signal)
-  assert.throws(() => convexRunner({}), /CONVEX_DEPLOY_KEY/)
-  assert.throws(() => convexRunner({ CONVEX_DEPLOY_KEY: 'test-only' }), /CONVEX_URL/)
 })
 
 test('all sweeps request server maxima and reject a repeated cursor', async () => {
