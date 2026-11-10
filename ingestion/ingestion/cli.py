@@ -57,7 +57,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     ingest.add_argument(
         "--debian-translation",
-        choices=["de", "fr", "es", "pt-BR", "ja", "ru"],
+        choices=["de", "fr", "es", "pt-BR", "ja", "ru", "ro", "pl"],
         help="Opt in to one language's translated Debian manuals (staging only)",
     )
     ingest.add_argument("--in-container", action="store_true", help=argparse.SUPPRESS)

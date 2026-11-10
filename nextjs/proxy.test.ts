@@ -473,3 +473,32 @@ it.each(['/man/tar/1', '/concept/signals'])('authorizes the exact analytics boot
   expect(csp).toContain("connect-src 'self';")
   expect(csp).not.toMatch(/https?:|nonce|strict-dynamic|unsafe-eval|script-src[^;]*unsafe-inline/)
 })
+
+it.each(['ro', 'pl'])('holds the unreviewed %s catalog out of public routing', async (lang) => {
+  vi.stubEnv('BM_I18N_PREVIEW', '')
+  for (const path of ['/search']) {
+    const response = await proxy(new NextRequest(`https://betterman.sh${path}?lang=${lang}`))
+    expect(response.headers.get('x-middleware-request-x-bm-lang')).toBeNull()
+  }
+})
+
+it.each(['ro', 'pl'])('privately canonicalizes every held %s content URL before release lookup', async (lang) => {
+  vi.stubEnv('BM_I18N_PREVIEW', '')
+  for (const path of ['/man/tar/1', '/man/tar', '/man/tar/1.txt']) {
+    const response = await proxy(new NextRequest(`https://betterman.sh${path}?lang=${lang}`))
+    expect(response.status).toBe(308)
+    expect(response.headers.get('location')).toBe(`https://betterman.sh${path}`)
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
+    expect(response.headers.get('cdn-cache-control')).toBeNull()
+    expect(response.headers.get('x-middleware-rewrite')).toBeNull()
+  }
+  expect(release.servingRelease).not.toHaveBeenCalled()
+})
+
+it('gates content release selection independently on short URLs', async () => {
+  vi.stubEnv('BM_I18N_PREVIEW', '')
+  vi.stubEnv('BM_RESERVED_PATH_SEGMENTS', 'api,search,man')
+  const response = await proxy(new NextRequest('https://betterman.sh/tar?lang=ro'))
+  expect(response.headers.get('x-middleware-request-x-bm-translation-release')).toBeNull()
+  expect(release.servingRelease).toHaveBeenCalled()
+})

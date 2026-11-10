@@ -49,7 +49,8 @@ class ConvexContractError(RuntimeError):
 # both ways: this client refuses any other advertised version or contract
 # shape, and every POST names this version in CONTRACT_HEADER so the server
 # refuses an older or newer client.
-REQUIRED_SCHEMA_VERSION = 9
+# v10 adds Romanian and Polish content locales (#510).
+REQUIRED_SCHEMA_VERSION = 10
 CONTRACT_HEADER = "X-BetterMan-Ingest-Contract"
 REQUIRED_FUNCTIONS = (
     "ingest.createRelease",

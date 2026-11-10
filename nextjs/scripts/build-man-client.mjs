@@ -11,7 +11,7 @@ import path from 'node:path'
 import { eraseMessagesPlugin } from './man-i18n.mjs'
 
 const OUT_DIR = 'public/_bm'
-const TRANSLATED = ['de', 'fr', 'es', 'pt-BR', 'ja', 'ru']
+const TRANSLATED = ['de', 'fr', 'es', 'pt-BR', 'ja', 'ru', 'ro', 'pl']
 
 function options(root, dev, lang, dictionary) {
   return {

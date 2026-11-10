@@ -9,7 +9,8 @@
 // documentedVersion. Every release-contract request now carries the exact
 // version in INGEST_CONTRACT_HEADER; any other version is rejected.
 
-export const INGEST_CONTRACT_SCHEMA_VERSION = 9;
+// v10 adds Romanian and Polish content locales (#510).
+export const INGEST_CONTRACT_SCHEMA_VERSION = 10;
 
 export const INGEST_CONTRACT_HEADER = "x-betterman-ingest-contract";
 

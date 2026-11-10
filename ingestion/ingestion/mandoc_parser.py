@@ -42,7 +42,7 @@ _bare_xref_re = re.compile(
 _bullet_term_re = re.compile(r"^\s*(?:\*|\+|-|•)(?:\s+|$)")
 _options_heading_re = re.compile(
     # English, then the translated titles Debian ships (#395).
-    r"\bOPTIONS?\b|\b(?:OPTIONEN|OPCIONES|OPÇÕES|ПАРАМЕТРЫ|ОПЦИИ)\b|オプション",
+    r"\bOPTIONS?\b|\b(?:OPTIONEN|OPCIONES|OPÇÕES|ПАРАМЕТРЫ|ОПЦИИ|OPȚIUNI|OPCJE)\b|オプション",
     re.IGNORECASE,
 )
 # Translated manuals (#395) title these sections in their own language, and
@@ -50,12 +50,33 @@ _options_heading_re = re.compile(
 # English ids always win; titles were tallied from man-pages-l10n in trixie.
 _LOCALIZED_SECTION_TITLES = {
     "NAME": frozenset(
-        {"BEZEICHNUNG", "NOM", "NOMBRE", "NOME", "名前", "名称", "НАИМЕНОВАНИЕ", "ИМЯ", "НАЗВАНИЕ"}
+        {
+            "NUME",
+            "NAZWA",
+            "BEZEICHNUNG",
+            "NOM",
+            "NOMBRE",
+            "NOME",
+            "名前",
+            "名称",
+            "НАИМЕНОВАНИЕ",
+            "ИМЯ",
+            "НАЗВАНИЕ",
+        }
     ),
     # French "SYNOPSIS" already has the English id.
-    "SYNOPSIS": frozenset({"ÜBERSICHT", "SINOPSIS", "SINOPSE", "書式", "ОБЗОР"}),
+    "SYNOPSIS": frozenset({"SKŁADNIA", "ÜBERSICHT", "SINOPSIS", "SINOPSE", "書式", "ОБЗОР"}),
     "SEE ALSO": frozenset(
-        {"SIEHE AUCH", "VOIR AUSSI", "VÉASE TAMBIÉN", "VEJA TAMBÉM", "関連項目", "СМОТРИТЕ ТАКЖЕ"}
+        {
+            "CONSULTAȚI ȘI",
+            "ZOBACZ TAKŻE",
+            "SIEHE AUCH",
+            "VOIR AUSSI",
+            "VÉASE TAMBIÉN",
+            "VEJA TAMBÉM",
+            "関連項目",
+            "СМОТРИТЕ ТАКЖЕ",
+        }
     ),
 }
 _bare_option_prefix_re = re.compile(r"^\s*(?:--|-|\+)(?=\s*(?:,|$))")

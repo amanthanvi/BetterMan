@@ -4,6 +4,9 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Add Debian Romanian and Polish manual ingestion with complete UI catalogs held behind `needs-review`; require ingest contract v10 (#510).
+- Apply Romanian and Polish translation-panel corrections, including bookmark accessible names; both catalogs remain held for owner review.
+
 ## v2.0.0
 
 - Operations: `prune-releases` grows its deletion batch back after a failure. Each failed attempt halves `maxDocs`, and the smaller size used to stick for the rest of the release, so on 2026-11-09 one streak of transient "too many system operations" errors left two releases deleting 5 documents a batch for about four hours, until the job's 5-hour timeout (#528). Batch sizes now double after ten batches in a row succeed on their first attempt, up to their starting size; when the first batch at a grown size fails, the wait before the next try doubles (up to 320 batches). The orphan content-blob and derived-cache sweeps share this, and `prune_progress` logs the current `maxDocs`.

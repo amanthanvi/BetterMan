@@ -570,3 +570,15 @@ it.each(['', 'gzip;q=0'])('offers a storage redirect when gzip is unavailable (%
   expect(response.status).toBe(307)
   expect(response.headers.get('location')).toBe('https://storage.test/large')
 })
+
+it.each(['ro', 'pl'])('gates the %s API search content language', async (lang) => {
+  for (const preview of ['', lang]) {
+    vi.stubEnv('BM_I18N_PREVIEW', preview)
+    apiMocks.search.mockResolvedValue({ items: [], total: 0 })
+    await GET(request(`/api/v1/search?q=tar&lang=${lang}`), context(['v1', 'search']))
+    const args = apiMocks.search.mock.calls.at(-1)?.[0]
+    expect(args).toBeTruthy()
+    if (preview) expect(args).toHaveProperty('lang', lang)
+    else expect(args).not.toHaveProperty('lang')
+  }
+})

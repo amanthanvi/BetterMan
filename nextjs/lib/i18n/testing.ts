@@ -26,7 +26,7 @@ export const testLang = {
 const held = new Map<TranslatedLang, (typeof CATALOG_META)[TranslatedLang]['status']>()
 
 /**
- * Every language is reviewed, so a test of the review gate holds some back as `needs-review`, as a
+ * Tests can hold a reviewed language back as `needs-review`, as a
  * language is while it waits for review. Call `releaseHeld` after each test.
  */
 export function holdBack(...langs: TranslatedLang[]): void {

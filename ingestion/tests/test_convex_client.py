@@ -314,11 +314,11 @@ def test_every_post_names_the_exact_contract_version(monkeypatch):
     assert opened.call_count == 4
 
 
-@pytest.mark.parametrize("version", [8, 10])
-def test_b3_rejects_v8_and_v10_even_with_all_required_capabilities(monkeypatch, version):
+@pytest.mark.parametrize("version", [9, 11])
+def test_b31_rejects_v9_and_v11_even_with_all_required_capabilities(monkeypatch, version):
     body = _contract_body(schemaVersion=version)
     monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(return_value=BytesIO(body)))
-    with pytest.raises(ConvexContractError, match=f"schemaVersion {version} != 9"):
+    with pytest.raises(ConvexContractError, match=f"schemaVersion {version} != 10"):
         ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
 
 

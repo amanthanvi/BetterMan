@@ -45,6 +45,16 @@ const LOADERS: Record<Lang, () => Promise<Catalog>> = {
     server: (await import('./catalog/ru/server')).server,
     man: (await import('./catalog/ru/man')).man,
   }),
+  ro: async () => ({
+    client: (await import('./catalog/ro/client')).client,
+    server: (await import('./catalog/ro/server')).server,
+    man: (await import('./catalog/ro/man')).man,
+  }),
+  pl: async () => ({
+    client: (await import('./catalog/pl/client')).client,
+    server: (await import('./catalog/pl/server')).server,
+    man: (await import('./catalog/pl/man')).man,
+  }),
 }
 
 export function loadCatalog(lang: Lang): Promise<Catalog> {

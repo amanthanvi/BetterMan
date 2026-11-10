@@ -108,6 +108,8 @@ def workspace(tmp_path: Path, packages: dict[str, tuple[dict, int]], locales=("d
         ("usr/share/man/pt_BR/man8/mount.8.gz", "pt_BR"),
         ("usr/share/man/ja/man3/printf.3.xz", "ja"),
         ("usr/share/man/ru/man5/passwd.5", "ru"),
+        ("usr/share/man/ro/man1/ls.1.gz", "ro"),
+        ("usr/share/man/pl/man1/ls.1.gz", "pl"),
     ],
 )
 def test_translated_roots_are_exact_and_never_english(path, root):
@@ -140,8 +142,12 @@ def test_locale_codes_map_to_debian_roots():
         "pt-BR": "pt_BR",
         "ja": "ja",
         "ru": "ru",
+        "ro": "ro",
+        "pl": "pl",
     }
     assert l10n.primary_packages("pt-BR") == ("manpages-pt-br", "manpages-pt-br-dev")
+    for locale in ["ro", "pl"]:
+        assert l10n.primary_packages(locale) == (f"manpages-{locale}", f"manpages-{locale}-dev")
 
 
 @pytest.mark.parametrize(
@@ -624,3 +630,25 @@ def test_all_translation_language_copies_match_b9():
                 assert set(options) - {"all"} == expected, (name, match[1])
                 checked.append((name, match[1]))
     assert ("update-translations", "locale") in checked
+
+
+@pytest.mark.skipif(shutil.which("mandoc") is None, reason="needs mandoc")
+@pytest.mark.parametrize(
+    ("name", "synopsis", "options", "see"),
+    [
+        ("NUME", "SINOPSIS", "OPȚIUNI", "CONSULTAȚI ȘI"),
+        ("NAZWA", "SKŁADNIA", "OPCJE", "ZOBACZ TAKŻE"),
+    ],
+)
+def test_ro_pl_real_package_headings(name, synopsis, options, see):
+    roff = (
+        f'.TH LS 1\n.SH "{name}"\nls \\- list files\n'
+        f'.SH "{synopsis}"\n\\fBls\\fP\n.SH "{options}"\n'
+        f'.TP\n\\fB--all\\fP\nList all files.\n.SH "{see}"\n\\fBdir\\fP(1)\n'
+    ).encode()
+    html = subprocess.run(["mandoc", "-Thtml"], input=roff, capture_output=True, check=True)
+    parsed = parse_mandoc_html(html.stdout.decode())
+    assert parsed.description == "list files"
+    assert parsed.synopsis
+    assert parsed.options and parsed.options[0].flags == "--all"
+    assert [ref.name for ref in parsed.see_also or []] == ["dir"]

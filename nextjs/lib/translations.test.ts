@@ -21,7 +21,7 @@ vi.mock('./api', async (importOriginal) => {
 })
 
 import { setLang, translatedLang } from './i18n/locales'
-import { MAN_LANGUAGES } from './manQuery'
+import { MAN_QUERY } from './manQuery'
 import { lookupManPage } from './manLookup'
 
 const page = (release: string, locale = 'en') => ({ kind: 'page', data: { page: { name: 'tar', section: '1', locale, datasetReleaseId: release } } })
@@ -31,7 +31,7 @@ describe('lang (#395)', () => {
     expect(translatedLang('pt-BR')).toBe('pt-BR')
     expect(translatedLang('en')).toBeNull()
     expect(translatedLang('pt_BR')).toBeNull()
-    expect(MAN_LANGUAGES).toEqual(['de', 'fr', 'es', 'pt-BR', 'ja', 'ru'])
+    expect(['en', 'de', 'fr', 'es', 'pt-BR', 'ja', 'ru', 'ro', 'pl'].filter(MAN_QUERY.lang)).toEqual(['de', 'fr', 'es', 'pt-BR', 'ja', 'ru'])
     expect(setLang('/man/tar/1?distro=ubuntu', 'de')).toBe('/man/tar/1?distro=ubuntu&lang=de')
     expect(setLang('https://betterman.sh/man/tar/1?lang=de', 'en')).toBe('https://betterman.sh/man/tar/1')
   })

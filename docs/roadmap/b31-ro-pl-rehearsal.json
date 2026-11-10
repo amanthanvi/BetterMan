@@ -1,0 +1,73 @@
+[
+  {
+    "lang": "ro",
+    "paths": 2984,
+    "pages": 1998,
+    "aliases": 983,
+    "failures": [],
+    "missing": [],
+    "sections": {
+      "3": 531,
+      "2": 170,
+      "1": 605,
+      "8": 265,
+      "5": 286,
+      "7": 84,
+      "1p": 3,
+      "6": 26,
+      "5ssl": 1,
+      "4": 25,
+      "3type": 1,
+      "1ssl": 1
+    },
+    "fields": {
+      "description": 1983,
+      "synopsis": 1368,
+      "options": 733,
+      "see_also": 1693,
+      "has_parse_warnings": 0
+    },
+    "headings": {
+      "NUME": 1982,
+      "SINOPSIS": 1376,
+      "DESCRIERE": 1957,
+      "OPȚIUNI": 490,
+      "CONSULTAȚI ȘI": 1833
+    }
+  },
+  {
+    "lang": "pl",
+    "paths": 1854,
+    "pages": 1104,
+    "aliases": 747,
+    "failures": [],
+    "missing": [],
+    "sections": {
+      "3": 228,
+      "2": 120,
+      "1": 356,
+      "8": 137,
+      "5": 158,
+      "7": 61,
+      "6": 5,
+      "4": 20,
+      "3pm": 16,
+      "1p": 2,
+      "1ssl": 1
+    },
+    "fields": {
+      "description": 1099,
+      "synopsis": 791,
+      "options": 439,
+      "see_also": 928,
+      "has_parse_warnings": 0
+    },
+    "headings": {
+      "NAZWA": 1083,
+      "SKŁADNIA": 783,
+      "OPIS": 1086,
+      "OPCJE": 282,
+      "ZOBACZ TAKŻE": 1015
+    }
+  }
+]

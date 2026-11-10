@@ -243,3 +243,21 @@ then authorize a promotion-only dispatch for that one language with
 `debian_translations_promote`, `debian_full_promote` and the signed-off
 `expected_release_id`, which Convex checks as the compare-and-swap expectation. Serving (`?lang=`, search, hreflang) and
 the drift note are documented above.
+
+## B3.1 code preparation (#510)
+
+Romanian (`ro`, `usr/share/man/ro/`) and Polish (`pl`, `usr/share/man/pl/`)
+are supported by ingestion and complete UI catalogs, with `needs-review` metadata.
+They do not add public languages until B9 review; public claims remain six.
+See [the local rehearsal evidence](b31-ro-pl-evidence.md).
+
+Contract v10 extends the validated locale set; it changes no stored fields,
+public query arguments, return shapes or function names. Convex imports `LANGS`
+through `_locales.ts`, so the backend **must deploy v10 before the next ingest**.
+Deploy backend and v10 ingestion together: the v10 client refuses v9 before
+acquisition/writes, and v10 servers reject v9 release-contract POSTs. Pause older
+ingestion jobs during this rollout. The previous frontend remains compatible:
+its public queries, English defaults and six reviewed catalogs still work against
+the expanded backend; `convex:test` exercises existing callers without new
+arguments. This is source/local-test evidence, not a cloud compatibility probe.
+No deployment or workflow dispatch is part of step 1.
