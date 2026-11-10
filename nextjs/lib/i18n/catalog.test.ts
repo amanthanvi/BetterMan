@@ -44,8 +44,8 @@ describe('every translation is complete and keeps what the code fills in', () =>
         expect(meta.translatedBy).toBeTruthy()
         if (lang === 'ro' || lang === 'pl') {
           expect(meta.status).toBe('needs-review')
-          expect(meta.reviewedBy).toEqual([])
-          expect(meta.reviewedOn).toBeNull()
+          expect(meta.reviewedBy).toEqual(['Claude Opus 5.5 (model panel)', 'Grok 4.7 (model panel)'])
+          expect(meta.reviewedOn).toBe('2026-11-10')
         } else {
           expect(meta.status).toBe('reviewed')
           expect(meta.reviewedBy.length).toBeGreaterThan(0)
@@ -78,4 +78,11 @@ it('uses Polish and Romanian plural rules for page counts', async () => {
   for (const group of Object.values(await loadCatalog('ro'))) {
     for (const text of Object.values(group)) expect(text).not.toMatch(/[şţŞŢ]/)
   }
+})
+
+it.each(['ro', 'pl'] as const)('keeps the %s visible bookmark label inside both accessible names', async (lang) => {
+  const { server, man } = await loadCatalog(lang)
+  const visible = server.Bookmark
+  expect(man['Bookmark {citation}']).toContain(visible)
+  expect(man['man.bookmarkRemoveLabel\u0004Remove bookmark for {citation}']).toContain(visible)
 })
