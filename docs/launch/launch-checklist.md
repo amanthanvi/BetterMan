@@ -1,6 +1,6 @@
 # BetterMan 2 launch checklist
 
-Draft for [#410](https://github.com/amanthanvi/BetterMan/issues/410) (BM2 D1). Items ticked below are done; nothing has been posted or published. The owner executes the rest.
+Draft for [#410](https://github.com/amanthanvi/BetterMan/issues/410) (BM2 D1). Items ticked below are done. **BetterMan 2 launched on 2026-11-10:** Show HN was posted at 02:12 UTC ([item 50435241](https://news.ycombinator.com/item?id=50435241)) and the changelog post is the [v2.0.0 GitHub Release](https://github.com/amanthanvi/BetterMan/releases/tag/v2.0.0). Never post Show HN again. The rest of this file is the record and the recipe for later releases; the first-48-hours checks (step 8) are still running.
 
 Full Debian (107,143 manuals) was promoted to production on 2026-10-31, after the staging checks and within the cost estimates ([b1-debian-evidence.md](../roadmap/b1-debian-evidence.md), [multi-distro-ops.md](../runbooks/multi-distro-ops.md#debian-archive-imports-explicit-approval-switches)). The launch is one coordinated day after that.
 
