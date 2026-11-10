@@ -3,15 +3,17 @@ import { expect, test, type Page } from '@playwright/test'
 import { expectNoCriticalOrSeriousViolations } from './a11y'
 import { waitForInteractiveShell } from './shortcuts'
 
-// UI localization (docs/i18n.md). All six languages are reviewed, so the server under test renders them with
+// UI localization (docs/i18n.md). All eight languages are reviewed, so the server under test renders them with
 // no BM_I18N_PREVIEW; the review gate itself is covered by the unit tests, which can hold a catalog back.
-const SIX = [
+const REVIEWED = [
   ['de', 'Deutsch'],
   ['fr', 'Français'],
   ['es', 'Español'],
   ['pt-BR', 'Português (Brasil)'],
   ['ja', '日本語'],
   ['ru', 'Русский'],
+  ['ro', 'Română'],
+  ['pl', 'Polski'],
 ] as const
 
 const lang = (page: Page) => page.locator('html').getAttribute('lang')
@@ -29,15 +31,15 @@ test.describe('English is the default', () => {
 })
 
 test.describe('every reviewed language is public', () => {
-  test('every reviewed language renders publicly and the switch lists all six', async ({ page }) => {
+  test('every reviewed language renders publicly and the switch lists all eight', async ({ page }) => {
     // gzip(1) has no translated manual in the seed (#395): an English manual under each localized UI.
-    for (const [code] of SIX) {
+    for (const [code] of REVIEWED) {
       await page.goto(`/man/gzip/1?lang=${code}`)
       expect(await lang(page), code).toBe(code)
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
     }
     await page.goto('/man/tar/1')
-    for (const [code, name] of SIX) await expect(page.locator(`[data-bm-lang-nav] [lang="${code}"]`)).toHaveText(name)
+    for (const [code, name] of REVIEWED) await expect(page.locator(`[data-bm-lang-nav] [lang="${code}"]`)).toHaveText(name)
   })
 
   test('Russian renders: the shell, the footer fix link and the home page', async ({ page }) => {
@@ -51,6 +53,26 @@ test.describe('every reviewed language is public', () => {
     await expect(page.getByRole('search', { name: 'Поиск по страницам руководства' })).toBeVisible()
     await expect(page.locator('html')).toHaveAttribute('lang', 'ru')
   })
+
+  // Romanian and Polish went public in #510: their chrome, the static script's strings and a dialog, in a real browser.
+  for (const [code, labels] of [
+    ['ro', { skip: 'Salt la conținut', header: 'Antetul site-ului', footer: 'Subsolul site-ului', find: 'Găsește în pagină', prefs: 'Preferințe de lectură' }],
+    ['pl', { skip: 'Przejdź do treści', header: 'Nagłówek witryny', footer: 'Stopka witryny', find: 'Znajdź na stronie', prefs: 'Preferencje czytania' }],
+  ] as const) {
+    test(`${code} renders: chrome, the find box and the preferences dialog`, async ({ page }) => {
+      await page.goto(`/man/gzip/1?lang=${code}`)
+      await waitForInteractiveShell(page)
+      expect(await lang(page)).toBe(code)
+      await expect(page.getByText(labels.skip)).toBeAttached()
+      await expect(page.getByRole('banner', { name: labels.header })).toBeVisible()
+      await expect(page.getByRole('contentinfo', { name: labels.footer })).toBeVisible()
+      await page.getByRole('button', { name: labels.find, exact: true }).click()
+      await expect(page.getByRole('textbox', { name: labels.find, exact: true })).toBeVisible()
+      await page.keyboard.press('Escape')
+      await page.getByRole('button', { name: labels.prefs, exact: true }).click()
+      await expect(page.getByRole('dialog', { name: labels.prefs, exact: true })).toBeVisible()
+    })
+  }
 })
 
 test.describe('a language that renders', () => {

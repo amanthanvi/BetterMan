@@ -1,3 +1,4 @@
+import { holdBack, releaseHeld } from '@/lib/i18n/testing'
 import fc from 'fast-check'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
@@ -65,7 +66,10 @@ beforeEach(() => {
   convexMocks.mutation.mockResolvedValue({ allowed: true })
 })
 
-afterEach(() => vi.unstubAllEnvs())
+afterEach(() => {
+  vi.unstubAllEnvs()
+  releaseHeld()
+})
 
 it.each([GET, HEAD])('keeps security headers on rate-limited API reads', async (handler) => {
   vi.stubEnv('NODE_ENV', 'production')
@@ -571,7 +575,8 @@ it.each(['', 'gzip;q=0'])('offers a storage redirect when gzip is unavailable (%
   expect(response.headers.get('location')).toBe('https://storage.test/large')
 })
 
-it.each(['ro', 'pl'])('gates the %s API search content language', async (lang) => {
+it.each(['ro', 'pl'] as const)('gates the %s API search content language', async (lang) => {
+  holdBack(lang)
   for (const preview of ['', lang]) {
     vi.stubEnv('BM_I18N_PREVIEW', preview)
     apiMocks.search.mockResolvedValue({ items: [], total: 0 })

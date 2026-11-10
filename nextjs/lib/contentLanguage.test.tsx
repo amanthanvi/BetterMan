@@ -1,3 +1,4 @@
+import { holdBack, releaseHeld } from './i18n/testing'
 import { afterEach, expect, it, vi } from 'vitest'
 
 const api = vi.hoisted(() => ({ search: vi.fn(), fetchInfo: vi.fn(), listSections: vi.fn() }))
@@ -6,8 +7,12 @@ vi.mock('next/headers', () => ({ headers: async () => new Headers(), cookies: as
 import HomePage from '../app/(site)/page'
 import SearchPage from '../app/search/page'
 
-afterEach(() => vi.unstubAllEnvs())
-it.each(['ro', 'pl'])('gates %s content on home and search, including previews', async (lang) => {
+afterEach(() => {
+  vi.unstubAllEnvs()
+  releaseHeld()
+})
+it.each(['ro', 'pl'] as const)('gates %s content on home and search, including previews', async (lang) => {
+  holdBack(lang)
   api.fetchInfo.mockResolvedValue({ pageCount: 1, lastUpdated: '2026-11-10' })
   api.listSections.mockResolvedValue([])
   api.search.mockResolvedValue({ results: [], suggestions: [], total: 0 })

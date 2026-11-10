@@ -65,7 +65,7 @@ class TranslationWorkflowTest(unittest.TestCase):
 
     def test_scheduled_gate_selects_every_language_for_staging_only(self):
         rows = self.matrix(BETTERMAN_DEBIAN_TRANSLATIONS='1')
-        self.assertEqual([row['locale'] for row in rows], ['de', 'fr', 'es', 'pt-BR', 'ja', 'ru'])
+        self.assertEqual([row['locale'] for row in rows], ['de', 'fr', 'es', 'pt-BR', 'ja', 'ru', 'ro', 'pl'])
         self.assertEqual({(row['distro'], row['ingest'], row['promote']) for row in rows[:1]}, {('debian-de', True, False)})
         self.assertTrue(all(row['ingest'] and not row['promote'] for row in rows))
 
@@ -90,21 +90,22 @@ class TranslationWorkflowTest(unittest.TestCase):
         for locale in w.LOCALES:
             self.assertIn(w.review_status(locale), ('reviewed', 'needs-review'))
         for locale in ('ro', 'pl'):
-            self.assertEqual(w.review_status(locale), 'needs-review')
-            env = {'BETTERMAN_WORKFLOW_EVENT': 'workflow_dispatch', 'BETTERMAN_TRANSLATION_LOCALE': locale,
-                   'BETTERMAN_DEBIAN_TRANSLATIONS_INPUT': 'true'}
-            self.assertEqual([r['locale'] for r in self.matrix(**env)], [locale])
-            # The repo-wide promotion switch leaves a held catalog staging-only...
-            self.assertEqual(self.matrix(**env, BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE='1'),
-                [{'distro': f'debian-{locale}', 'locale': locale, 'ingest': True, 'promote': False, 'timeout': 120}])
-            self.assertEqual(self.matrix(**{**env, 'BETTERMAN_DEBIAN_TRANSLATIONS_INPUT': 'false'}, BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE='1'), [])
-            # ...and asking to promote it is refused at plan time.
-            with self.assertRaisesRegex(ValueError, 'catalog review'):
-                self.matrix(**env, BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT='true', BETTERMAN_EXPECTED_RELEASE_ID_INPUT=f'{locale}-1')
-            with self.assertRaisesRegex(ValueError, 'catalog review'):
-                w.promote(locale)
+            self.assertEqual(w.review_status(locale), 'reviewed')
+            with patch.object(w, 'review_status', return_value='needs-review'):
+                env = {'BETTERMAN_WORKFLOW_EVENT': 'workflow_dispatch', 'BETTERMAN_TRANSLATION_LOCALE': locale,
+                       'BETTERMAN_DEBIAN_TRANSLATIONS_INPUT': 'true'}
+                self.assertEqual([r['locale'] for r in self.matrix(**env)], [locale])
+                # The repo-wide promotion switch leaves a held catalog staging-only...
+                self.assertEqual(self.matrix(**env, BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE='1'),
+                    [{'distro': f'debian-{locale}', 'locale': locale, 'ingest': True, 'promote': False, 'timeout': 120}])
+                self.assertEqual(self.matrix(**{**env, 'BETTERMAN_DEBIAN_TRANSLATIONS_INPUT': 'false'}, BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE='1'), [])
+                # ...and asking to promote it is refused at plan time.
+                with self.assertRaisesRegex(ValueError, 'catalog review'):
+                    self.matrix(**env, BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT='true', BETTERMAN_EXPECTED_RELEASE_ID_INPUT=f'{locale}-1')
+                with self.assertRaisesRegex(ValueError, 'catalog review'):
+                    w.promote(locale)
         self.assertEqual(self.requests, [])
-        self.assertNotIn('ro', [r['locale'] for r in self.matrix(BETTERMAN_WORKFLOW_EVENT='workflow_dispatch', BETTERMAN_DEBIAN_TRANSLATIONS_INPUT='true')])
+        self.assertIn('ro', [r['locale'] for r in self.matrix(BETTERMAN_WORKFLOW_EVENT='workflow_dispatch', BETTERMAN_DEBIAN_TRANSLATIONS_INPUT='true')])
         with patch.object(w, 'review_status', return_value='needs-review'):
             self.assertEqual(self.matrix(BETTERMAN_DEBIAN_TRANSLATIONS='1'), [])
 
@@ -117,7 +118,7 @@ class TranslationWorkflowTest(unittest.TestCase):
         out = io.StringIO()
         with patch.object(w, 'review_status', side_effect=status), patch('sys.stdout', out):
             rows = self.matrix(BETTERMAN_DEBIAN_TRANSLATIONS='1')
-        self.assertEqual([r['locale'] for r in rows], ['de', 'es', 'pt-BR', 'ja', 'ru'])
+        self.assertEqual([r['locale'] for r in rows], ['de', 'es', 'pt-BR', 'ja', 'ru', 'ro', 'pl'])
         self.assertIn('::warning::Missing or ambiguous catalog review status for fr', out.getvalue())
         # An explicit dispatch for the broken locale still fails loudly.
         with patch.object(w, 'review_status', side_effect=status), self.assertRaisesRegex(ValueError, 'for fr'):
