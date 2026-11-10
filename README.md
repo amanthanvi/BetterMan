@@ -4,27 +4,12 @@
 
 # BetterMan
 
-### The Unix manual, typeset for the screen.
+Unix manual pages, typeset for the screen.
 
-Fast, beautiful, linkable man pages for every major Unix.<br>
-No accounts. No clutter. Just the answer, then the whole manual.
+[betterman.sh](https://betterman.sh)
 
-<p>
-  <a href="https://betterman.sh"><img src="https://img.shields.io/badge/try_it-betterman.sh-1c1a16?style=for-the-badge&labelColor=b3261e" alt="Try it at betterman.sh"></a>
-</p>
-
-<p>
-  <a href="https://github.com/amanthanvi/BetterMan/actions/workflows/ci.yml"><img src="https://github.com/amanthanvi/BetterMan/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-1c1a16" alt="MIT license"></a>
-  <img src="https://img.shields.io/badge/accounts-none-1c1a16" alt="No accounts">
-</p>
-
-<p>
-  <a href="#-why-youll-like-it">Features</a> ·
-  <a href="#-explain-any-command">Explain</a> ·
-  <a href="#-honest-about-whats-generated">Transparency</a> ·
-  <a href="#-for-developers">Developers</a>
-</p>
+<a href="https://github.com/amanthanvi/BetterMan/actions/workflows/ci.yml"><img src="https://github.com/amanthanvi/BetterMan/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-1c1a16" alt="MIT license"></a>
 
 <br>
 
@@ -39,84 +24,23 @@ No accounts. No clutter. Just the answer, then the whole manual.
 
 <br>
 
-You need one flag. `man` hands you a wall of monospace, and a search engine hands you a forum thread from 2011. **BetterMan gives you the real manual, set like a well-printed book**, with the answer at the top and every option one click away.
+BetterMan is a web reader for man pages. Each page starts with a one-line summary, a few examples and the flags people reach for most, then gives you the upstream manual unchanged, with a filterable index of its options. You don't need an account. Bookmarks, history and reading preferences are kept in your browser.
 
-<div align="center">
+## What it does
 
-| **400,000+** | **7** | **6** | **0** |
-| :---: | :---: | :---: | :---: |
-| manual pages | operating systems | languages | sign-ups required |
+- Search understands task phrases as well as names. `extract a tarball` finds `tar(1)`, `open(2)` goes straight to the system call, and small typos still match.
+- The URLs are short enough to type. `betterman.sh/tar` opens the section `man` itself would pick, `betterman.sh/tar/-x` lands on the flag, and `curl -L betterman.sh/tar.txt` prints the page as plain text. You can also add BetterMan to your browser as a search engine.
+- It covers the full Debian trixie main archive, full archive imports of Ubuntu 24.04, Fedora 44, Arch and Alpine 3.23, the FreeBSD 15.1 base system, and the macOS pages whose license allows it. That comes to a little over 400,000 pages.
+- When a flag behaves differently on another system, it gets a portability marker. The markers come from diffing the real manuals. If several packages ship a page with the same name (`nc`, `awk` and `vi` are the usual suspects), a switch lets you pick the package.
+- On a man page the pager keys work: <kbd>j</kbd> and <kbd>k</kbd> scroll, <kbd>/</kbd> finds, <kbd>n</kbd> and <kbd>N</kbd> step through matches, and <kbd>[</kbd> and <kbd>]</kbd> move between sections. <kbd>⌘</kbd> <kbd>K</kbd> opens the command palette anywhere, and <kbd>?</kbd> lists every shortcut.
+- About 9,500 pages are translated into German, French, Spanish, Brazilian Portuguese, Japanese or Russian, taken from Debian's manpages-l10n packages. Pages without a translation fall back to English. The interface is translated into the same six languages.
+- Man pages are plain server-rendered HTML. The only JavaScript is an inline script that applies your theme before the first paint and a small static bundle. Pages you've read recently work offline, the site installs as an app, and there's a print stylesheet and a dark theme.
 
-</div>
+## Explain
 
-## ✨ Why you'll like it
+Paste a shell line into Explain and it labels each command, flag and argument and links it to its definition in the manual. Clustered flags such as `-xzvf` are split into `-x -z -v -f`. Three small squares next to each flag show whether GNU/Linux, FreeBSD and macOS have it, with a half-filled square where it behaves differently.
 
-<table>
-<tr>
-<td width="50%" valign="top">
-
-#### 🎯 Answers first
-Every page opens with a one-line summary, a few working examples and the most-used flags. The full upstream manual follows, untouched, with a filterable options index.
-
-</td>
-<td width="50%" valign="top">
-
-#### 🔎 Search that gets you
-Type `extract a tarball`, land on `tar(1)`. Type `open(2)`, land on the syscall. Typos are forgiven.
-
-</td>
-</tr>
-<tr>
-<td valign="top">
-
-#### 🐧 Every distro, side by side
-Full archives from **Debian, Ubuntu, Fedora, Arch and Alpine**, plus **FreeBSD** and **macOS**. Flags that differ between systems get a portability marker, so you find out before your script breaks on someone else's machine.
-
-</td>
-<td valign="top">
-
-#### 🔗 Links that just work
-`betterman.sh/tar` opens the page `man` would pick.<br>
-`betterman.sh/tar/-x` jumps straight to the flag.<br>
-`curl -L betterman.sh/tar.txt` prints it in your terminal.
-
-</td>
-</tr>
-<tr>
-<td valign="top">
-
-#### ⌨️ Built for the keyboard
-<kbd>⌘</kbd> <kbd>K</kbd> opens the command palette. On a man page, the pager keys you already know work: <kbd>j</kbd> <kbd>k</kbd> to scroll, <kbd>/</kbd> to find, <kbd>n</kbd> <kbd>N</kbd> for matches, <kbd>[</kbd> <kbd>]</kbd> for sections. <kbd>?</kbd> shows the rest.
-
-</td>
-<td valign="top">
-
-#### 🔒 Private by design
-No sign-up, ever. Bookmarks, history and reading preferences (font, size, line height, column width, theme) live in your browser and never touch a server.
-
-</td>
-</tr>
-<tr>
-<td valign="top">
-
-#### 🌍 Speaks your language
-Translated pages in German, French, Spanish, Brazilian Portuguese, Japanese and Russian, from Debian's manpages-l10n project. The interface is translated too.
-
-</td>
-<td valign="top">
-
-#### ⚡ Fast and light
-Server-rendered HTML with almost no JavaScript. Works offline for pages you've read, installs as an app, prints cleanly, and comes in light and dark.
-
-</td>
-</tr>
-</table>
-
-## 🧩 Explain any command
-
-Paste a shell line and BetterMan breaks it apart: every command, flag and argument is labelled and linked to the exact line of the manual that defines it. Clustered flags like `-xzvf` are split. Little squares show at a glance whether each flag exists on GNU/Linux, FreeBSD and macOS.
-
-It's a deterministic parser, not an AI model. When it can't parse something safely, it says so instead of guessing.
+Explain is a parser for a defined subset of shell grammar, and no language model is involved. When it can't parse a line safely it tells you so, which means it will turn down some valid input.
 
 <div align="center">
 <a href="https://betterman.sh/explain?cmd=tar%20-xzvf%20backup.tar.gz%20-C%20%2Ftmp">
@@ -126,25 +50,18 @@ It's a deterministic parser, not an AI model. When it can't parse something safe
   </picture>
 </a>
 <br>
-<sub><a href="https://betterman.sh/explain?cmd=tar%20-xzvf%20backup.tar.gz%20-C%20%2Ftmp">Try this example live →</a></sub>
+<sub><a href="https://betterman.sh/explain?cmd=tar%20-xzvf%20backup.tar.gz%20-C%20%2Ftmp">Open this example on betterman.sh</a></sub>
 </div>
 
-## 🪪 Honest about what's generated
+## Generated text
 
-The manual text is always the upstream manual: parsed, never rewritten. Summaries, task phrases and a few extra examples are generated ahead of time, never while you wait.
+The manual itself comes from upstream and is parsed without edits. The one-line summaries, the task phrases search uses, and extra examples for pages with fewer than three are generated when the dataset is built, so no model runs when you load a page. Each generated line names the model and the date. Every flag in a generated example is checked against that page's options table, and the example is dropped if any flag is missing. Commands that destroy data, such as `rm`, `dd` and `mkfs`, get no generated text.
 
-- **Labelled.** Every generated line names the model and the date.
-- **Checked.** Every flag in a generated example is verified against the page's own options table, or the example is dropped.
-- **Held back.** Destructive commands like `rm` and `dd` get no generated text at all.
-- **Credited.** Examples from [tldr-pages](https://github.com/tldr-pages/tldr) link to their exact source.
+Examples from [tldr-pages](https://github.com/tldr-pages/tldr) are credited and link to the upstream file. If you find a mistake, the Report a problem link on every page opens a prefilled GitHub issue.
 
-Spot something wrong? Every page has a **Report a problem** link.
+## Development
 
----
-
-## 🛠 For developers
-
-BetterMan is a [Next.js](https://nextjs.org) app backed by [Convex](https://convex.dev), with a Python pipeline that turns `mandoc` output into a typed document model.
+The app is [Next.js](https://nextjs.org) on top of [Convex](https://convex.dev). A Python pipeline renders each page with `mandoc` and converts the output into a typed document model.
 
 ```text
 nextjs/      The web app: pages, API routes, rendering
@@ -154,9 +71,9 @@ scripts/     CI and deploy helpers
 docs/        Architecture, releasing, runbooks
 ```
 
-### Run it locally
+### Running it locally
 
-You'll need **Node 26**, **pnpm 10.34**, **Python 3.14** and [**uv**](https://docs.astral.sh/uv/).
+You need Node 26, pnpm 10.34, Python 3.14 and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 pnpm install
@@ -168,7 +85,7 @@ RATE_LIMIT_TAG_KEY=dev pnpm next:dev    # Convex watcher + Next.js at http://loc
 > [!NOTE]
 > Next.js and Convex must share the same `RATE_LIMIT_TAG_KEY`. If they don't, search and page API routes return 429.
 
-The local database starts empty. With `pnpm next:dev` running, load the test fixture in a second terminal:
+The local database starts empty. With `pnpm next:dev` running, load the test fixture from a second terminal:
 
 ```bash
 npx convex env set CONVEX_INGEST_SECRET dev
@@ -179,7 +96,7 @@ BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev \
 ```
 
 <details>
-<summary><strong>Everyday commands</strong></summary>
+<summary>Commands</summary>
 <br>
 
 | Area | Command | What it does |
@@ -199,27 +116,16 @@ BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev \
 
 </details>
 
-<details>
-<summary><strong>How it ships</strong></summary>
-<br>
+### Deploys and data
 
-- **App:** every push to `main` that passes CI deploys to Vercel ([`deploy.yml`](.github/workflows/deploy.yml)).
-- **Data:** the dataset is rebuilt monthly ([`update-docs.yml`](.github/workflows/update-docs.yml)). Each release is ingested, verified, sealed and staged before it's promoted, so rolling back is just pointing at the previous release.
-- **Analytics:** cookieless [Vercel Web Analytics](docs/analytics.md), production only.
+Pushes to `main` that pass CI deploy to Vercel through [`deploy.yml`](.github/workflows/deploy.yml). The dataset is rebuilt monthly by [`update-docs.yml`](.github/workflows/update-docs.yml): each release is ingested, verified, sealed and staged before it's promoted, and rolling back means pointing production at the previous release. Production builds load cookieless [Vercel Web Analytics](docs/analytics.md).
 
-For the full picture, start with [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/runbooks/`](docs/runbooks/).
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/runbooks/`](docs/runbooks/) have the details.
 
-</details>
+## Contributing
 
-## 🤝 Contributing
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Report security issues privately as described in [`SECURITY.md`](SECURITY.md).
 
-Contributions are welcome. Read [`CONTRIBUTING.md`](CONTRIBUTING.md) to get started, and report security issues privately as described in [`SECURITY.md`](SECURITY.md).
-
-## 📄 License
+## License
 
 [MIT](LICENSE). Examples from tldr-pages are [CC BY 4.0](docs/vendor/tldr-pages.md).
-
-<div align="center">
-<br>
-<sub><strong>betterman</strong>(1) · <a href="https://betterman.sh">betterman.sh</a></sub>
-</div>
