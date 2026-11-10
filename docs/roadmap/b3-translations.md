@@ -45,7 +45,7 @@ the translated roots, with the same integrity guarantees:
 - The same 2% parse gate, copyright notice for every published package, and
   declared counts verified before activation.
 
-The roots are exactly `de fr es pt_BR ja ru`. Encoded duplicates
+The roots are exactly `de fr es pt_BR ja ru ro pl`. Encoded duplicates
 (`fr.UTF-8`, `fr.ISO8859-1`, `de.UTF-8`, `ja.UTF-8`) hold 2–10 pages and are
 not read. Within a language, the most-installed package (popcon) owns a route,
 then package name, then path; other copies are dropped and listed in the
@@ -125,7 +125,7 @@ drift notes rely mostly on missing options. Two Japanese aliases (`url.7`,
 
 ## Serving
 
-The URL scheme is B9's (#401, #475): one `?lang=de|fr|es|pt-BR|ja|ru` drives
+The URL scheme is B9's (#401, #475): one `?lang=de|fr|es|pt-BR|ja|ru|ro|pl` drives
 both the interface language and the manual's language, English when absent.
 B9 owns the list (`nextjs/lib/i18n/locales.ts`; `MAN_LANGUAGES` derives from it),
 case normalization, the man URL allowlist redirect and the remembered-language
@@ -244,11 +244,13 @@ then authorize a promotion-only dispatch for that one language with
 `expected_release_id`, which Convex checks as the compare-and-swap expectation. Serving (`?lang=`, search, hreflang) and
 the drift note are documented above.
 
-## B3.1 code preparation (#510)
+## B3.1 go-live (#510)
 
 Romanian (`ro`, `usr/share/man/ro/`) and Polish (`pl`, `usr/share/man/pl/`)
-are supported by ingestion and complete UI catalogs, with `needs-review` metadata.
-They do not add public languages until B9 review; public claims remain six.
+are supported by ingestion and complete, reviewed UI catalogs. The owner signed
+off on both catalogs, the measured staging costs and promotion on 2026-11-10.
+This PR makes both languages public; promotion follows merge. No production
+promotion or deployment was performed as part of this change.
 See [the local rehearsal evidence](b31-ro-pl-evidence.md).
 
 Contract v10 extends the validated locale set; it changes no stored fields,
@@ -261,3 +263,23 @@ its public queries, English defaults and six reviewed catalogs still work agains
 the expanded backend; `convex:test` exercises existing callers without new
 arguments. This is source/local-test evidence, not a cloud compatibility probe.
 No deployment or workflow dispatch is part of step 1.
+
+### Measured staging releases (2026-11-10)
+
+Measured with `maintenance:measureReleaseBatch`, using B1's method: 10x logical
+JSON at $0.20/GB-month plus files at $0.03/GB-month, per retained release before
+included usage, excluding search, I/O, functions and backups. Both releases had
+**0 hard failures**. These are measured storage estimates, not invoices.
+
+| Language | Pages | Aliases | Docs | JSON | Files | Estimated monthly storage |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| ro | 1,998 | 983 | 33,419 | 15.24 MB | 35.48 MB | about $0.032/month |
+| pl | 1,104 | 747 | 20,902 | 9.78 MB | 26.24 MB | about $0.020/month |
+
+Signed-off release IDs for promotion after merge:
+
+- ro: `2026-11-10T11:26:03Z+debian-ro+a662ce5fe254952f3aece17e7d64026f927b39e1+mandoc:host`
+- pl: `2026-11-10T11:36:18Z+debian-pl+a662ce5fe254952f3aece17e7d64026f927b39e1+mandoc:host`
+
+The original 9,552 translated pages plus 1,998 Romanian and 1,104 Polish pages
+make 12,654 (about 12,600) after promotion, across eight translated languages.

@@ -33,7 +33,7 @@ BetterMan is a web reader for man pages. Where the data exists, a page starts wi
 - It covers the full Debian trixie main archive, full archive imports of Ubuntu 24.04, Fedora 44, Arch and Alpine 3.23, the FreeBSD 15.1 base system, and the macOS pages whose license allows it. That comes to a little over 400,000 pages.
 - When a flag behaves differently on another system, it gets a portability marker. The markers come from diffing the real manuals. If several packages ship a page with the same name (`nc`, `awk` and `vi` are the usual suspects), a switch lets you pick the package.
 - On a man page the pager keys work: <kbd>j</kbd> and <kbd>k</kbd> scroll, <kbd>/</kbd> finds, <kbd>n</kbd> and <kbd>N</kbd> step through matches, and <kbd>[</kbd> and <kbd>]</kbd> move between sections. <kbd>⌘</kbd> <kbd>K</kbd> opens the command palette anywhere, and <kbd>?</kbd> lists every shortcut.
-- About 9,500 pages are translated into German, French, Spanish, Brazilian Portuguese, Japanese or Russian, taken from Debian's manpages-l10n packages. Pages without a translation fall back to English. The interface is translated into the same six languages.
+- About 12,600 pages are translated into German, French, Spanish, Brazilian Portuguese, Japanese, Russian, Romanian or Polish, taken from Debian's manpages-l10n packages. Pages without a translation fall back to English. The interface is translated into the same eight languages.
 - Man pages are plain server-rendered HTML. The only JavaScript is an inline script that applies your theme before the first paint and a small static bundle. After your first visit, the last 80 pages you open are cached for offline reading. The site installs as an app, and there's a print stylesheet and a dark theme.
 
 ## Explain

@@ -474,7 +474,8 @@ it.each(['/man/tar/1', '/concept/signals'])('authorizes the exact analytics boot
   expect(csp).not.toMatch(/https?:|nonce|strict-dynamic|unsafe-eval|script-src[^;]*unsafe-inline/)
 })
 
-it.each(['ro', 'pl'])('holds the unreviewed %s catalog out of public routing', async (lang) => {
+it.each(['ro', 'pl'] as const)('holds the unreviewed %s catalog out of public routing', async (lang) => {
+  holdBack(lang)
   vi.stubEnv('BM_I18N_PREVIEW', '')
   for (const path of ['/search']) {
     const response = await proxy(new NextRequest(`https://betterman.sh${path}?lang=${lang}`))
@@ -482,7 +483,8 @@ it.each(['ro', 'pl'])('holds the unreviewed %s catalog out of public routing', a
   }
 })
 
-it.each(['ro', 'pl'])('privately canonicalizes every held %s content URL before release lookup', async (lang) => {
+it.each(['ro', 'pl'] as const)('privately canonicalizes every held %s content URL before release lookup', async (lang) => {
+  holdBack(lang)
   vi.stubEnv('BM_I18N_PREVIEW', '')
   for (const path of ['/man/tar/1', '/man/tar', '/man/tar/1.txt']) {
     const response = await proxy(new NextRequest(`https://betterman.sh${path}?lang=${lang}`))
@@ -496,6 +498,7 @@ it.each(['ro', 'pl'])('privately canonicalizes every held %s content URL before 
 })
 
 it('gates content release selection independently on short URLs', async () => {
+  holdBack('ro')
   vi.stubEnv('BM_I18N_PREVIEW', '')
   vi.stubEnv('BM_RESERVED_PATH_SEGMENTS', 'api,search,man')
   const response = await proxy(new NextRequest('https://betterman.sh/tar?lang=ro'))

@@ -43,8 +43,8 @@ describe('every translation is complete and keeps what the code fills in', () =>
         expect(meta.lang).toBe(lang)
         expect(meta.translatedBy).toBeTruthy()
         if (lang === 'ro' || lang === 'pl') {
-          expect(meta.status).toBe('needs-review')
-          expect(meta.reviewedBy).toEqual(['Claude Opus 5.5 (model panel)', 'Grok 4.7 (model panel)'])
+          expect(meta.status).toBe('reviewed')
+          expect(meta.reviewedBy).toEqual(['Claude Opus 5.5 (model panel)', 'Grok 4.7 (model panel)', 'independent review of the applied corrections'])
           expect(meta.reviewedOn).toBe('2026-11-10')
         } else {
           expect(meta.status).toBe('reviewed')

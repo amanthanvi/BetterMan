@@ -454,11 +454,12 @@ describe('UI language (docs/i18n.md)', () => {
     }
   })
 
-  it('shows the switch with all six languages in production, where nothing is previewed', async () => {
+  it('shows the switch with all eight translations in production, where nothing is previewed', async () => {
     vi.stubEnv('BM_I18N_PREVIEW', '')
     const html = render(propsOf(await pageProps(context({ name: 'tar', section: '1' }).ctx)))
     expect(html).toContain('data-bm-lang-nav')
-    for (const name of ['Deutsch', 'Français', 'Español', 'Português (Brasil)', '日本語', 'Русский']) expect(html).toContain(name)
+    for (const name of ['Deutsch', 'Français', 'Español', 'Português (Brasil)', '日本語', 'Русский', 'Română', 'Polski']) expect(html).toContain(name)
+    expect((html.match(/href="[^"]*\/-\/lang\//g) ?? [])).toHaveLength(8)
     const russian = propsOf(await pageProps(context({ name: 'tar', section: '1' }, { lang: 'ru' }).ctx)) as { head: { noindex: boolean }; i18n: { lang: string } }
     expect(russian.i18n.lang).toBe('ru')
     // Localized pages stay out of the index, with the English canonical, until translated manuals ship (B3).
@@ -466,7 +467,7 @@ describe('UI language (docs/i18n.md)', () => {
   })
 
   it('does not render a language that is not reviewed: the page is English and the parameter is ignored', async () => {
-    holdBack('de', 'fr', 'es', 'pt-BR', 'ja', 'ru')
+    holdBack('de', 'fr', 'es', 'pt-BR', 'ja', 'ru', 'ro', 'pl')
     vi.stubEnv('BM_I18N_PREVIEW', '')
     const result = propsOf(await pageProps(context({ name: 'tar', section: '1' }, { lang: 'de' }).ctx)) as { head: { noindex: boolean }; i18n: { lang: string; urlLang: string | null } }
     expect(result.i18n).toMatchObject({ lang: 'en', urlLang: null })
@@ -477,7 +478,8 @@ describe('UI language (docs/i18n.md)', () => {
     expect(html).not.toContain('data-bm-lang-nav')
   })
 
-  it.each(['ro', 'pl'])('serves English for held %s URLs, with no switch or localized SEO', async (lang) => {
+  it.each(['ro', 'pl'] as const)('serves English for held %s URLs, with no switch or localized SEO', async (lang) => {
+    holdBack('ro', 'pl')
     vi.stubEnv('BM_I18N_PREVIEW', '')
     const held = context({ name: 'tar', section: '1' }, { lang }, { 'x-bm-translation-release': JSON.stringify({ lang, datasetReleaseId: 'held-release', known: true }) })
     const result = propsOf(await pageProps(held.ctx)) as { head: ManHeadData; i18n: { lang: string; urlLang: string | null } }
@@ -527,8 +529,9 @@ it.each([
   expect(html).not.toContain('?lang=')
 })
 
-it.each(['ro', 'pl'])('runs the %s proxy rewrite and renderer with the actual forwarded translation header', async (lang) => {
-  vi.stubEnv('BM_I18N_PREVIEW', lang)
+it.each([['ro', ''], ['pl', ''], ['ro', 'ro'], ['pl', 'pl']] as const)('runs the public %s proxy rewrite and renderer (preview=%s) with the actual forwarded translation header', async (lang, preview) => {
+  if (preview) holdBack(lang)
+  vi.stubEnv('BM_I18N_PREVIEW', preview)
   backend.query.mockResolvedValue({ ...release, translation: { datasetReleaseId: 'translated-release' } })
   const response = await proxy(new NextRequest(`https://betterman.sh/man/tar/1?lang=${lang}`))
   expect(response.status).toBe(200)
@@ -538,13 +541,16 @@ it.each(['ro', 'pl'])('runs the %s proxy rewrite and renderer with the actual fo
     if (key.startsWith('x-middleware-request-')) headers[key.slice('x-middleware-request-'.length)] = value
   })
   expect(headers['x-bm-translation-release']).toBeTruthy()
-  await pageProps(context({ name: 'tar', section: '1' }, { lang }, headers).ctx)
+  const result = propsOf(await pageProps(context({ name: 'tar', section: '1' }, { lang }, headers).ctx)) as { i18n: { lang: string; urlLang: string } }
+  expect(result.i18n).toMatchObject({ lang, urlLang: lang })
+  expect(renderToStaticMarkup(ManPageRoute(result as Parameters<typeof ManPageRoute>[0]))).toContain('data-bm-lang-nav')
   expect(lookup.lookupManPage).toHaveBeenLastCalledWith(expect.objectContaining({
     translation: { lang, datasetReleaseId: 'translated-release', known: true },
   }))
 })
 
-it.each(['ro', 'pl'])('drops held %s from the section-less content redirect', async (lang) => {
+it.each(['ro', 'pl'] as const)('drops held %s from the section-less content redirect', async (lang) => {
+  holdBack(lang)
   vi.stubEnv('BM_I18N_PREVIEW', '')
   lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' }, servedRelease: release.datasetReleaseId })
   expect(await nameProps(context({ name: 'tar' }, { lang }).ctx)).toEqual({ redirect: { destination: '/man/tar/1', permanent: false } })

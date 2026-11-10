@@ -4,8 +4,10 @@ import { CATALOG_META, previewLangs, publicLangs, resolvePublicLang } from './ga
 import { LANGS, LANG_NAMES, normalizeLang, resolveLang, setLang, translatedLang, withLang } from './locales'
 import { holdBack, releaseHeld } from './testing'
 
+afterEach(releaseHeld)
+
 describe('the language contract', () => {
-  it('lists English first, six reviewed languages, then Romanian and Polish', () => {
+  it('lists English first, eight reviewed translations', () => {
     expect(LANGS).toEqual(['en', 'de', 'fr', 'es', 'pt-BR', 'ja', 'ru', 'ro', 'pl'])
     for (const lang of LANGS) expect(LANG_NAMES[lang]).toBeTruthy()
   })
@@ -19,22 +21,22 @@ describe('the language contract', () => {
 })
 
 describe('the review gate', () => {
-  it('ships the original six translations reviewed, with who reviewed it and when, so all six render publicly', () => {
-    for (const [lang, meta] of Object.entries(CATALOG_META).filter(([lang]) => lang !== 'ro' && lang !== 'pl')) {
+  it('ships all eight translations reviewed, with who reviewed them and when', () => {
+    for (const [lang, meta] of Object.entries(CATALOG_META)) {
       expect(meta.lang).toBe(lang)
       expect(meta.status).toBe('reviewed')
       expect(meta.reviewedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-      expect(meta.reviewedBy.join('; ')).toContain('GPT-6.1 Sol')
+      expect(meta.reviewedBy.join('; ')).toContain(['ro', 'pl'].includes(lang) ? 'Claude Opus 5.5' : 'GPT-6.1 Sol')
       expect(meta.reviewedBy.join('; ')).toContain('Grok 4.7')
       expect(meta.reviewedBy.join('; ')).toContain('independent review')
     }
-    expect(publicLangs('')).toEqual(['en', 'de', 'fr', 'es', 'pt-BR', 'ja', 'ru'])
+    expect(publicLangs('')).toEqual(['en', 'de', 'fr', 'es', 'pt-BR', 'ja', 'ru', 'ro', 'pl'])
     expect(publicLangs(undefined)).toEqual(publicLangs(''))
     expect(resolveLang('ru', publicLangs(''))).toBe('ru')
   })
 
   describe('while a language waits for review', () => {
-    beforeEach(() => holdBack('de', 'fr', 'es', 'pt-BR', 'ja', 'ru'))
+    beforeEach(() => holdBack('de', 'fr', 'es', 'pt-BR', 'ja', 'ru', 'ro', 'pl'))
     afterEach(releaseHeld)
 
     it('renders only English', () => {
@@ -76,7 +78,8 @@ describe('links', () => {
   })
 })
 
-it.each(['ro', 'pl'])('keeps %s private until catalog review', async (lang) => {
+it.each(['ro', 'pl'] as const)('keeps %s private until catalog review', async (lang) => {
+  holdBack(lang)
   const { manI18n } = await import('./page')
   expect(publicLangs('')).not.toContain(lang)
   expect(resolvePublicLang(lang)).toBeNull()
