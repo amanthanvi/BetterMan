@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Operations: `prune-releases` grows its deletion batch back after a failure. Each failed attempt halves `maxDocs`, and the smaller size used to stick for the rest of the release, so on 2026-11-09 one streak of transient "too many system operations" errors left two releases deleting 5 documents a batch for about four hours, until the job's 5-hour timeout (#528). Batch sizes now double after ten batches in a row succeed on their first attempt, up to their starting size.
 - Operations: `prune-releases` no longer stops at the first release it cannot delete. On 2026-11-09 an abandoned Alpine draft failed every deletion batch with Convex's "too many system operations" and blocked 19 ordinary superseded releases behind it. The script now logs `prune_release_failed`, prunes the rest, runs the sweeps, and still exits non-zero naming each failed release. The draft itself is tracked separately.
 - Ingestion: record dangling Fedora and Arch notice-file links as visible license gaps after verified resolution (Alpine, which has no file index, still fails closed), retaining other package notices or labelled standard texts; fixes Arch python-dkim's stale pre-PEP-639 license link without guessing a replacement path.
 - Refresh Alpine's superseded APKINDEX snapshots and reviewed whole-file package pins; identify missing pinned APKs with fail-closed refresh guidance and rehearse the full publisher locally without uploads.

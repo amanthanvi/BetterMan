@@ -170,6 +170,44 @@ test('shrinks the deletion batch after a failed attempt and keeps the smaller si
   assert.equal(limit.forAttempt(9), 5)
 })
 
+test('grows the deletion batch back after a run of clean batches (#528)', async () => {
+  // Re-run 42679888836 hit one transient streak of "too many system
+  // operations", then deleted 5 documents a batch for four hours until the job
+  // timed out. A single bad streak must not pin the rest of a release there.
+  const sizes = []
+  let calls = 0
+  let batches = 0
+  const run = async (name, args) => {
+    calls += 1
+    sizes.push(args.maxDocs)
+    if (calls <= 9) throw new Error('Your request timed out performing too many system operations')
+    batches += 1
+    return { datasetReleaseId: 'r', deleted: args.maxDocs, deletedByTable: { manPages: args.maxDocs }, deletedRelease: batches === 100, hasMore: batches !== 100 }
+  }
+  await pruneRelease(run, 'r', { ...quiet, retry: noPause })
+  assert.deepEqual(sizes.slice(0, 10), [1000, 500, 250, 125, 62, 31, 15, 7, 5, 5])
+  const grown = sizes.slice(10)
+  // Ten clean batches at each size, then double, never past the starting size.
+  assert.deepEqual([...new Set(grown)], [5, 10, 20, 40, 80, 160, 320, 640, 1000])
+  assert.equal(grown.filter((size) => size === 5).length, 10)
+  assert.equal(Math.max(...sizes), 1000)
+  assert.equal(sizes.at(-1), 1000)
+
+  // A batch that needed a retry keeps its smaller size and restarts the count.
+  const limit = adaptiveLimit({ start: 100, min: 5 }, { growAfter: 2 })
+  limit.forAttempt(1); limit.forAttempt(5); limit.succeeded()
+  assert.equal(limit.current, 6)
+  limit.forAttempt(1); limit.succeeded()
+  limit.forAttempt(1); limit.forAttempt(2); limit.succeeded()
+  assert.equal(limit.current, 5)
+  limit.forAttempt(1); limit.succeeded()
+  assert.equal(limit.current, 5)
+  limit.forAttempt(1); limit.succeeded()
+  assert.equal(limit.current, 10)
+  for (let i = 0; i < 20; i += 1) { limit.forAttempt(1); limit.succeeded() }
+  assert.equal(limit.current, 100)
+})
+
 test('stops on stalled, mismatched, or failing deletions', async () => {
   const opts = { ...quiet, retry: { ...noPause, attempts: 1 } }
   await assert.rejects(pruneRelease(async () => ({ datasetReleaseId: 'r', deleted: 0, deletedByTable: {}, deletedRelease: false, hasMore: true }), 'r', opts), /no progress/)
