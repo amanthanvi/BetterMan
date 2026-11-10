@@ -208,6 +208,41 @@ test('grows the deletion batch back after a run of clean batches (#528)', async 
   assert.equal(limit.current, 100)
 })
 
+test('a size that always fails is retried less and less often', async () => {
+  // Data that deterministically fails above 40 documents a batch. Probing the
+  // next size every ten batches would fail on ~9% of batches indefinitely;
+  // backing off the probe keeps the tax near zero.
+  const sizes = []
+  let failures = 0
+  let batches = 0
+  const run = async (name, args) => {
+    sizes.push(args.maxDocs)
+    if (args.maxDocs > 40) { failures += 1; throw new Error('Your request timed out performing too many system operations') }
+    batches += 1
+    return { datasetReleaseId: 'r', deleted: 1, deletedByTable: { manPages: 1 }, deletedRelease: batches === 1000, hasMore: batches !== 1000 }
+  }
+  await pruneRelease(run, 'r', { ...quiet, retry: noPause })
+  assert.equal(batches, 1000)
+  // Five failures shrink 1000 to 31 once; then probes at 62 fail after 10, 20,
+  // 40, 80, 160 and every 320 clean batches.
+  assert.ok(failures <= 12, `expected at most 12 failed calls, got ${failures}`)
+  assert.ok(sizes.every((size) => size <= 1000 && size >= 31))
+})
+
+test('the orphan blob sweep also grows its page size back after a transient failure', async () => {
+  const limits = []
+  let pages = 0
+  const run = async (name, args) => {
+    limits.push(args.limit)
+    if (limits.length <= 3) throw new Error('Your request timed out performing too many system operations')
+    pages += 1
+    return { isDone: pages === 60, continueCursor: `c${pages}`, scanned: args.limit, orphans: 0, blobDeletes: 0, chunkDeletes: 0, storageDeletes: 0, oversizedSkipped: 0 }
+  }
+  await cleanupOrphanBlobs(run, { dryRun: true, ...quiet, retry: noPause })
+  assert.deepEqual(limits.slice(0, 4), [50, 25, 12, 6])
+  assert.equal(limits.at(-1), 50)
+})
+
 test('stops on stalled, mismatched, or failing deletions', async () => {
   const opts = { ...quiet, retry: { ...noPause, attempts: 1 } }
   await assert.rejects(pruneRelease(async () => ({ datasetReleaseId: 'r', deleted: 0, deletedByTable: {}, deletedRelease: false, hasMore: true }), 'r', opts), /no progress/)
