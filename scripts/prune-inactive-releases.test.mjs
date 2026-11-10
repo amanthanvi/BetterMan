@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import {
-  adaptiveLimit, cleanupOrphanBlobs, cleanupOrphanManifestFiles, describeError, limitForAttempt, listInactiveReleases, mapWithConcurrency, parseOptions, prune,
+  convexRunner, adaptiveLimit, cleanupOrphanDerivedCaches, cleanupOrphanBlobs, cleanupOrphanManifestFiles, describeError, limitForAttempt, listInactiveReleases, mapWithConcurrency, parseOptions, prune,
   pruneRelease, selectPrunable, withRetry,
 } from './prune-inactive-releases.mjs'
 
@@ -20,7 +20,7 @@ const at = (daysAgo) => new Date(now - daysAgo * day).toISOString()
 
 test('parses environment options with safe defaults and rejects unsafe values', () => {
   assert.deepEqual(parseOptions({}, now), {
-    apply: false, keepPerDistro: 1, minAgeMs: day, unsealedMinAgeMs: null, sweepOrphans: false, concurrency: 4, now,
+    apply: false, keepPerDistro: 1, minAgeMs: day, unsealedMinAgeMs: null, sweepOrphans: false, sweepOnly: false, sweep: 'all', startCursor: null, concurrency: 4, now,
   })
   const applied = parseOptions({ BETTERMAN_PRUNE_APPLY: 'true', BETTERMAN_PRUNE_KEEP_PER_DISTRO: '2', BETTERMAN_PRUNE_UNSEALED_MIN_AGE_HOURS: '72' }, now)
   assert.equal(applied.keepPerDistro, 2)
@@ -241,8 +241,8 @@ test('the orphan blob sweep also grows its page size back after a transient fail
     return { isDone: pages === 60, continueCursor: `c${pages}`, scanned: args.limit, orphans: 0, blobDeletes: 0, chunkDeletes: 0, storageDeletes: 0, oversizedSkipped: 0 }
   }
   await cleanupOrphanBlobs(run, { dryRun: true, ...quiet, retry: noPause })
-  assert.deepEqual(limits.slice(0, 4), [50, 25, 12, 6])
-  assert.equal(limits.at(-1), 50)
+  assert.deepEqual(limits.slice(0, 4), [100, 50, 25, 12])
+  assert.equal(limits.at(-1), 100)
 })
 
 test('stops on stalled, mismatched, or failing deletions', async () => {
@@ -262,7 +262,7 @@ test('sweeps orphan blobs across every page and honours dry run', async () => {
   const run = async (name, args) => { calls.push([name, args]); return pages.shift() }
   const totals = await cleanupOrphanBlobs(run, { dryRun: true, ...quiet, retry: noPause })
   assert.deepEqual(totals, { scanned: 57, orphans: 3, blobDeletes: 0, chunkDeletes: 0, storageDeletes: 0, oversizedSkipped: 1, pages: 2 })
-  assert.ok(calls.every(([name, args]) => name === 'maintenance:cleanupOrphanContentBlobsBatch' && args.dryRun === true && args.limit === 50))
+  assert.ok(calls.every(([name, args]) => name === 'maintenance:cleanupOrphanContentBlobsBatch' && args.dryRun === true && args.limit === 100))
   await assert.rejects(cleanupOrphanBlobs(async () => ({ isDone: false, scanned: 1 }), { dryRun: true, ...quiet, retry: noPause }), /continuation cursor/)
 })
 
@@ -463,4 +463,78 @@ test('a pin acquired after preview is skipped without retry and does not abort e
   assert.deepEqual(calls.filter(([name]) => name === 'maintenance:cleanupOrphanDerivedCachesBatch').map(([, args]) => args.table), ['derivedSignatureCache', 'derivedLegacySignatures', 'manPageSymbols'])
   assert.ok(logs.some((entry) => entry.event === 'prune_skipped' && entry.datasetReleaseId === 'pinned-race'))
   assert.ok(!logs.some((entry) => entry.event === 'retry'))
+})
+
+for (const [table, sweep] of [
+  ['manPageContentBlobs', cleanupOrphanBlobs], ['_storage', cleanupOrphanManifestFiles],
+  ['manPageSymbols', (run, opts) => cleanupOrphanDerivedCaches(run, { ...opts, table: 'manPageSymbols' })],
+]) {
+  test(`${table} logs checkpoints, completion and failure with resumable cursors`, async () => {
+    const logs = []
+    let calls = 0
+    const opts = { dryRun: true, startCursor: 'resume', retry: { ...noPause, attempts: 1 }, log: line => logs.push(JSON.parse(line)) }
+    await sweep(async (_, args) => {
+      assert.equal(args.cursor, calls === 0 ? 'resume' : `c${calls}`)
+      calls++
+      return { scanned: 1, orphans: 1, deleted: 0, isDone: calls === 51, continueCursor: `c${calls}` }
+    }, opts)
+    assert.ok(logs.some(e => e.event === 'sweep_progress' && e.table === table && e.pages === 50 && e.cursor === 'c50' && e.scanned === 50 && e.deleted === 0))
+    assert.ok(logs.some(e => e.event === 'sweep_done' && e.table === table && e.pages === 51))
+    logs.length = 0
+    await assert.rejects(sweep(async () => { throw new Error('stop') }, opts), /stop/)
+    assert.ok(logs.some(e => e.event === 'sweep_failed' && e.table === table && e.cursor === 'resume'))
+  })
+}
+
+test('sweep-only selects one table, resumes it and never previews or deletes releases', async () => {
+  const options = parseOptions({ BETTERMAN_PRUNE_SWEEP_ONLY: 'true', BETTERMAN_PRUNE_SWEEP: 'manPageSymbols', BETTERMAN_PRUNE_START_CURSOR: 'saved' }, now)
+  const calls = []
+  await prune(async (name, args) => {
+    calls.push([name, args])
+    return { scanned: 0, isDone: true }
+  }, options, quiet)
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0][0], 'maintenance:cleanupOrphanDerivedCachesBatch')
+  assert.deepEqual(calls[0][1], { table: 'manPageSymbols', cursor: 'saved', limit: 8, dryRun: true })
+  assert.throws(() => parseOptions({ BETTERMAN_PRUNE_START_CURSOR: 'saved' }), /single sweep/)
+  assert.throws(() => parseOptions({ BETTERMAN_PRUNE_SWEEP: 'typo' }), /Invalid sweep/)
+})
+
+test('persistent admin client calls internal functions without spawning CLI processes', async () => {
+  const requests = []
+  const run = convexRunner({ CONVEX_URL: 'http://127.0.0.1:3210', CONVEX_DEPLOY_KEY: 'test-only' }, {
+    fetch: async (url, init) => {
+      requests.push({ url, ...init, body: JSON.parse(init.body) })
+      return new Response(JSON.stringify({ status: 'success', value: { scanned: 100 }, logLines: ['must not be printed'] }))
+    },
+  })
+  assert.deepEqual(await run('maintenance:cleanupOrphanContentBlobsBatch', { cursor: 'saved', limit: 100, dryRun: true }), { scanned: 100 })
+  await run('maintenance:previewInactiveReleases', { cursor: null })
+  assert.equal(requests.length, 2)
+  assert.equal(requests[0].url, 'http://127.0.0.1:3210/api/function')
+  assert.equal(requests[0].headers.Authorization, 'Convex test-only')
+  assert.equal(requests[0].body.path, 'maintenance:cleanupOrphanContentBlobsBatch')
+  assert.deepEqual(requests[0].body.args, { cursor: 'saved', limit: 100, dryRun: true })
+  assert.ok(requests[0].signal instanceof AbortSignal)
+  assert.notEqual(requests[0].signal, requests[1].signal)
+  assert.throws(() => convexRunner({}), /CONVEX_DEPLOY_KEY/)
+  assert.throws(() => convexRunner({ CONVEX_DEPLOY_KEY: 'test-only' }), /CONVEX_URL/)
+})
+
+test('all sweeps request server maxima and reject a repeated cursor', async () => {
+  for (const [sweep, maximum] of [[cleanupOrphanBlobs, 100], [cleanupOrphanManifestFiles, 100], [cleanupOrphanDerivedCaches, 8]]) {
+    const limits = []
+    await sweep(async (_, args) => { limits.push(args.limit); return { scanned: 0, isDone: true } }, quiet)
+    assert.ok(limits.every(value => value === maximum))
+    await assert.rejects(sweep(async () => ({ scanned: 1, isDone: false, continueCursor: 'same' }), { ...quiet, startCursor: 'same' }), /did not advance/)
+  }
+})
+
+test('workflow exposes safe sweep selection and checkpoint inputs with protected URL', () => {
+  const workflow = readRepositoryFile('.github/workflows/prune-releases.yml')
+  assert.match(workflow, /sweep_only:\n(?:.*\n){1,3}\s+default: false/)
+  assert.match(workflow, /sweep:\n(?:.*\n){1,3}\s+default: all/)
+  assert.match(workflow, /start_cursor:/)
+  assert.match(workflow, /CONVEX_URL: \$\{\{ vars\.CONVEX_URL \}\}/)
+  for (const input of ['SWEEP_ONLY', 'SWEEP', 'START_CURSOR']) assert.ok(workflow.includes(`BETTERMAN_PRUNE_${input}:`))
 })

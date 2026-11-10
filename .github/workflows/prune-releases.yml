@@ -40,6 +40,26 @@ on:
           - "true"
           - "false"
 
+      sweep_only:
+        description: Skip release deletion and preview; sweep even in dry run
+        type: boolean
+        default: false
+      sweep:
+        description: Tables to sweep (independent of release deletion)
+        type: choice
+        default: all
+        options:
+          - all
+          - blobs
+          - manifests
+          - derivedSignatureCache
+          - derivedLegacySignatures
+          - manPageSymbols
+      start_cursor:
+        description: Resume cursor from sweep_progress (requires a single sweep)
+        type: string
+        required: false
+
 concurrency:
   group: update-dataset
   cancel-in-progress: false
@@ -75,6 +95,10 @@ jobs:
       - name: Prune inactive releases
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          CONVEX_URL: ${{ vars.CONVEX_URL }}
+          BETTERMAN_PRUNE_SWEEP_ONLY: ${{ inputs.sweep_only && 'true' || 'false' }}
+          BETTERMAN_PRUNE_SWEEP: ${{ inputs.sweep }}
+          BETTERMAN_PRUNE_START_CURSOR: ${{ inputs.start_cursor }}
           BETTERMAN_PRUNE_APPLY: ${{ inputs.apply && 'true' || 'false' }}
           BETTERMAN_PRUNE_KEEP_PER_DISTRO: ${{ inputs.keep_per_distro }}
           BETTERMAN_PRUNE_MIN_AGE_HOURS: ${{ inputs.min_age_hours }}

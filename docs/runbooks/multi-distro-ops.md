@@ -78,7 +78,7 @@ Selection rules, applied on top of `maintenance:deleteInactiveReleaseBatch` (whi
 - Sealed legacy releases without an alias declaration, and sealed releases whose manifest verification failed, cannot be activated again and are pruned regardless of age.
 - Sealed declared releases created less than `min_age_hours` ago (default 24, minimum 1) are skipped in case activation is still hydrating. Beyond that floor, the newest `keep_per_distro` (default 1, minimum 1) verified releases per distro are retained as rollback targets and the rest are pruned.
 
-Deletion starts at 1,000 documents per transaction (server maximum 2,000), including manifest rows and stored provenance. Up to ten attempts let large batches shrink to the five-document minimum. Deletion runs in bounded batches per release with retries; batch sizes halve after a failed attempt and stay at the size that succeeded, so an oversized transaction shrinks instead of stalling. After ten batches in a row succeed on their first attempt, the size doubles again, up to 1,000, so one streak of transient failures cannot leave a release at five documents a batch for the rest of the run ([#528](https://github.com/amanthanvi/BetterMan/issues/528)). If the first batch at a grown size fails, the run waits twice as long before trying to grow again (up to 320 batches), so a size that always fails costs little. The orphan content-blob and derived-cache sweeps grow back the same way (the manifest-file sweep uses a fixed batch of 100), and `prune_progress` logs the current `maxDocs`. A release whose retries run out is logged as `prune_release_failed` and the run carries on with the others, then exits non-zero naming it; re-running resumes because marked releases are always finished first. When applying, the run then sweeps `manPageContentBlobs` that no page references, deleting their chunks and stored files. Blobs still shared with an active release are never orphans and are left in place. The sweep walks the whole blob table, so previews skip it unless `sweep_orphans=true`; its count on a preview is pre-existing orphans, not what pruning would produce.
+Deletion starts at 1,000 documents per transaction (server maximum 2,000), including manifest rows and stored provenance. Up to ten attempts let large batches shrink to the five-document minimum. Deletion runs in bounded batches per release with retries; batch sizes halve after a failed attempt and stay at the size that succeeded, so an oversized transaction shrinks instead of stalling. After ten batches in a row succeed on their first attempt, the size doubles again, up to 1,000, so one streak of transient failures cannot leave a release at five documents a batch for the rest of the run ([#528](https://github.com/amanthanvi/BetterMan/issues/528)). If the first batch at a grown size fails, the run waits twice as long before trying to grow again (up to 320 batches), so a size that always fails costs little. All orphan sweeps grow back the same way (starting at server maxima: 100 content blobs, 100 storage files, 8 derived rows), and `prune_progress` logs the current `maxDocs`. A release whose retries run out is logged as `prune_release_failed` and the run carries on with the others, then exits non-zero naming it; re-running resumes because marked releases are always finished first. When applying, the run then sweeps `manPageContentBlobs` that no page references, deleting their chunks and stored files. Blobs still shared with an active release are never orphans and are left in place. The sweep walks the whole blob table, so previews skip it unless `sweep_orphans=true`; its count on a preview is pre-existing orphans, not what pruning would produce.
 
 Run the preview again after applying; it should list only the retained rollback candidates and any unsealed drafts.
 
@@ -199,6 +199,41 @@ Use the operator's securely selected deployment for both commands. The internal
 repair mutation requires a sealed, manifest-verified, nonpruning release and
 rejects a live job. Successful batches reset the failure budget; ordinary polls
 cannot reset it.
+
+Prune uses one long-lived `ConvexHttpClient`, authenticated with the protected
+production `CONVEX_DEPLOY_KEY` and `vars.CONVEX_URL` (the same deployment URL
+used by deploy). It calls the SDK admin endpoint used by `convex run`, without
+starting a process per page. No transaction bounds or orphan checks change.
+The SDK's admin methods are internal APIs; the driver tests exercise the
+installed package so an incompatible upgrade fails locally/CI.
+
+Every table emits `sweep_progress` at entry and every 50 pages, `sweep_done` on
+completion, or `sweep_failed` on a caught failure. Events include `table`,
+`pages`, `scanned`, `deleted`, detailed counters, `limit`, `dryRun` and `cursor`.
+Counters are for this invocation/table, not lifetime totals. `cursor` is the
+next page to scan; null on `sweep_done` means completion, not a resume request.
+A hard cancellation leaves the last checkpoint in the log (at most 50 pages
+need replay); retry events identify the table and current request cursor too.
+
+To finish an interrupted sweep, dispatch the same workflow with
+`sweep_only=true`, `sweep` set to the interrupted table selector, and
+`start_cursor` copied exactly from its last `sweep_progress` event. Selectors:
+`blobs` for `manPageContentBlobs`, `manifests` for `_storage`, or the exact
+`derivedSignatureCache`, `derivedLegacySignatures`, `manPageSymbols` table name.
+`all` (default) walks all five tables and cannot accept a start cursor.
+`sweep_only` skips release preview/deletion and defaults sweeps on, including
+in dry run; `sweep_orphans=false` explicitly disables them. `apply` still
+defaults false. Selection alone does not skip release deletion: use
+`sweep_only=true` for a dedicated sweep. The `update-dataset` concurrency group
+still excludes ingestion/promotion. Invalid/expired cursors fail visibly;
+restart that selected table with an empty cursor. Replaying is safe, but a
+resumed suffix will not find newly created orphans before its cursor; periodic
+full sweeps are still needed.
+
+Local equivalents use `BETTERMAN_PRUNE_SWEEP_ONLY=true`,
+`BETTERMAN_PRUNE_SWEEP=<selector>`, and `BETTERMAN_PRUNE_START_CURSOR=<cursor>`.
+Do not reuse an apply cursor to count a complete dry-run table: it counts only
+the remaining suffix.
 
 The orphan sweep also scans manifest files tagged
 `application/vnd.betterman.release-manifest+json`. It preserves files younger
