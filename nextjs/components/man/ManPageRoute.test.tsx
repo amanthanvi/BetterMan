@@ -1,6 +1,11 @@
+import { NextRequest } from 'next/server'
+import { proxy } from '../../proxy'
 import type { GetServerSidePropsContext } from 'next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const backend = vi.hoisted(() => ({ query: vi.fn() }))
+vi.mock('../../lib/convexClient', () => ({ getConvexClient: () => backend }))
 
 const limiter = vi.hoisted(() => ({ isRateLimited: vi.fn() }))
 vi.mock('../../lib/rateLimit', () => limiter)
@@ -11,7 +16,7 @@ vi.mock('../../lib/manLookup', () => lookup)
 import ManNameRoute, { getServerSideProps as nameProps } from '../../pages/man/[name]/index'
 import ManPageRoute, { config, getServerSideProps as pageProps } from '../../pages/man/[name]/[section]'
 import { holdBack, releaseHeld } from '../../lib/i18n/testing'
-import { encodeReleaseHeader } from '../../lib/manRelease'
+import { encodeReleaseHeader, resetReleaseCache } from '../../lib/manRelease'
 import { ManHeadTags, type ManHeadData } from './ManHead'
 
 process.env.BM_RELEASE_TOKEN = 'test-release-token'
@@ -46,6 +51,8 @@ afterEach(() => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  resetReleaseCache()
+  backend.query.mockResolvedValue(release)
   limiter.isRateLimited.mockResolvedValue(false)
   lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data, related: [], servedRelease: '2026-10-28+debian' })
   lookup.manMiss.mockImplementation(async (opts: object) => ({ ...opts, suggestions: [], distros: [], limited: false, answeredByKey: true }))
@@ -472,8 +479,10 @@ describe('UI language (docs/i18n.md)', () => {
 
   it.each(['ro', 'pl'])('serves English for held %s URLs, with no switch or localized SEO', async (lang) => {
     vi.stubEnv('BM_I18N_PREVIEW', '')
-    const result = propsOf(await pageProps(context({ name: 'tar', section: '1' }, { lang }).ctx)) as { head: ManHeadData; i18n: { lang: string; urlLang: string | null } }
+    const held = context({ name: 'tar', section: '1' }, { lang }, { 'x-bm-translation-release': JSON.stringify({ lang, datasetReleaseId: 'held-release', known: true }) })
+    const result = propsOf(await pageProps(held.ctx)) as { head: ManHeadData; i18n: { lang: string; urlLang: string | null } }
     expect(result.i18n).toMatchObject({ lang: 'en', urlLang: null })
+    expect(held.res.headers['cache-control']).toBe('private, no-store')
     expect(result.head.canonical).not.toContain('lang=')
     const html = render(result)
     for (const held of ['ro', 'pl']) {
@@ -481,7 +490,7 @@ describe('UI language (docs/i18n.md)', () => {
       expect(html).not.toContain(`hreflang="${held}"`)
     }
     expect(html).toContain('Skip to content')
-    expect(lookup.lookupManPage.mock.calls.at(-1)?.[0]).not.toHaveProperty('lang', lang)
+    expect(lookup.lookupManPage.mock.calls.at(-1)?.[0]).not.toHaveProperty('translation')
   })
 
   it('keeps the language on a redirect, the section picker and a miss', async () => {
@@ -516,4 +525,27 @@ it.each([
   ] : [])
   const html = renderToStaticMarkup(<ManHeadTags {...head} />)
   expect(html).not.toContain('?lang=')
+})
+
+it.each(['ro', 'pl'])('runs the %s proxy rewrite and renderer with the actual forwarded translation header', async (lang) => {
+  vi.stubEnv('BM_I18N_PREVIEW', lang)
+  backend.query.mockResolvedValue({ ...release, translation: { datasetReleaseId: 'translated-release' } })
+  const response = await proxy(new NextRequest(`https://betterman.sh/man/tar/1?lang=${lang}`))
+  expect(response.status).toBe(200)
+  expect(decodeURIComponent(response.headers.get('x-middleware-rewrite')!)).toContain(`~${lang}:translated-release`)
+  const headers: Record<string, string> = {}
+  response.headers.forEach((value, key) => {
+    if (key.startsWith('x-middleware-request-')) headers[key.slice('x-middleware-request-'.length)] = value
+  })
+  expect(headers['x-bm-translation-release']).toBeTruthy()
+  await pageProps(context({ name: 'tar', section: '1' }, { lang }, headers).ctx)
+  expect(lookup.lookupManPage).toHaveBeenLastCalledWith(expect.objectContaining({
+    translation: { lang, datasetReleaseId: 'translated-release', known: true },
+  }))
+})
+
+it.each(['ro', 'pl'])('drops held %s from the section-less content redirect', async (lang) => {
+  vi.stubEnv('BM_I18N_PREVIEW', '')
+  lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' }, servedRelease: release.datasetReleaseId })
+  expect(await nameProps(context({ name: 'tar' }, { lang }).ctx)).toEqual({ redirect: { destination: '/man/tar/1', permanent: false } })
 })

@@ -12,6 +12,7 @@ import http.client
 import importlib.util
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -26,6 +27,17 @@ _spec.loader.exec_module(dataset)
 # Keep aligned with TRANSLATION_ROOTS in ingestion/ingestion/debian_indexes.py
 # and the workflow_dispatch choices in .github/workflows/update-translations.yml.
 LOCALES = ["de", "fr", "es", "pt-BR", "ja", "ru", "ro", "pl"]
+
+
+# Catalog metadata is also the TypeScript public-language gate's source of truth.
+def review_status(locale):
+    meta = (Path(__file__).resolve().parents[1] / "nextjs/lib/i18n/catalog" / locale / "meta.ts").read_text()
+    statuses = re.findall(r"^  status: '(reviewed|needs-review)',?$", meta, re.MULTILINE)
+    if len(statuses) != 1:
+        raise ValueError("Missing or ambiguous catalog review status")
+    return statuses[0]
+
+
 HELD = {"TRANSLATED_PROMOTION_HELD", "FULL_DEBIAN_PROMOTION_HELD"}
 
 
@@ -68,7 +80,12 @@ def selection():
         raise ValueError("Unsupported translation locale target")
     pinned_release()  # Fail the plan before any job when a dispatch lacks its pin.
     ingest, promote = ingestion_enabled(), promotion_enabled()
-    locales = LOCALES if target == "all" else [target]
+    if target == "all" or not dispatch():
+        locales = [locale for locale in LOCALES if review_status(locale) == "reviewed"]
+    else:
+        locales = [target]
+    if promote and any(review_status(locale) != "reviewed" for locale in locales):
+        raise ValueError("Refusing promotion before catalog review")
     return {
         "include": [
             {
@@ -97,6 +114,8 @@ def promote(locale):
 
     if locale not in LOCALES:
         raise ValueError("Unsupported translation locale")
+    if review_status(locale) != "reviewed":
+        raise ValueError("Refusing promotion before catalog review")
     name = key(locale)
     record = dataset.load(name)
     if not promotion_enabled():

@@ -31,7 +31,7 @@ describe('lang (#395)', () => {
     expect(translatedLang('pt-BR')).toBe('pt-BR')
     expect(translatedLang('en')).toBeNull()
     expect(translatedLang('pt_BR')).toBeNull()
-    expect(MAN_LANGUAGES).toEqual(['de', 'fr', 'es', 'pt-BR', 'ja', 'ru', 'ro', 'pl'])
+    expect(MAN_LANGUAGES).toEqual(['de', 'fr', 'es', 'pt-BR', 'ja', 'ru'])
     expect(setLang('/man/tar/1?distro=ubuntu', 'de')).toBe('/man/tar/1?distro=ubuntu&lang=de')
     expect(setLang('https://betterman.sh/man/tar/1?lang=de', 'en')).toBe('https://betterman.sh/man/tar/1')
   })

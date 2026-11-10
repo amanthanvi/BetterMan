@@ -158,12 +158,11 @@ In BetterMan, the Arch ingest path handles this automatically (see `ingestion/in
 
 Do not deploy Convex during an `update-docs` / `update-dataset` run. Wait for all
 isolated distro matrix legs to finish before deploying. Contracts go v7 (index
-by demand, #445), v8 (B2 full extractions) and **v9** (translated manuals,
-#395). Versions match exactly, both ways: ingestion and every promotion path
+by demand, #445), v8 (B2 full extractions) v9 (translated manuals, #395), and **v10** (Romanian and Polish, #510). Versions match exactly, both ways: ingestion and every promotion path
 call `require_deployed_contract()`, which rejects any other advertised version
 or contract shape before writes, and **every** release-contract route (release,
 license-packages, pages, pages/storage, aliases, licenses, activate,
-promotion-source and promote) requires `X-BetterMan-Ingest-Contract: 9`. Convex
+promotion-source and promote) requires `X-BetterMan-Ingest-Contract: 10`. Convex
 rejects a missing or different header as `409 INGEST_CONTRACT_MISMATCH` before
 any read or write, so an old in-flight workflow stops at its next request
 instead of writing or moving pointers. The generated layer keeps its own
@@ -383,3 +382,11 @@ The `.txt` path retains #462's release keys, authenticated unknown marker/null
 key and private mismatch responses. B10 provider alternates remain noindex even
 on unscored releases. Noindex HTML/text omit canonical declarations; canonical
 paths and share images retain `manCanonicalPath`.
+
+## Contract deployment ordering
+
+Do not merge a contract-version change while any `update-dataset`,
+`update-translations`, or prune run is in progress, or on the 1st of the month
+(`update-docs` runs at 05:00 UTC). `deploy.yml` does not share the
+`update-dataset` concurrency group. A v9 client meeting v10 Convex receives
+409 and leaves an unsealed draft. Wait for all those runs to finish before merging.

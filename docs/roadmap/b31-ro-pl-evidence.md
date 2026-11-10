@@ -102,7 +102,7 @@ Commands on this branch, using Node 26.5.0 and pnpm 10.34.4:
 - `pnpm next:lint` and `pnpm next:grammar`: passed.
 - `pnpm next:test`: 1,050 tests passed in 91 files, including completeness,
   placeholders, plural forms, comma-below diacritics, production review gates,
-  English fallback, switch omission and hidden-language alternate filtering.
+  English fallback, switch omission (alternates currently emit only English and x-default).
 - `pnpm ingest:lint`: passed, 103 files formatted.
 - `pnpm ingest:test`: 1,264 passed, 89.82% coverage. One existing SQLite
   ResourceWarning; no skips. Real ro/pl heading fixtures and cross-language
@@ -118,3 +118,60 @@ Commands on this branch, using Node 26.5.0 and pnpm 10.34.4:
 
 No interactive browser/E2E run or independent review panel was performed by
 this implementation child. CI and reviewer feedback are tracked on the PR.
+
+## PR 533 review fixes (2026-11-10)
+
+Content language selection uses `resolvePublicTranslation` at the proxy,
+trusted translation header, section-less redirect, home/search and API. The man
+query allowlist uses public languages. Catalog `meta.ts` remains the status
+source for both TypeScript and the Python workflow; missing or ambiguous status
+fails closed. Schedules and `all` exclude held catalogs, explicit single-locale
+staging remains available, and both planning and promotion reject held catalogs.
+
+A local proxy probe used an in-memory Convex response (`en-release`, no translated
+release), resetting caches between requests. It ran against the original
+`2c8b653b87185407f464178ec46d77e1bd41daf3` proxy/query/header files and then
+the fixed files. No deployment was contacted.
+
+| URL | Before | After, preview unset |
+| --- | --- | --- |
+| `/man/tar/1?lang=ro` | 200, `en-release~ro:none`, locale ro read | private 308 to `/man/tar/1`, zero reads |
+| `/man/tar/1?lang=pl` | 200, `en-release~pl:none`, locale pl read | private 308 to `/man/tar/1`, zero reads |
+| `/man/tar?lang=ro` | 200, `en-release~ro:none`, locale ro read | private 308 to `/man/tar`, zero reads |
+| `/man/tar/1.txt?lang=ro` | 200, English release only | private 308 to `/man/tar/1.txt`, zero reads |
+
+All fixed redirects carry `Cache-Control: private, no-store`, no rewrite, and no
+translation header. With `BM_I18N_PREVIEW=ro`, the Romanian HTML URLs return 200
+with `en-release~ro:none` and a trusted translation header; Polish still redirects.
+The text export remains English. The proxy/renderer integration test additionally
+uses an existing translated release and verifies that the forwarded header reaches
+`lookupManPage.translation` for both languages. The renderer rejects held language
+headers and keeps direct, invalid-query requests private.
+
+Each mutation below was applied separately and restored. Tests failed as follows:
+
+| Bypassed gate | Failing regression | Failures |
+| --- | --- | ---: |
+| `nextjs/lib/manQuery.ts` | privately canonicalizes every held ro content URL before release lookup | 4 |
+| `nextjs/proxy.ts` | gates content release selection independently on short URLs | 1 |
+| `nextjs/lib/manRelease.ts` | serves English for held ro URLs, with no switch or localized SEO | 2 |
+| `nextjs/pages/man/[name]/index.tsx` | drops held ro from the section-less content redirect | 2 |
+| `nextjs/app/search/page.tsx` | gates ro content on home and search, including previews | 2 |
+| `nextjs/app/(site)/page.tsx` | gates ro content on home and search, including previews | 2 |
+| `nextjs/app/api/[...path]/route.ts` | gates the ro API search content language | 2 |
+
+The proxy mutation uses a short URL to test release selection independently of
+the earlier query canonicalizer. The header mutation supplies a trusted held
+translation header to the renderer. Home, search and API tests inspect actual
+backend arguments, and the section-less test inspects its redirect destination.
+
+Verification after restoration: `pnpm next:test` (1,063 tests, 92 files),
+`pnpm ops:test` (126 tests, including 10 embedded Python workflow tests),
+`pnpm convex:test` (3,408 tests, 48 files), and `pnpm ingest:test`
+(1,264 tests, 89.82% coverage, one SQLite ResourceWarning) passed.
+`pnpm next:lint`, `pnpm next:grammar`, `pnpm ingest:lint`,
+`pnpm convex:typecheck` and `pnpm perf:check` passed. Performance reported
+Next baseline drift 16.4.3 to 16.4.5; budgets were unchanged. No Convex code changed,
+so no new `convex:check` was needed. No interactive E2E or independent reviewer
+was used by this implementation sub-agent. Catalog wording and the bookmark
+accessible-name thread remain for the catalog round.

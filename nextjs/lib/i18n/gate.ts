@@ -39,3 +39,9 @@ export function publicLangs(preview: string | undefined = process.env.BM_I18N_PR
 export function resolvePublicLang(value: unknown): Lang | null {
   return resolveLang(value, publicLangs())
 }
+
+/** A public content language; English uses the untranslated path. */
+export function resolvePublicTranslation(value: unknown): TranslatedLang | null {
+  const lang = resolvePublicLang(value)
+  return lang && lang !== 'en' ? lang : null
+}

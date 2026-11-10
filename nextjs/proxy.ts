@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
 import { DISTRO_COOKIE, normalizeDistro } from './lib/distro'
-import { resolvePublicLang } from './lib/i18n/gate'
-import { DEFAULT_LANG, LANG_COOKIE, LANG_PARAM, translatedLang, type Lang } from './lib/i18n/locales'
+import { resolvePublicLang, resolvePublicTranslation } from './lib/i18n/gate'
+import { DEFAULT_LANG, LANG_COOKIE, LANG_PARAM, type Lang } from './lib/i18n/locales'
 import { LANG_HEADER } from './lib/i18n/request'
 import { translationFixHref } from './lib/i18n/fix'
 import { LANG_SWITCH_PATH, FIX_PATH, pathInLang, safeLocalPath } from './lib/i18n/switch'
@@ -164,7 +164,7 @@ async function manProxy(request: NextRequest, cspEnabled: boolean, text = false,
   }
 
   // `?lang=` (#395) keys on the language's release too: its page, or English with a note.
-  const lang = text ? null : translatedLang(url.searchParams.get(LANG_PARAM))
+  const lang = text ? null : resolvePublicTranslation(url.searchParams.get(LANG_PARAM))
   const releases = lang ? await within(servingReleases(explicit ?? 'debian', lang), undefined) : undefined
   const release = lang ? releases?.release ?? null : await releaseWithin(explicit ?? 'debian')
   const translation: TranslationInfo | null = lang

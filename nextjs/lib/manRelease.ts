@@ -1,7 +1,8 @@
 import { api } from '../../convex/_generated/api'
 import { getConvexClient } from './convexClient'
 import { normalizeDistro, type Distro } from './distro'
-import { translatedLang, type TranslatedLang } from './i18n/locales'
+import { type TranslatedLang } from './i18n/locales'
+import { resolvePublicTranslation } from './i18n/gate'
 
 /**
  * The active dataset release per distro, as the proxy sees it. Man page HTML is
@@ -111,7 +112,7 @@ export function trustedTranslation(headers: Record<string, HeaderValue>): Transl
   if (!raw) return null
   try {
     const parsed = JSON.parse(raw) as Partial<TranslationInfo>
-    const lang = translatedLang(parsed.lang)
+    const lang = resolvePublicTranslation(parsed.lang)
     if (!lang || typeof parsed.known !== 'boolean') return null
     const id = typeof parsed.datasetReleaseId === 'string' && parsed.datasetReleaseId ? parsed.datasetReleaseId : null
     return { lang, datasetReleaseId: parsed.known ? id : null, known: parsed.known }

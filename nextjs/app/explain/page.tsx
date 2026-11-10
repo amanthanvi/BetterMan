@@ -62,7 +62,7 @@ export default async function ExplainPage({ searchParams }: { searchParams: Prom
   const cmd = getFirst(sp.cmd) ?? ''
   const urlDistro = explicitDistro(sp)
   const urlLang = explicitLang(sp)
-  const { t } = await getI18n(resolveRequestLang(sp))
+  const { t, lang } = await getI18n(resolveRequestLang(sp))
   const requestedDistro = await resolveRequestDistro(sp)
   const wanted = cmd.trim() ? cmd : ''
 
@@ -79,7 +79,7 @@ export default async function ExplainPage({ searchParams }: { searchParams: Prom
         body = (
           <p className="mt-8 font-serif text-lg italic text-ink-2">
             {t('This line is longer than BetterMan explains: at most {characters} characters, {tokens} words, {stages} commands and {depth} levels of nesting.', {
-              characters: EXPLAIN_LIMITS.characters.toLocaleString(),
+              characters: EXPLAIN_LIMITS.characters.toLocaleString(lang),
               tokens: EXPLAIN_LIMITS.tokens,
               stages: EXPLAIN_LIMITS.stages,
               depth: EXPLAIN_LIMITS.depth,

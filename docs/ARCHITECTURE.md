@@ -44,7 +44,7 @@ A `.so` include stub is recorded as an alias rather than a page; its URL permane
 
 A release is one distro at one point in time. Before uploading, ingestion declares its page count, per-section totals, alias count, and license count with the package identities that require license text. Activation verifies these declarations against completed uploads before sealing, hydrating related metadata, and atomically changing the `staging` pointer. Promotion copies only manifest-verified, sealed, complete release pointers to `prod`. New rows cannot be appended after sealing, and pruning marks a release ineligible for activation before deleting any children. Superseded releases are removed by the manual `prune-releases` workflow, which keeps the newest verified inactive release per distro as a rollback target, never deletes active or recently created declared releases, and leaves unsealed drafts alone unless an operator opts in.
 
-Ingest contract v9 retains the v2 storage/batch protocol and v3/v4 extractor,
+Ingest contract v10 retains the v2 storage/batch protocol and v3/v4 extractor,
 signature, symbol and optional-argument fields, adding real and alias package
 providers from v5, adding an authenticated fixed-staging promotion-source read
 and per-distro `expectedDatasetReleaseId` compare-and-swap. A mismatch aborts
@@ -67,7 +67,7 @@ sitemaps and serve the long tail with noindex. Unscored releases keep main's
 all-page indexing and sitemaps. Full-Debian releases without a tier cannot
 enter prod (`FULL_DEBIAN_TIER_REQUIRED`), even with owner authorization. See the [B4 policy and rollout](roadmap/b4-index-by-demand.md).
 
-Contract v9 (after #445's v7 and B2's v8) adds content locales (#395): each translated language is its own release
+Contract v10 extends v9's translated manuals (#395) with Romanian and Polish (#510): each translated language is its own release
 per distro (`locale` on the release and its `(stage, locale, distro)` pointer),
 promotion moves one locale per request, and a translated release reaches prod
 only with `allowTranslations` (`TRANSLATED_PROMOTION_HELD` otherwise; archive

@@ -8,7 +8,8 @@ import { RunningHead } from '../../../components/man/RunningHead'
 import type { AmbiguousPageResponse } from '../../../lib/docModel'
 import { canonicalWithDistro, normalizeDistro, withDistro, type Distro } from '../../../lib/distro'
 import { manI18n, manT, type ManI18n } from '../../../lib/i18n/page'
-import { setLang, translatedLang, withLang } from '../../../lib/i18n/locales'
+import { setLang, withLang } from '../../../lib/i18n/locales'
+import { resolvePublicTranslation } from '../../../lib/i18n/gate'
 import { MAN_MISS_CACHE, MAN_PAGE_CACHE, MAN_PRIVATE_CACHE, setManCache } from '../../../lib/manCache'
 import { manMiss, resolveManName, type ManMiss } from '../../../lib/manLookup'
 import { hasBareRsc, isManQuery } from '../../../lib/manQuery'
@@ -62,8 +63,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
     let destination = withDistro(`/man/${encodeURIComponent(result.name)}/${encodeURIComponent(result.section)}`, urlDistro, urlLang)
     const pkg = result.kind === 'alias' ? packageName(result.pkg) : selectedPackage
     if (pkg) destination += `${destination.includes('?') ? '&' : '?'}pkg=${encodeURIComponent(pkg)}`
-    // The content language (#395) goes with the redirect even when the UI language is not public yet.
-    const contentLang = translatedLang(firstQuery(query.lang))
+    // The content language (#395) goes with the redirect only when the language is public.
+    const contentLang = resolvePublicTranslation(firstQuery(query.lang))
     if (contentLang) destination = setLang(destination, contentLang)
     // A requested package is proven only by the page it leads to, so its answer stays private.
     setManCache(res, unproven ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })

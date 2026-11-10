@@ -65,7 +65,7 @@ class TranslationWorkflowTest(unittest.TestCase):
 
     def test_scheduled_gate_selects_every_language_for_staging_only(self):
         rows = self.matrix(BETTERMAN_DEBIAN_TRANSLATIONS='1')
-        self.assertEqual([row['locale'] for row in rows], ['de', 'fr', 'es', 'pt-BR', 'ja', 'ru', 'ro', 'pl'])
+        self.assertEqual([row['locale'] for row in rows], ['de', 'fr', 'es', 'pt-BR', 'ja', 'ru'])
         self.assertEqual({(row['distro'], row['ingest'], row['promote']) for row in rows[:1]}, {('debian-de', True, False)})
         self.assertTrue(all(row['ingest'] and not row['promote'] for row in rows))
 
@@ -85,6 +85,23 @@ class TranslationWorkflowTest(unittest.TestCase):
         self.assertEqual(self.matrix(BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT='true'), [])
         with self.assertRaises(ValueError):
             self.matrix(BETTERMAN_TRANSLATION_LOCALE='pt_BR')
+
+    def test_review_status_and_explicit_staging(self):
+        for locale in w.LOCALES:
+            self.assertIn(w.review_status(locale), ('reviewed', 'needs-review'))
+        for locale in ('ro', 'pl'):
+            self.assertEqual(w.review_status(locale), 'needs-review')
+            env = {'BETTERMAN_WORKFLOW_EVENT': 'workflow_dispatch', 'BETTERMAN_TRANSLATION_LOCALE': locale,
+                   'BETTERMAN_DEBIAN_TRANSLATIONS_INPUT': 'true'}
+            self.assertEqual([r['locale'] for r in self.matrix(**env)], [locale])
+            with self.assertRaisesRegex(ValueError, 'catalog review'):
+                self.matrix(**env, BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE='1')
+            with self.assertRaisesRegex(ValueError, 'catalog review'):
+                w.promote(locale)
+        self.assertEqual(self.requests, [])
+        self.assertNotIn('ro', [r['locale'] for r in self.matrix(BETTERMAN_WORKFLOW_EVENT='workflow_dispatch', BETTERMAN_DEBIAN_TRANSLATIONS_INPUT='true')])
+        with patch.object(w, 'review_status', return_value='needs-review'):
+            self.assertEqual(self.matrix(BETTERMAN_DEBIAN_TRANSLATIONS='1'), [])
 
     def test_promotion_refuses_without_authorization_before_any_request(self):
         with self.assertRaises(ValueError):
