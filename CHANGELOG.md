@@ -4,6 +4,8 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Add Debian Romanian and Polish manual ingestion with complete UI catalogs held behind `needs-review`; require ingest contract v10 (#510).
+
 - Operations: `prune-releases` no longer stops at the first release it cannot delete. On 2026-11-09 an abandoned Alpine draft failed every deletion batch with Convex's "too many system operations" and blocked 19 ordinary superseded releases behind it. The script now logs `prune_release_failed`, prunes the rest, runs the sweeps, and still exits non-zero naming each failed release. The draft itself is tracked separately.
 - Ingestion: record dangling Fedora and Arch notice-file links as visible license gaps after verified resolution (Alpine, which has no file index, still fails closed), retaining other package notices or labelled standard texts; fixes Arch python-dkim's stale pre-PEP-639 license link without guessing a replacement path.
 - Refresh Alpine's superseded APKINDEX snapshots and reviewed whole-file package pins; identify missing pinned APKs with fail-closed refresh guidance and rehearse the full publisher locally without uploads.

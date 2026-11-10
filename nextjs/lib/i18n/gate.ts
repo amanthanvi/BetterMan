@@ -3,6 +3,8 @@ import { meta as es } from './catalog/es/meta'
 import { meta as fr } from './catalog/fr/meta'
 import { meta as ja } from './catalog/ja/meta'
 import { meta as ptBR } from './catalog/pt-BR/meta'
+import { meta as ro } from './catalog/ro/meta'
+import { meta as pl } from './catalog/pl/meta'
 import { meta as ru } from './catalog/ru/meta'
 import { LANGS, normalizeLang, resolveLang, type CatalogMeta, type Lang, type TranslatedLang } from './locales'
 
@@ -10,7 +12,7 @@ import { LANGS, normalizeLang, resolveLang, type CatalogMeta, type Lang, type Tr
  * The review gate. Server code only (the proxy and the renderers): the browser bundles never carry the
  * catalogs' metadata, they are told which languages are public.
  */
-export const CATALOG_META: Record<TranslatedLang, CatalogMeta> = { de, fr, es, 'pt-BR': ptBR, ja, ru }
+export const CATALOG_META: Record<TranslatedLang, CatalogMeta> = { de, fr, es, 'pt-BR': ptBR, ja, ru, ro, pl }
 
 /**
  * Languages a deployment may show before review, from `BM_I18N_PREVIEW`: a

@@ -473,3 +473,11 @@ it.each(['/man/tar/1', '/concept/signals'])('authorizes the exact analytics boot
   expect(csp).toContain("connect-src 'self';")
   expect(csp).not.toMatch(/https?:|nonce|strict-dynamic|unsafe-eval|script-src[^;]*unsafe-inline/)
 })
+
+it.each(['ro', 'pl'])('holds the unreviewed %s catalog out of public routing', async (lang) => {
+  vi.stubEnv('BM_I18N_PREVIEW', '')
+  for (const path of ['/search', '/man/tar/1']) {
+    const response = await proxy(new NextRequest(`https://betterman.sh${path}?lang=${lang}`))
+    expect(response.headers.get('x-middleware-request-x-bm-lang')).toBeNull()
+  }
+})

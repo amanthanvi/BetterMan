@@ -25,7 +25,7 @@ it("advertises the ingest contract only when the ingest secret matches", async (
   });
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({
-    schemaVersion: 9,
+    schemaVersion: 10,
     acquisitions: [...INGEST_CONTRACT.acquisitions],
     storedLicenseText: true,
     functions: [...INGEST_CONTRACT.functions],

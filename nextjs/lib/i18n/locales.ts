@@ -4,7 +4,7 @@
  * `?lang=` alone, so cached HTML never depends on a cookie or Accept-Language.
  * English is the default and the source language; a bare URL is English.
  */
-export const LANGS = ['en', 'de', 'fr', 'es', 'pt-BR', 'ja', 'ru'] as const
+export const LANGS = ['en', 'de', 'fr', 'es', 'pt-BR', 'ja', 'ru', 'ro', 'pl'] as const
 export type Lang = (typeof LANGS)[number]
 export type TranslatedLang = Exclude<Lang, 'en'>
 
@@ -22,6 +22,8 @@ export const LANG_NAMES: Record<Lang, string> = {
   'pt-BR': 'Português (Brasil)',
   ja: '日本語',
   ru: 'Русский',
+  ro: 'Română',
+  pl: 'Polski',
 }
 
 export type ReviewStatus = 'needs-review' | 'reviewed'

@@ -25,7 +25,7 @@ _spec.loader.exec_module(dataset)
 
 # Keep aligned with TRANSLATION_ROOTS in ingestion/ingestion/debian_indexes.py
 # and the workflow_dispatch choices in .github/workflows/update-translations.yml.
-LOCALES = ["de", "fr", "es", "pt-BR", "ja", "ru"]
+LOCALES = ["de", "fr", "es", "pt-BR", "ja", "ru", "ro", "pl"]
 HELD = {"TRANSLATED_PROMOTION_HELD", "FULL_DEBIAN_PROMOTION_HELD"}
 
 

@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { CATALOG_META, previewLangs, publicLangs } from './gate'
+import { CATALOG_META, previewLangs, publicLangs, resolvePublicLang } from './gate'
 import { LANGS, LANG_NAMES, normalizeLang, resolveLang, setLang, translatedLang, withLang } from './locales'
 import { holdBack, releaseHeld } from './testing'
 
 describe('the language contract', () => {
-  it('lists English first, then the six first languages', () => {
-    expect(LANGS).toEqual(['en', 'de', 'fr', 'es', 'pt-BR', 'ja', 'ru'])
+  it('lists English first, six reviewed languages, then Romanian and Polish', () => {
+    expect(LANGS).toEqual(['en', 'de', 'fr', 'es', 'pt-BR', 'ja', 'ru', 'ro', 'pl'])
     for (const lang of LANGS) expect(LANG_NAMES[lang]).toBeTruthy()
   })
 
@@ -19,8 +19,8 @@ describe('the language contract', () => {
 })
 
 describe('the review gate', () => {
-  it('ships every translation reviewed, with who reviewed it and when, so all six render publicly', () => {
-    for (const [lang, meta] of Object.entries(CATALOG_META)) {
+  it('ships the original six translations reviewed, with who reviewed it and when, so all six render publicly', () => {
+    for (const [lang, meta] of Object.entries(CATALOG_META).filter(([lang]) => lang !== 'ro' && lang !== 'pl')) {
       expect(meta.lang).toBe(lang)
       expect(meta.status).toBe('reviewed')
       expect(meta.reviewedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/)
@@ -44,7 +44,7 @@ describe('the review gate', () => {
 
     it('lets a deployment preview a language that is not reviewed yet, and nothing else', () => {
       expect(previewLangs('de, PT-br,xx')).toEqual(['de', 'pt-BR'])
-      expect(previewLangs('all')).toEqual(['de', 'fr', 'es', 'pt-BR', 'ja', 'ru'])
+      expect(previewLangs('all')).toEqual(['de', 'fr', 'es', 'pt-BR', 'ja', 'ru', 'ro', 'pl'])
       expect(previewLangs('en')).toEqual([])
       expect(publicLangs('de,ja')).toEqual(['en', 'de', 'ja'])
       expect(resolveLang('ja', publicLangs('de,ja'))).toBe('ja')
@@ -74,4 +74,15 @@ describe('links', () => {
     expect(withLang('/search?q=c%2B%2B', null)).toBe('/search?q=c%2B%2B')
     expect(withLang('/', undefined)).toBe('/')
   })
+})
+
+it.each(['ro', 'pl'])('keeps %s private until catalog review', async (lang) => {
+  const { manI18n } = await import('./page')
+  expect(publicLangs('')).not.toContain(lang)
+  expect(resolvePublicLang(lang)).toBeNull()
+  const page = await manI18n(lang, `/man/tar/1?lang=${lang}`)
+  expect(page.lang).toBe('en')
+  expect(page.urlLang).toBeNull()
+  expect(page.langHrefs).not.toHaveProperty(lang)
+  expect(page.messages).toEqual({})
 })

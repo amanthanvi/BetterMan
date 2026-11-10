@@ -31,7 +31,7 @@ describe('every translation is complete and keeps what the code fills in', () =>
             expect(text.trim(), key).not.toBe('')
             expect(placeholders(text), key).toEqual(placeholders(source))
             if (source.includes('plural,')) {
-              const needed = lang === 'ru' ? ['few', 'many', 'one', 'other'] : ['other']
+              const needed = ['ru', 'pl'].includes(lang) ? ['few', 'many', 'one', 'other'] : lang === 'ro' ? ['few', 'one', 'other'] : ['other']
               for (const form of needed) expect(pluralForms(text), `${key} needs ${form}`).toContain(form)
             }
           }
@@ -42,8 +42,14 @@ describe('every translation is complete and keeps what the code fills in', () =>
         const meta = CATALOG_META[lang]
         expect(meta.lang).toBe(lang)
         expect(meta.translatedBy).toBeTruthy()
-        expect(meta.status).toBe('reviewed')
-        expect(meta.reviewedBy.length).toBeGreaterThan(0)
+        if (lang === 'ro' || lang === 'pl') {
+          expect(meta.status).toBe('needs-review')
+          expect(meta.reviewedBy).toEqual([])
+          expect(meta.reviewedOn).toBeNull()
+        } else {
+          expect(meta.status).toBe('reviewed')
+          expect(meta.reviewedBy.length).toBeGreaterThan(0)
+        }
       })
     })
   }
@@ -56,4 +62,20 @@ it('lists a message once per group', () => {
 it('knows English without a catalog: the message is the text', async () => {
   const english = await loadCatalog('en')
   expect(english).toEqual({ client: {}, server: {}, man: {} })
+})
+
+it('uses Polish and Romanian plural rules for page counts', async () => {
+  const { makeT } = await import('./translate')
+  const key = '{count, plural, one {# page} other {# pages}}'
+  const pl = makeT('pl', (await loadCatalog('pl')).client)
+  for (const [count, expected] of [[1, '1 strona'], [2, '2 strony'], [5, '5 stron'], [12, '12 stron'], [22, '22 strony']] as const) {
+    expect(pl(key, { count })).toBe(expected)
+  }
+  const ro = makeT('ro', (await loadCatalog('ro')).client)
+  for (const [count, expected] of [[1, '1 pagină'], [2, '2 pagini'], [20, '20 de pagini']] as const) {
+    expect(ro(key, { count })).toBe(expected)
+  }
+  for (const group of Object.values(await loadCatalog('ro'))) {
+    for (const text of Object.values(group)) expect(text).not.toMatch(/[şţŞŢ]/)
+  }
 })

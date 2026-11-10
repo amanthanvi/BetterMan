@@ -470,6 +470,20 @@ describe('UI language (docs/i18n.md)', () => {
     expect(html).not.toContain('data-bm-lang-nav')
   })
 
+  it.each(['ro', 'pl'])('serves English for held %s URLs, with no switch or localized SEO', async (lang) => {
+    vi.stubEnv('BM_I18N_PREVIEW', '')
+    const result = propsOf(await pageProps(context({ name: 'tar', section: '1' }, { lang }).ctx)) as { head: ManHeadData; i18n: { lang: string; urlLang: string | null } }
+    expect(result.i18n).toMatchObject({ lang: 'en', urlLang: null })
+    expect(result.head.canonical).not.toContain('lang=')
+    const html = render(result)
+    for (const held of ['ro', 'pl']) {
+      expect(html).not.toContain(`/-/lang/${held}`)
+      expect(html).not.toContain(`hreflang="${held}"`)
+    }
+    expect(html).toContain('Skip to content')
+    expect(lookup.lookupManPage.mock.calls.at(-1)?.[0]).not.toHaveProperty('lang', lang)
+  })
+
   it('keeps the language on a redirect, the section picker and a miss', async () => {
     vi.stubEnv('BM_I18N_PREVIEW', 'fr')
     lookup.lookupManPage.mockResolvedValue({ kind: 'alias', name: 'gzip', section: '1', distro: 'debian', servedRelease: '2026-10-28+debian' })
@@ -489,7 +503,7 @@ it.each([
     kind: 'page', distro: 'debian',
     data: { ...data, page: { ...page, locale: 'de', indexable: false } },
     related: [], servedRelease: release.datasetReleaseId,
-    translation: { state: 'translated', lang: 'de', englishHasRoute, englishIndexable, languages: ['en', 'de', 'fr'] },
+    translation: { state: 'translated', lang: 'de', englishHasRoute, englishIndexable, languages: ['en', 'de', 'fr', 'ro', 'pl'] },
   })
   const { ctx, res } = context({ name: 'tar', section: '1' }, { lang: 'de' })
   const { head } = propsOf(await pageProps(ctx)) as { head: ManHeadData }

@@ -53,7 +53,7 @@ describe("translated releases (#395)", () => {
     expect(await t.run((ctx) => ctx.db.query("datasetReleases").take(1))).toEqual([]);
   });
 
-  it.each(["en", "de", "fr", "es", "pt-BR", "ja", "ru"])("accepts the content locale %s", async (locale) => {
+  it.each(["en", "de", "fr", "es", "pt-BR", "ja", "ru", "ro", "pl"])("accepts the content locale %s", async (locale) => {
     const t = convexTest(schema, modules);
     const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput(`r-${locale}`, locale));
     expect(await t.run((ctx) => ctx.db.get(releaseId))).toMatchObject({ locale });

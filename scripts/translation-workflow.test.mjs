@@ -65,7 +65,7 @@ class TranslationWorkflowTest(unittest.TestCase):
 
     def test_scheduled_gate_selects_every_language_for_staging_only(self):
         rows = self.matrix(BETTERMAN_DEBIAN_TRANSLATIONS='1')
-        self.assertEqual([row['locale'] for row in rows], ['de', 'fr', 'es', 'pt-BR', 'ja', 'ru'])
+        self.assertEqual([row['locale'] for row in rows], ['de', 'fr', 'es', 'pt-BR', 'ja', 'ru', 'ro', 'pl'])
         self.assertEqual({(row['distro'], row['ingest'], row['promote']) for row in rows[:1]}, {('debian-de', True, False)})
         self.assertTrue(all(row['ingest'] and not row['promote'] for row in rows))
 

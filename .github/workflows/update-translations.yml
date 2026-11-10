@@ -22,6 +22,8 @@ on:
           - pt-BR
           - ja
           - ru
+          - ro
+          - pl
       debian_translations:
         description: Explicitly authorize translated Debian manual ingestion into staging (adds Convex storage)
         type: boolean
