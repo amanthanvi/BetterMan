@@ -3,15 +3,15 @@
 > Drafting notes, delete before publishing.
 >
 > - Voice follows [PRODUCT.md](../../PRODUCT.md) and [DESIGN.md](../../DESIGN.md): quiet, precise, tool-like, no hype. No exclamation marks, no superlatives.
-> - The numbers were filled from production on 2026-11-01 (values in [launch-checklist.md](launch-checklist.md#placeholders)). Only the launch date is left for the owner. Re-verify each claim on production first (checklist step 6).
+> - The numbers were filled from production on 2026-11-01 (values in [launch-checklist.md](launch-checklist.md#placeholders)). The launch date is filled: Show HN went up on 2026-11-10. Re-verify each claim on production first (checklist step 6).
 > - The coverage sentence in "All of Debian, and more systems" says what production had on 2026-11-09: Ubuntu, Fedora, Arch and Alpine all full archive imports (B2, #394, closed). Re-read the counts on launch day; the monthly cron refreshes them.
 > - The concept explainers claim was checked on production on 2026-11-08: all twenty `/concept/<slug>` pages answer 200, and `/concept/signals` links signal(7) first.
 > - Word count of the post body below: about 600.
-> - Not published, not posted. The owner publishes.
+> - **Published 2026-11-10** as the [v2.0.0 GitHub Release](https://github.com/amanthanvi/BetterMan/releases/tag/v2.0.0) (the owner's choice), with relative links made absolute and a link to the v2.0.0 CHANGELOG section.
 
 **Title:** BetterMan 2
 
-**Date:** {{LAUNCH_DATE}}
+**Date:** 2026-11-10
 
 BetterMan 2 is out. It is still Unix manual pages, typeset for the screen, with no accounts. This is what changed for a reader.
 
