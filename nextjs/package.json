@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@sentry/nextjs": "^11.11.0",
-    "convex": "^1.48.0",
+    "convex": "^1.49.0",
     "highlight.js": "^11.12.0",
     "next": "^16.4.5",
     "react": "^19.3.1",

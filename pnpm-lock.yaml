@@ -43,8 +43,8 @@ importers:
   .:
     dependencies:
       convex:
-        specifier: ^1.48.0
-        version: 1.48.0(react@19.3.1)
+        specifier: ^1.49.0
+        version: 1.49.0(react@19.3.1)
     devDependencies:
       '@edge-runtime/vm':
         specifier: 5.0.0
@@ -54,7 +54,7 @@ importers:
         version: 26.6.6
       convex-test:
         specifier: 0.0.60
-        version: 0.0.60(convex@1.48.0(react@19.3.1))
+        version: 0.0.60(convex@1.49.0(react@19.3.1))
       sigstore:
         specifier: 5.0.0
         version: 5.0.0
@@ -77,8 +77,8 @@ importers:
         specifier: ^11.11.0
         version: 11.11.0(next@16.4.5(@babel/core@7.29.7)(@opentelemetry/api@1.10.0)(@playwright/test@1.64.1)(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0))(webpack@5.105.0(esbuild@0.28.2))
       convex:
-        specifier: ^1.48.0
-        version: 1.48.0(react@19.3.1)
+        specifier: ^1.49.0
+        version: 1.49.0(react@19.3.1)
       highlight.js:
         specifier: ^11.12.0
         version: 11.12.0
@@ -2525,9 +2525,9 @@ packages:
     peerDependencies:
       convex: ^1.43.0
 
-  convex@1.48.0:
-    resolution: {integrity: sha512-M9jEgTvCN8ziP/VgQQUH+j0ijM7g+NmQd8tFlvETK8/HMC/aaqHZwcu4hBO30X5DV2VIyYK4mOoLQGIb1766ew==}
-    engines: {node: '>=20.0.0', npm: '>=7.0.0'}
+  convex@1.49.0:
+    resolution: {integrity: sha512-mkr9oXF8/arkCI1kvYyGytWd62oVXNABh4uwLeI4UQVN6Zuudm4DlmSzNUJKF63djk6f/uUXC+6ffuVSkPLvzA==}
+    engines: {node: '>=22.0.0', npm: '>=7.0.0'}
     hasBin: true
     peerDependencies:
       '@auth0/auth0-react': ^2.0.1
@@ -4359,6 +4359,7 @@ packages:
 
   tldts-core@7.4.20:
     resolution: {integrity: sha512-C630TWXZCZmLq0F2bW4QqwnaaxCQ/svpAqvJwnC4JvgEM5ohhBnGsEzTLSOXcN+xjz+kEaHS5uoWIw2klnqd0A==}
+    deprecated: Partial release, see https://github.com/remusao/tldts/issues/2735. Use >=7.4.22.
 
   tldts@7.4.19:
     resolution: {integrity: sha512-48dH6aSpQnpbzDUc4vIQZ1VjB8tkK+e8c1yx05/SZK+rkssgjEOlxDd/yU8/a4vGYQ9vRgJr9dwMq9TJ0b3X2Q==}
@@ -7006,11 +7007,11 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  convex-test@0.0.60(convex@1.48.0(react@19.3.1)):
+  convex-test@0.0.60(convex@1.49.0(react@19.3.1)):
     dependencies:
-      convex: 1.48.0(react@19.3.1)
+      convex: 1.49.0(react@19.3.1)
 
-  convex@1.48.0(react@19.3.1):
+  convex@1.49.0(react@19.3.1):
     dependencies:
       esbuild: 0.28.2
       prettier: 3.9.6

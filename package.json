@@ -39,7 +39,7 @@
 		"ingest:page-size-audit": "cd ingestion && uv run python -m scripts.audit_page_sizes"
 	},
 	"dependencies": {
-		"convex": "^1.48.0"
+		"convex": "^1.49.0"
 	},
 	"devDependencies": {
 		"@edge-runtime/vm": "5.0.0",
