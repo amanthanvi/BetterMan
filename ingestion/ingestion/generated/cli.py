@@ -221,6 +221,8 @@ def _candidates_from_cache(
 
 
 def run(args: argparse.Namespace) -> int:
+    # The limit counts from here, so candidate listing is inside it too.
+    started = _clock()
     provider_config = ProviderConfig.from_env()
     dry_run = args.dry_run
     llm = not args.no_llm
@@ -271,7 +273,6 @@ def run(args: argparse.Namespace) -> int:
     # The scheduled job has a hard timeout. Stopping between batches before it
     # leaves time to propagate flag usage, save the ledger and log the summary;
     # rows already written are skipped as unchanged by the next run.
-    started = _clock()
     deadline = started + args.max_minutes * 60 if args.max_minutes else None
     last_progress = started
     stopped_at: int | None = None
