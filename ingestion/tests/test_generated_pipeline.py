@@ -1125,3 +1125,15 @@ def test_a_time_limited_convex_run_still_hands_over_flag_usage(monkeypatch, capl
     [summary] = _events(caplog, "generation_summary")
     assert summary["stoppedAtTimeLimit"] is True and summary["remaining"] == 70
     assert summary["flagUsageScheduled"] == 50
+
+
+@pytest.mark.parametrize("value", ["0", "-5", "nan", "inf", "-inf", "", "soon"])
+def test_a_run_time_limit_must_be_finite_and_positive(value, capsys):
+    # A bad BETTERMAN_GEN_MAX_MINUTES must fail the run, not disable the limit
+    # (0, nan, inf) or stop before the first batch (negative).
+    with pytest.raises(SystemExit) as exit_info:
+        cli.main(
+            ["run", "--source", "cache", "--cache", ".", "--no-tldr", f"--max-minutes={value}"]
+        )
+    assert exit_info.value.code == 2
+    assert "finite number of minutes above 0" in capsys.readouterr().err

@@ -15,6 +15,7 @@ import gzip
 import hashlib
 import json
 import logging
+import math
 import os
 import subprocess
 import sys
@@ -202,6 +203,19 @@ def _estimate_usd(page: PageInput, det: Deterministic) -> float:
     )
     tokens = sum(len(m["content"]) for m in messages) // 4 + 16
     return token_cost(tokens, ESTIMATED_OUTPUT_TOKENS)
+
+
+def _minutes(raw: str) -> float:
+    """A run time limit: a finite number of minutes above zero."""
+    try:
+        value = float(raw)
+    except ValueError:
+        value = math.nan
+    if not math.isfinite(value) or value <= 0:
+        # 0, nan and inf would disable the limit; a negative one would stop
+        # before the first batch and still report success.
+        raise argparse.ArgumentTypeError(f"must be a finite number of minutes above 0, not {raw!r}")
+    return value
 
 
 def _concurrency() -> int:
@@ -498,7 +512,7 @@ def main(argv: list[str] | None = None) -> int:
     run_p.add_argument("--out", help="also write records as JSONL")
     run_p.add_argument(
         "--max-minutes",
-        type=float,
+        type=_minutes,
         help="stop starting new batches after this many minutes; the next run resumes",
     )
 
