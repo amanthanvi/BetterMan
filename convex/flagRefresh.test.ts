@@ -14,22 +14,25 @@ type Harness = TestConvex<typeof schema>;
 
 afterEach(() => vi.useRealTimers());
 
-async function setup(served = true) {
+async function setup(served = true, pages = 1) {
   const t = convexTest({ schema, modules, transactionLimits: true });
   const releaseId = await t.run(async (ctx) => {
     const releaseId = await ctx.db.insert("datasetReleases", {
       datasetReleaseId: "debian-r", locale: "en", distro: "debian", imageRef: "test", imageDigest: "test",
-      ingestedAt: "2026-11-01T00:00:00Z", pageCount: 1, sealed: true,
+      ingestedAt: "2026-11-01T00:00:00Z", pageCount: pages, sealed: true,
     });
     if (served) await point(ctx, releaseId);
-    const pageId = await ctx.db.insert("manPages", {
-      releaseId, datasetReleaseId: "debian-r", externalId: "tar", locale: "en", distro: "debian", name: "tar",
-      section: "1", sitemapPage: 1, title: "tar", description: "archiver", sourcePath: "tar", contentSha256: "tar",
-      hasParseWarnings: false, verifiedFlagUsage: [{ flag: "-x", count: 2, source: "tldr" }],
-    });
-    for (const flag of optionKeys("-x, --extract")) await ctx.db.insert("manPageOptionFlags", {
-      releaseId, pageId, nameNorm: "tar", section: "1", flag, flags: "-x, --extract", anchorId: "x",
-    });
+    for (let i = 0; i < pages; i++) {
+      const name = i ? `tar${String(i).padStart(2, "0")}` : "tar";
+      const pageId = await ctx.db.insert("manPages", {
+        releaseId, datasetReleaseId: "debian-r", externalId: name, locale: "en", distro: "debian", name,
+        section: "1", sitemapPage: 1, title: name, description: "archiver", sourcePath: name, contentSha256: name,
+        hasParseWarnings: false, verifiedFlagUsage: [{ flag: "-x", count: 2, source: "tldr" }],
+      });
+      for (const flag of optionKeys("-x, --extract")) await ctx.db.insert("manPageOptionFlags", {
+        releaseId, pageId, nameNorm: name, section: "1", flag, flags: "-x, --extract", anchorId: "x",
+      });
+    }
     return releaseId;
   });
   return { t, releaseId };
@@ -51,6 +54,10 @@ async function completeFirstPass(t: Harness) {
   await t.mutation(internal.taskPhrases.backfillActiveReleases, {});
   await finish(t);
 }
+
+const retire = (t: Harness) => t.run(async (ctx) => {
+  for (const pointer of await ctx.db.query("activeReleases").collect()) await ctx.db.delete(pointer._id);
+});
 
 it("waits before a refresh pass so a burst of requests shares it", async () => {
   vi.useFakeTimers();
@@ -86,21 +93,50 @@ it("marks a retired release stale instead of rescanning it, and refreshes it whe
   expect(await t.mutation(internal.taskPhrases.backfillActiveReleases, {})).toMatchObject({ scheduled: 0, complete: 1 });
 });
 
-it("does not queue another pass when the release is retired during one", async () => {
+it("pauses a refresh pass whose release is retired before it starts, and resumes it on activation", async () => {
   vi.useFakeTimers();
-  const { t, releaseId } = await setup();
+  const { t, releaseId } = await setup(true, 10);
   await completeFirstPass(t);
   await t.mutation(internal.taskPhrases.requestFlagRefresh, { releaseId });
-  // Start the refresh pass, then retire the release and ask again mid-pass.
+  await retire(t);
+  await finish(t);
+  // Nothing scanned, the published generation untouched, nothing queued.
+  const paused = await statusOf(t, releaseId);
+  expect(paused).toMatchObject({ generation: 2, candidateGeneration: 2, scanned: 0 });
+  expect(paused?.completedVersion).toBeUndefined();
+  expect((await t.run((ctx) => ctx.db.get(releaseId)))?.flagSearchGeneration).toBe(1);
+  expect(await pendingPasses(t)).toHaveLength(0);
+  await t.run((ctx) => point(ctx, releaseId));
+  expect(await t.mutation(internal.taskPhrases.backfillActiveReleases, {})).toMatchObject({ scheduled: 1 });
+  await finish(t);
+  expect(await statusOf(t, releaseId)).toMatchObject({ candidateGeneration: 2, scanned: 10, completedVersion: TASK_PHRASE_VERSION });
+  expect((await t.run((ctx) => ctx.db.get(releaseId)))?.flagSearchGeneration).toBe(2);
+});
+
+it("pauses mid-pass when its release is retired, keeps later requests, and resumes from the cursor", async () => {
+  vi.useFakeTimers();
+  const { t, releaseId } = await setup(true, 10);
+  await completeFirstPass(t);
+  await t.mutation(internal.taskPhrases.requestFlagRefresh, { releaseId });
+  // Run only the first four-page batch of the refresh pass.
   vi.advanceTimersByTime(15 * 60_000);
   await t.finishInProgressScheduledFunctions();
-  await t.run(async (ctx) => {
-    for (const pointer of await ctx.db.query("activeReleases").collect()) await ctx.db.delete(pointer._id);
-  });
+  expect(await statusOf(t, releaseId)).toMatchObject({ generation: 2, scanned: 4 });
+  await retire(t);
   await t.mutation(internal.taskPhrases.requestFlagRefresh, { releaseId });
   await finish(t);
+  const paused = await statusOf(t, releaseId);
+  expect(paused).toMatchObject({ scanned: 4, rescanFlags: true });
+  expect(paused?.completedVersion).toBeUndefined();
   expect(await pendingPasses(t)).toHaveLength(0);
-  expect(await statusOf(t, releaseId)).toMatchObject({ generation: 2, completedVersion: TASK_PHRASE_VERSION, rescanFlags: true });
+  await t.run((ctx) => point(ctx, releaseId));
+  await t.mutation(internal.taskPhrases.backfillActiveReleases, {});
+  await finish(t);
+  // The resumed pass finishes from its cursor; the request made while retired runs one more.
+  const status = await statusOf(t, releaseId);
+  expect(status).toMatchObject({ completedVersion: TASK_PHRASE_VERSION, rescanFlags: false, scanned: 10 });
+  expect(status!.candidateGeneration).toBeGreaterThan(2);
+  expect((await t.run((ctx) => ctx.db.get(releaseId)))?.flagSearchGeneration).toBe(status!.candidateGeneration);
 });
 
 it("creates no backfill for a release that is still uploading", async () => {

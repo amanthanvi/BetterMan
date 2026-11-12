@@ -446,7 +446,9 @@ requests share a start 15 minutes after the first, per release; requests
 arriving after scanning starts ask for one later pass. Only a release that an
 active pointer serves is rescanned. For a retired release, or one still
 uploading, a request only marks its completed backfill row stale (it keeps
-`rescanFlags`), and activation or the next deploy runs the refresh. Task-backfill version 5 builds a new candidate generation in
+`rescanFlags`), and activation or the next deploy runs the refresh. A pass
+whose release is retired before or during it pauses at its cursor and resumes
+on the next activation. Task-backfill version 5 builds a new candidate generation in
 four-page batches while readers retain the last completed generation, including
 legacy rows that have no generation key. A completed pass atomically switches
 `flagSearchGeneration` and marks the first generation ready. Later refreshes never

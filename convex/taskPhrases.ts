@@ -25,7 +25,8 @@ import { datasetStageValidator, distroValidator } from "./schema";
  * a pass starts FLAG_REFRESH_DELAY_MS after the first request and every request
  * until then joins it; requests during a pass queue one more. A release that no
  * active pointer serves (retired, or still uploading) is only marked stale, and
- * its next activation or deploy runs the refresh.
+ * its next activation or deploy runs the refresh; a pass whose release is
+ * retired before or during it pauses until then.
  */
 export const TASK_PHRASE_VERSION = 5;
 const BACKFILL_PAGES = 4;
@@ -169,6 +170,12 @@ export const backfillRelease = internalMutation({
     const status = await ctx.db.query("taskPhraseBackfills").withIndex("by_releaseId", (q) => q.eq("releaseId", args.releaseId)).unique();
     if (!release || release.pruning || !status || status.version !== TASK_PHRASE_VERSION || args.generation !== status.generation || args.generation === undefined) return { done: false };
     if (status.completedVersion === TASK_PHRASE_VERSION) return { done: true };
+    // A release retired while this pass waited or ran stops here: no reader needs it. The cursor
+    // and candidate generation stay, so its next activation resumes the pass (#538).
+    if (!await servedRelease(ctx, release)) {
+      await ctx.db.patch(status._id, { jobId: undefined, updatedAt: Date.now() });
+      return { done: false };
+    }
     const batch = await ctx.db.query("manPages")
       .withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", args.releaseId))
       .paginate({ cursor: status.cursor, numItems: BACKFILL_PAGES });
