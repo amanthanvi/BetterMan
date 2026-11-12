@@ -440,8 +440,10 @@ and `-z` therefore stay together. The top-hit brief keeps its separate twelve
 spelling lookup budget.
 
 B7 commits page usage first. `generated.propagateFlagUsage` then requests a
-refresh once per release per run, 10 seconds after the page updates it
-scheduled, not once per page (#538). A refresh rescans the whole release, so
+refresh once per release per run, not once per page (#538). The request
+carries the job ids of that release's page updates and rechecks every 10
+seconds until none is still waiting to run, so it never joins a pass that
+could start before one of those writes commits. A refresh rescans the whole release, so
 requests share a start 15 minutes after the first, per release; requests
 arriving after scanning starts ask for one later pass. Only a release that an
 active pointer serves is rescanned. For a retired release, or one still

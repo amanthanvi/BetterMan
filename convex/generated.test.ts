@@ -575,8 +575,12 @@ describe("B7 propagation at scale and after suppression", () => {
     expect(updates).toHaveLength(24);
     expect(updates.every((job) => job.args[0].refresh === false)).toBe(true);
     expect(refreshes.map((job) => job.args[0].releaseId).sort()).toEqual([...releaseIds].sort());
-    const firstRefresh = Math.min(...refreshes.map((job) => job.scheduledTime));
-    expect(updates.every((job) => job.scheduledTime < firstRefresh)).toBe(true);
+    // Each request names exactly its release's update jobs, and waits for them to run.
+    const pageRelease = new Map((await t.run((ctx) => ctx.db.query("manPages").take(100))).map((page) => [page._id, page.releaseId]));
+    for (const refresh of refreshes) {
+      const expected = updates.filter((job) => pageRelease.get(job.args[0].pageId) === refresh.args[0].releaseId).map((job) => job._id);
+      expect([...refresh.args[0].after].sort()).toEqual(expected.sort());
+    }
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
     // Each page updated once, and one first pass per release.
     const pages = await t.run((ctx) => ctx.db.query("manPages").take(100));

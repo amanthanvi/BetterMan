@@ -31,7 +31,7 @@ import { datasetStageValidator, distroValidator } from "./schema";
 export const TASK_PHRASE_VERSION = 5;
 const BACKFILL_PAGES = 4;
 const FLAG_REFRESH_DELAY_MS = 15 * 60_000;
-/** How long `generated.propagateFlagUsage` waits after its page updates before requesting a refresh. */
+/** How often a coalesced request rechecks the page updates it follows (`requestFlagRefresh` `after`). */
 export const FLAG_REQUEST_DELAY_MS = 10_000;
 const SYNC_PAGES = 256;
 const MAX_BACKFILL_ATTEMPTS = 3;
@@ -221,13 +221,25 @@ export const cleanupFlagGeneration = internalMutation({
 
 /**
  * B7 commits page metadata first; requests coalesce into this release's single
- * rebuild chain. A release no pointer serves is only marked stale (once): with
- * no backfill row yet, its activation runs a full pass anyway.
+ * rebuild chain. A request made for several page updates (`after`, their
+ * scheduled jobs) acts only once none is still waiting to run: a scheduled
+ * mutation's state commits with its writes, so joining a pending pass then
+ * cannot miss one (#538 review). A release no pointer serves is only marked
+ * stale (once): with no backfill row yet, its activation runs a full pass anyway.
  */
 export const requestFlagRefresh = internalMutation({
-  args: { releaseId: v.id("datasetReleases") },
+  args: { releaseId: v.id("datasetReleases"), after: v.optional(v.array(v.id("_scheduled_functions"))) },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const waiting: Id<"_scheduled_functions">[] = [];
+    for (const jobId of args.after ?? []) {
+      const job = await ctx.db.system.get(jobId);
+      if (job?.state.kind === "pending" || job?.state.kind === "inProgress") waiting.push(jobId);
+    }
+    if (waiting.length) {
+      await ctx.scheduler.runAfter(FLAG_REQUEST_DELAY_MS, internal.taskPhrases.requestFlagRefresh, { releaseId: args.releaseId, after: waiting });
+      return null;
+    }
     const release = await ctx.db.get(args.releaseId);
     if (!release || release.pruning) return null;
     if (await servedRelease(ctx, release)) {

@@ -73,7 +73,8 @@ export const upsertRecords = internalMutation({
  * Each run schedules at most `flagUsageSchedules` updates, well under Convex's
  * 1,000 scheduled functions per mutation, then continues itself from the
  * hash and the last page it handled. Each release it touched gets one flag
- * refresh request, after the updates, rather than one per page (#538).
+ * refresh request, which waits for that release's updates to run, rather
+ * than one per page (#538).
  */
 export const propagateFlagUsage = internalMutation({
   args: {
@@ -89,10 +90,11 @@ export const propagateFlagUsage = internalMutation({
     }
     const hashes = [...new Set(args.contentSha256s)];
     let scheduled = 0;
-    const releases = new Set<Id<"datasetReleases">>();
+    // Each release's request follows the page updates scheduled for it, by job id.
+    const updates = new Map<Id<"datasetReleases">, Id<"_scheduled_functions">[]>();
     const requestRefreshes = async () => {
-      for (const releaseId of releases) {
-        await ctx.scheduler.runAfter(FLAG_REQUEST_DELAY_MS, internal.taskPhrases.requestFlagRefresh, { releaseId });
+      for (const [releaseId, after] of updates) {
+        await ctx.scheduler.runAfter(FLAG_REQUEST_DELAY_MS, internal.taskPhrases.requestFlagRefresh, { releaseId, after });
       }
     };
     for (let index = 0; index < hashes.length; index++) {
@@ -126,8 +128,8 @@ export const propagateFlagUsage = internalMutation({
         if (sameFlagUsage(page.verifiedFlagUsage, usage)) continue;
         const release = await ctx.db.get(page.releaseId);
         if (!release || release.pruning) continue;
-        await ctx.scheduler.runAfter(0, internal.derived.setVerifiedFlagUsage, { pageId: page._id, usage, refresh: false });
-        releases.add(page.releaseId);
+        const jobId = await ctx.scheduler.runAfter(0, internal.derived.setVerifiedFlagUsage, { pageId: page._id, usage, refresh: false });
+        updates.set(page.releaseId, [...(updates.get(page.releaseId) ?? []), jobId]);
         scheduled += 1;
       }
     }

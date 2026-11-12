@@ -139,6 +139,31 @@ it("pauses mid-pass when its release is retired, keeps later requests, and resum
   expect((await t.run((ctx) => ctx.db.get(releaseId)))?.flagSearchGeneration).toBe(status!.candidateGeneration);
 });
 
+it("waits for the page updates it follows before joining a pass (#538 review)", async () => {
+  vi.useFakeTimers();
+  const { t, releaseId } = await setup();
+  await completeFirstPass(t);
+  // A pass is due in ten seconds when a page update is still waiting to run.
+  await t.mutation(internal.taskPhrases.requestFlagRefresh, { releaseId });
+  vi.advanceTimersByTime(15 * 60_000 - 10_500);
+  const pageId = (await t.run((ctx) => ctx.db.query("manPages").first()))!._id;
+  const update = await t.run((ctx) => ctx.scheduler.runAfter(11_000, internal.derived.setVerifiedFlagUsage, {
+    pageId, usage: [{ flag: "-x", count: 5, source: "tldr" }], refresh: false,
+  }));
+  // The coalesced request fires first: it must not join the pass that would read the old usage.
+  await t.mutation(internal.taskPhrases.requestFlagRefresh, { releaseId, after: [update] });
+  const deferred = await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect())
+    .filter((job) => job.name === "taskPhrases:requestFlagRefresh" && job.state.kind === "pending"));
+  expect(deferred.map((job) => job.args[0].after)).toEqual([[update]]);
+  await finish(t);
+  const candidate = await t.run(async (ctx) => {
+    const release = (await ctx.db.get(releaseId))!;
+    return ctx.db.query("flagSearchCandidates").withIndex("by_releaseId_and_generation_and_flag", (q) =>
+      q.eq("releaseId", releaseId).eq("generation", release.flagSearchGeneration).eq("flag", "-x")).unique();
+  });
+  expect(candidate?.candidates[0].usage.find((u) => u.flag === "-x")?.count).toBe(5);
+});
+
 it("creates no backfill for a release that is still uploading", async () => {
   vi.useFakeTimers();
   const { t, releaseId } = await setup(false);
