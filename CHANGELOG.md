@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Operations: Convex background jobs stop multiplying flag rescans and write conflicts (#538). A generation run requests one flag refresh per release per run, once that release's page updates have run, instead of one per page, a refresh pass starts 15 minutes after the first request so a burst shares it, and a release no active pointer serves (retired, or still uploading) is only marked stale until its activation or the next deploy; a pass whose release retires pauses until then. On 2026-11-09 debian and ubuntu each went through 20 full rescans, including their retired releases. A derived build's halved batch size no longer carries into the next build; production had been left at 4 of 32 pages per batch.
 - Operations: prune orphan sweeps reuse one admin HTTP client, request server-maximum pages with adaptive backoff, log per-table progress/completion and resumable cursors, and support selected sweep-only runs (#535). Progress events are now `sweep_progress` (formerly `orphan_progress`); invalid resume inputs and deployment credentials fail early, and exported sweep helpers default to dry run.
 - Make the reviewed Romanian and Polish catalogs public after owner sign-off, expanding the language switch to eight translations and enabling their signed-off manual releases for promotion (#510).
 - Add Debian Romanian and Polish manual ingestion with complete UI catalogs held behind `needs-review`; require ingest contract v10 (#510).

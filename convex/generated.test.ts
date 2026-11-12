@@ -546,6 +546,49 @@ describe("B7 propagation at scale and after suppression", () => {
     // 1,600 B7 updates run in memory; CI machines need more than the default 5 s.
   }, 120_000);
 
+  it("requests one flag refresh per release per run, behind its page updates (#538)", async () => {
+    vi.useFakeTimers();
+    const t = convexTest({ schema, modules, transactionLimits: { functionsScheduled: 1000 } });
+    const hashes = Array.from({ length: 3 }, (_, i) => i.toString(16).padStart(64, "0"));
+    const releaseIds = await t.run(async (ctx) => {
+      const ids = [await release(ctx, "debian"), await release(ctx, "ubuntu")];
+      for (const [h, sha] of hashes.entries()) {
+        await ctx.db.insert("manPageGenerated", {
+          contentSha256: sha, updatedAt: "now", page: { examples: [], flagUsage: [{ flag: "-c", count: 1 }] },
+        });
+        for (const [r, releaseId] of ids.entries()) for (let i = 0; i < 4; i++) {
+          const distro = r ? "ubuntu" as const : "debian" as const;
+          await ctx.db.insert("manPages", {
+            releaseId, datasetReleaseId: `${distro}-prod`, externalId: `${h}-${i}`, locale: "en", distro,
+            name: `p${h}-${i}`, section: "1", sitemapPage: 0, title: "p", description: "p", sourcePath: "p",
+            contentSha256: sha, hasParseWarnings: false,
+          });
+        }
+      }
+      return ids;
+    });
+    expect(await t.mutation(internal.generated.propagateFlagUsage, { contentSha256s: hashes }))
+      .toEqual({ scheduled: 24, continued: false });
+    const jobs = await t.run((ctx) => ctx.db.system.query("_scheduled_functions").collect());
+    const updates = jobs.filter((job) => job.name === "derived:setVerifiedFlagUsage");
+    const refreshes = jobs.filter((job) => job.name === "taskPhrases:requestFlagRefresh");
+    expect(updates).toHaveLength(24);
+    expect(updates.every((job) => job.args[0].refresh === false)).toBe(true);
+    expect(refreshes.map((job) => job.args[0].releaseId).sort()).toEqual([...releaseIds].sort());
+    // Each request names exactly its release's update jobs, and waits for them to run.
+    const pageRelease = new Map((await t.run((ctx) => ctx.db.query("manPages").take(100))).map((page) => [page._id, page.releaseId]));
+    for (const refresh of refreshes) {
+      const expected = updates.filter((job) => pageRelease.get(job.args[0].pageId) === refresh.args[0].releaseId).map((job) => job._id);
+      expect([...refresh.args[0].after].sort()).toEqual(expected.sort());
+    }
+    await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+    // Each page updated once, and one first pass per release.
+    const pages = await t.run((ctx) => ctx.db.query("manPages").take(100));
+    expect(pages.every((page) => page.verifiedFlagUsage?.[0]?.flag === "-c")).toBe(true);
+    const statuses = await t.run((ctx) => ctx.db.query("taskPhraseBackfills").take(10));
+    expect(statuses.map((status) => status.generation)).toEqual([1, 1]);
+  });
+
   it("resumes after the last handled page when a page is pruned between runs", async () => {
     vi.useFakeTimers();
     // Final re-check of #434: an offset over a re-queried list skipped a live page.

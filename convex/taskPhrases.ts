@@ -20,10 +20,19 @@ import { datasetStageValidator, distroValidator } from "./schema";
  *   suppressed, over every page with that content hash.
  * Before a release's backfill completes, worded queries match only the pages
  * whose rows exist; other search results are unaffected.
+ *
+ * A flag refresh rescans the whole release, so requests are coalesced (#538):
+ * a pass starts FLAG_REFRESH_DELAY_MS after the first request and every request
+ * until then joins it; requests during a pass queue one more. A release that no
+ * active pointer serves (retired, or still uploading) is only marked stale, and
+ * its next activation or deploy runs the refresh; a pass whose release is
+ * retired before or during it pauses until then.
  */
 export const TASK_PHRASE_VERSION = 5;
 const BACKFILL_PAGES = 4;
-const FLAG_REFRESH_DELAY_MS = 30_000;
+const FLAG_REFRESH_DELAY_MS = 15 * 60_000;
+/** How often a coalesced request rechecks the page updates it follows (`requestFlagRefresh` `after`). */
+export const FLAG_REQUEST_DELAY_MS = 10_000;
 const SYNC_PAGES = 256;
 const MAX_BACKFILL_ATTEMPTS = 3;
 
@@ -100,14 +109,29 @@ export const syncHashes = internalMutation({
   },
 });
 
+/** Whether an active pointer serves this release: search reads flag candidates only through one. */
+async function servedRelease(ctx: { db: DatabaseReader }, release: Doc<"datasetReleases">): Promise<boolean> {
+  for (const stage of DATASET_STAGES) {
+    const pointer = await ctx.db.query("activeReleases")
+      .withIndex("by_stage_and_locale_and_distro", (q) => q.eq("stage", stage).eq("locale", release.locale).eq("distro", release.distro))
+      .unique();
+    if (pointer?.releaseId === release._id) return true;
+  }
+  return false;
+}
+
 /**
  * Schedule (or join) a release's backfill. Returns false once it is complete
- * for the current version. A failed job resumes from its persisted cursor, up
- * to MAX_BACKFILL_ATTEMPTS; past that it throws TASK_PHRASE_BACKFILL_FAILED.
+ * for the current version and not marked stale. A failed job resumes from its
+ * persisted cursor, up to MAX_BACKFILL_ATTEMPTS; past that it throws
+ * TASK_PHRASE_BACKFILL_FAILED.
  */
 export async function scheduleTaskPhraseBackfill(ctx: MutationCtx, release: Doc<"datasetReleases">, refreshFlags = false): Promise<boolean> {
   const status = await ctx.db.query("taskPhraseBackfills").withIndex("by_releaseId", (q) => q.eq("releaseId", release._id)).unique();
-  if (!refreshFlags && status?.completedVersion === TASK_PHRASE_VERSION && status.version === TASK_PHRASE_VERSION) return false;
+  const complete = status?.completedVersion === TASK_PHRASE_VERSION && status.version === TASK_PHRASE_VERSION;
+  // A completed pass that kept `rescanFlags` was asked to refresh while no pointer served it.
+  if (complete && status?.rescanFlags) refreshFlags = true;
+  if (!refreshFlags && complete) return false;
   let failed = false;
   if (status?.jobId) {
     const job = await ctx.db.system.get(status.jobId);
@@ -146,6 +170,12 @@ export const backfillRelease = internalMutation({
     const status = await ctx.db.query("taskPhraseBackfills").withIndex("by_releaseId", (q) => q.eq("releaseId", args.releaseId)).unique();
     if (!release || release.pruning || !status || status.version !== TASK_PHRASE_VERSION || args.generation !== status.generation || args.generation === undefined) return { done: false };
     if (status.completedVersion === TASK_PHRASE_VERSION) return { done: true };
+    // A release retired while this pass waited or ran stops here: no reader needs it. The cursor
+    // and candidate generation stay, so its next activation resumes the pass (#538).
+    if (!await servedRelease(ctx, release)) {
+      await ctx.db.patch(status._id, { jobId: undefined, updatedAt: Date.now() });
+      return { done: false };
+    }
     const batch = await ctx.db.query("manPages")
       .withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", args.releaseId))
       .paginate({ cursor: status.cursor, numItems: BACKFILL_PAGES });
@@ -158,11 +188,14 @@ export const backfillRelease = internalMutation({
     if (batch.isDone) {
       // Publish before queuing another pass: reads retain a completed snapshot throughout updates.
       await ctx.db.patch(release._id, { flagSearchReady: true, flagSearchGeneration: status.candidateGeneration });
-      await ctx.db.patch(status._id, { ...progress, cursor: null, completedVersion: TASK_PHRASE_VERSION, attempts: 0, rescanFlags: false });
+      // Requests that arrived during this pass get one more while the release is served;
+      // otherwise `rescanFlags` stays set as the stale marker for its next activation.
+      const rescan = status.rescanFlags === true && await servedRelease(ctx, release);
+      await ctx.db.patch(status._id, { ...progress, cursor: null, completedVersion: TASK_PHRASE_VERSION, attempts: 0, rescanFlags: status.rescanFlags === true && !rescan });
       if (release.flagSearchGeneration !== status.candidateGeneration) await ctx.scheduler.runAfter(0, internal.taskPhrases.cleanupFlagGeneration, {
         releaseId: release._id, generation: release.flagSearchGeneration,
       });
-      if (status.rescanFlags) await scheduleTaskPhraseBackfill(ctx, { ...release, flagSearchReady: true, flagSearchGeneration: status.candidateGeneration }, true);
+      if (rescan) await scheduleTaskPhraseBackfill(ctx, { ...release, flagSearchReady: true, flagSearchGeneration: status.candidateGeneration }, true);
       return { done: true };
     }
     const jobId = await ctx.scheduler.runAfter(0, internal.taskPhrases.backfillRelease, { releaseId: args.releaseId, generation: args.generation });
@@ -186,13 +219,35 @@ export const cleanupFlagGeneration = internalMutation({
   },
 });
 
-/** B7 commits page metadata first; requests coalesce into this release's single rebuild chain. */
+/**
+ * B7 commits page metadata first; requests coalesce into this release's single
+ * rebuild chain. A request made for several page updates (`after`, their
+ * scheduled jobs) acts only once none is still waiting to run: a scheduled
+ * mutation's state commits with its writes, so joining a pending pass then
+ * cannot miss one (#538 review). A release no pointer serves is only marked
+ * stale (once): with no backfill row yet, its activation runs a full pass anyway.
+ */
 export const requestFlagRefresh = internalMutation({
-  args: { releaseId: v.id("datasetReleases") },
+  args: { releaseId: v.id("datasetReleases"), after: v.optional(v.array(v.id("_scheduled_functions"))) },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const waiting: Id<"_scheduled_functions">[] = [];
+    for (const jobId of args.after ?? []) {
+      const job = await ctx.db.system.get(jobId);
+      if (job?.state.kind === "pending" || job?.state.kind === "inProgress") waiting.push(jobId);
+    }
+    if (waiting.length) {
+      await ctx.scheduler.runAfter(FLAG_REQUEST_DELAY_MS, internal.taskPhrases.requestFlagRefresh, { releaseId: args.releaseId, after: waiting });
+      return null;
+    }
     const release = await ctx.db.get(args.releaseId);
-    if (release && !release.pruning) await scheduleTaskPhraseBackfill(ctx, release, true);
+    if (!release || release.pruning) return null;
+    if (await servedRelease(ctx, release)) {
+      await scheduleTaskPhraseBackfill(ctx, release, true);
+      return null;
+    }
+    const status = await ctx.db.query("taskPhraseBackfills").withIndex("by_releaseId", (q) => q.eq("releaseId", release._id)).unique();
+    if (status && !status.rescanFlags) await ctx.db.patch(status._id, { rescanFlags: true });
     return null;
   },
 });

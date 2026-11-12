@@ -7,6 +7,7 @@ import type { MutationCtx } from "./_generated/server";
 import type { Distro } from "./lib";
 import { persistOptionSignature, persistPackedSignature } from "./_derivedInputs";
 import { decodeSummary } from "./_derivedEncoding";
+import { DERIVED_BATCH_PAGES } from "./derived";
 import { DISTROS } from "./lib";
 import schema from "./schema";
 
@@ -194,9 +195,39 @@ it("replans after a scheduled too-large-batch failure and drains later pages and
   expect(await t.query(internal.derived.status, {})).toMatchObject({ healthy: true, state: "complete", pendingJobs: 0 });
   expectBounded(samples);
   await point(t, next);
-  await t.mutation(internal.derived.rebuildActive, {}); await finish(t);
+  await t.mutation(internal.derived.rebuildActive, {});
+  // The halving answered the previous build's failure; the next build starts at the default (#538).
+  expect(await t.query(internal.derived.status, {})).toMatchObject({ batchPageLimit: DERIVED_BATCH_PAGES });
+  await finish(t);
   expect(await t.query(internal.derived.status, {})).toMatchObject({ healthy: true, state: "complete", pendingJobs: 0 });
   expectBounded(samples);
+}, 60_000);
+
+it("keeps a reduced batch size while a build is unfinished and drops it for the next one (#538)", async () => {
+  vi.useFakeTimers(); const { t } = measuredHarness();
+  const release = await makeRelease(t, "debian", "09");
+  await addPage(t, release, "a-page", false);
+  await point(t, release);
+  await t.mutation(internal.derived.rebuildActive, {});
+  const reduce = () => t.run(async (ctx) => {
+    const build = await ctx.db.query("derivedBuilds").withIndex("by_locale", (q) => q.eq("locale", "en")).unique();
+    await ctx.db.patch(build!._id, { batchPageLimit: 4 });
+  });
+  await reduce();
+  // An unfinished build keeps its size: an hourly re-plan does not reset it.
+  expect(await t.mutation(internal.derived.rebuildActive, {})).toBe(true);
+  expect(await t.query(internal.derived.status, {})).toMatchObject({ batchPageLimit: 4 });
+  await finish(t);
+  expect(await t.query(internal.derived.status, {})).toMatchObject({ state: "complete", batchPageLimit: 4 });
+  // A signature refresh after completion is a new build, so it starts at the default too.
+  await t.mutation(internal.derived.signatureRefresh, { releaseId: release });
+  expect(await t.query(internal.derived.status, {})).toMatchObject({ batchPageLimit: DERIVED_BATCH_PAGES });
+  await finish(t);
+  await reduce();
+  await t.mutation(internal.derived.rebuildActive, { force: true });
+  expect(await t.query(internal.derived.status, {})).toMatchObject({ batchPageLimit: DERIVED_BATCH_PAGES });
+  await finish(t);
+  expect(await t.query(internal.derived.status, {})).toMatchObject({ healthy: true, state: "complete", pendingJobs: 0 });
 }, 60_000);
 
 

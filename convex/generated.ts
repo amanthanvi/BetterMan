@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import {
   flagUsageFor,
   GENERATED_LIMITS,
@@ -13,6 +14,7 @@ import {
 import { contentPointer } from "./content";
 import { pageByNameAndSection, requireActiveRelease } from "./_releaseLookups";
 import { datasetStageValidator, distroValidator } from "./schema";
+import { FLAG_REQUEST_DELAY_MS } from "./taskPhrases";
 
 /**
  * Insert or update generated-layer rows by content hash. Each part present in
@@ -70,7 +72,9 @@ export const upsertRecords = internalMutation({
  * Give B7 the verified flag counts for every page with these content hashes.
  * Each run schedules at most `flagUsageSchedules` updates, well under Convex's
  * 1,000 scheduled functions per mutation, then continues itself from the
- * hash and the last page it handled.
+ * hash and the last page it handled. Each release it touched gets one flag
+ * refresh request, which waits for that release's updates to run, rather
+ * than one per page (#538).
  */
 export const propagateFlagUsage = internalMutation({
   args: {
@@ -86,6 +90,13 @@ export const propagateFlagUsage = internalMutation({
     }
     const hashes = [...new Set(args.contentSha256s)];
     let scheduled = 0;
+    // Each release's request follows the page updates scheduled for it, by job id.
+    const updates = new Map<Id<"datasetReleases">, Id<"_scheduled_functions">[]>();
+    const requestRefreshes = async () => {
+      for (const [releaseId, after] of updates) {
+        await ctx.scheduler.runAfter(FLAG_REQUEST_DELAY_MS, internal.taskPhrases.requestFlagRefresh, { releaseId, after });
+      }
+    };
     for (let index = 0; index < hashes.length; index++) {
       const contentSha256 = hashes[index];
       const after = index === 0 ? args.after : undefined;
@@ -109,6 +120,7 @@ export const propagateFlagUsage = internalMutation({
             contentSha256s: hashes.slice(index),
             ...(last ? { after: { ...last, seen } } : {}),
           });
+          await requestRefreshes();
           return { scheduled, continued: true };
         }
         seen += 1;
@@ -116,10 +128,12 @@ export const propagateFlagUsage = internalMutation({
         if (sameFlagUsage(page.verifiedFlagUsage, usage)) continue;
         const release = await ctx.db.get(page.releaseId);
         if (!release || release.pruning) continue;
-        await ctx.scheduler.runAfter(0, internal.derived.setVerifiedFlagUsage, { pageId: page._id, usage });
+        const jobId = await ctx.scheduler.runAfter(0, internal.derived.setVerifiedFlagUsage, { pageId: page._id, usage, refresh: false });
+        updates.set(page.releaseId, [...(updates.get(page.releaseId) ?? []), jobId]);
         scheduled += 1;
       }
     }
+    await requestRefreshes();
     return { scheduled, continued: false };
   },
 });

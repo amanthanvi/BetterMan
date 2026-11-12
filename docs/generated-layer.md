@@ -78,7 +78,7 @@ Two idempotent writers keep the rows current. `upsertRecords` and
 which updates every page with that hash in every release (256 pages per run,
 then it continues). Activating a release, and every deploy
 (`taskPhrases:backfillActiveReleases` in `deploy.yml`, after the Convex deploy),
-schedules or joins that release's backfill over all its pages (100 per batch).
+schedules or joins that release's backfill over all its pages (four per batch).
 Progress, the cursor and the scheduled job live in `taskPhraseBackfills`, so a
 failed batch resumes from its cursor (three attempts, then
 `TASK_PHRASE_BACKFILL_FAILED`). `pnpm convex:task-check --prod` (also in the
@@ -439,9 +439,18 @@ all aliases of each selected option. Real tar's `--gzip`, `--gunzip`, `--ungzip`
 and `-z` therefore stay together. The top-hit brief keeps its separate twelve
 spelling lookup budget.
 
-B7 commits page usage first and schedules a refresh request. Requests share a
-30-second delayed start per release; requests arriving after scanning starts ask
-for one later pass. Task-backfill version 5 builds a new candidate generation in
+B7 commits page usage first. `generated.propagateFlagUsage` then requests a
+refresh once per release per run, not once per page (#538). The request
+carries the job ids of that release's page updates and rechecks every 10
+seconds until none is still waiting to run, so it never joins a pass that
+could start before one of those writes commits. A refresh rescans the whole release, so
+requests share a start 15 minutes after the first, per release; requests
+arriving after scanning starts ask for one later pass. Only a release that an
+active pointer serves is rescanned. For a retired release, or one still
+uploading, a request only marks its completed backfill row stale (it keeps
+`rescanFlags`), and activation or the next deploy runs the refresh. A pass
+whose release is retired before or during it pauses at its cursor and resumes
+on the next activation. Task-backfill version 5 builds a new candidate generation in
 four-page batches while readers retain the last completed generation, including
 legacy rows that have no generation key. A completed pass atomically switches
 `flagSearchGeneration` and marks the first generation ready. Later refreshes never

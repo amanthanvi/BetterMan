@@ -78,6 +78,9 @@ aliases and distros.
 
 Resume checks the scheduled job state, including crashes that left the build phase
 unchanged. Each failed/canceled batch halves a persisted name limit down to one.
+The limit lasts for that build: a write conflict fails a batch too, so the next
+build after a completed one, including a signature refresh, starts at the
+default 32 again (#538).
 If a one-name transaction still fails, that page is isolated on the next attempt;
 its error remains visible for targeted repair instead of blocking the locale's
 queue forever. Healthy names and later promotions continue. Native transaction
