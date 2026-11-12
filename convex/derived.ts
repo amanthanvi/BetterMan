@@ -111,7 +111,9 @@ export async function scheduleDerivedBuild(ctx: MutationCtx, locale: string, for
   }
   const priorJob = previous?.jobId ? await ctx.db.system.get(previous.jobId) : null;
   const crashed = priorJob?.state.kind === "failed" || priorJob?.state.kind === "canceled";
-  const priorLimit = previous?.batchPageLimit ?? DERIVED_BATCH_PAGES;
+  // A reduced batch answers a failure in one build's queue (a write conflict counts too), so the
+  // next build after a completed one starts at the default again rather than inheriting it (#538).
+  const priorLimit = previous?.phase === "complete" ? DERIVED_BATCH_PAGES : previous?.batchPageLimit ?? DERIVED_BATCH_PAGES;
   const batchPageLimit = crashed ? Math.max(1, Math.floor(priorLimit / 2)) : priorLimit;
   const isolateNext = previous?.isolateNext || (priorJob?.state.kind === "failed" && priorLimit === 1);
   const retry = previous?.phase === "failed";
@@ -168,7 +170,8 @@ export async function scheduleDerivedSignatureRefresh(ctx: MutationCtx, releaseI
   if (build.jobId) await ctx.scheduler.cancel(build.jobId);
   const added = await enqueueScan(ctx, release.locale, releaseId, key, "aliases");
   await ctx.db.patch(build._id, { key, revision, phase: "summaries", pendingJobs: (build.pendingJobs ?? 0) + (added ? 1 : 0),
-    retrying: true, retryCursor: null, skipped: 0, error: undefined, errorSamples: [] });
+    retrying: true, retryCursor: null, skipped: 0, error: undefined, errorSamples: [],
+    ...(build.phase === "complete" ? { batchPageLimit: DERIVED_BATCH_PAGES } : {}) });
   for (const pointer of build.pointers) await ctx.db.patch(pointer.releaseId, { derivedExpectedKey: key });
   const jobId = await ctx.scheduler.runAfter(0, internal.derived.runBatch, { locale: release.locale, key });
   await ctx.db.patch(build._id, { jobId });
@@ -657,7 +660,13 @@ export const failBuild = internalMutation({
 });
 
 export const setVerifiedFlagUsage = internalMutation({
-  args: { pageId: v.id("manPages"), usage: v.array(v.object({ flag: v.string(), count: v.number(), source: v.union(v.literal("examples"), v.literal("tldr")) })) },
+  args: {
+    pageId: v.id("manPages"),
+    usage: v.array(v.object({ flag: v.string(), count: v.number(), source: v.union(v.literal("examples"), v.literal("tldr")) })),
+    // False when the caller requests the release's flag refresh itself, once for many pages
+    // (`generated.propagateFlagUsage`). Absent on jobs queued before that existed.
+    refresh: v.optional(v.boolean()),
+  },
   handler: async (ctx, args) => {
     if (args.usage.length > 256 || args.usage.some((item) => !Number.isSafeInteger(item.count) || item.count < 1 || item.flag.length > 80)) throw new Error("INVALID_VERIFIED_FLAG_USAGE");
     const page = await ctx.db.get(args.pageId);
@@ -665,7 +674,7 @@ export const setVerifiedFlagUsage = internalMutation({
     const release = await ctx.db.get(page.releaseId);
     if (!release || release.pruning) throw new Error("RELEASE_NOT_AVAILABLE");
     await ctx.db.patch(page._id, { verifiedFlagUsage: args.usage });
-    await ctx.scheduler.runAfter(0, internal.taskPhrases.requestFlagRefresh, { releaseId: page.releaseId });
+    if (args.refresh !== false) await ctx.scheduler.runAfter(0, internal.taskPhrases.requestFlagRefresh, { releaseId: page.releaseId });
     const input = await inputForPage(ctx, page);
     const row = await storedRow(ctx, page.locale, page.distro, page.name, page.section);
     if (row && row.releaseId === page.releaseId && row.pageId === page._id && input?.status === "ready" && row.sourceContentSha256 === page.contentSha256) {
