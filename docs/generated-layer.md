@@ -282,6 +282,18 @@ eight concurrent agents have already hit "Go usage limit exceeded" (#398).
   (900) or a provider limit stops model calls, writes the ledger and lets the
   run finish its page and tldr parts. The next run loads the ledger and
   resumes where the windows allow.
+- At 20 requests per minute a run may never reach a window or the run cap, so
+  it also has a wall-clock limit: `--max-minutes`, which the workflow sets
+  from `BETTERMAN_GEN_MAX_MINUTES` (default 285, inside the 330-minute job
+  timeout). Past it, no new 50-page batch starts. The run still hands over
+  flag usage, saves the ledger and logs `generation_summary` with
+  `stoppedAtTimeLimit` and `remaining`, and exits successfully. The next run
+  skips the rows already written. Before this limit, the scheduled runs on
+  2026-11-02 and 2026-11-09 were cancelled by the job timeout with no output
+  after start.
+- `generation_started` reports the selection and the limit.
+  `generation_progress`, at most every five minutes, reports pages
+  processed, records written, requests and spend so far.
 
 The ledger is a JSON checkpoint (`--checkpoint`). The workflow carries only
 that file between runs, as the `generated-layer-state` artifact, so a pass can

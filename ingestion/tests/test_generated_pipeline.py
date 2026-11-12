@@ -1020,3 +1020,108 @@ def test_rejection_reasons_never_quote_model_text():
     assert _reason("unsupported shell syntax: No closing quotation") == "unsupported shell syntax"
     assert _reason("unknown flag -Z in -xZf") == "unknown flag"
     assert _reason("anything the verifier adds later") == "other"
+
+
+def _events(caplog, name: str) -> list[dict]:
+    events = []
+    for record in caplog.records:
+        try:
+            data = json.loads(record.message)
+        except ValueError:
+            continue
+        if isinstance(data, dict) and data.get("event") == name:
+            events.append(data)
+    return events
+
+
+def test_cli_stops_at_the_run_time_limit_and_reports_progress(tmp_path: Path, monkeypatch, caplog):
+    # Scheduled runs hit the 330-minute job timeout with no output (#538 follow-up).
+    pages = [golden_page("ls.1", name="ls", sha=f"{i:064x}") for i in range(120)]
+    monkeypatch.setattr(
+        cli,
+        "_candidates_from_cache",
+        lambda cache, distro: (
+            [Candidate(p.name, p.section, p.content_sha256, None, True) for p in pages],
+            {p.content_sha256: p for p in pages},
+        ),
+    )
+    now = [0.0]
+    monkeypatch.setattr(cli, "_clock", lambda: now[0])
+    monkeypatch.setattr(cli, "PROGRESS_SECONDS", 60.0)
+    build_record = cli.build_record
+
+    def slow_record(*args, **kwargs):
+        now[0] += 1.5  # 75 s per 50-page batch
+        return build_record(*args, **kwargs)
+
+    monkeypatch.setattr(cli, "build_record", slow_record)
+    caplog.set_level("INFO")
+    out = tmp_path / "records.jsonl"
+    argv = ["run", "--source", "cache", "--cache", str(tmp_path), "--no-tldr", "--no-llm"]
+    assert cli.main([*argv, "--out", str(out), "--max-minutes", "2"]) == 0
+
+    # Batches start at 0 s and 75 s; the third would start at 150 s, past 120 s.
+    assert len(out.read_text().splitlines()) == 100
+    [started] = _events(caplog, "generation_started")
+    assert started["selected"] == 120 and started["maxMinutes"] == 2
+    assert [e["processed"] for e in _events(caplog, "generation_progress")] == [50]
+    [stopped] = _events(caplog, "generation_stopped")
+    assert stopped["reason"] == "run time limit" and stopped["processed"] == 100
+    [summary] = _events(caplog, "generation_summary")
+    assert summary["stoppedAtTimeLimit"] is True and summary["remaining"] == 20
+    assert summary["records"] == 100 and summary["elapsedMinutes"] == 2.5
+
+    # Without a limit the same run covers every page.
+    caplog.clear()
+    now[0] = 0.0
+    assert cli.main([*argv, "--out", str(out)]) == 0
+    assert len(out.read_text().splitlines()) == 120
+    [summary] = _events(caplog, "generation_summary")
+    assert "stoppedAtTimeLimit" not in summary
+
+
+def test_a_time_limited_convex_run_still_hands_over_flag_usage(monkeypatch, caplog):
+    class Unchanged(FakeClient):
+        def post(self, path, payload):
+            self.posts.append((path, payload))
+            if path == "/ingest/generated/candidates":
+                return {
+                    "items": [
+                        {
+                            "name": f"p{i:03}",
+                            "section": "1",
+                            "contentSha256": f"{i:064x}",
+                            "hasRecord": True,
+                            "promptVersion": "b6-v1",
+                            "tldrCommit": None,
+                            "flagUsageCurrent": False,
+                        }
+                        for i in range(120)
+                    ],
+                    "isDone": True,
+                }
+            if path == "/ingest/generated/flag-usage":
+                return {"scheduled": len(payload["contentSha256s"]), "continued": False}
+            raise AssertionError(path)
+
+    client = Unchanged()
+    monkeypatch.setattr("ingestion.convex_client.ConvexIngestClient", lambda **kwargs: client)
+    monkeypatch.delenv("OPENCODE_GO_API_KEY", raising=False)
+    monkeypatch.delenv("BETTERMAN_GEN_API_KEY", raising=False)
+    ticks = iter(range(0, 10_000, 25))
+    monkeypatch.setattr(cli, "_clock", lambda: float(next(ticks)))
+    caplog.set_level("INFO")
+    argv = ["run", "--source", "convex", "--sections", "1", "--no-tldr", "--max-minutes", "1"]
+    assert cli.main(argv) == 0
+
+    # The first batch is handled before the limit; its stale rows still reach B7.
+    sent = [
+        sha
+        for path, payload in client.posts
+        if path == "/ingest/generated/flag-usage"
+        for sha in payload["contentSha256s"]
+    ]
+    assert sent == [f"{i:064x}" for i in range(50)]
+    [summary] = _events(caplog, "generation_summary")
+    assert summary["stoppedAtTimeLimit"] is True and summary["remaining"] == 70
+    assert summary["flagUsageScheduled"] == 50

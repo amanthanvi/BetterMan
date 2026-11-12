@@ -18,6 +18,7 @@ import logging
 import os
 import subprocess
 import sys
+import time
 from collections import Counter
 from collections.abc import Iterable, Iterator
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
@@ -57,6 +58,13 @@ DEFAULT_CONCURRENCY = 3
 MAX_CONCURRENCY = 4
 # Pages whose content a Convex dry run reads before it extrapolates.
 DRY_RUN_INPUT_SAMPLE = 50
+# Pages per batch: one inputs read and one upsert each.
+BATCH_PAGES = 50
+# A long run logs `generation_progress` at most this often.
+PROGRESS_SECONDS = 300.0
+PROGRESS_TOTALS = ("generated", "records", "inserted", "updated", "skippedUnchanged")
+# Wall-clock source for the run deadline and progress; tests replace it.
+_clock = time.monotonic
 
 
 def _log(event: str, **fields: object) -> None:
@@ -260,14 +268,51 @@ def run(args: argparse.Namespace) -> int:
     totals: Counter[str] = Counter()
     estimated_usd = 0.0
     sampled = 0
+    # The scheduled job has a hard timeout. Stopping between batches before it
+    # leaves time to propagate flag usage, save the ledger and log the summary;
+    # rows already written are skipped as unchanged by the next run.
+    started = _clock()
+    deadline = started + args.max_minutes * 60 if args.max_minutes else None
+    last_progress = started
+    stopped_at: int | None = None
+    _log(
+        "generation_started",
+        selected=len(chosen),
+        candidates=len(candidates),
+        distro=args.distro,
+        stage=args.stage,
+        dryRun=dry_run,
+        llm=llm and generator is not None,
+        maxMinutes=args.max_minutes,
+    )
+
+    def progress_fields(done: int) -> dict[str, object]:
+        fields: dict[str, object] = {
+            "elapsedMinutes": round((_clock() - started) / 60, 1),
+            "processed": done,
+            "selected": len(chosen),
+            **{k: totals[k] for k in PROGRESS_TOTALS},
+        }
+        if generator is not None:
+            fields["requests"] = generator.stats.requests
+            fields["runUsd"] = round(governor.run_spend, 4)
+        return fields
+
     # Unchanged rows whose pages (e.g. in a new release) lack B7 flag counts.
     stale_usage: list[str] = []
     records: list[dict] = []
     out = open(args.out, "w", encoding="utf-8") if args.out else None  # noqa: SIM115
     paused: BudgetPaused | None = None
     try:
-        for start in range(0, len(chosen), 50):
-            batch = chosen[start : start + 50]
+        for start in range(0, len(chosen), BATCH_PAGES):
+            if deadline is not None and _clock() >= deadline:
+                stopped_at = start
+                _log("generation_stopped", reason="run time limit", **progress_fields(start))
+                break
+            if _clock() - last_progress >= PROGRESS_SECONDS:
+                last_progress = _clock()
+                _log("generation_progress", **progress_fields(start))
+            batch = chosen[start : start + BATCH_PAGES]
             todo = []
             for candidate in batch:
                 state = remote.get(candidate.content_sha256)
@@ -399,6 +444,10 @@ def run(args: argparse.Namespace) -> int:
         summary["estimatedOffPeakUsd"] = round(estimated_usd, 4)
     if paused is not None:
         summary["paused"] = str(paused)
+    if stopped_at is not None:
+        summary["stoppedAtTimeLimit"] = True
+        summary["remaining"] = len(chosen) - stopped_at
+    summary["elapsedMinutes"] = round((_clock() - started) / 60, 1)
     _log("generation_summary", **summary)
     return 0
 
@@ -446,6 +495,11 @@ def main(argv: list[str] | None = None) -> int:
     run_p.add_argument("--cache-dir", help="generated parts by content hash")
     run_p.add_argument("--work", default=".generated-work")
     run_p.add_argument("--out", help="also write records as JSONL")
+    run_p.add_argument(
+        "--max-minutes",
+        type=float,
+        help="stop starting new batches after this many minutes; the next run resumes",
+    )
 
     restore = sub.add_parser(
         "restore-ledger", help="Recover the budget ledger from earlier default-branch runs"
