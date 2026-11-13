@@ -38,8 +38,10 @@ Actions → generated-layer → Run workflow:
   window, the run cap or Go's own limit is reached, still writes page and tldr
   examples, and saves the ledger for the next run.
 
-The schedule runs at 12:00 UTC on the 2nd and 9th of each month, after the
-monthly ingest, and writes when the secret exists. It reads the `staging`
+The schedule runs at 12:00 UTC every day from the 2nd to the 15th of each
+month, after the monthly ingest, and writes when the secret exists. Each run
+resumes where the last stopped, so a full-Debian pass finishes in about a week
+of runs; once nothing is left, a run only lists candidates and exits. It reads the `staging`
 release; rows are keyed by content hash, so they serve the same pages once
 promoted.
 
@@ -107,8 +109,9 @@ going, `generation_progress` lines (at most every five minutes) show pages
 processed, records written, requests and spend. A run that ends cancelled by
 the job timeout anyway means something outside these checks took more than
 the 45 minutes left after the limit. Past the limit, Convex requests get one
-attempt each and the flag-usage hand-over stops after ten minutes, so the
-likely cause is a request that never stopped sending. Look at the last
+attempt each, every response body must arrive within its request timeout, and
+the flag-usage hand-over stops after ten minutes, so a cancellation now points
+at something outside the run itself, such as the job's setup or artifact steps. Look at the last
 progress line, and lower `BETTERMAN_GEN_MAX_MINUTES` if needed. A summary with
 `flagUsageDeferred` is normal after a time-limited run; the next run hands
 those over.
