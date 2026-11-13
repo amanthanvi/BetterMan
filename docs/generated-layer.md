@@ -303,9 +303,11 @@ eight concurrent agents have already hit "Go usage limit exceeded" (#398).
   `listingComplete: false`. That happens also when the limit arrives inside
   the last batch. The run exits successfully, and the next run skips the rows
   already written. A response body, from Convex or the model, must arrive
-  within its request timeout (120 s or 60 s). A socket timeout restarts with
-  every byte, so a server that keeps sending a byte at a time used to hold a
-  request until the job timeout. Each git step of the tldr-pages fetch times out after ten
+  within its request timeout (120 s or 60 s), and an HTTP error body within
+  30 s. A socket timeout restarts with every byte, so a server that keeps
+  sending a byte at a time, in the body, the chunk framing or the trailers,
+  used to hold a request until the job timeout. Now the connection's socket is
+  shut down at the limit and the request fails as a timeout. Each git step of the tldr-pages fetch times out after ten
   minutes. Before this limit, the scheduled runs on 2026-11-02 and 2026-11-09
   were cancelled by the job timeout with no output after start.
 - `generation_started` reports the selection and the limit.

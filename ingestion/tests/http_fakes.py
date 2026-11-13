@@ -1,41 +1,49 @@
-"""A real http.client.HTTPResponse over a socket that trickles one byte per read."""
+"""Real http.client responses over a local socket pair, sent on a schedule."""
 
 from __future__ import annotations
 
-import io
+import socket
+import threading
+import time
+from email.message import Message
 from http.client import HTTPResponse
+from urllib.error import HTTPError
 
 
-class _Trickle(io.RawIOBase):
-    def __init__(self, data: bytes, clock: list[float], step: float) -> None:
-        self.data = data
-        self.clock = clock
-        self.step = step
+def _serve(parts: list[tuple[bytes, float]]) -> socket.socket:
+    """A client socket whose peer sends each part after its delay, then closes."""
+    client, server = socket.socketpair()
 
-    def readable(self) -> bool:
-        return True
+    def send() -> None:
+        try:
+            for data, delay in parts:
+                time.sleep(delay)
+                server.sendall(data)
+        except OSError:
+            pass  # the reader shut the connection down
+        finally:
+            server.close()
 
-    def readinto(self, buffer) -> int:
-        if not self.data:
-            return 0
-        buffer[0] = self.data[0]
-        self.data = self.data[1:]
-        self.clock[0] += self.step
-        return 1
-
-
-class _Socket:
-    def __init__(self, raw: io.RawIOBase) -> None:
-        self.raw = raw
-
-    def makefile(self, mode: str):
-        return io.BufferedReader(self.raw, buffer_size=1)
+    threading.Thread(target=send, daemon=True).start()
+    return client
 
 
-def trickling_response(body: bytes, clock: list[float], step: float) -> HTTPResponse:
-    """Headers and body arrive one byte per read; each read advances `clock` by `step`."""
-    head = b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
-    head += b"Content-Length: %d\r\n\r\n" % len(body)
-    response = HTTPResponse(_Socket(_Trickle(head + body, clock, step)))
-    response.begin()
-    return response
+def response(head: bytes, parts: list[tuple[bytes, float]], status: bytes = b"200 OK"):
+    """`head` holds header lines; `parts` the body bytes, each after a delay."""
+    sock = _serve([(b"HTTP/1.1 " + status + b"\r\n" + head + b"\r\n", 0.0), *parts])
+    result = HTTPResponse(sock)
+    result.begin()
+    return result
+
+
+def trickle(data: bytes, every: float) -> list[tuple[bytes, float]]:
+    return [(data[i : i + 1], every) for i in range(len(data))]
+
+
+def sized(body: bytes) -> bytes:
+    return b"Content-Type: application/json\r\nContent-Length: %d\r\n" % len(body)
+
+
+def http_error(code: int, response_: HTTPResponse) -> HTTPError:
+    """An HTTPError over a live response, as urllib raises it."""
+    return HTTPError("https://example.test", code, "error", Message(), response_)

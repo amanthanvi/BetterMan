@@ -621,17 +621,29 @@ def test_no_retries_after_the_callers_cutoff(monkeypatch):
 
 
 def test_a_trickling_response_fails_instead_of_holding_the_request(monkeypatch):
-    # A socket timeout restarts with every byte; the whole body must arrive
-    # within the request timeout (generated-layer runs have a time limit).
-    from http_fakes import trickling_response
+    # A socket timeout restarts with every byte; the whole body, success or
+    # error, must arrive within its time limit (generated-layer runs have one).
+    import time as clock
 
-    now = [0.0]
-    monkeypatch.setattr("ingestion.http_read._clock", lambda: now[0])
-    monkeypatch.setattr("ingestion.convex_client.time.sleep", Mock())
-    opened = Mock(side_effect=lambda *_a, **_k: trickling_response(b" " * 1000 + b"{}", now, 1.0))
-    monkeypatch.setattr("ingestion.convex_client.urlopen", opened)
+    from http_fakes import http_error, response, sized, trickle
+
+    body = b" " * 200 + b"{}"
     client = ConvexIngestClient("https://test.convex.site", "test-secret")
-    with pytest.raises(RuntimeError, match="longer than 120 s"):
-        client.post("/ingest/generated/flag-usage", {"contentSha256s": []})
-    assert opened.call_count == 3  # each attempt gives up at 120 s
-    assert now[0] < 3 * 200
+    monkeypatch.setattr(
+        "ingestion.convex_client.urlopen",
+        Mock(side_effect=lambda *_a, **_k: response(sized(body), trickle(body, 0.05))),
+    )
+    started = clock.monotonic()
+    with pytest.raises(RuntimeError, match="longer than 0.3 s"):
+        client.post("/ingest/activate", {}, timeout_seconds=0.3)
+    assert clock.monotonic() - started < 2
+
+    def busy(*_args, **_kwargs):
+        raise http_error(503, response(sized(body), trickle(body, 0.05), status=b"503 Busy"))
+
+    monkeypatch.setattr("ingestion.convex_client.ERROR_BODY_SECONDS", 0.3)
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(side_effect=busy))
+    started = clock.monotonic()
+    with pytest.raises(RuntimeError, match="HTTP 503: unreadable error body"):
+        client.post("/ingest/activate", {}, timeout_seconds=0.3)
+    assert clock.monotonic() - started < 2

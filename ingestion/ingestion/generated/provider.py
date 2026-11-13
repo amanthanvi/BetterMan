@@ -19,7 +19,7 @@ from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from ingestion.http_read import read_within
+from ingestion.http_read import ERROR_BODY_SECONDS, read_within
 
 DEFAULT_BASE_URL = "https://opencode.ai/inference/go/openai/v1"
 DEFAULT_MODEL = "deepseek-v4.1-flash"
@@ -251,7 +251,7 @@ class OpenAICompatibleProvider(Provider):
 
 def _read_error(exc: HTTPError) -> str:
     try:
-        return exc.read().decode("utf-8", errors="replace")
+        return read_within(exc, ERROR_BODY_SECONDS).decode("utf-8", errors="replace")
     except (TimeoutError, HTTPException, ConnectionError, OSError):
         return ""
 
