@@ -213,3 +213,17 @@ def test_recorded_completion_shapes_are_bounded(content, reasoning, finish, shap
 def test_untrusted_finish_reason_is_not_returned():
     payload = {"choices": [{"finish_reason": "private text", "message": {"content": ""}}]}
     assert parse_completion(payload).finish_reason == "unknown"
+
+
+def test_a_trickling_model_response_is_a_transient_failure(monkeypatch):
+    # The 60 s socket timeout restarts with every byte; the body must arrive
+    # within the request timeout, so a run's time limit can hold.
+    from http_fakes import trickling_response
+
+    now = [0.0]
+    monkeypatch.setattr("ingestion.http_read._clock", lambda: now[0])
+    body = json.dumps(completion()).encode() + b" " * 1000
+    client = provider(lambda request, timeout: trickling_response(body, now, 1.0))
+    with pytest.raises(TransientProviderError, match="TimeoutError"):
+        client.send([{"role": "user", "content": "hi"}], max_tokens=10)
+    assert now[0] < 200

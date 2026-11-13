@@ -302,8 +302,10 @@ eight concurrent agents have already hit "Go usage limit exceeded" (#398).
   with `stoppedAtTimeLimit`, `remaining` and, if the limit came during listing,
   `listingComplete: false`. That happens also when the limit arrives inside
   the last batch. The run exits successfully, and the next run skips the rows
-  already written. A response that keeps trickling bytes is still bounded only
-  by the job timeout. Each git step of the tldr-pages fetch times out after ten
+  already written. A response body, from Convex or the model, must arrive
+  within its request timeout (120 s or 60 s). A socket timeout restarts with
+  every byte, so a server that keeps sending a byte at a time used to hold a
+  request until the job timeout. Each git step of the tldr-pages fetch times out after ten
   minutes. Before this limit, the scheduled runs on 2026-11-02 and 2026-11-09
   were cancelled by the job timeout with no output after start.
 - `generation_started` reports the selection and the limit.
@@ -370,10 +372,12 @@ $0.003 cached input, off-peak; double at peak.
 Under Go's caps at the default half share ($8 per 5 h, $20 per week, $40 per
 month), today's tier fits in one run. The full Debian pass is limited by
 request rate before money: at 20 requests per minute a 5 h window spends about
-$2.40. A first full pass at the defaults spreads over about two weeks of
-manual and scheduled runs; raising `BETTERMAN_GEN_RPM` and concurrency
-shortens it, and the weekly cap ($20 at half share, about 40,000 pages) then
-becomes the limit. The first live sample made 59 requests for 50 pages; its aggregate cost was $0.02. Actual output token counts and the reason for invalid JSON were not retained, so the estimate remains provisional.
+$2.40. One 285-minute run generates about 5,400 pages. The schedule runs
+daily from the 2nd to the 15th, so a first full pass takes about a week of
+runs. A full-tier dry run on 2026-11-13 found 35,026 pages left of 46,975,
+at an estimated $12.30, inside the weekly cap ($20 at half share) even at
+seven runs a week. Raising `BETTERMAN_GEN_RPM` and concurrency would shorten
+it further, and the weekly cap (about 40,000 pages) then becomes the limit. The first live sample made 59 requests for 50 pages; its aggregate cost was $0.02. Actual output token counts and the reason for invalid JSON were not retained, so the estimate remains provisional.
 
 Switching to the direct DeepSeek API, or any other provider, is a spend change
 that needs owner sign-off (`docs/roadmap/betterman-2.md`).

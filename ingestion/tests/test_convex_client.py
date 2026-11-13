@@ -618,3 +618,20 @@ def test_no_retries_after_the_callers_cutoff(monkeypatch):
     with pytest.raises(RuntimeError, match="HTTP 503"):
         early.post("/ingest/generated/flag-usage", {"contentSha256s": []})
     assert request.call_count == 3
+
+
+def test_a_trickling_response_fails_instead_of_holding_the_request(monkeypatch):
+    # A socket timeout restarts with every byte; the whole body must arrive
+    # within the request timeout (generated-layer runs have a time limit).
+    from http_fakes import trickling_response
+
+    now = [0.0]
+    monkeypatch.setattr("ingestion.http_read._clock", lambda: now[0])
+    monkeypatch.setattr("ingestion.convex_client.time.sleep", Mock())
+    opened = Mock(side_effect=lambda *_a, **_k: trickling_response(b" " * 1000 + b"{}", now, 1.0))
+    monkeypatch.setattr("ingestion.convex_client.urlopen", opened)
+    client = ConvexIngestClient("https://test.convex.site", "test-secret")
+    with pytest.raises(RuntimeError, match="longer than 120 s"):
+        client.post("/ingest/generated/flag-usage", {"contentSha256s": []})
+    assert opened.call_count == 3  # each attempt gives up at 120 s
+    assert now[0] < 3 * 200

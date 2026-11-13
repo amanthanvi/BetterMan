@@ -11,6 +11,8 @@ from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from ingestion.http_read import read_within
+
 logger = logging.getLogger("betterman.ingestion")
 
 # Release, page, alias, and license posts are idempotent: the server returns
@@ -270,7 +272,7 @@ class ConvexIngestClient:
         try:
             with urlopen(req, timeout=timeout_seconds) as res:
                 try:
-                    raw = res.read().decode("utf-8")
+                    raw = read_within(res, timeout_seconds).decode("utf-8")
                 except (TimeoutError, UnicodeDecodeError, HTTPException, ConnectionError) as exc:
                     raise _contract_read_error(exc) from exc
         except TimeoutError as exc:
@@ -342,7 +344,7 @@ class ConvexIngestClient:
         for attempt in range(1, attempts + 1):
             try:
                 with urlopen(req, timeout=timeout_seconds) as res:
-                    raw = res.read().decode("utf-8")
+                    raw = read_within(res, timeout_seconds).decode("utf-8")
                 result = _json_object(raw)
             except HTTPError as exc:
                 detail = _post_error_detail(exc)
