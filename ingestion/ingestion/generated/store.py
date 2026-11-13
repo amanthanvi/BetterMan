@@ -39,6 +39,8 @@ class GeneratedStore:
         # Pages Convex would not send because one alone exceeds a response.
         self.skipped: list[dict] = []
         self.flag_usage_deferred = 0
+        # Pages the last `inputs` call left unread because `stop()` was true.
+        self.unread: list[dict] = []
 
     def require_contract(self) -> dict:
         try:
@@ -93,10 +95,26 @@ class GeneratedStore:
                 return
             cursor = result.get("continueCursor")
 
-    def inputs(self, *, stage: str, distro: str, pages: list[Candidate]) -> list[PageInput]:
+    def inputs(
+        self,
+        *,
+        stage: str,
+        distro: str,
+        pages: list[Candidate],
+        stop: Callable[[], bool] | None = None,
+    ) -> list[PageInput]:
+        """Read page inputs; once `stop()` is true no further request starts.
+
+        Large manuals can make Convex defer pages, so one batch may need many
+        requests. Pages left unread are listed in `unread`.
+        """
         loaded: list[PageInput] = []
         queue = [{"name": page.name, "section": page.section} for page in pages]
+        self.unread = []
         while queue:
+            if stop is not None and stop():
+                self.unread = queue
+                break
             batch, queue = queue[:INPUT_BATCH], queue[INPUT_BATCH:]
             result = self.client.post(
                 "/ingest/generated/inputs",

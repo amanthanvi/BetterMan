@@ -1299,3 +1299,84 @@ def test_a_time_limit_pause_keeps_earlier_rounds_and_reports_the_stop(
     [summary] = _events(caplog, "generation_summary")
     assert summary["stoppedAtTimeLimit"] is True and summary["remaining"] == 0
     assert summary["generated"] == 1
+
+
+def test_deferred_input_reads_stop_at_the_run_time_limit(monkeypatch, caplog):
+    # Convex defers pages when a response fills; one batch may then need a
+    # request per page. Past the limit no further read starts (#541 review).
+    now = [0.0]
+    monkeypatch.setattr(cli, "_clock", lambda: now[0])
+
+    class OneAtATime(FakeClient):
+        def post(self, path, payload):
+            self.posts.append((path, payload))
+            if path == "/ingest/generated/candidates":
+                return {
+                    "items": [
+                        {
+                            "name": f"p{i:02}",
+                            "section": "1",
+                            "contentSha256": f"p{i:02}" * 32,
+                            "hasRecord": False,
+                            "promptVersion": None,
+                            "tldrCommit": None,
+                        }
+                        for i in range(10)
+                    ],
+                    "isDone": True,
+                }
+            if path == "/ingest/generated/inputs":
+                now[0] += 119  # each read returns one page and defers the rest
+                first, *rest = payload["pages"]
+                return {
+                    "pages": [
+                        {
+                            "name": first["name"],
+                            "section": "1",
+                            "contentSha256": first["name"] * 32,
+                            "options": [],
+                            "doc": None,
+                        }
+                    ],
+                    "deferred": rest,
+                }
+            return {"inserted": len(payload["records"]), "updated": 0}
+
+    client = OneAtATime()
+    monkeypatch.setattr("ingestion.convex_client.ConvexIngestClient", lambda **kwargs: client)
+    caplog.set_level("INFO")
+    argv = ["run", "--source", "convex", "--sections", "1", "--no-tldr", "--no-llm"]
+    assert cli.main([*argv, "--max-minutes", "5"]) == 0
+
+    # Reads start at 0, 119 and 238 s; the fourth would start past 300 s.
+    reads = [p for path, p in client.posts if path == "/ingest/generated/inputs"]
+    assert len(reads) == 3
+    writes = [r for path, p in client.posts if path == "/ingest/generated" for r in p["records"]]
+    assert len(writes) == 3
+    [summary] = _events(caplog, "generation_summary")
+    assert summary["inputsDeferred"] == 7 and "missingInput" not in summary
+    assert summary["stoppedAtTimeLimit"] is True and summary["remaining"] == 7
+
+
+def test_the_retry_cutoff_counts_from_the_start_of_the_run(monkeypatch):
+    # Slow tldr setup must not push the no-retry cutoff past the limit (#541 review).
+    mono = [1000.0]
+    monkeypatch.setattr(cli.time, "monotonic", lambda: mono[0])
+
+    def slow_tldr(args):
+        mono[0] += 600
+        return None
+
+    monkeypatch.setattr(cli, "_load_tldr", slow_tldr)
+    captured: dict = {}
+    client = StaleRows(0)
+
+    def make_client(**kwargs):
+        captured.update(kwargs)
+        return client
+
+    monkeypatch.setattr("ingestion.convex_client.ConvexIngestClient", make_client)
+    monkeypatch.delenv("OPENCODE_GO_API_KEY", raising=False)
+    argv = ["run", "--source", "convex", "--sections", "1", "--max-minutes", "5"]
+    assert cli.main(argv) == 0
+    assert captured["retry_until"] == 1000.0 + 300

@@ -249,6 +249,7 @@ def run(args: argparse.Namespace) -> int:
     # flag usage, save the ledger and log its summary. Rows already written
     # are skipped as unchanged by the next run.
     started = _clock()
+    started_monotonic = time.monotonic()
     deadline = started + args.max_minutes * 60 if args.max_minutes else None
     listing_complete = True
     provider_config = ProviderConfig.from_env()
@@ -271,7 +272,7 @@ def run(args: argparse.Namespace) -> int:
             http_url=os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL", ""),
             ingest_secret=os.environ.get("CONVEX_INGEST_SECRET", ""),
             # One attempt per request once the limit has passed.
-            retry_until=time.monotonic() + args.max_minutes * 60 if args.max_minutes else None,
+            retry_until=started_monotonic + args.max_minutes * 60 if args.max_minutes else None,
         )
         store = GeneratedStore(client)
         store.require_contract()
@@ -324,6 +325,9 @@ def run(args: argparse.Namespace) -> int:
         listingComplete=listing_complete,
         elapsedMinutes=round((_clock() - started) / 60, 1),
     )
+
+    def past_limit() -> bool:
+        return deadline is not None and _clock() >= deadline
 
     def handover_over() -> bool:
         return deadline is not None and _clock() >= deadline + HANDOVER_GRACE_SECONDS
@@ -399,15 +403,25 @@ def run(args: argparse.Namespace) -> int:
                 continue
             if store is not None and todo:
                 for page in store.inputs(
-                    stage=args.stage, distro=args.distro, pages=[c for c, _ in todo]
+                    stage=args.stage,
+                    distro=args.distro,
+                    pages=[c for c, _ in todo],
+                    stop=past_limit,
                 ):
                     inputs[page.content_sha256] = page
                 sampled += len(todo)
             prepared = []
+            unread = (
+                {(p["name"], p["section"]) for p in store.unread} if store is not None else set()
+            )
             for candidate, fresh_llm in todo:
                 page = inputs.pop(candidate.content_sha256, None)
                 if page is None:
-                    totals["missingInput"] += 1
+                    # Not read before the time limit: the next run selects it again.
+                    if (candidate.name, candidate.section) in unread:
+                        totals["inputsDeferred"] += 1
+                    else:
+                        totals["missingInput"] += 1
                     continue
                 det = deterministic(page, tldr)
                 generated = cache.get(page.content_sha256)
@@ -478,8 +492,10 @@ def run(args: argparse.Namespace) -> int:
     if store is not None and store.flag_usage_deferred:
         totals["flagUsageDeferred"] = store.flag_usage_deferred
     # A time-limit pause in the last batch ends the loop without a batch check.
-    time_limited = stopped_at is not None or (
-        paused is not None and paused.reason == "run time limit"
+    time_limited = (
+        stopped_at is not None
+        or totals["inputsDeferred"] > 0
+        or (paused is not None and paused.reason == "run time limit")
     )
     if time_limited and stopped_at is None:
         _log("generation_stopped", reason="run time limit", **progress_fields(len(chosen)))
@@ -510,7 +526,9 @@ def run(args: argparse.Namespace) -> int:
         summary["stoppedAtTimeLimit"] = True
         # Pages with no record this run; paused pages lacking model text are
         # also picked up again by the next run.
-        summary["remaining"] = len(chosen) - (stopped_at if stopped_at is not None else len(chosen))
+        summary["remaining"] = (
+            len(chosen) - (stopped_at if stopped_at is not None else len(chosen))
+        ) + totals["inputsDeferred"]
     if not listing_complete:
         summary["listingComplete"] = False
     summary["elapsedMinutes"] = round((_clock() - started) / 60, 1)

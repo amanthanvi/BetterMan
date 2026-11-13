@@ -292,8 +292,10 @@ eight concurrent agents have already hit "Go usage limit exceeded" (#398).
   limit, at most the attempts already in flight finish (a 60 s timeout each,
   plus a backoff of up to 120 s). A page that already had valid output from
   an earlier round keeps it. The batch's remaining pages get page and tldr
-  parts only. Convex requests are no longer retried: one attempt each, with a
-  120 s timeout. Stale flag usage is handed over during the run, 250 hashes at
+  parts only. No further page-input read starts: Convex may defer pages when
+  a response fills, so a batch can need several reads. Pages left unread
+  count as `inputsDeferred` and `remaining`. Convex requests are no longer
+  retried: one attempt each, with a 120 s timeout. Stale flag usage is handed over during the run, 250 hashes at
   a time, and the hand-over stops ten minutes past the limit. The next run
   finds whatever it did not send (`flagUsageDeferred` in the summary). The run
   then saves the ledger and logs `generation_stopped` and `generation_summary`
