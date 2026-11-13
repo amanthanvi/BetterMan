@@ -16,6 +16,8 @@ limits and the cost model are in `docs/generated-layer.md`.
    - `BETTERMAN_GEN_BUDGET_FRACTION`: share of each Go cap, default `0.5`.
    - `BETTERMAN_GEN_RUN_CAP_USD`: ceiling per run, default `8`.
    - `BETTERMAN_GEN_RPM`: requests per minute, default `20`.
+   - `BETTERMAN_GEN_MAX_MINUTES`: when a run stops starting new batches,
+     default `285`. Keep it well under the job's 330-minute timeout.
 4. Deploy Convex from `main` so `GET /ingest/generated/contract` answers
    version 3 (the generated-layer contract; the release ingest contract is
    separate). The CLI refuses to run against any other version.
@@ -95,6 +97,21 @@ A pause is normal. The log line `generation_paused` names the reason and the
 resume time: a 5 h, 7 d or 30 d window, peak hours, the run cap, or Go's
 "usage limit exceeded" (which waits at least an hour). The next scheduled or
 manual run resumes from the ledger. To stop entirely, disable the workflow.
+
+Reaching the time limit is also normal for a large pass. If it comes mid-batch,
+`generation_paused` with reason `run time limit` appears first. It is followed
+by `generation_stopped`, and then by a summary with `stoppedAtTimeLimit: true`
+and the `remaining` page count (`listingComplete: false` if listing never
+finished). The run still succeeds and the next run continues. While a run is
+going, `generation_progress` lines (at most every five minutes) show pages
+processed, records written, requests and spend. A run that ends cancelled by
+the job timeout anyway means something outside these checks took more than
+the 45 minutes left after the limit. Past the limit, Convex requests get one
+attempt each and the flag-usage hand-over stops after ten minutes, so the
+likely cause is a request that never stopped sending. Look at the last
+progress line, and lower `BETTERMAN_GEN_MAX_MINUTES` if needed. A summary with
+`flagUsageDeferred` is normal after a time-limited run; the next run hands
+those over.
 
 ## Removing a bad item
 

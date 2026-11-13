@@ -15,9 +15,11 @@ import gzip
 import hashlib
 import json
 import logging
+import math
 import os
 import subprocess
 import sys
+import time
 from collections import Counter
 from collections.abc import Iterable, Iterator
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
@@ -57,6 +59,21 @@ DEFAULT_CONCURRENCY = 3
 MAX_CONCURRENCY = 4
 # Pages whose content a Convex dry run reads before it extrapolates.
 DRY_RUN_INPUT_SAMPLE = 50
+# Pages per batch: one inputs read and one upsert each.
+BATCH_PAGES = 50
+# A long run logs `generation_progress` at most this often.
+PROGRESS_SECONDS = 300.0
+# Candidate listing checks the run time limit this often.
+LISTING_CHECK_EVERY = 500
+# Stale flag usage is handed to Convex once this many hashes have gathered,
+# so the hand-over left after the loop stays small (at most 10 requests).
+FLAG_USAGE_HANDOFF = 250
+# Past the run time limit, Convex requests are not retried and flag usage
+# stops being handed over after this long; the next run finds the rest.
+HANDOVER_GRACE_SECONDS = 600.0
+PROGRESS_TOTALS = ("generated", "records", "inserted", "updated", "skippedUnchanged")
+# Wall-clock source for the run deadline and progress; tests replace it.
+_clock = time.monotonic
 
 
 def _log(event: str, **fields: object) -> None:
@@ -196,6 +213,19 @@ def _estimate_usd(page: PageInput, det: Deterministic) -> float:
     return token_cost(tokens, ESTIMATED_OUTPUT_TOKENS)
 
 
+def _minutes(raw: str) -> float:
+    """A run time limit: a finite number of minutes above zero."""
+    try:
+        value = float(raw)
+    except ValueError:
+        value = math.nan
+    if not math.isfinite(value) or value <= 0:
+        # 0, nan and inf would disable the limit; a negative one would stop
+        # before the first batch and still report success.
+        raise argparse.ArgumentTypeError(f"must be a finite number of minutes above 0, not {raw!r}")
+    return value
+
+
 def _concurrency() -> int:
     raw = os.environ.get("BETTERMAN_GEN_CONCURRENCY") or DEFAULT_CONCURRENCY
     return max(1, min(int(raw), MAX_CONCURRENCY))
@@ -213,6 +243,15 @@ def _candidates_from_cache(
 
 
 def run(args: argparse.Namespace) -> int:
+    # The scheduled job has a hard timeout. The limit counts from here and is
+    # checked while listing candidates, by every model attempt (through the
+    # budget governor) and between batches, so the run can still hand over
+    # flag usage, save the ledger and log its summary. Rows already written
+    # are skipped as unchanged by the next run.
+    started = _clock()
+    started_monotonic = time.monotonic()
+    deadline = started + args.max_minutes * 60 if args.max_minutes else None
+    listing_complete = True
     provider_config = ProviderConfig.from_env()
     dry_run = args.dry_run
     llm = not args.no_llm
@@ -232,6 +271,8 @@ def run(args: argparse.Namespace) -> int:
         client = ConvexIngestClient(
             http_url=os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL", ""),
             ingest_secret=os.environ.get("CONVEX_INGEST_SECRET", ""),
+            # One attempt per request once the limit has passed.
+            retry_until=started_monotonic + args.max_minutes * 60 if args.max_minutes else None,
         )
         store = GeneratedStore(client)
         store.require_contract()
@@ -240,6 +281,12 @@ def run(args: argparse.Namespace) -> int:
             for item in store.candidates(stage=args.stage, distro=args.distro, section=section):
                 candidates.append(item.candidate)
                 remote[item.candidate.content_sha256] = item
+                if len(candidates) % LISTING_CHECK_EVERY == 0:
+                    if deadline is not None and _clock() >= deadline:
+                        listing_complete = False
+                        break
+            if not listing_complete:
+                break
         inputs: dict[str, PageInput] = {}
     else:
         if not args.cache:
@@ -251,7 +298,11 @@ def run(args: argparse.Namespace) -> int:
     chosen = select(candidates, priority=priority, sections=sections, limit=args.limit)
     cache = ResultCache(Path(args.cache_dir) if args.cache_dir else None)
     checkpoint = Checkpoint.load(Path(args.checkpoint) if args.checkpoint else None)
-    governor = BudgetGovernor(BudgetConfig.from_env(), checkpoint)
+    governor = BudgetGovernor(
+        BudgetConfig.from_env(),
+        checkpoint,
+        remaining=(lambda: deadline - _clock()) if deadline is not None else None,
+    )
     generator = None
     concurrency = _concurrency()
     if llm and not dry_run and provider_config.has_key:
@@ -260,14 +311,54 @@ def run(args: argparse.Namespace) -> int:
     totals: Counter[str] = Counter()
     estimated_usd = 0.0
     sampled = 0
+    last_progress = started
+    stopped_at: int | None = None
+    _log(
+        "generation_started",
+        selected=len(chosen),
+        candidates=len(candidates),
+        distro=args.distro,
+        stage=args.stage,
+        dryRun=dry_run,
+        llm=llm and generator is not None,
+        maxMinutes=args.max_minutes,
+        listingComplete=listing_complete,
+        elapsedMinutes=round((_clock() - started) / 60, 1),
+    )
+
+    def past_limit() -> bool:
+        return deadline is not None and _clock() >= deadline
+
+    def handover_over() -> bool:
+        return deadline is not None and _clock() >= deadline + HANDOVER_GRACE_SECONDS
+
+    def progress_fields(done: int) -> dict[str, object]:
+        fields: dict[str, object] = {
+            "elapsedMinutes": round((_clock() - started) / 60, 1),
+            "processed": done,
+            "selected": len(chosen),
+            **{k: totals[k] for k in PROGRESS_TOTALS},
+        }
+        if generator is not None:
+            fields["requests"] = generator.stats.requests
+            fields["runUsd"] = round(governor.run_spend, 4)
+        return fields
+
     # Unchanged rows whose pages (e.g. in a new release) lack B7 flag counts.
     stale_usage: list[str] = []
     records: list[dict] = []
     out = open(args.out, "w", encoding="utf-8") if args.out else None  # noqa: SIM115
     paused: BudgetPaused | None = None
     try:
-        for start in range(0, len(chosen), 50):
-            batch = chosen[start : start + 50]
+        for start in range(0, len(chosen), BATCH_PAGES):
+            if deadline is not None and _clock() >= deadline:
+                stopped_at = start
+                _log("generation_stopped", reason="run time limit", **progress_fields(start))
+                break
+            if _clock() - last_progress >= PROGRESS_SECONDS:
+                last_progress = _clock()
+                _log("generation_progress", **progress_fields(start))
+            batch = chosen[start : start + BATCH_PAGES]
             todo = []
             for candidate in batch:
                 state = remote.get(candidate.content_sha256)
@@ -312,15 +403,25 @@ def run(args: argparse.Namespace) -> int:
                 continue
             if store is not None and todo:
                 for page in store.inputs(
-                    stage=args.stage, distro=args.distro, pages=[c for c, _ in todo]
+                    stage=args.stage,
+                    distro=args.distro,
+                    pages=[c for c, _ in todo],
+                    stop=past_limit,
                 ):
                     inputs[page.content_sha256] = page
                 sampled += len(todo)
             prepared = []
+            unread = (
+                {(p["name"], p["section"]) for p in store.unread} if store is not None else set()
+            )
             for candidate, fresh_llm in todo:
                 page = inputs.pop(candidate.content_sha256, None)
                 if page is None:
-                    totals["missingInput"] += 1
+                    # Not read before the time limit: the next run selects it again.
+                    if (candidate.name, candidate.section) in unread:
+                        totals["inputsDeferred"] += 1
+                    else:
+                        totals["missingInput"] += 1
                     continue
                 det = deterministic(page, tldr)
                 generated = cache.get(page.content_sha256)
@@ -345,6 +446,8 @@ def run(args: argparse.Namespace) -> int:
                         item[2] = generator.generate(item[0], item[1])
                     except BudgetPaused as exc:
                         paused = paused or exc
+                        if exc.partial is not None:
+                            item[2] = exc.partial
 
                 with ThreadPoolExecutor(max_workers=concurrency) as pool:
                     list(pool.map(generate, work))
@@ -370,12 +473,32 @@ def run(args: argparse.Namespace) -> int:
                 totals["inserted"] += result["inserted"]
                 totals["updated"] += result["updated"]
             records = []
+            if (
+                store is not None
+                and len(stale_usage) >= FLAG_USAGE_HANDOFF
+                and not dry_run
+                and not args.no_write
+            ):
+                totals["flagUsageScheduled"] += store.propagate_flag_usage(
+                    stale_usage, stop=handover_over
+                )
+                stale_usage = []
     finally:
         if out:
             out.close()
         checkpoint.save()
     if store is not None and stale_usage and not dry_run and not args.no_write:
-        totals["flagUsageScheduled"] = store.propagate_flag_usage(stale_usage)
+        totals["flagUsageScheduled"] += store.propagate_flag_usage(stale_usage, stop=handover_over)
+    if store is not None and store.flag_usage_deferred:
+        totals["flagUsageDeferred"] = store.flag_usage_deferred
+    # A time-limit pause in the last batch ends the loop without a batch check.
+    time_limited = (
+        stopped_at is not None
+        or totals["inputsDeferred"] > 0
+        or (paused is not None and paused.reason == "run time limit")
+    )
+    if time_limited and stopped_at is None:
+        _log("generation_stopped", reason="run time limit", **progress_fields(len(chosen)))
     if store is not None and store.skipped:
         totals["inputTooLarge"] = len(store.skipped)
         _log("generation_inputs_skipped", pages=store.skipped[:20])
@@ -399,6 +522,16 @@ def run(args: argparse.Namespace) -> int:
         summary["estimatedOffPeakUsd"] = round(estimated_usd, 4)
     if paused is not None:
         summary["paused"] = str(paused)
+    if time_limited:
+        summary["stoppedAtTimeLimit"] = True
+        # Pages with no record this run; paused pages lacking model text are
+        # also picked up again by the next run.
+        summary["remaining"] = (
+            len(chosen) - (stopped_at if stopped_at is not None else len(chosen))
+        ) + totals["inputsDeferred"]
+    if not listing_complete:
+        summary["listingComplete"] = False
+    summary["elapsedMinutes"] = round((_clock() - started) / 60, 1)
     _log("generation_summary", **summary)
     return 0
 
@@ -446,6 +579,11 @@ def main(argv: list[str] | None = None) -> int:
     run_p.add_argument("--cache-dir", help="generated parts by content hash")
     run_p.add_argument("--work", default=".generated-work")
     run_p.add_argument("--out", help="also write records as JSONL")
+    run_p.add_argument(
+        "--max-minutes",
+        type=_minutes,
+        help="stop starting new batches after this many minutes; the next run resumes",
+    )
 
     restore = sub.add_parser(
         "restore-ledger", help="Recover the budget ledger from earlier default-branch runs"

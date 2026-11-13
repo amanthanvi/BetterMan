@@ -163,3 +163,30 @@ def test_loaded_checkpoint_is_clamped(tmp_path: Path):
     loaded = Checkpoint.load(path, now=SATURDAY)
     assert loaded.paused_until == SATURDAY + 7 * 86400
     assert loaded.ledger == [[SATURDAY, 0.1], [200.0, 0.25]]
+
+
+def test_no_attempt_starts_or_waits_past_the_run_time_limit():
+    clock = Clock()
+    deadline = clock.now + 100
+    gov = BudgetGovernor(
+        BudgetConfig(requests_per_minute=1),
+        Checkpoint.load(None),
+        clock=clock,
+        sleep=clock.sleep,
+        remaining=lambda: deadline - clock.now,
+    )
+    gov.acquire(0.001)
+    # The next request must wait 60 s for the per-minute limit; that fits.
+    clock.now += 30
+    gov.acquire(0.001)
+    assert clock.sleeps == [30]
+    # Another 60 s wait would end past the limit: stop instead of sleeping.
+    with pytest.raises(BudgetPaused, match="run time limit"):
+        gov.acquire(0.001)
+    assert clock.sleeps == [30]
+    # Past the limit nothing starts, even with no wait.
+    clock.now = deadline
+    with pytest.raises(BudgetPaused, match="run time limit"):
+        gov.acquire(0.001)
+    # A time limit is not a provider pause: nothing carries to the next run.
+    assert gov.checkpoint.paused_until == 0

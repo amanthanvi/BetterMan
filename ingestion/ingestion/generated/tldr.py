@@ -297,6 +297,10 @@ def tldr_examples(
     return result
 
 
+# One git step of the pinned tldr-pages fetch.
+GIT_TIMEOUT_SECONDS = 600
+
+
 def fetch_pinned(
     dest: Path,
     *,
@@ -309,7 +313,12 @@ def fetch_pinned(
 
     def git(*args: str) -> str:
         return subprocess.run(
-            ["git", "-C", str(dest), *args], check=True, capture_output=True, text=True
+            ["git", "-C", str(dest), *args],
+            check=True,
+            capture_output=True,
+            text=True,
+            # A stalled fetch must fail the run, not hold it until the job timeout.
+            timeout=GIT_TIMEOUT_SECONDS,
         ).stdout.strip()
 
     if not (dest / ".git").exists():

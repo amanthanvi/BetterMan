@@ -205,6 +205,9 @@ class ConvexIngestClient:
     ingest_secret: str
     activation_timeout: float = field(default_factory=activation_timeout_seconds)
     activation_deadline: float | None = field(default_factory=ingest_activation_deadline)
+    # A time.monotonic() value after which a failed request is not retried, so a
+    # caller near a time limit spends at most one attempt per request.
+    retry_until: float | None = None
 
     def __post_init__(self) -> None:
         if not 0 < self.activation_timeout <= MAX_ACTIVATION_TIMEOUT_SECONDS:
@@ -363,7 +366,8 @@ class ConvexIngestClient:
                 error = RuntimeError(f"Convex ingest request failed: {exc}")
             else:
                 return result
-            if not retryable or attempt == attempts:
+            retries_over = self.retry_until is not None and time.monotonic() >= self.retry_until
+            if not retryable or attempt == attempts or retries_over:
                 if path == "/ingest/aliases" and isinstance(payload, dict):
                     routes = [
                         {

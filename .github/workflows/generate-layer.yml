@@ -62,7 +62,10 @@ jobs:
     name: Generated layer (${{ inputs.distro || 'debian' }})
     runs-on: ubuntu-latest
     environment: production
-    # Under GitHub's 6 h job limit; the budget governor pauses long before.
+    # Under GitHub's 6 h job limit. At 20 requests a minute the budget governor
+    # may never pause, so the run stops itself at BETTERMAN_GEN_MAX_MINUTES and
+    # keeps the rest of this budget to finish its batch, hand over flag usage,
+    # log its summary and keep the ledger.
     timeout-minutes: 330
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -106,6 +109,7 @@ jobs:
           BETTERMAN_GEN_BUDGET_FRACTION: ${{ vars.BETTERMAN_GEN_BUDGET_FRACTION || '0.5' }}
           BETTERMAN_GEN_RUN_CAP_USD: ${{ vars.BETTERMAN_GEN_RUN_CAP_USD || '8' }}
           BETTERMAN_GEN_RPM: ${{ vars.BETTERMAN_GEN_RPM || '20' }}
+          BETTERMAN_GEN_MAX_MINUTES: ${{ vars.BETTERMAN_GEN_MAX_MINUTES || '285' }}
           DISTRO: ${{ inputs.distro || 'debian' }}
           STAGE: ${{ inputs.stage || 'staging' }}
           LIMIT: ${{ inputs.limit }}
@@ -124,7 +128,8 @@ jobs:
           set -- run --source convex --distro "$DISTRO" --stage "$STAGE" \
             --checkpoint "$RUNNER_TEMP/state/checkpoint.json" \
             --cache-dir "$RUNNER_TEMP/work/parts" \
-            --work "$RUNNER_TEMP/work"
+            --work "$RUNNER_TEMP/work" \
+            --max-minutes "$BETTERMAN_GEN_MAX_MINUTES"
           if [ -n "$LIMIT" ]; then set -- "$@" --limit "$LIMIT"; fi
           if [ "$LLM" != "true" ]; then set -- "$@" --no-llm; fi
           if [ "$REFRESH_PAGE" = "true" ]; then set -- "$@" --refresh-page; fi
