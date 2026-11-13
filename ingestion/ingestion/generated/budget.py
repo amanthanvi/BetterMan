@@ -105,6 +105,9 @@ class BudgetPaused(RuntimeError):
         super().__init__(f"generation paused: {reason}; resume after {when}")
         self.reason = reason
         self.resume_at = resume_at
+        # Valid output a page had from earlier rounds when this pause refused
+        # its next request (set by the generator); already paid for.
+        self.partial: object | None = None
 
 
 @dataclass

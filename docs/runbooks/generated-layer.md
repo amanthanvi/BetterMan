@@ -106,9 +106,12 @@ finished). The run still succeeds and the next run continues. While a run is
 going, `generation_progress` lines (at most every five minutes) show pages
 processed, records written, requests and spend. A run that ends cancelled by
 the job timeout anyway means something outside these checks took more than
-the 45 minutes left after the limit. That could be one candidate page or input
-request, an upsert, or the job's own setup and artifact steps. Look at the
-last progress line, and lower `BETTERMAN_GEN_MAX_MINUTES` if needed.
+the 45 minutes left after the limit. Past the limit, Convex requests get one
+attempt each and the flag-usage hand-over stops after ten minutes, so the
+likely cause is a request that never stopped sending. Look at the last
+progress line, and lower `BETTERMAN_GEN_MAX_MINUTES` if needed. A summary with
+`flagUsageDeferred` is normal after a time-limited run; the next run hands
+those over.
 
 ## Removing a bad item
 

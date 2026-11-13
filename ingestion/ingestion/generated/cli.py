@@ -68,6 +68,9 @@ LISTING_CHECK_EVERY = 500
 # Stale flag usage is handed to Convex once this many hashes have gathered,
 # so the hand-over left after the loop stays small (at most 10 requests).
 FLAG_USAGE_HANDOFF = 250
+# Past the run time limit, Convex requests are not retried and flag usage
+# stops being handed over after this long; the next run finds the rest.
+HANDOVER_GRACE_SECONDS = 600.0
 PROGRESS_TOTALS = ("generated", "records", "inserted", "updated", "skippedUnchanged")
 # Wall-clock source for the run deadline and progress; tests replace it.
 _clock = time.monotonic
@@ -267,6 +270,8 @@ def run(args: argparse.Namespace) -> int:
         client = ConvexIngestClient(
             http_url=os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL", ""),
             ingest_secret=os.environ.get("CONVEX_INGEST_SECRET", ""),
+            # One attempt per request once the limit has passed.
+            retry_until=time.monotonic() + args.max_minutes * 60 if args.max_minutes else None,
         )
         store = GeneratedStore(client)
         store.require_contract()
@@ -319,6 +324,9 @@ def run(args: argparse.Namespace) -> int:
         listingComplete=listing_complete,
         elapsedMinutes=round((_clock() - started) / 60, 1),
     )
+
+    def handover_over() -> bool:
+        return deadline is not None and _clock() >= deadline + HANDOVER_GRACE_SECONDS
 
     def progress_fields(done: int) -> dict[str, object]:
         fields: dict[str, object] = {
@@ -424,6 +432,8 @@ def run(args: argparse.Namespace) -> int:
                         item[2] = generator.generate(item[0], item[1])
                     except BudgetPaused as exc:
                         paused = paused or exc
+                        if exc.partial is not None:
+                            item[2] = exc.partial
 
                 with ThreadPoolExecutor(max_workers=concurrency) as pool:
                     list(pool.map(generate, work))
@@ -455,14 +465,24 @@ def run(args: argparse.Namespace) -> int:
                 and not dry_run
                 and not args.no_write
             ):
-                totals["flagUsageScheduled"] += store.propagate_flag_usage(stale_usage)
+                totals["flagUsageScheduled"] += store.propagate_flag_usage(
+                    stale_usage, stop=handover_over
+                )
                 stale_usage = []
     finally:
         if out:
             out.close()
         checkpoint.save()
     if store is not None and stale_usage and not dry_run and not args.no_write:
-        totals["flagUsageScheduled"] += store.propagate_flag_usage(stale_usage)
+        totals["flagUsageScheduled"] += store.propagate_flag_usage(stale_usage, stop=handover_over)
+    if store is not None and store.flag_usage_deferred:
+        totals["flagUsageDeferred"] = store.flag_usage_deferred
+    # A time-limit pause in the last batch ends the loop without a batch check.
+    time_limited = stopped_at is not None or (
+        paused is not None and paused.reason == "run time limit"
+    )
+    if time_limited and stopped_at is None:
+        _log("generation_stopped", reason="run time limit", **progress_fields(len(chosen)))
     if store is not None and store.skipped:
         totals["inputTooLarge"] = len(store.skipped)
         _log("generation_inputs_skipped", pages=store.skipped[:20])
@@ -486,9 +506,11 @@ def run(args: argparse.Namespace) -> int:
         summary["estimatedOffPeakUsd"] = round(estimated_usd, 4)
     if paused is not None:
         summary["paused"] = str(paused)
-    if stopped_at is not None:
+    if time_limited:
         summary["stoppedAtTimeLimit"] = True
-        summary["remaining"] = len(chosen) - stopped_at
+        # Pages with no record this run; paused pages lacking model text are
+        # also picked up again by the next run.
+        summary["remaining"] = len(chosen) - (stopped_at if stopped_at is not None else len(chosen))
     if not listing_complete:
         summary["listingComplete"] = False
     summary["elapsedMinutes"] = round((_clock() - started) / 60, 1)

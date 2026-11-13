@@ -1147,9 +1147,9 @@ def test_stale_flag_usage_is_handed_over_during_the_run(monkeypatch):
     sizes: list[int] = []
     handover = GeneratedStore.propagate_flag_usage
 
-    def counted(self, hashes):
+    def counted(self, hashes, **kwargs):
         sizes.append(len(hashes))
-        return handover(self, hashes)
+        return handover(self, hashes, **kwargs)
 
     monkeypatch.setattr(GeneratedStore, "propagate_flag_usage", counted)
     client = StaleRows(600)
@@ -1227,3 +1227,75 @@ def test_a_run_time_limit_must_be_finite_and_positive(value, capsys):
         )
     assert exit_info.value.code == 2
     assert "finite number of minutes above 0" in capsys.readouterr().err
+
+
+def test_flag_usage_hand_over_stops_after_the_grace_period(monkeypatch, caplog):
+    # Past the limit each request may still take minutes (#541 review): the
+    # hand-over stops 10 minutes after it, and the next run finds the rest.
+    client = StaleRows(240)
+    now = [0.0]
+    monkeypatch.setattr(cli, "_clock", lambda: now[0])
+    posted = []
+
+    def slow_post(path, payload):
+        result = StaleRows.post(client, path, payload)
+        if path == "/ingest/generated/flag-usage":
+            posted.append(len(payload["contentSha256s"]))
+            now[0] += 240  # each hand-over request takes 4 minutes
+        return result
+
+    client.post = slow_post
+    caplog.set_level("INFO")
+    _stale_run(monkeypatch, client, "--max-minutes", "1")
+    # The 240 stale hashes are handed over after the loop, starting at 0 s; the
+    # limit is 60 s and the hand-over stops at 660 s: requests at 0, 240, 480.
+    assert posted == [25, 25, 25]
+    [summary] = _events(caplog, "generation_summary")
+    assert summary["flagUsageScheduled"] == 75
+    assert summary["flagUsageDeferred"] == 165
+
+
+def test_a_time_limit_pause_keeps_earlier_rounds_and_reports_the_stop(
+    tmp_path: Path, monkeypatch, caplog
+):
+    # One valid first round, then the limit refuses the second (#541 review).
+    page = golden_page("ls.1", name="ls", sha="1" * 64)
+    monkeypatch.setattr(
+        cli,
+        "_candidates_from_cache",
+        lambda cache, distro: (
+            [Candidate(page.name, page.section, page.content_sha256, None, True)],
+            {page.content_sha256: page},
+        ),
+    )
+    now = [0.0]
+    monkeypatch.setattr(cli, "_clock", lambda: now[0])
+    reply = answer([("Long list", "ls -l")])  # one example; the page wants three
+
+    class OneRound(FakeProvider):
+        def send(self, messages, *, max_tokens):
+            self.calls.append(messages)
+            now[0] += 120  # the limit passes during this round
+            return Completion(text=reply, prompt_tokens=900, completion_tokens=300)
+
+    provider = OneRound()
+    monkeypatch.setattr(cli, "OpenAICompatibleProvider", lambda config: provider)
+    monkeypatch.setenv("OPENCODE_GO_API_KEY", "k")
+    monkeypatch.setenv("BETTERMAN_GEN_ALLOW_PEAK", "1")
+    monkeypatch.setenv("BETTERMAN_GEN_RPM", "100000")
+    caplog.set_level("INFO")
+    out = tmp_path / "records.jsonl"
+    argv = ["run", "--source", "cache", "--cache", str(tmp_path), "--no-tldr"]
+    argv += ["--checkpoint", str(tmp_path / "ck.json"), "--out", str(out), "--max-minutes", "1"]
+    assert cli.main(argv) == 0
+
+    assert len(provider.calls) == 1
+    [record] = [json.loads(line) for line in out.read_text().splitlines()]
+    generated = record["generated"]
+    assert generated["summary"] and [e["command"] for e in generated["examples"]] == ["ls -l"]
+    # The pause came in the last (only) batch: the stop is still reported.
+    [stopped] = _events(caplog, "generation_stopped")
+    assert stopped["reason"] == "run time limit" and stopped["processed"] == 1
+    [summary] = _events(caplog, "generation_summary")
+    assert summary["stoppedAtTimeLimit"] is True and summary["remaining"] == 0
+    assert summary["generated"] == 1

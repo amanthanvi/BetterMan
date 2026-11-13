@@ -7,7 +7,7 @@ contract version.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
 
@@ -38,6 +38,7 @@ class GeneratedStore:
         self.client = client
         # Pages Convex would not send because one alone exceeds a response.
         self.skipped: list[dict] = []
+        self.flag_usage_deferred = 0
 
     def require_contract(self) -> dict:
         try:
@@ -133,10 +134,20 @@ class GeneratedStore:
                 totals[key] += int(result.get(key, 0))
         return totals
 
-    def propagate_flag_usage(self, hashes: list[str]) -> int:
-        """Hand stored flag counts to B7 for pages that do not have them yet."""
+    def propagate_flag_usage(
+        self, hashes: list[str], *, stop: Callable[[], bool] | None = None
+    ) -> int:
+        """Hand stored flag counts to B7 for pages that do not have them yet.
+
+        Once `stop()` is true no further request starts; the hashes not sent are
+        counted in `flag_usage_deferred`, and the next run finds them again
+        (their pages still report `flagUsageCurrent: false`).
+        """
         scheduled = 0
         for start in range(0, len(hashes), RECORD_BATCH):
+            if stop is not None and stop():
+                self.flag_usage_deferred += len(hashes) - start
+                break
             result = self.client.post(
                 "/ingest/generated/flag-usage",
                 {"contentSha256s": hashes[start : start + RECORD_BATCH]},

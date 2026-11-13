@@ -18,7 +18,7 @@ from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
-from ingestion.generated.budget import BudgetGovernor, token_cost
+from ingestion.generated.budget import BudgetGovernor, BudgetPaused, token_cost
 from ingestion.generated.flags import (
     invocations_for,
     simple_invocation_problems,
@@ -266,7 +266,18 @@ class Generator:
                 avoid=sorted(seen)[:5],
                 rejected=notes,
             )
-            completion = self._request(messages)
+            try:
+                completion = self._request(messages)
+            except BudgetPaused as exc:
+                # Keep what earlier rounds produced: a page with fewer examples
+                # is the normal outcome when its rounds run out (#541 review).
+                if summary or phrases or accepted:
+                    part.summary = summary
+                    part.examples = accepted
+                    part.task_phrases = phrases
+                    part.rejected = rejected
+                    exc.partial = part
+                raise
             if completion is None:
                 continue
             part.prompt_tokens += completion.prompt_tokens

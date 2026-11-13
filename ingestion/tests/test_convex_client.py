@@ -600,3 +600,21 @@ def test_old_client_rejects_current_server_contract(monkeypatch, old_version):
         ConvexContractError, match=f"schemaVersion {REQUIRED_SCHEMA_VERSION} != {old_version}"
     ):
         ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+def test_no_retries_after_the_callers_cutoff(monkeypatch):
+    # The generated-layer CLI sets retry_until to its run time limit (#541 review).
+    request = Mock(side_effect=_http_error(503, b"outage"))
+    monkeypatch.setattr("ingestion.convex_client.urlopen", request)
+    monkeypatch.setattr("ingestion.convex_client.time.sleep", Mock())
+    monkeypatch.setattr("ingestion.convex_client.time.monotonic", lambda: 1000.0)
+    late = ConvexIngestClient("https://test.convex.site", "test-secret", retry_until=999.0)
+    with pytest.raises(RuntimeError, match="HTTP 503"):
+        late.post("/ingest/generated/flag-usage", {"contentSha256s": []})
+    request.assert_called_once()
+
+    request.reset_mock()
+    early = ConvexIngestClient("https://test.convex.site", "test-secret", retry_until=2000.0)
+    with pytest.raises(RuntimeError, match="HTTP 503"):
+        early.post("/ingest/generated/flag-usage", {"contentSha256s": []})
+    assert request.call_count == 3
