@@ -170,11 +170,15 @@ class BudgetGovernor:
         *,
         clock: Callable[[], float] = time.time,
         sleep: Callable[[float], None] = time.sleep,
+        remaining: Callable[[], float] | None = None,
     ) -> None:
         self.config = config
         self.checkpoint = checkpoint
         self._clock = clock
         self._sleep = sleep
+        # Seconds left before the run's time limit, if it has one. Every model
+        # attempt, retries included, acquires here, so none starts after it.
+        self._remaining = remaining
         self._requests: list[float] = []
         self.run_spend = 0.0
         # Estimates of requests in flight, so concurrent workers cannot
@@ -227,6 +231,10 @@ class BudgetGovernor:
         """
         while True:
             with self._lock:
+                left = self._remaining() if self._remaining is not None else math.inf
+                if left <= 0:
+                    self.checkpoint.save()
+                    raise BudgetPaused("run time limit", math.inf)
                 blocked = self.check(estimate_usd)
                 if blocked is None:
                     self._requests.append(self._clock())
@@ -237,6 +245,10 @@ class BudgetGovernor:
                 if wait > self.config.max_wait_seconds:
                     self.checkpoint.save()
                     raise BudgetPaused(reason, resume_at)
+                if wait >= left:
+                    # Waiting would outlast the run; the next run resumes.
+                    self.checkpoint.save()
+                    raise BudgetPaused("run time limit", math.inf)
             self._sleep(max(wait, 0.01))
 
     def record(self, usd: float, *, reserved: float = 0.0) -> None:

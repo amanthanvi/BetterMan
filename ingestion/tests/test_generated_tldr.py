@@ -8,6 +8,7 @@ from generated_fixtures import TAR_TLDR, golden_page, tldr_tree
 
 from ingestion.generated.flags import option_table
 from ingestion.generated.tldr import (
+    GIT_TIMEOUT_SECONDS,
     TLDR_ATTRIBUTION,
     TldrIndex,
     clean_description,
@@ -314,3 +315,16 @@ def test_path_named_wrappers_around_the_target_are_rejected(wrapper):
     result = tldr_examples(page, name="tar", table=TAR.table)
     assert result.examples == []
     assert any(p.startswith("wrapped invocation") for p in result.rejected[0][1])
+
+
+def test_a_stalled_tldr_fetch_fails_instead_of_hanging(tmp_path: Path, monkeypatch):
+    timeouts = []
+
+    def stalled(cmd, **kwargs):
+        timeouts.append(kwargs.get("timeout"))
+        raise subprocess.TimeoutExpired(cmd, kwargs.get("timeout"))
+
+    monkeypatch.setattr("ingestion.generated.tldr.subprocess.run", stalled)
+    with pytest.raises(subprocess.TimeoutExpired):
+        fetch_pinned(tmp_path / "tldr")
+    assert timeouts == [GIT_TIMEOUT_SECONDS]

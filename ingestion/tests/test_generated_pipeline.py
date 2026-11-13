@@ -22,6 +22,7 @@ from ingestion.generated.provider import (
     Provider,
     ProviderConfig,
     ProviderError,
+    TransientProviderError,
     UsageLimitExceeded,
 )
 from ingestion.generated.selector import Candidate, Priority, select
@@ -1080,51 +1081,140 @@ def test_cli_stops_at_the_run_time_limit_and_reports_progress(tmp_path: Path, mo
     assert "stoppedAtTimeLimit" not in summary
 
 
-def test_a_time_limited_convex_run_still_hands_over_flag_usage(monkeypatch, caplog):
-    class Unchanged(FakeClient):
-        def post(self, path, payload):
-            self.posts.append((path, payload))
-            if path == "/ingest/generated/candidates":
-                return {
-                    "items": [
-                        {
-                            "name": f"p{i:03}",
-                            "section": "1",
-                            "contentSha256": f"{i:064x}",
-                            "hasRecord": True,
-                            "promptVersion": "b6-v1",
-                            "tldrCommit": None,
-                            "flagUsageCurrent": False,
-                        }
-                        for i in range(120)
-                    ],
-                    "isDone": True,
-                }
-            if path == "/ingest/generated/flag-usage":
-                return {"scheduled": len(payload["contentSha256s"]), "continued": False}
-            raise AssertionError(path)
+class StaleRows(FakeClient):
+    """Unchanged rows whose pages lack B7 flag counts: only the hand-over posts."""
 
-    client = Unchanged()
+    def __init__(self, count: int):
+        super().__init__()
+        self.count = count
+
+    def post(self, path, payload):
+        self.posts.append((path, payload))
+        if path == "/ingest/generated/candidates":
+            return {
+                "items": [
+                    {
+                        "name": f"p{i:04}",
+                        "section": "1",
+                        "contentSha256": f"{i:064x}",
+                        "hasRecord": True,
+                        "promptVersion": "b6-v1",
+                        "tldrCommit": None,
+                        "flagUsageCurrent": False,
+                    }
+                    for i in range(self.count)
+                ],
+                "isDone": True,
+            }
+        if path == "/ingest/generated/flag-usage":
+            return {"scheduled": len(payload["contentSha256s"]), "continued": False}
+        raise AssertionError(path)
+
+
+def _stale_run(monkeypatch, client: StaleRows, *extra: str) -> None:
     monkeypatch.setattr("ingestion.convex_client.ConvexIngestClient", lambda **kwargs: client)
     monkeypatch.delenv("OPENCODE_GO_API_KEY", raising=False)
     monkeypatch.delenv("BETTERMAN_GEN_API_KEY", raising=False)
-    ticks = iter(range(0, 10_000, 25))
-    monkeypatch.setattr(cli, "_clock", lambda: float(next(ticks)))
-    caplog.set_level("INFO")
-    argv = ["run", "--source", "convex", "--sections", "1", "--no-tldr", "--max-minutes", "1"]
+    argv = ["run", "--source", "convex", "--sections", "1", "--no-tldr", *extra]
     assert cli.main(argv) == 0
 
-    # The first batch is handled before the limit; its stale rows still reach B7.
-    sent = [
+
+def _handed_over(client: StaleRows) -> list[str]:
+    return [
         sha
         for path, payload in client.posts
         if path == "/ingest/generated/flag-usage"
         for sha in payload["contentSha256s"]
     ]
-    assert sent == [f"{i:064x}" for i in range(50)]
+
+
+def test_a_time_limited_convex_run_still_hands_over_flag_usage(monkeypatch, caplog):
+    client = StaleRows(120)
+    ticks = iter(range(0, 10_000, 25))
+    monkeypatch.setattr(cli, "_clock", lambda: float(next(ticks)))
+    caplog.set_level("INFO")
+    _stale_run(monkeypatch, client, "--max-minutes", "1")
+
+    # The first batch is handled before the limit; its stale rows still reach B7.
+    assert _handed_over(client) == [f"{i:064x}" for i in range(50)]
     [summary] = _events(caplog, "generation_summary")
     assert summary["stoppedAtTimeLimit"] is True and summary["remaining"] == 70
     assert summary["flagUsageScheduled"] == 50
+
+
+def test_stale_flag_usage_is_handed_over_during_the_run(monkeypatch):
+    # A large stale list must not all wait for the end of the run (#541 review).
+    sizes: list[int] = []
+    handover = GeneratedStore.propagate_flag_usage
+
+    def counted(self, hashes):
+        sizes.append(len(hashes))
+        return handover(self, hashes)
+
+    monkeypatch.setattr(GeneratedStore, "propagate_flag_usage", counted)
+    client = StaleRows(600)
+    _stale_run(monkeypatch, client)
+    assert sizes == [250, 250, 100]
+    assert _handed_over(client) == [f"{i:064x}" for i in range(600)]
+
+
+def test_candidate_listing_stops_at_the_run_time_limit(monkeypatch, caplog):
+    client = StaleRows(1200)
+    ticks = iter(range(0, 10_000, 200))
+    monkeypatch.setattr(cli, "_clock", lambda: float(next(ticks)))
+    caplog.set_level("INFO")
+    _stale_run(monkeypatch, client, "--max-minutes", "5")
+
+    # Checked every 500 candidates: 200 s at 500, past 300 s at 1,000.
+    [started] = _events(caplog, "generation_started")
+    assert started["listingComplete"] is False and started["selected"] == 1000
+    [summary] = _events(caplog, "generation_summary")
+    assert summary["listingComplete"] is False
+    assert summary["stoppedAtTimeLimit"] is True and summary["remaining"] == 1000
+    assert _handed_over(client) == []
+
+
+def test_model_retries_stop_at_the_run_time_limit(tmp_path: Path, monkeypatch, caplog):
+    # A batch admitted just before the limit must not run on through retries (#541 review).
+    pages = [golden_page("ls.1", name="ls", sha=f"{i:064x}") for i in range(20)]
+    monkeypatch.setattr(
+        cli,
+        "_candidates_from_cache",
+        lambda cache, distro: (
+            [Candidate(p.name, p.section, p.content_sha256, None, True) for p in pages],
+            {p.content_sha256: p for p in pages},
+        ),
+    )
+    now = [0.0]
+    monkeypatch.setattr(cli, "_clock", lambda: now[0])
+
+    class TimingOut(FakeProvider):
+        def send(self, messages, *, max_tokens):
+            self.calls.append(messages)
+            now[0] += 60  # every attempt times out after a minute
+            raise TransientProviderError("timed out", retry_after=0)
+
+    provider = TimingOut()
+    monkeypatch.setattr(cli, "OpenAICompatibleProvider", lambda config: provider)
+    monkeypatch.setenv("OPENCODE_GO_API_KEY", "k")
+    monkeypatch.setenv("BETTERMAN_GEN_ALLOW_PEAK", "1")
+    monkeypatch.setenv("BETTERMAN_GEN_CONCURRENCY", "1")
+    # No real per-minute waits: only the run time limit may stop the attempts.
+    monkeypatch.setenv("BETTERMAN_GEN_RPM", "100000")
+    caplog.set_level("INFO")
+    out = tmp_path / "records.jsonl"
+    argv = ["run", "--source", "cache", "--cache", str(tmp_path), "--no-tldr"]
+    argv += ["--checkpoint", str(tmp_path / "ck.json"), "--out", str(out), "--max-minutes", "5"]
+    assert cli.main(argv) == 0
+
+    # Attempts start at 0 to 4 minutes; none at or after the 5-minute limit.
+    # Without it, 20 pages x 2 rounds x 4 attempts would run for 160 minutes.
+    assert len(provider.calls) == 5
+    assert len(out.read_text().splitlines()) == 20  # page parts still written
+    [summary] = _events(caplog, "generation_summary")
+    assert "run time limit" in summary["paused"]
+    assert summary["elapsedMinutes"] == 5.0
+    assert Checkpoint.load(tmp_path / "ck.json").paused_until == 0
 
 
 @pytest.mark.parametrize("value", ["0", "-5", "nan", "inf", "-inf", "", "soon"])

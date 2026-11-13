@@ -63,6 +63,11 @@ DRY_RUN_INPUT_SAMPLE = 50
 BATCH_PAGES = 50
 # A long run logs `generation_progress` at most this often.
 PROGRESS_SECONDS = 300.0
+# Candidate listing checks the run time limit this often.
+LISTING_CHECK_EVERY = 500
+# Stale flag usage is handed to Convex once this many hashes have gathered,
+# so the hand-over left after the loop stays small (at most 10 requests).
+FLAG_USAGE_HANDOFF = 250
 PROGRESS_TOTALS = ("generated", "records", "inserted", "updated", "skippedUnchanged")
 # Wall-clock source for the run deadline and progress; tests replace it.
 _clock = time.monotonic
@@ -235,8 +240,14 @@ def _candidates_from_cache(
 
 
 def run(args: argparse.Namespace) -> int:
-    # The limit counts from here, so candidate listing is inside it too.
+    # The scheduled job has a hard timeout. The limit counts from here and is
+    # checked while listing candidates, by every model attempt (through the
+    # budget governor) and between batches, so the run can still hand over
+    # flag usage, save the ledger and log its summary. Rows already written
+    # are skipped as unchanged by the next run.
     started = _clock()
+    deadline = started + args.max_minutes * 60 if args.max_minutes else None
+    listing_complete = True
     provider_config = ProviderConfig.from_env()
     dry_run = args.dry_run
     llm = not args.no_llm
@@ -264,6 +275,12 @@ def run(args: argparse.Namespace) -> int:
             for item in store.candidates(stage=args.stage, distro=args.distro, section=section):
                 candidates.append(item.candidate)
                 remote[item.candidate.content_sha256] = item
+                if len(candidates) % LISTING_CHECK_EVERY == 0:
+                    if deadline is not None and _clock() >= deadline:
+                        listing_complete = False
+                        break
+            if not listing_complete:
+                break
         inputs: dict[str, PageInput] = {}
     else:
         if not args.cache:
@@ -275,7 +292,11 @@ def run(args: argparse.Namespace) -> int:
     chosen = select(candidates, priority=priority, sections=sections, limit=args.limit)
     cache = ResultCache(Path(args.cache_dir) if args.cache_dir else None)
     checkpoint = Checkpoint.load(Path(args.checkpoint) if args.checkpoint else None)
-    governor = BudgetGovernor(BudgetConfig.from_env(), checkpoint)
+    governor = BudgetGovernor(
+        BudgetConfig.from_env(),
+        checkpoint,
+        remaining=(lambda: deadline - _clock()) if deadline is not None else None,
+    )
     generator = None
     concurrency = _concurrency()
     if llm and not dry_run and provider_config.has_key:
@@ -284,10 +305,6 @@ def run(args: argparse.Namespace) -> int:
     totals: Counter[str] = Counter()
     estimated_usd = 0.0
     sampled = 0
-    # The scheduled job has a hard timeout. Stopping between batches before it
-    # leaves time to propagate flag usage, save the ledger and log the summary;
-    # rows already written are skipped as unchanged by the next run.
-    deadline = started + args.max_minutes * 60 if args.max_minutes else None
     last_progress = started
     stopped_at: int | None = None
     _log(
@@ -299,6 +316,8 @@ def run(args: argparse.Namespace) -> int:
         dryRun=dry_run,
         llm=llm and generator is not None,
         maxMinutes=args.max_minutes,
+        listingComplete=listing_complete,
+        elapsedMinutes=round((_clock() - started) / 60, 1),
     )
 
     def progress_fields(done: int) -> dict[str, object]:
@@ -430,12 +449,20 @@ def run(args: argparse.Namespace) -> int:
                 totals["inserted"] += result["inserted"]
                 totals["updated"] += result["updated"]
             records = []
+            if (
+                store is not None
+                and len(stale_usage) >= FLAG_USAGE_HANDOFF
+                and not dry_run
+                and not args.no_write
+            ):
+                totals["flagUsageScheduled"] += store.propagate_flag_usage(stale_usage)
+                stale_usage = []
     finally:
         if out:
             out.close()
         checkpoint.save()
     if store is not None and stale_usage and not dry_run and not args.no_write:
-        totals["flagUsageScheduled"] = store.propagate_flag_usage(stale_usage)
+        totals["flagUsageScheduled"] += store.propagate_flag_usage(stale_usage)
     if store is not None and store.skipped:
         totals["inputTooLarge"] = len(store.skipped)
         _log("generation_inputs_skipped", pages=store.skipped[:20])
@@ -462,6 +489,8 @@ def run(args: argparse.Namespace) -> int:
     if stopped_at is not None:
         summary["stoppedAtTimeLimit"] = True
         summary["remaining"] = len(chosen) - stopped_at
+    if not listing_complete:
+        summary["listingComplete"] = False
     summary["elapsedMinutes"] = round((_clock() - started) / 60, 1)
     _log("generation_summary", **summary)
     return 0

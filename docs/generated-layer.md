@@ -285,12 +285,20 @@ eight concurrent agents have already hit "Go usage limit exceeded" (#398).
 - At 20 requests per minute a run may never reach a window or the run cap, so
   it also has a wall-clock limit: `--max-minutes`, which the workflow sets
   from `BETTERMAN_GEN_MAX_MINUTES` (default 285, inside the 330-minute job
-  timeout). Past it, no new 50-page batch starts. The run still hands over
-  flag usage, saves the ledger and logs `generation_summary` with
-  `stoppedAtTimeLimit` and `remaining`, and exits successfully. The next run
-  skips the rows already written. Before this limit, the scheduled runs on
-  2026-11-02 and 2026-11-09 were cancelled by the job timeout with no output
-  after start.
+  timeout). It counts from the start of the run and is checked in three
+  places. Candidate listing checks it every 500 candidates. The budget
+  governor checks it before every model attempt, retries included, and stops
+  instead of waiting past it. No new 50-page batch starts after it. Past the
+  limit, at most the attempts already in flight finish (a 60 s timeout each,
+  plus a backoff of up to 120 s). The batch's remaining pages get page and
+  tldr parts only, and the run hands over the last flag usage, saves the
+  ledger and logs `generation_summary` with `stoppedAtTimeLimit`, `remaining`
+  and, if the limit came during listing, `listingComplete: false`. It exits
+  successfully, and the next run skips the rows already written. Stale flag
+  usage is handed over during the run, 250 hashes at a time, so little is left
+  for the end. Each git step of the tldr-pages fetch times out after ten
+  minutes. Before this limit, the scheduled runs on 2026-11-02 and 2026-11-09
+  were cancelled by the job timeout with no output after start.
 - `generation_started` reports the selection and the limit.
   `generation_progress`, at most every five minutes, reports pages
   processed, records written, requests and spend so far.

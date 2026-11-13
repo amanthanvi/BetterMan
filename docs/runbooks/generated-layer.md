@@ -98,14 +98,17 @@ resume time: a 5 h, 7 d or 30 d window, peak hours, the run cap, or Go's
 "usage limit exceeded" (which waits at least an hour). The next scheduled or
 manual run resumes from the ledger. To stop entirely, disable the workflow.
 
-Reaching the time limit is also normal for a large pass: `generation_stopped`
-with reason `run time limit`, then a summary with `stoppedAtTimeLimit: true`
-and the `remaining` page count. The run still succeeds and the next run
-continues. While a run is going, `generation_progress` lines (at most every
-five minutes) show pages processed, records written, requests and spend. A
-run that ends cancelled by the job timeout instead means a batch or the
-final hand-over took more than the 45 minutes left after the limit. Lower
-`BETTERMAN_GEN_MAX_MINUTES` if that happens.
+Reaching the time limit is also normal for a large pass. If it comes mid-batch,
+`generation_paused` with reason `run time limit` appears first. It is followed
+by `generation_stopped`, and then by a summary with `stoppedAtTimeLimit: true`
+and the `remaining` page count (`listingComplete: false` if listing never
+finished). The run still succeeds and the next run continues. While a run is
+going, `generation_progress` lines (at most every five minutes) show pages
+processed, records written, requests and spend. A run that ends cancelled by
+the job timeout anyway means something outside these checks took more than
+the 45 minutes left after the limit. That could be one candidate page or input
+request, an upsert, or the job's own setup and artifact steps. Look at the
+last progress line, and lower `BETTERMAN_GEN_MAX_MINUTES` if needed.
 
 ## Removing a bad item
 
