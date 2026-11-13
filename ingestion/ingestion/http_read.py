@@ -50,7 +50,9 @@ def read_within(response: object, seconds: float) -> bytes:
             # The base method: an SSLSocket's own shutdown also drops its TLS state.
             socket.socket.shutdown(sock, socket.SHUT_RDWR)
         except OSError:
-            pass
+            # Already closed or reset by the peer: the read is ending either way,
+            # and `aborted` still turns its result into TimeoutError.
+            return
 
     def finish() -> bool:
         with lock:
