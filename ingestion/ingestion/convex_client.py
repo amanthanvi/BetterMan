@@ -11,6 +11,8 @@ from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from ingestion.http_read import ERROR_BODY_SECONDS, read_within
+
 logger = logging.getLogger("betterman.ingestion")
 
 # Release, page, alias, and license posts are idempotent: the server returns
@@ -87,7 +89,7 @@ def _contract_read_error(exc: BaseException) -> ConvexContractError:
 
 def _http_error_detail(exc: HTTPError) -> str:
     try:
-        return _clip(exc.read().decode("utf-8", errors="replace"))
+        return _clip(read_within(exc, ERROR_BODY_SECONDS).decode("utf-8", errors="replace"))
     except (TimeoutError, UnicodeDecodeError, HTTPException, ConnectionError) as read_exc:
         raise _contract_read_error(read_exc) from read_exc
 
@@ -100,7 +102,7 @@ def _post_error_detail(exc: HTTPError) -> str:
     retry loop.
     """
     try:
-        return exc.read().decode("utf-8", errors="replace")
+        return read_within(exc, ERROR_BODY_SECONDS).decode("utf-8", errors="replace")
     except (TimeoutError, HTTPException, ConnectionError) as read_exc:
         return f"unreadable error body ({read_exc})"
 
@@ -270,7 +272,7 @@ class ConvexIngestClient:
         try:
             with urlopen(req, timeout=timeout_seconds) as res:
                 try:
-                    raw = res.read().decode("utf-8")
+                    raw = read_within(res, timeout_seconds).decode("utf-8")
                 except (TimeoutError, UnicodeDecodeError, HTTPException, ConnectionError) as exc:
                     raise _contract_read_error(exc) from exc
         except TimeoutError as exc:
@@ -342,7 +344,7 @@ class ConvexIngestClient:
         for attempt in range(1, attempts + 1):
             try:
                 with urlopen(req, timeout=timeout_seconds) as res:
-                    raw = res.read().decode("utf-8")
+                    raw = read_within(res, timeout_seconds).decode("utf-8")
                 result = _json_object(raw)
             except HTTPError as exc:
                 detail = _post_error_detail(exc)

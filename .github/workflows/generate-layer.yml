@@ -45,9 +45,14 @@ on:
         type: boolean
         default: false
   schedule:
-    # 12:00 UTC on the 2nd and 9th, after the monthly ingest on the 1st and
-    # outside Go's weekday peak hours. The second run resumes a paused pass.
-    - cron: "0 12 2,9 * *"
+    # 12:00 UTC daily from the 2nd to the 15th: after the monthly ingest on
+    # the 1st and outside Go's weekday peak hours. A 285-minute run generates
+    # about 5,400 pages at 20 requests a minute, so a full-Debian pass (about
+    # 35,000 pages left on 2026-11-13, about $12) takes about a week of runs;
+    # each run resumes where the last stopped. Once nothing is left a run
+    # only lists candidates (about a minute) and exits. The budget governor
+    # still caps spend per 5 h, week and month.
+    - cron: "0 12 2-15 * *"
 
 concurrency:
   group: generated-layer

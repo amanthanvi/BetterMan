@@ -618,3 +618,32 @@ def test_no_retries_after_the_callers_cutoff(monkeypatch):
     with pytest.raises(RuntimeError, match="HTTP 503"):
         early.post("/ingest/generated/flag-usage", {"contentSha256s": []})
     assert request.call_count == 3
+
+
+def test_a_trickling_response_fails_instead_of_holding_the_request(monkeypatch):
+    # A socket timeout restarts with every byte; the whole body, success or
+    # error, must arrive within its time limit (generated-layer runs have one).
+    import time as clock
+
+    from http_fakes import http_error, response, sized, trickle
+
+    body = b" " * 200 + b"{}"
+    client = ConvexIngestClient("https://test.convex.site", "test-secret")
+    monkeypatch.setattr(
+        "ingestion.convex_client.urlopen",
+        Mock(side_effect=lambda *_a, **_k: response(sized(body), trickle(body, 0.05))),
+    )
+    started = clock.monotonic()
+    with pytest.raises(RuntimeError, match="longer than 0.3 s"):
+        client.post("/ingest/activate", {}, timeout_seconds=0.3)
+    assert clock.monotonic() - started < 2
+
+    def busy(*_args, **_kwargs):
+        raise http_error(503, response(sized(body), trickle(body, 0.05), status=b"503 Busy"))
+
+    monkeypatch.setattr("ingestion.convex_client.ERROR_BODY_SECONDS", 0.3)
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(side_effect=busy))
+    started = clock.monotonic()
+    with pytest.raises(RuntimeError, match="HTTP 503: unreadable error body"):
+        client.post("/ingest/activate", {}, timeout_seconds=0.3)
+    assert clock.monotonic() - started < 2

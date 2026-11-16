@@ -213,3 +213,30 @@ def test_recorded_completion_shapes_are_bounded(content, reasoning, finish, shap
 def test_untrusted_finish_reason_is_not_returned():
     payload = {"choices": [{"finish_reason": "private text", "message": {"content": ""}}]}
     assert parse_completion(payload).finish_reason == "unknown"
+
+
+def test_a_trickling_model_response_is_a_transient_failure(monkeypatch):
+    # The socket timeout restarts with every byte; the body, success or error,
+    # must arrive within its time limit, so a run's time limit can hold.
+    import time as clock
+
+    from http_fakes import http_error, response, sized, trickle
+
+    body = json.dumps(completion()).encode() + b" " * 200
+    client = provider(
+        lambda request, timeout: response(sized(body), trickle(body, 0.05)), timeout_seconds=0.3
+    )
+    started = clock.monotonic()
+    with pytest.raises(TransientProviderError, match="TimeoutError"):
+        client.send([{"role": "user", "content": "hi"}], max_tokens=10)
+    assert clock.monotonic() - started < 2
+
+    def limited(request, timeout):
+        raise http_error(429, response(sized(body), trickle(body, 0.05), status=b"429 Slow"))
+
+    monkeypatch.setattr("ingestion.generated.provider.ERROR_BODY_SECONDS", 0.3)
+    client = provider(limited, timeout_seconds=0.3)
+    started = clock.monotonic()
+    with pytest.raises(TransientProviderError, match="HTTP 429"):
+        client.send([{"role": "user", "content": "hi"}], max_tokens=10)
+    assert clock.monotonic() - started < 2
