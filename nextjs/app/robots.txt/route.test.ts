@@ -10,13 +10,15 @@ it('disallows training and SEO backlink crawlers, and gives answer engines the p
     for (const agent of ['GPTBot', 'ChatGPT-User', 'OAI-SearchBot', 'ClaudeBot', 'Claude-SearchBot', 'Claude-User', 'PerplexityBot', 'Perplexity-User', 'Google-Extended', '*']) {
       expect(body).toContain(`User-agent: ${agent}\n`)
     }
-    const [disallowed, publicPolicy] = body.split('\n\n')
+    const groups = body.split('\n\n')
+    expect(groups).toHaveLength(2)
+    const [disallowed, publicPolicy] = groups
     expect(disallowed).toBe(
       'User-agent: Bytespider\nUser-agent: CCBot\nUser-agent: SERankingBacklinksBot\nUser-agent: SemrushBot\nDisallow: /',
     )
     expect(publicPolicy).toContain('Allow: /\nDisallow: /api/\nSitemap: https://betterman.sh/sitemap.xml\n')
     expect(publicPolicy).not.toContain('Disallow: /\n')
-    expect(publicPolicy).not.toMatch(/Bytespider|CCBot|SERankingBacklinksBot|SemrushBot/)
+    expect(publicPolicy).not.toMatch(/Bytespider|CCBot|SERankingBacklinksBot|SemrushBot/i)
   } finally {
     vi.unstubAllEnvs()
   }
