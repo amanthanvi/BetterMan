@@ -7,6 +7,9 @@ export async function GET(request: Request) {
   const body = [
     'User-agent: Bytespider',
     'User-agent: CCBot',
+    'User-agent: SERankingBacklinksBot',
+    'User-agent: SemrushBot',
+    'User-agent: AhrefsBot',
     'Disallow: /',
     '',
     'User-agent: GPTBot',

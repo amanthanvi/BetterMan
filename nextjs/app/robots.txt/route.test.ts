@@ -10,8 +10,10 @@ it('gives answer engines the public crawl policy while keeping APIs disallowed a
     for (const agent of ['GPTBot', 'ChatGPT-User', 'OAI-SearchBot', 'ClaudeBot', 'Claude-SearchBot', 'Claude-User', 'PerplexityBot', 'Perplexity-User', 'Google-Extended', '*']) {
       expect(body).toContain(`User-agent: ${agent}\n`)
     }
-    const [training, publicPolicy] = body.split('\n\n')
-    expect(training).toBe('User-agent: Bytespider\nUser-agent: CCBot\nDisallow: /')
+    const [disallowed, publicPolicy] = body.split('\n\n')
+    expect(disallowed).toBe(
+      'User-agent: Bytespider\nUser-agent: CCBot\nUser-agent: SERankingBacklinksBot\nUser-agent: SemrushBot\nUser-agent: AhrefsBot\nDisallow: /',
+    )
     expect(publicPolicy).toContain('Allow: /\nDisallow: /api/\nSitemap: https://betterman.sh/sitemap.xml\n')
     expect(publicPolicy).not.toContain('Disallow: /\n')
   } finally {
