@@ -40,7 +40,7 @@ through automatically. This includes verified answer/search agents such as
 GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-SearchBot, Claude-User,
 PerplexityBot, Perplexity-User and Google-Extended; a claimed User-Agent alone is
 not verification. Keep Bytespider and CCBot disallowed in robots.txt, along with
-the SEO backlink crawlers SERankingBacklinksBot, SemrushBot and AhrefsBot (see
+the SEO backlink crawlers SERankingBacklinksBot and SemrushBot (see
 [Other heavy traffic](#other-heavy-traffic-2026-11-20)). Answer engines, search
 engines and other crawlers retain the public policy with `/api/` disallowed.
 
@@ -213,13 +213,13 @@ These sources passed every rule above, and no rule targets them.
 - **11-17 and 11-18:** an evenly rotating User-Agent set sent about 1.0–1.2K requests per User-Agent, 6–7K a day. The set includes Chrome 99 on Android Pixel 6, Edge 99, iOS Safari 17.2, 18.0 and 18.4, and macOS Safari 18.0 and 26.0. It also appeared on 11-10 and 11-14 to 11-15.
 - **New Chromium digest:** `t13d1516h2_8daaf6152771_e5627efa2ab1` had about 3.1K allowed requests a day on 11-17 and 11-18. Re-check it at the 2026-12-04 review.
 
-Decision, 2026-11-20: robots.txt disallows the three SEO backlink crawlers, and nothing else changes.
+Decision, 2026-11-20: robots.txt disallows two SEO backlink crawlers, and nothing else changes.
 
-- **Why the crawlers.** In the 24 hours to 2026-11-20 20:32 UTC, the Firewall allowed 44.5K requests. SERankingBacklinksBot sent 16.3K of them (the same count came from Hetzner), SemrushBot 10.6K (the same count from `SEMrush CY LTD`) and AhrefsBot 0.6K: 62% in total. The volumes since 11-09 above are similar. These crawlers build link indexes for their companies' customers; blocking them doesn't change how search engines rank BetterMan.
-- **Why robots.txt and not a rule.** All three document that they obey robots.txt. Semrush says it notices a change within an hour or 100 requests, SE Ranking within a day, and Ahrefs before its next planned visit. A crawler that stops asking sends no requests at all, and the Firewall gets no new rule to maintain.
-- **Kept:** bingbot (12.4K in the same window; it feeds Bing and the engines built on it), ExaSearchBot (0.2K) and the answer engines.
-- **Not targeted:** the macOS / `OCULUS NETWORKS INC` set and the evenly rotating set. Neither appeared in that window, and each has come in bursts of one or two days. If either returns at volume, the 2026-12-04 review weighs a rule for it.
-- **Check:** at the 2026-12-04 review, all three crawlers should be near zero under `vercel.request.count` grouped by `clientUserAgent`. If one keeps crawling, deny its User-Agent with a custom rule.
+- **Why these two.** In the 24 hours to 2026-11-20 20:32 UTC, 44,470 requests had the Firewall action `allow` (plus 393 `bypass` and 247 `log`). SERankingBacklinksBot sent 16,309 of them (Hetzner had the same count) and SemrushBot 10,631 (`SEMrush CY LTD` the same): 26,940, or 60.6%. The volumes since 11-09 above are similar. Both build link indexes for their companies' customers and feed no search engine. How much function, CPU and Convex usage this saves is not measured; the 2026-12-04 review compares billing quantities.
+- **Why robots.txt and not a rule.** Both document that they obey robots.txt. Semrush says it notices a change within an hour or 100 requests, and SE Ranking within a day. A crawler that stops asking sends no requests at all, and the Firewall gets no new rule to maintain.
+- **Kept:** bingbot (12,447 in the same window; it feeds Bing and the engines built on it), ExaSearchBot (243) and the answer engines. AhrefsBot (598, from OVH) stays too: [it also powers Yep](https://ahrefs.com/robot), a search engine. If its bursts (34K on 11-02, 13.9K on 11-16) grow, give it a `Crawl-delay`, which it obeys, rather than a `Disallow`.
+- **Not targeted:** the macOS / `OCULUS NETWORKS INC` set was not among the window's top 25 User-Agents or networks. The evenly rotating set was still there at 61–73 requests per User-Agent (about 480 in total), against 1.0–1.2K per User-Agent on 11-17 and 11-18. Both have come in bursts of one or two days. If either returns at volume, the 2026-12-04 review weighs a rule for it.
+- **Check:** at the 2026-12-04 review, both crawlers should be near zero under `vercel.request.count` grouped by `clientUserAgent`, apart from their `/robots.txt` fetches. If one keeps crawling other paths, deny its User-Agent with a custom rule.
 
 ## Search index cost
 

@@ -9,7 +9,6 @@ export async function GET(request: Request) {
     'User-agent: CCBot',
     'User-agent: SERankingBacklinksBot',
     'User-agent: SemrushBot',
-    'User-agent: AhrefsBot',
     'Disallow: /',
     '',
     'User-agent: GPTBot',
