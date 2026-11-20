@@ -39,7 +39,9 @@ Vercel's [Attack Mode](https://vercel.com/docs/vercel-firewall/attack-mode) and
 through automatically. This includes verified answer/search agents such as
 GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-SearchBot, Claude-User,
 PerplexityBot, Perplexity-User and Google-Extended; a claimed User-Agent alone is
-not verification. Keep Bytespider and CCBot disallowed in robots.txt. Answer
+not verification. Keep Bytespider and CCBot disallowed in robots.txt, along with
+the SEO backlink crawlers SERankingBacklinksBot and SemrushBot (see
+[Other heavy traffic](#other-heavy-traffic-2026-11-20)). Answer engines, search
 engines and other crawlers retain the public policy with `/api/` disallowed.
 
 The minimal exemption set is four custom Firewall **Bypass** rules. Combine each
@@ -210,6 +212,16 @@ These sources passed every rule above, and no rule targets them.
   - ExaSearchBot sent 11.2K on 11-18, that day's top User-Agent.
 - **11-17 and 11-18:** an evenly rotating User-Agent set sent about 1.0–1.2K requests per User-Agent, 6–7K a day. The set includes Chrome 99 on Android Pixel 6, Edge 99, iOS Safari 17.2, 18.0 and 18.4, and macOS Safari 18.0 and 26.0. It also appeared on 11-10 and 11-14 to 11-15.
 - **New Chromium digest:** `t13d1516h2_8daaf6152771_e5627efa2ab1` had about 3.1K allowed requests a day on 11-17 and 11-18. Re-check it at the 2026-12-04 review.
+
+Decision, 2026-11-20: robots.txt disallows two SEO backlink crawlers, and nothing else changes.
+
+- **Why these two.** In the 24 hours to 2026-11-20 20:32 UTC, 44,470 requests had the Firewall action `allow` (plus 393 `bypass` and 247 `log`). SERankingBacklinksBot sent 16,309 of them (Hetzner had the same count) and SemrushBot 10,631 (`SEMrush CY LTD` the same): 26,940, or 60.6%. The volumes since 11-09 above are similar. Both crawl for their companies' backlink tools (Semrush calls its index a "public backlink search engine index"). General web search and answer engines crawl with their own agents, which keep their access. How much function, CPU and Convex usage this saves is not measured; the 2026-12-04 review compares billing quantities.
+- **Why robots.txt and not a rule.** Both document that they obey robots.txt. Semrush says it notices a change within an hour or 100 requests, and SE Ranking within a day. A crawler that stops asking sends no page requests, and the Firewall gets no new rule to maintain.
+- **Kept:** bingbot (12,447 in the same window; it feeds Bing and the engines built on it), ExaSearchBot (243) and the answer engines. AhrefsBot (598; `OVH SAS` had the same count) stays too: [it also powers Yep](https://ahrefs.com/robot), a search engine. If its bursts (34K on 11-02, 13.9K on 11-16) grow, give it a `Crawl-delay`, which it obeys, rather than a `Disallow`. Put it in its own group that repeats `Allow: /` and `Disallow: /api/`, because a named group replaces the `*` group for that crawler.
+- **Not targeted:** the macOS / `OCULUS NETWORKS INC` set was not among the window's top 25 User-Agents or networks. The evenly rotating set was still there at 61–73 requests per User-Agent (about 480 in total), against 1.0–1.2K per User-Agent on 11-17 and 11-18. Both have come in bursts of one or two days. If either returns at volume, the 2026-12-04 review weighs a rule for it.
+- **Check:** at the 2026-12-04 review, first confirm that `https://betterman.sh/robots.txt` answers 200 and lists both names. Then query each crawler on its own: filter `vercel.request.count` on its exact User-Agent and group by `wafAction` only, so every request is counted. A top-25 User-Agent list can't show the drop, because its cutoff was 49 requests, and a breakdown by path stops at the query's row limit. The two User-Agents are `Mozilla/5.0 (compatible; SERankingBacklinksBot/1.0; +https://seranking.com/backlinks-crawler)` and `Mozilla/5.0 (compatible; SemrushBot/7~bl; +http://www.semrush.com/bot.html)`, for example `clientUserAgent:"Mozilla/5.0 (compatible; SemrushBot/7~bl; +http://www.semrush.com/bot.html)"`. If a version string has changed, filter the crawler's network (`asnName`) and group by User-Agent instead.
+  - Count the page requests that reach the app: `allow`, `log` and `bypass`, minus the crawler's `/robots.txt` fetches from a second query that adds `AND requestPath:"/robots.txt"`. Those fetches are expected. The root-text bypass rule records them as `bypass`, and SemrushBot made 118 in the 24 hours to 2026-11-20 20:48 UTC. Challenged and denied requests never reach the app. Group the remainder by `requestPath` only to see what it is.
+  - Consider a deny only if a crawler still sends a material number of such requests more than a day after the deploy. The custom rule denies its User-Agent unless the path is `/robots.txt`. Place it before the four bypass rules, because a bypass skips every later rule.
 
 ## Search index cost
 
