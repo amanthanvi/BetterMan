@@ -98,7 +98,8 @@ Why challenge it here:
 - 3,349 of those beacons came from `t13d1516h2_8daaf6152771_d8a2da3f94cd`. They fell on a day when total beacons jumped from a few hundred to about 3,300, so they are not proof of where real visitors arrive. On 11-07 and 11-08 that digest turned out to be mostly automation; see the next section.
 - Its User-Agents rotated across Chrome 150–154, from residential ISPs in many countries.
 - 73% of those requests got the app's 429. Each one still cost a proxy invocation, Fluid CPU and a Convex rate-limit call.
-- The 2026-11-20 review kept the challenge and moved the review to 2026-12-04. Challenges fell to 389–5,472 a day from 11-11 to 11-17, then the scraper returned: 42,602 on 11-18 and 18,896 on 11-19, with the same rotation across Chrome 150–154 on Windows, macOS, Linux and ChromeOS from residential ISPs worldwide. About 1–2% of its challenges were solved (398 and 429 a day). That solved traffic did not look like real visitors: from 11-09 to 11-20 it fetched `/favicon.svg` 928 times beside 1,280 Web Analytics beacons, nearly one per page view, and in the 24 hours before the review a single Chrome 154 Windows User-Agent sent 1,129 of its 1,374 allowed requests.
+- The 2026-11-20 review kept the challenge and moved the review to 2026-12-04. Challenges fell to 389–5,472 a day from 11-11 to 11-17, then the scraper returned: 42,602 on 11-18 and 18,896 on 11-19. In the 24 hours before the review, the challenged requests rotated across Chrome 150–154 on Windows, macOS, Linux and ChromeOS, from residential ISPs worldwide. About 1–2% were solved (398 on 11-18, 0.9%; 429 on 11-19, 2.3%).
+- Allowed traffic on the digest, most of it after solved challenges, did not look like real visitors overall. From 11-09 to 11-20 it fetched `/favicon.svg` 928 times beside 1,280 Web Analytics beacons, about three favicons per four page views. In the 24 hours before the review, one Chrome 154 Windows User-Agent sent 1,129 of its 1,374 allowed requests. Some current Chrome 155–158 visitors did pass the challenge, as designed.
 
 Limits:
 
@@ -121,7 +122,7 @@ If the scraper changes fingerprint, group allowed traffic by **JA4 Digest** in t
 
 ## Impossible User-Agent deny (2026-11-08, inactive since 2026-11-20)
 
-The custom rule `Cost guard: deny impossible UAs on Chromium JA4 d8a2da3f94cd (inactive since 2026-11-20)` (id `rule_cost_guard_deny_impossible_u_as_on_chromium_ja_4_d8a2da3f94cd_re_M1k7vJ`) sits after the challenge rule above, followed only by the tripwire in the next section. It is **inactive**: it denied 62,058 requests on 11-09, nearly all with the scraper's ten stale User-Agents, then 0–4 a day from 11-11 to 11-19, so the 2026-11-20 review switched it off. Its conditions are unchanged, so setting it active again restores it. When active, it **denies** a request when all three conditions hold:
+The custom rule `Cost guard: deny impossible UAs on Chromium JA4 d8a2da3f94cd (inactive since 2026-11-20)` (id `rule_cost_guard_deny_impossible_u_as_on_chromium_ja_4_d8a2da3f94cd_re_M1k7vJ`) sits after the challenge rule above, followed only by the tripwire in the next section. It is **inactive**. It denied 62,058 requests on 11-09 and 158 on 11-10, nearly all with the scraper's ten stale User-Agents, then 0–4 a day from 11-11 to 11-19, so the 2026-11-20 review switched it off. Its conditions are unchanged, so setting it active again restores it. When active, it **denies** a request when all three conditions hold:
 
 - JA4 digest equals `t13d1516h2_8daaf6152771_d8a2da3f94cd`.
 - User-Agent matches `Firefox/|Chrome/(1[0-2][0-9]|[1-9]?[0-9])\.`: Firefox, or Chrome 129 and older.
@@ -165,7 +166,7 @@ The custom rule `Tripwire: log Chromium TLS + desktop Chrome UA without client h
 
 Desktop Chromium sends `sec-ch-ua` on documents and their subresources. Automation that sets its User-Agent through the DevTools protocol (`Network.setUserAgentOverride`) without client-hint metadata sends none of the `sec-ch-ua*` headers, whatever version it claims. On 2026-11-08 a local Chrome 157 sent the hints natively and with an override that carried metadata, and sent none with an override that did not, on the document and its subresources. So the tripwire catches a scraper that rotates to current User-Agents, which the deny rule above cannot. Mobile User-Agents are exempt because in-app browsers that replace their User-Agent may drop the hints. Declared crawlers and tools are exempt too.
 
-The exception is the service worker script. On 2026-11-20 a local Chrome 157 sent the hints on the page and none on its `/sw.js` fetch (`Sec-Fetch-Dest: serviceworker`). From 11-09 to 11-20 the tripwire logged about 1,750 requests, 96% of them `/sw.js`. Most carried one Chrome 154 Windows User-Agent on the challenged `cb7bf5808d99` digest, probably the scraper's own service worker after a solved challenge. Current Chrome 156 and 157 on Windows, macOS and Linux appeared too, as real visitors' browsers would. A deny would break real visitors' service worker, so `/sw.js` is excluded.
+The exception is the service worker script. On 2026-11-20 a local headless Chrome 157 sent the hints on the page and none on its `/sw.js` fetch (`Sec-Fetch-Dest: serviceworker`); a headed Chrome against production has not been checked. From 11-09 to 11-20 the tripwire logged about 1,750 requests by request count (about 1,500 by Firewall action count), 96% of them `/sw.js`. Most carried one Chrome 154 Windows User-Agent on the challenged `cb7bf5808d99` digest, probably the scraper's own service worker after a solved challenge. Current Chrome 156 and 157 on Windows, macOS and Linux appeared too, as real visitors' browsers would. A deny would break real visitors' service worker, so `/sw.js` is excluded.
 
 Live test the same day: in a solved-challenge session, the rule logged a local Chrome's desktop requests without hints, and ignored its mobile requests without hints and its desktop requests with hints. curl's non-Chromium handshake did not match.
 
@@ -177,7 +178,7 @@ Limits:
 
 Checks:
 
-- Under **Firewall → Traffic**, choose the rule and read its User-Agents, fingerprints, networks and paths. Set it to deny only when it has logged a real sample that is clearly the scraper (many residential networks, User-Agents rotating, `/favicon.svg` about as often as pages) and nothing that looks like a real visitor (a few IPs browsing ordinary pages, an in-app browser, a declared tool). With no matches, or too few to judge, it stays at log. Checks on 2026-11-09 and 2026-11-20 applied this test and kept it at log. Apart from `/sw.js`, the 2026-11-20 sample was about 70 requests, a handful of page loads with their assets, and its User-Agents included declared `HeadlessChrome` tools. The 2026-12-04 review applies the test again.
+- Under **Firewall → Traffic**, choose the rule and read its User-Agents, fingerprints, networks and paths. Set it to deny only when it has logged a real sample that is clearly the scraper (many residential networks, User-Agents rotating, `/favicon.svg` about as often as pages) and nothing that looks like a real visitor (a few IPs browsing ordinary pages, an in-app browser, a declared tool). With no matches, or too few to judge, it stays at log. Checks on 2026-11-09 and 2026-11-20 applied this test and kept it at log. Apart from `/sw.js`, the 2026-11-20 sample was at least 70 requests, a handful of page loads with their assets. Its User-Agents included declared `HeadlessChrome` tools and an embedded Electron browser (`T3CodeNightly`). The 2026-12-04 review applies the test again.
 - Once it denies, set it back to log if a real visitor appears among its matches.
 - To roll back, set the rule inactive or to log under **Firewall → Configure**.
 
@@ -185,12 +186,17 @@ Checks:
 
 These sources passed every rule above, and no rule targets them.
 
-- **11-01 and 11-14 to 11-15:** Mac Chrome 148 (`Edg/148`) and Chrome 149 User-Agents on `t13d1516h2_8daaf6152771_d8a2da3f94cd` and `t13d1517h2_8daaf6152771_b6f405a00624`, with Mac Firefox 151 on Firefox's own handshake (`5b57614c22b0`).
-  - On 11-01 and 11-02 the busiest network was `OCULUS NETWORKS INC`, with 47K requests, close to this User-Agent set's 50K. The same User-Agent set returned on 11-14 and 11-15; its network was not checked then.
+- **10-31 to 11-01 and 11-14 to 11-15:** a set of macOS User-Agents: Edge 148 (`Edg/148`) and Chrome 149 on `t13d1516h2_8daaf6152771_d8a2da3f94cd` and `t13d1517h2_8daaf6152771_b6f405a00624`, and Firefox 151 on Firefox's own handshake (`5b57614c22b0`).
+  - On 11-01 and 11-02 the busiest network was `OCULUS NETWORKS INC`, with 47K requests, close to this User-Agent set's 50K. The two counts come from separate queries. The set's network on 11-14 and 11-15 was not checked.
   - Its User-Agents match their handshakes, so the impossible-User-Agent rule never matched it, and Bot Protection let it through.
-  - It made about half of the day's function invocations on 11-15, when billing counted 191K.
-- **11-02:** AhrefsBot (`t13d3112h2_e8f1e7e78f70_b26ce05bbdd6`, OVH) sent about 34K requests, and 13.9K again on 11-16.
-- **Every day:** SEO crawlers make up most allowed traffic: SERankingBacklinksBot up to 17K requests a day, SemrushBot about 11K and bingbot 4–11K.
+  - On 11-15 it made about 50K of the 95K function invocations that Observability counted. Billing counted 191K invocations that day, about two per request.
+- **11-02:** AhrefsBot (`t13d3112h2_e8f1e7e78f70_b26ce05bbdd6`, OVH) sent about 34K requests. It sent 13.9K more on 11-16 from `t13d3013h2_1d37bd780c83_8537cf56674e`; that day's network was not checked.
+- **Since 11-09:** declared crawlers are a large share of allowed traffic:
+  - SERankingBacklinksBot, first seen 11-08, sends up to 17K requests a day.
+  - SemrushBot sends about 11K a day, and bingbot 3–12K.
+  - ExaSearchBot sent 11.2K on 11-18, that day's top User-Agent.
+- **11-17 and 11-18:** an evenly rotating User-Agent set sent about 1.0–1.2K requests per User-Agent, 6–7K a day. The set includes Chrome 99 on Android Pixel 6, Edge 99, iOS Safari 17.2, 18.0 and 18.4, and macOS Safari 18.0 and 26.0. It also appeared on 11-10 and 11-14 to 11-15.
+- **New Chromium digest:** `t13d1516h2_8daaf6152771_e5627efa2ab1` had about 3.1K allowed requests a day on 11-17 and 11-18. Re-check it at the 2026-12-04 review.
 
 ## Search index cost
 
