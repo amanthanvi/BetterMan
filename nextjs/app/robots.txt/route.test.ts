@@ -16,6 +16,7 @@ it('disallows training and SEO backlink crawlers, and gives answer engines the p
     )
     expect(publicPolicy).toContain('Allow: /\nDisallow: /api/\nSitemap: https://betterman.sh/sitemap.xml\n')
     expect(publicPolicy).not.toContain('Disallow: /\n')
+    expect(publicPolicy).not.toMatch(/Bytespider|CCBot|SERankingBacklinksBot|SemrushBot/)
   } finally {
     vi.unstubAllEnvs()
   }
