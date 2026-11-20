@@ -83,9 +83,9 @@ a verified-bot request, not just a spoofed User-Agent. Finally add BetterMan as 
 search engine in real Chrome and Firefox on production and type `ta`. Local E2E
 proves the HTTP contract, not production exemptions or browser registration.
 
-## Chromium fingerprint challenge (2026-11-06, review by 2026-12-04)
+## Chromium fingerprint challenge (2026-11-06)
 
-The custom rule `Cost guard: challenge Chromium JA4 cb7bf5808d99 (review 2026-12-04)` (id `rule_probe_ja4_QjDurB`) sits after the four #388 bypass rules, followed by the inactive deny rule and the tripwire in the next two sections. Text and OpenSearch reads therefore never reach it. It **challenges** a request when both conditions hold:
+Review by 2026-12-04. The custom rule `Cost guard: challenge Chromium JA4 cb7bf5808d99 (review 2026-12-04)` (id `rule_probe_ja4_QjDurB`) sits after the four #388 bypass rules, followed by the inactive deny rule and the tripwire in the next two sections. Text and OpenSearch reads therefore never reach it. It **challenges** a request when both conditions hold:
 
 - JA4 digest equals `t13d1517h2_8daaf6152771_cb7bf5808d99`.
 - User-Agent does not contain `bot`.
@@ -114,15 +114,28 @@ Checks:
 
 - The Firewall events API reports only per-IP system actions, so watch the rule under **Firewall → Traffic**: choose it in the filter menu. Without Observability Plus the view covers the past day. Longer ranges open a prompt to include the project in Plus; cancel it.
 - Total Web Analytics cannot show harm from this rule: the fingerprint sent 8 of 3,415 beacons, and the 2026-11-05 total was a one-day spike. Read the rule's challenge outcomes instead. The Traffic view's legend shows only Challenged; the split comes from the query that view sends to `/api/observability-api/v1/metrics` (metric `vercel.firewall_action.count`, grouped by `wafAction`), which returns `challenge`, `challenge-solved` and `challenge-failed`. Mostly failed or unanswered challenges mean automation. Many solved challenges mean something that runs JavaScript presents this fingerprint, which can be headless automation (the next section's scraper solved 16,470 Bot Protection challenges in a day). Set the rule to log only with evidence of real visitors as well: volume near the site's usual few hundred page views a day, User-Agents that match the fingerprint's real Chrome versions, and `/favicon.svg` fetched far less often than pages. On 2026-11-08 the past day showed 60,810 challenged, 4 solved and 0 failed, so the challenge stayed.
-- The same past-day query also works without a browser: `POST https://api.vercel.com/metrics/v1?teamId=…` with a Vercel REST token and the dashboard's request body. Longer windows answer 402 without Observability Plus, and `vercel.function_invocation.count` covers only the last 30 minutes.
+- The same past-day query also works without a browser: `POST https://api.vercel.com/metrics/v1?teamId=<team id>` with a Vercel REST token as a bearer token. Longer windows answer 402 without Observability Plus, and `vercel.function_invocation.count` covers only the last 30 minutes. This body returns the rule's outcomes over a day:
+
+  ```json
+  {"metrics": {"value": {"metric": "vercel.firewall_action.count", "aggregation": "count"}},
+   "outputs": ["value"],
+   "groupBy": ["wafRuleId", "wafAction"],
+   "rowLimit": 50,
+   "orderBy": [{"metric": "value", "direction": "desc"}],
+   "scope": {"ownerId": "<team id>", "projectIds": ["<project id>"]},
+   "timeRange": {"start": "<now minus 24 h, ISO 8601>", "end": "<now, ISO 8601>"},
+   "filter": "wafRuleId:\"rule_probe_ja4_QjDurB\""}
+  ```
+
+  For traffic, use `vercel.request.count` grouped by `clientUserAgent`, `clientJa4Digest`, `requestPath`, `asnName` or `wafAction`. Join filters such as `clientJa4Digest:"…"` and `wafAction:"allow"` with ` AND `.
 - By 2026-12-04, if matches have stayed near the 500-a-day baseline, set the rule inactive.
 - To roll back at any time, set the rule inactive or to log under **Firewall → Configure**. Re-activating an earlier configuration version also undoes every later change, including the deny rule below, so compare it with the active configuration first.
 
 If the scraper changes fingerprint, group allowed traffic by **JA4 Digest** in the Firewall monitoring view (the last 24 hours). Alternatively, briefly re-include the project in Observability Plus and query `client_ja4_digest`. Vercel allows 5 enables per project per week; a sixth answers 429 until the week resets. Compare Web Analytics beacons per request rather than raw counts: the busiest fingerprint can be a mainstream browser.
 
-## Impossible User-Agent deny (2026-11-08, inactive since 2026-11-20)
+## Impossible User-Agent deny (2026-11-08)
 
-The custom rule `Cost guard: deny impossible UAs on Chromium JA4 d8a2da3f94cd (inactive since 2026-11-20)` (id `rule_cost_guard_deny_impossible_u_as_on_chromium_ja_4_d8a2da3f94cd_re_M1k7vJ`) sits after the challenge rule above, followed only by the tripwire in the next section. It is **inactive**. It denied 62,058 requests on 11-09 and 158 on 11-10, nearly all with the scraper's ten stale User-Agents, then 0–4 a day from 11-11 to 11-19, so the 2026-11-20 review switched it off. Its conditions are unchanged, so setting it active again restores it. When active, it **denies** a request when all three conditions hold:
+Inactive since 2026-11-20. The custom rule `Cost guard: deny impossible UAs on Chromium JA4 d8a2da3f94cd (inactive since 2026-11-20)` (id `rule_cost_guard_deny_impossible_u_as_on_chromium_ja_4_d8a2da3f94cd_re_M1k7vJ`) sits after the challenge rule above, followed only by the tripwire in the next section. It is **inactive**. It denied 62,058 requests on 11-09 and 158 on 11-10, nearly all with the scraper's ten stale User-Agents, then 0–4 a day from 11-11 to 11-19, so the 2026-11-20 review switched it off. Its conditions are unchanged, so setting it active again restores it. When active, it **denies** a request when all three conditions hold:
 
 - JA4 digest equals `t13d1516h2_8daaf6152771_d8a2da3f94cd`.
 - User-Agent matches `Firefox/|Chrome/(1[0-2][0-9]|[1-9]?[0-9])\.`: Firefox, or Chrome 129 and older.
@@ -153,9 +166,9 @@ Checks:
 - While it is active, choose it under **Firewall → Traffic** and read its User-Agents. Every denied User-Agent should be Firefox or Chrome 129 or older. If Chrome 130 or newer appears, or anything else suggests real visitors, set the rule to log.
 - To roll back, set the rule inactive or to log under **Firewall → Configure**. Do not re-activate an older configuration version for this: it also undoes every later change.
 
-## Client-hints tripwire (2026-11-08, review by 2026-12-04)
+## Client-hints tripwire (2026-11-08)
 
-The custom rule `Tripwire: log Chromium TLS + desktop Chrome UA without client hints (review 2026-12-04)` (id `rule_tripwire_log_chromium_tls_desktop_chrome_ua_without_client_hints_97FSXl`) sits last. It **logs** a request when all six conditions hold:
+Review by 2026-12-04. The custom rule `Tripwire: log Chromium TLS + desktop Chrome UA without client hints (review 2026-12-04)` (id `rule_tripwire_log_chromium_tls_desktop_chrome_ua_without_client_hints_97FSXl`) sits last. It **logs** a request when all six conditions hold:
 
 - JA4 digest contains `_8daaf6152771_`, the Chromium cipher list, on fresh and resumed connections alike.
 - User-Agent contains `Chrome/`.
